@@ -371,6 +371,11 @@ a{color:var(--gold)}
 .refbanner:active{transform:translateY(0)}
 .refbanner.group{background:transparent;color:var(--gold);border:1px solid rgba(201,168,76,.6);box-shadow:none}
 .refbanner.group:hover{background:rgba(201,168,76,.08)}
+.socialbar{display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:10px;margin:12px auto 0;max-width:760px}
+.socialtag{font-family:var(--dispers);text-transform:uppercase;letter-spacing:2px;font-size:13px;color:var(--muted)}
+.sociallink{display:inline-flex;align-items:center;gap:6px;padding:7px 16px;border-radius:999px;border:1px solid rgba(201,168,76,.6);
+  color:var(--gold);background:transparent;text-decoration:none;font-family:var(--dispers);text-transform:uppercase;letter-spacing:1px;font-size:14px;transition:background .15s,transform .15s}
+.sociallink:hover{background:rgba(201,168,76,.10);transform:translateY(-2px)}
 
 /* how-it-works steps */
 .step{background:var(--surface);border:1px solid rgba(255,255,255,.06);border-radius:10px;box-shadow:0 16px 38px rgba(0,0,0,.38)}
@@ -548,6 +553,12 @@ table td,table th,thead th,tbody td,.edgetbl td,.edgetbl th,.caltbl td,.caltbl t
 
   <a id="refbanner" class="refbanner" href="#" target="_blank" rel="noopener" hidden></a>
   <a id="refbanner2" class="refbanner group" href="#" target="_blank" rel="noopener" hidden></a>
+
+  <div id="socialbar" class="socialbar" hidden>
+    <span class="socialtag">Follow us</span>
+    <a id="social_ig" class="sociallink" href="#" target="_blank" rel="noopener" hidden>📸 Instagram</a>
+    <a id="social_tt" class="sociallink" href="#" target="_blank" rel="noopener" hidden>🎵 TikTok</a>
+  </div>
 
 <div id="page-week">
   <div class="panel" id="digestpanel" hidden>
@@ -779,6 +790,8 @@ const REFERRAL = { url: "https://polymarket.us/join/propstreaklab", text: "🎁 
 // ▲ e.g. url: "https://polymarket.com/@yourhandle" or your invite URL. Leave "" to hide the banner. ▲
 // Second banner: join our Polymarket squad/group. Leave url "" to hide it.
 const REFERRAL2 = { url: "https://polymarket.us/squad/join/CDU9RMD97K7O1G95yAao?referrer=propstreaklab", text: "👥 Join our Polymarket group →" };
+// ▼▼▼ SOCIAL FOLLOW LINKS — put your full profile URLs here (placeholders below; replace with your real handles). Leave "" to hide a button. ▼▼▼
+const SOCIAL = { instagram: "https://www.instagram.com/propstreaklab", tiktok: "https://www.tiktok.com/@propstreaklab" };
 
 // ▼▼▼ FEATURE-SUGGESTION INBOX — replace with your company email. Suggestions open in the visitor's mail app addressed here. ▼▼▼
 const FEEDBACK_EMAIL = "feedback@example.com";
@@ -903,6 +916,11 @@ if(WEEK.week) $('dnweek').textContent = `${WEEK.season} · week ${WEEK.week} on 
 (function renderRef(){ const b=$('refbanner');
   if(REFERRAL.url){ b.href=REFERRAL.url; b.textContent=REFERRAL.text; b.hidden=false; } else b.hidden=true;
   const b2=$('refbanner2'); if(REFERRAL2.url){ b2.href=REFERRAL2.url; b2.textContent=REFERRAL2.text; b2.hidden=false; } else b2.hidden=true; })();
+(function renderSocial(){ const ig=$('social_ig'), tt=$('social_tt'), bar=$('socialbar'); if(!bar) return;
+  const S=(typeof SOCIAL!=='undefined')?SOCIAL:{};
+  if(S.instagram){ ig.href=S.instagram; ig.hidden=false; } else ig.hidden=true;
+  if(S.tiktok){ tt.href=S.tiktok; tt.hidden=false; } else tt.hidden=true;
+  bar.hidden = !(S.instagram||S.tiktok); })();
 
 (function(){
   const wrap=$('chips');
@@ -1419,6 +1437,15 @@ function apCandidates(teamsSet){
   });
   return out;
 }
+let apLastSig='';
+function apPick(pool, want, risk){
+  const weight=c=> risk==='longshot' ? Math.max(1,c.neff||1) : Math.pow(Math.max(0.02,c.prob),3);
+  const draw=arr=>{ let tot=0; for(const c of arr) tot+=weight(c); let r=Math.random()*tot; for(const c of arr){ r-=weight(c); if(r<=0) return c; } return arr[arr.length-1]; };
+  const rem=pool.slice(), legs=[], seenG={};
+  while(legs.length<want){ const avail=rem.filter(c=>!seenG[c.gid]); if(!avail.length) break; const c=draw(avail); legs.push(c); seenG[c.gid]=1; rem.splice(rem.indexOf(c),1); }
+  while(legs.length<want && rem.length){ const c=draw(rem); legs.push(c); rem.splice(rem.indexOf(c),1); }
+  return legs;
+}
 async function buildAutoParlay(){
   const note=$('apnote');
   const teams=new Set([...document.querySelectorAll('#apTeams .chip[aria-pressed="true"]')].map(b=>b.dataset.t));
@@ -1428,18 +1455,22 @@ async function buildAutoParlay(){
     note.textContent='Pulling every Polymarket prop for those games…';
     try{ await scanBoard(false); }catch(e){}
   }
-  let cands=apCandidates(teams).filter(c=>c.prob>=R.lo&&c.prob<=R.hi);
+  const cands=apCandidates(teams).filter(c=>c.prob>=R.lo&&c.prob<=R.hi);
   const byP={}; cands.forEach(c=>{ const b=byP[c.p.id]; if(!b||c.prob>b.prob) byP[c.p.id]=c; });
-  cands=Object.values(byP).sort((a,b)=> (risk==='longshot'? ((b.neff-a.neff)||(b.prob-a.prob)) : (b.prob-a.prob)) );
-  const legs=[], seenG={};
-  for(const c of cands){ if(legs.length>=want) break; if(seenG[c.gid]) continue; legs.push(c); seenG[c.gid]=1; }
-  if(legs.length<want){ for(const c of cands){ if(legs.length>=want) break; if(legs.indexOf(c)<0) legs.push(c); } }
-  if(!legs.length){ note.textContent=`No ${R.label.toLowerCase()} legs found${teams.size?' for those teams':''} this week — try a different risk level or add teams.`; return; }
+  const pool=Object.values(byP);
+  if(!pool.length){ note.textContent=`No ${R.label.toLowerCase()} legs found${teams.size?' for those teams':''} this week — try a different risk level or add teams.`; return; }
+  let legs=[];
+  for(let tries=0; tries<8; tries++){                     // draw a fresh set; don't repeat the last one unless the pool is too small to vary
+    legs=apPick(pool, want, risk);
+    const sig=legs.map(c=>c.p.id+'|'+c.sk+'|'+c.line).sort().join(',');
+    if(sig!==apLastSig || pool.length<=want){ apLastSig=sig; break; }
+  }
+  legs.sort((a,b)=>b.prob-a.prob);
   PARLAY = legs.map(c=>({pid:c.p.id, name:c.p.n, sk:c.sk, statLabel:STATMAP[c.sk].label, line:c.line, side:c.side||'over'}));
   saveParlay(); renderParlay();
   const comb=legs.reduce((a,c)=>a*c.prob,1);
   const short = legs.length<want ? ` (only ${legs.length} available in that range${teams.size?' for those teams':''})` : '';
-  note.innerHTML=`Built a <b>${legs.length}-leg ${R.label}</b> parlay${teams.size?` from ${[...teams].join(', ')}`:''}${short} — combined model chance <b>${pct(comb)}</b>. It's loaded in the Parlay builder below; type each price for your payout.`;
+  note.innerHTML=`Built a <b>${legs.length}-leg ${R.label}</b> parlay${teams.size?` from ${[...teams].join(', ')}`:''}${short} — combined model chance <b>${pct(comb)}</b>. It's loaded in the Parlay builder below; type each price for your payout. <b>Tap Build again for a different set.</b>`;
   $('parlaypanel').scrollIntoView({behavior:'smooth',block:'start'});
 }
 function initAutoParlay(){
