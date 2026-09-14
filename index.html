@@ -1,7 +1,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Prop Streak Lab</title>
-<link rel="icon" href="data:,">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2064%2064'%3E%3Crect%20width='64'%20height='64'%20rx='14'%20fill='%230a1628'/%3E%3Cpath%20d='M32,6%20Q32,32%2054,32%20Q32,32%2032,58%20Q32,32%2010,32%20Q32,32%2032,6%20Z'%20fill='%23c9a84c'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600;700&family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,500;1,600&display=swap">
@@ -378,6 +378,9 @@ a{color:var(--gold)}
   color:#0a1628;background:var(--gold);text-decoration:none;font-family:var(--dispers);text-transform:uppercase;letter-spacing:1.5px;font-size:20px;font-weight:700;
   box-shadow:0 12px 32px rgba(201,168,76,.28);transition:transform .15s,box-shadow .15s}
 .sociallink:hover{transform:translateY(-3px);box-shadow:0 18px 44px rgba(201,168,76,.45)}
+.brandmark{color:var(--gold);margin:0 0 10px;line-height:0}
+.brandlogo{display:block;width:130px;min-width:0;height:auto;filter:drop-shadow(0 6px 18px rgba(201,168,76,.22))}
+@media(max-width:640px){.brandlogo{width:104px}}
 
 /* how-it-works steps */
 .step{background:var(--surface);border:1px solid rgba(255,255,255,.06);border-radius:10px;box-shadow:0 16px 38px rgba(0,0,0,.38)}
@@ -538,6 +541,16 @@ table td,table th,thead th,tbody td,.edgetbl td,.edgetbl th,.caltbl td,.caltbl t
   <div class="hero">
     <div class="hero-in">
       <div>
+        <div class="brandmark">
+          <svg class="brandlogo" viewBox="0 0 260 132" role="img" aria-label="Prop Streak Lab logo" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+            <path d="M200,8 Q200,66 232,66 Q200,66 200,124 Q200,66 168,66 Q200,66 200,8 Z"/>
+            <path d="M168,60 Q118,76 66,96 Q120,82 168,60 Z"/>
+            <path d="M154,68 Q116,80 82,95 Q118,86 154,68 Z"/>
+            <path d="M132,79 Q112,85 98,93 Q114,89 132,79 Z"/>
+            <path d="M88,99 Q80,102 72,106 Q80,104 88,99 Z"/>
+            <path d="M66,107 Q61,110 56,112 Q61,109 66,107 Z"/>
+          </svg>
+        </div>
         <div class="eyebrow">NFL Player Props · Real game logs · Tracked picks</div>
         <h1 class="hero-title">Prop <span class="hl">Streak</span> Lab</h1>
         <div class="hero-tag">See how often any NFL player clears a prop, get a calibrated chance for the line, price it against Polymarket, and check how past picks actually held up.</div>
