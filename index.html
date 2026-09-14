@@ -890,6 +890,9 @@ DB.players.forEach(p=>{ p._label = `${p.n} (${p.p}, ${p.t})`; byId[p.id]=p;
 const WEEK = DB.week || {games:[]};
 const TEAM_GAME = {}; (WEEK.games||[]).forEach(g=>{ TEAM_GAME[g.away]=g; TEAM_GAME[g.home]=g; });
 function teamGame(t){ return TEAM_GAME[t]||null; }
+function gameHappened(g){ if(!g) return false; if(g.final) return true; if(!g.date) return false;
+  const m=String(g.time||'').match(/^(\d{1,2}):(\d{2})$/), tm=m?(m[1].padStart(2,'0')+':'+m[2]):'12:00';
+  const dt=new Date(g.date+'T'+tm+':00'); return isFinite(dt.getTime()) && dt.getTime()<=Date.now(); }
 function oppOf(p){ const g=teamGame(p.t); if(!g) return null; return g.away===p.t? g.home : g.away; }
 const DAYS=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'], MONS=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 function kickoff(g){
@@ -1422,7 +1425,7 @@ function apCandidates(teamsSet){
   DB.players.forEach(p=>{
     if(!p.g||p.g.length<5) return;
     if(isRuledOut(p)) return;
-    const wg=teamGame(p.t); if(!wg||wg.final) return;
+    const wg=teamGame(p.t); if(!wg||gameHappened(wg)) return;
     if(teamsSet.size && !teamsSet.has(p.t)) return;
     const stats=LEADER_STATS[p.p]; if(!stats) return;
     const home=wg.home===p.t, opp=home?wg.away:wg.home;
@@ -1477,7 +1480,7 @@ async function buildAutoParlay(){
 }
 function initAutoParlay(){
   const wrap=$('apTeams'); if(!wrap) return;
-  const teams=[...new Set((WEEK.games||[]).filter(g=>!g.final).flatMap(g=>[g.away,g.home]).filter(Boolean))].sort();
+  const teams=[...new Set((WEEK.games||[]).filter(g=>!gameHappened(g)).flatMap(g=>[g.away,g.home]).filter(Boolean))].sort();
   wrap.innerHTML = teams.length ? teams.map(t=>`<button class="chip" type="button" data-t="${esc(t)}" aria-pressed="false">${esc(t)}</button>`).join('')
     : `<span class="mktmuted">No upcoming games this week.</span>`;
   wrap.querySelectorAll('.chip').forEach(b=>b.onclick=()=>b.setAttribute('aria-pressed', b.getAttribute('aria-pressed')!=='true'));
@@ -1691,7 +1694,7 @@ function generateDigest(){
   DB.players.forEach(p=>{
     if(!p.g||p.g.length<4) return;
     if(p.st==='RET'||p.st==='CUT') return;
-    const wg=teamGame(p.t); if(!wg||wg.final) return;
+    const wg=teamGame(p.t); if(!wg||gameHappened(wg)) return;
     const stats=LEADER_STATS[p.p]; if(!stats) return;
     const home=wg.home===p.t, opp=home?wg.away:wg.home;
     const gameSpr = wg.spread!=null? (home?wg.spread:-wg.spread) : null;
@@ -1717,7 +1720,8 @@ function generateDigest(){
   const nearLocks=best.filter(c=>c.prob>=0.85);
   const trapByPlayer={}; cands.filter(c=>c.trap).forEach(c=>{ const b=trapByPlayer[c.p.id]; if(!b||(c.raw-c.prob)>(b.raw-b.prob)) trapByPlayer[c.p.id]=c; });
   const traps=Object.values(trapByPlayer).sort((a,b)=>(b.raw-b.prob)-(a.raw-a.prob));
-  const streak=(typeof LB!=='undefined'&&LB.length)? LB[0] : computeStreaks()[0];
+  const streakPool=(typeof LB!=='undefined'&&LB.length)? LB : computeStreaks();
+  const streak=streakPool.find(s=>{ const g=teamGame(s.p.t); return g && !gameHappened(g); });
   const link=(c,label)=>`<button class="wload" type="button" data-id="${esc(c.p.id)}" data-sk="${esc(c.sk)}" data-line="${c.line}">${esc(label!=null?label:(c.p.n+' over '+fmt(c.line)+' '+STATMAP[c.sk].label))}</button>`;
   let s='';
   if(best.length) s+=`<p><b>Cleanest looks:</b> `+best.slice(0,3).map(c=>`${link(c)} (${pct(c.prob)})`).join(', ')+`.</p>`;
