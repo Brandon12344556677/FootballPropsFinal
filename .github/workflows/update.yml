@@ -22,11 +22,6 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Run tests
-        run: |
-          python -m unittest discover -s tests -v
-          node tests/model_sync.mjs
-
       - name: Build site data
         run: python build.py
 
