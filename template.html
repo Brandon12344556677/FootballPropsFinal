@@ -1337,9 +1337,12 @@ async function scanBoard(force){
     edgeRows=modeled; valueRows=modeled.filter(r=>r.lists.includes('V'));
     const nohist=rows.filter(r=>r.nohist).length;
     status.textContent=`${modeled.length} props modeled · ${valueRows.length} value · ${gamesL.length} games${nohist?` · ${nohist} skipped (no game log)`:''}`;
-    if(!modeled.length) body.innerHTML=`<p class="mktnote">No props matched players yet — early in the week the board is thin. Try again closer to game day.</p>`;
-    else renderEdges();
-    renderValue();
+    if(!modeled.length){
+      const msg = gamesL.length
+        ? `<p class="mktnote">No props matched players yet — early in the week the board is thin. Check back closer to game day.</p>`
+        : `<p class="mktnote">📅 <b>Polymarket hasn't posted this week's player-prop markets yet.</b> They usually go up a day or two before kickoff — this board fills in automatically once they do. Nothing's broken; there's just nothing to scan yet.</p>`;
+      body.innerHTML=msg; $('valuebody').innerHTML=msg;
+    } else { renderEdges(); renderValue(); }
   }catch(err){
     body.innerHTML=`<p class="mktnote">Couldn't reach Polymarket from here. The board scan works on the <b>hosted website</b>; a local file or a sandboxed preview can't call the API.</p>`;
     $('valuebody').innerHTML=`<p class="mktnote">Loads on the hosted website.</p>`;
