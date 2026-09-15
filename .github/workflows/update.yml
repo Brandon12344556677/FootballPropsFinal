@@ -1,8 +1,15 @@
 name: Update NFL data
 
+# Pulls fresh stats (nflverse + ESPN box scores for games nflverse hasn't posted
+# yet), grades finished picks, refreshes this week's board, and redeploys.
+# Runs the morning catch-all plus the nights games finish so results post within
+# hours. Cron is UTC; ET times are approximate (shift 1h with daylight saving).
 on:
   schedule:
-    - cron: "0 9 * * *"
+    - cron: "0 9 * * *"   # daily ~5 AM ET  — catch-all
+    - cron: "0 5 * * 5"   # Fri ~1 AM ET    — after Thursday Night Football
+    - cron: "0 5 * * 1"   # Mon ~1 AM ET    — after Sunday games + SNF
+    - cron: "0 5 * * 2"   # Tue ~1 AM ET    — after Monday Night Football
   workflow_dispatch:
 
 permissions:

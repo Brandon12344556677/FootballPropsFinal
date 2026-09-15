@@ -38,6 +38,12 @@ INJ_URL = BASE + "injuries/injuries_{year}.csv"
 ROSTER_URL = BASE + "rosters/roster_{year}.csv"
 UA = {"User-Agent": "prop-streak-lab/2.0"}
 
+# ESPN public box scores — a near-real-time fill for current-season games the
+# schedule already shows final but that nflverse hasn't published weekly stats
+# for yet (nflverse lags 1-2 days). Unofficial but stable and free.
+ESPN_SB = "https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard?dates={season}&seasontype=2&week={week}"
+ESPN_SUM = "https://site.api.espn.com/apis/site/v2/sports/football/nfl/summary?event={event}"
+
 # ---------------------------------------------------------------------------
 # Game-row layout. The front-end reads rows by index — keep in sync with template.html.
 #   0 season  1 week  2 opp  3 type(REG/POST)
@@ -313,6 +319,110 @@ def current_week(sched, season):
         return None
     pending = [g for g in gs if not g["final"]]
     return min(g["week"] for g in pending) if pending else max(g["week"] for g in gs)
+
+
+# ---------------------------------------------------------------------------
+# ESPN box scores (fresh fill for games nflverse hasn't posted yet)
+# ---------------------------------------------------------------------------
+def _espn_cell(d, *names):
+    for n in names:
+        if n in d:
+            return d[n]
+    return None
+
+
+def espn_box_to_rows(summ, sg, season, week, stype, home, away, nfl_index):
+    """One ESPN game summary -> nflverse-shaped stat rows, only for players we can
+    match by name to an existing nflverse player (so ids/positions stay consistent)."""
+    rows = []
+    for tb in (summ.get("boxscore") or {}).get("players") or []:
+        team = team_code((tb.get("team") or {}).get("abbreviation"))
+        opp = away if team == home else home
+        agg, team_targets = {}, 0
+        for cat in tb.get("statistics") or []:
+            name = (cat.get("name") or "").lower()
+            if name not in ("passing", "rushing", "receiving"):
+                continue
+            labels = [str(l).upper() for l in (cat.get("labels") or [])]
+            for ath in cat.get("athletes") or []:
+                disp = ((ath.get("athlete") or {}).get("displayName") or "").strip()
+                if not disp:
+                    continue
+                st = ath.get("stats") or []
+                d = {labels[i]: st[i] for i in range(min(len(labels), len(st)))}
+                e = agg.setdefault(pkey(disp), {"n": disp, "s": {}})
+                if name == "passing":
+                    m = re.match(r"\s*(\d+)\s*/\s*(\d+)", str(_espn_cell(d, "C/ATT") or "0/0"))
+                    e["s"]["completions"] = int(m.group(1)) if m else 0
+                    e["s"]["attempts"] = int(m.group(2)) if m else 0
+                    e["s"]["passing_yards"] = num(_espn_cell(d, "YDS"))
+                    e["s"]["passing_tds"] = num(_espn_cell(d, "TD"))
+                    e["s"]["passing_interceptions"] = num(_espn_cell(d, "INT"))
+                elif name == "rushing":
+                    e["s"]["carries"] = num(_espn_cell(d, "CAR"))
+                    e["s"]["rushing_yards"] = num(_espn_cell(d, "YDS"))
+                    e["s"]["rushing_tds"] = num(_espn_cell(d, "TD"))
+                else:
+                    tg = num(_espn_cell(d, "TGTS", "TAR"))
+                    e["s"]["receptions"] = num(_espn_cell(d, "REC"))
+                    e["s"]["targets"] = tg
+                    e["s"]["receiving_yards"] = num(_espn_cell(d, "YDS"))
+                    e["s"]["receiving_tds"] = num(_espn_cell(d, "TD"))
+                    team_targets += tg if isinstance(tg, (int, float)) else 0
+        for key, e in agg.items():
+            idx = nfl_index.get(key)
+            if not idx:
+                continue                       # only established (name-matched) players
+            pid, pos = idx
+            s = e["s"]
+            if any(isinstance(s.get(c), (int, float)) and not (-10 <= s.get(c) <= 700)
+                   for c in ("passing_yards", "rushing_yards", "receiving_yards")):
+                continue                       # drop obviously bad box-score values
+            tgt = s.get("targets", 0) or 0
+            row = {"player_id": pid, "player_display_name": e["n"], "position": pos,
+                   "season": season, "week": week, "season_type": stype,
+                   "game_id": sg["id"], "team": team, "opponent_team": opp,
+                   "target_share": round(tgt / team_targets, 2) if team_targets else 0}
+            for c in STAT_COLS:
+                row[c] = s.get(c, 0)
+            rows.append(row)
+    return rows
+
+
+def fetch_espn_recent(sched, stats_gids, nfl_index, season):
+    """Stat rows for current-season REG games the schedule shows final but that are
+    missing from the nflverse stats file. Mutates stats_gids with any game it fills."""
+    missing = [g for g in sched.values()
+               if g["season"] == season and g["final"] and g["type"] == "REG" and g["id"] not in stats_gids]
+    if not missing:
+        return []
+    rows = []
+    for wk in sorted({g["week"] for g in missing}):
+        try:
+            sb = json.loads(http_get(ESPN_SB.format(season=season, week=wk)))
+        except Exception as e:  # noqa: BLE001
+            print(f"    ESPN scoreboard wk{wk}: skipped ({e})")
+            continue
+        for ev in sb.get("events", []):
+            comp = (ev.get("competitions") or [{}])[0]
+            if not (((comp.get("status") or {}).get("type") or {}).get("completed")):
+                continue
+            cs = comp.get("competitors") or []
+            home = team_code(next((c.get("team", {}).get("abbreviation") for c in cs if c.get("homeAway") == "home"), None))
+            away = team_code(next((c.get("team", {}).get("abbreviation") for c in cs if c.get("homeAway") == "away"), None))
+            sg = next((g for g in missing if g["week"] == wk and {g["away"], g["home"]} == {home, away}), None)
+            if not sg:
+                continue
+            try:
+                summ = json.loads(http_get(ESPN_SUM.format(event=ev.get("id"))))
+            except Exception as e:  # noqa: BLE001
+                print(f"    ESPN box {ev.get('id')}: skipped ({e})")
+                continue
+            gr = espn_box_to_rows(summ, sg, season, wk, sg["type"], home, away, nfl_index)
+            if gr:
+                rows.extend(gr)
+                stats_gids.add(sg["id"])
+    return rows
 
 
 # ---------------------------------------------------------------------------
@@ -805,7 +915,7 @@ def build_live_picks(picks, slate_games, sched, by_key, snap):
     return len(fresh), added, updated
 
 
-def grade_picks(picks, sched, by_pid, stats_gids):
+def grade_picks(picks, sched, by_pid, stats_gids, espn_gids=frozenset()):
     n = 0
     for p in picks:
         if p["src"] != "live" or p["res"] is not None:
@@ -818,6 +928,8 @@ def grade_picks(picks, sched, by_pid, stats_gids):
         if pl:
             row = next((r for r in pl["g"] if r[0] == p["season"] and r[1] == p["week"]), None)
         if row is None:
+            if p["gid"] in espn_gids:
+                continue   # ESPN fill may not include this player — wait for nflverse before calling it a DNP
             p["res"], p["actual"] = "dnp", None
         else:
             v = stat_value(p["stat"], row)
@@ -939,11 +1051,26 @@ def main():
     if not all_rows:
         die("no data downloaded")
     stats_gids = {r.get("game_id") for r in all_rows if r.get("game_id")}
+    nfl_index = {}                       # normalized name -> (player_id, position) for ESPN matching
+    for r in all_rows:
+        if r.get("position") in SKILL and r.get("player_id"):
+            nfl_index[pkey(r.get("player_display_name") or "")] = (r.get("player_id"), r.get("position"))
 
     print("Downloading schedule, injuries, roster…")
     sched = load_schedule(set(CANDIDATE_SEASONS))
     injuries = load_injuries(SEASON)
     roster = load_roster(SEASON)
+
+    espn_gids = set()
+    try:
+        nfl_gids = set(stats_gids)
+        espn_rows = fetch_espn_recent(sched, stats_gids, nfl_index, SEASON)
+        all_rows.extend(espn_rows)
+        espn_gids = stats_gids - nfl_gids
+        print(f"  ESPN: +{len(espn_rows)} player-rows from {len(espn_gids)} game(s) ahead of nflverse"
+              if espn_rows else "  ESPN: nothing fresher to add (nflverse is current)")
+    except Exception as e:  # noqa: BLE001
+        print(f"  ESPN: skipped ({e}) — using nflverse only")
 
     players = build_players(all_rows, roster, injuries, sched)
     with_games = [p for p in players if p["g"]]
@@ -968,7 +1095,7 @@ def main():
         if k not in by_key or (not by_key[k]["g"] and p["g"]):
             by_key[k] = p
     picks = [p for p in load_picks() if p.get("src") == "live"]
-    graded = grade_picks(picks, sched, by_pid, stats_gids)
+    graded = grade_picks(picks, sched, by_pid, stats_gids, espn_gids)
     print(f"Picks: graded {graded} live pick(s).")
 
     slate_games = None
