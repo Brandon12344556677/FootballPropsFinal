@@ -1786,12 +1786,13 @@ function weekTopPicks(n){
       if(line < (sk==='pass_yds'?150 : st.kind==='yards'?30 : 3.5)) return;
       const cs=contextScale(statFamily(sk,p.p),hist,gamePts,gameSpr,defRatioFor(opp,p.p,sk));
       const mp=calMp(modelProb(vals,line,st.kind,cs.scale)); if(!mp||mp.neff<6) return;
-      if(!best||mp.over>best.prob) best={p, sk, line, prob:mp.over, label:STATMAP[sk].label};
+      if(!best||mp.over>best.prob) best={p, sk, line, prob:mp.over, label:STATMAP[sk].label, opp, home, date:wg.date};
     });
     if(best) out.push(best);
   });
   return out.sort((a,b)=>b.prob-a.prob).slice(0,n);
 }
+function sgDate(d){ if(!d) return ''; const dt=new Date(d+'T12:00:00'); if(isNaN(dt)) return ''; return ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][dt.getDay()]+' '+(dt.getMonth()+1)+'/'+dt.getDate(); }
 function drawSparkle(g,cx,cy,s){
   g.fillStyle='#00c805';
   const path=pts=>{ g.beginPath(); pts.forEach((p,i)=>{ const x=cx+p[0]*s,y=cy+p[1]*s; i?g.lineTo(x,y):g.moveTo(x,y); }); g.closePath(); g.fill(); };
@@ -1813,10 +1814,11 @@ function buildShareCanvas(picks){
   const top=360, bot=H-170, rowH=(bot-top)/Math.max(1,picks.length);
   picks.forEach((pk,i)=>{
     const cy=top+rowH*i+rowH/2;
-    g.textAlign='left'; g.fillStyle='rgba(0,200,5,.75)'; g.font='800 46px Arial'; g.fillText((i+1)+'', 58, cy);
+    g.textAlign='left'; g.fillStyle='rgba(0,200,5,.75)'; g.font='800 48px Arial'; g.fillText((i+1)+'', 56, cy);
     g.fillStyle='#f5f7fa'; g.font='700 46px Arial'; g.fillText(pk.p.n, 138, cy-24);
-    g.fillStyle='#8393a8'; g.font='500 30px Arial'; g.fillText(pk.p.p+' · '+pk.p.t+'    Over '+fmt(pk.line)+' '+pk.label, 138, cy+28);
-    g.textAlign='right'; g.fillStyle='#00c805'; g.font='800 62px Arial'; g.fillText(Math.round(pk.prob*100)+'%', W-58, cy);
+    g.fillStyle='#8393a8'; g.font='500 30px Arial'; g.fillText(pk.p.p+' · '+pk.p.t+'   ·   Over '+fmt(pk.line)+' '+pk.label, 138, cy+22);
+    g.textAlign='right'; g.fillStyle='#00c805'; g.font='800 58px Arial'; g.fillText(Math.round(pk.prob*100)+'%', W-58, cy-18);
+    g.fillStyle='#8393a8'; g.font='500 26px Arial'; g.fillText((pk.home?'vs ':'@ ')+pk.opp+' · '+sgDate(pk.date), W-58, cy+30);
     if(i<picks.length-1){ g.strokeStyle='rgba(255,255,255,.08)'; g.lineWidth=2; g.beginPath(); g.moveTo(58,top+rowH*(i+1)); g.lineTo(W-58,top+rowH*(i+1)); g.stroke(); }
   });
   g.textAlign='center'; g.fillStyle='#00c805'; g.font='700 42px Arial'; g.fillText('propstreaklab.com', W/2, H-108);
