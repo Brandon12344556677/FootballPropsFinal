@@ -1,27 +1,34 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Prop Streak Lab</title>
-<link rel="icon" href="data:,">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2064%2064'%3E%3Crect%20width='64'%20height='64'%20rx='14'%20fill='%230a1628'/%3E%3Cpath%20d='M32,6%20Q32,32%2054,32%20Q32,32%2032,58%20Q32,32%2010,32%20Q32,32%2032,6%20Z'%20fill='%2300c805'/%3E%3C/svg%3E">
+<script data-goatcounter="https://propstreaklive.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600;700&family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,500;1,600&display=swap">
 <style>
 :root{
-  color-scheme:light;
-  --ink:#0b0e11; --bg:#e7e4da; --surface:#ffffff; --surface-2:#f1efe8; --line:#d4d1c7;
-  --text:#0b0e11; --muted:#6c6a61;
-  --accent:#1a56ff; --blaze:#ff3d17; --gold:#ffb020;
-  --hit:#08a457; --hit-soft:#d4f2e0; --miss:#e42313; --miss-soft:#fbdbd6; --push:#8b8a80;
-  --shadow:0 2px 0 rgba(11,14,17,.05),0 12px 30px rgba(11,14,17,.08);
-  --hard:5px 5px 0 var(--ink); --hard-sm:3px 3px 0 var(--ink);
-  --display:"Anton","Barlow Condensed",Impact,sans-serif;
+  color-scheme:dark;
+  --ink:#22354f; --bg:#0a1628; --surface:#0f2038; --surface-2:#142743; --line:#22354f;
+  --text:#ffffff; --muted:#e6eaf0;
+  --accent:#00c805; --blaze:#d98a3e; --gold:#00c805;
+  --hit:#4fb583; --hit-soft:#12352a; --miss:#d76a7a; --miss-soft:#3a1c22; --push:#8393a8;
+  --shadow:0 20px 50px rgba(0,0,0,.45);
+  --hard:0 18px 44px rgba(0,0,0,.45); --hard-sm:0 10px 26px rgba(0,0,0,.4);
+  --display:"Cormorant Garamond",Georgia,"Times New Roman",serif;
   --dispers:"Barlow Condensed",Impact,"Arial Narrow",sans-serif;
   --body:"Barlow",system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
 }
 *{box-sizing:border-box}
 body{background:var(--bg);color:var(--text);font-family:var(--body);line-height:1.5;margin:0;
-  -webkit-font-smoothing:antialiased;font-size:15px;
-  background-image:radial-gradient(rgba(11,14,17,.06) 1px,transparent 1px);background-size:22px 22px}
+  -webkit-font-smoothing:antialiased;font-size:15px;overflow-x:hidden;
+  background-image:
+    linear-gradient(rgba(0,200,5,.035) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(0,200,5,.035) 1px,transparent 1px),
+    radial-gradient(1000px 640px at 15% -8%,rgba(0,200,5,.06),transparent 60%),
+    linear-gradient(180deg,#0b1a32,#0a1628 55%,#081120);
+  background-size:58px 58px,58px 58px,100% 100%,100% 100%;
+  background-attachment:fixed}
 .wrap{max-width:1120px;margin:0 auto;padding:20px 16px 70px}
 a{color:var(--accent)}
 .tnum{font-variant-numeric:tabular-nums}
@@ -44,7 +51,7 @@ h2{margin:0}
 .hero-meta .wk{color:#fff;font-size:14px}
 
 /* tabs */
-.tabs{display:flex;gap:10px;margin:0 0 20px;flex-wrap:wrap}
+.tabs{display:flex;gap:12px;margin:0 0 24px;flex-wrap:wrap;justify-content:center}
 .tab{border:2.5px solid var(--ink);background:var(--surface);color:var(--ink);border-radius:12px;padding:10px 20px;
   font-family:var(--dispers);font-weight:700;text-transform:uppercase;letter-spacing:.7px;font-size:17px;cursor:pointer;box-shadow:var(--hard-sm)}
 .tab[aria-selected=true]{background:var(--ink);color:#fff}
@@ -320,14 +327,234 @@ footer b{color:var(--ink)}
 .beta{font-family:var(--dispers);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;background:var(--blaze);color:#fff;padding:1px 6px;border-radius:5px;vertical-align:3px}
 .corrwarn{background:var(--surface-2);border-left:4px solid var(--gold);padding:9px 13px;border-radius:0 8px 8px 0;font-size:14px;margin-bottom:10px}
 .sliptext{white-space:pre-wrap;font-size:12px;background:var(--surface-2);padding:10px;border-radius:8px;max-height:220px;overflow:auto}
+.panel.collapsible > .mkthead, .panel.collapsible > h2:first-child{cursor:pointer;user-select:none}
+.panel.collapsible .chev{display:inline-block;margin-left:8px;font-size:.72em;color:var(--muted);transition:transform .15s ease;vertical-align:middle}
+.panel.collapsed .chev{transform:rotate(-90deg)}
+.panel.collapsed > *:not(:first-child){display:none!important}
+.panel.collapsed{padding-bottom:14px}
+.apwrap{display:grid;gap:14px}
+.apfield label{display:block;font-family:var(--dispers);font-size:13px;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);font-weight:700;margin-bottom:6px}
+.apteams{display:flex;flex-wrap:wrap;gap:7px}
+.aprow{display:flex;gap:14px;align-items:flex-end;flex-wrap:wrap}
+
+/* ============ ELEGANT NAVY + GOLD "FUND" THEME ============ */
+a{color:var(--gold)}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+/* hero */
+.hero{position:relative;overflow:hidden;border:1px solid rgba(0,200,5,.22);border-radius:14px;padding:40px 34px;margin-bottom:22px;
+  background:radial-gradient(1100px 540px at 12% -12%,rgba(0,200,5,.10),transparent 55%),linear-gradient(160deg,#112846,#0c1c34 55%,#0a1628);
+  box-shadow:0 26px 64px rgba(0,0,0,.5)}
+.hero::before{content:"";position:absolute;inset:0;pointer-events:none;z-index:0;
+  background-image:linear-gradient(rgba(0,200,5,.055) 1px,transparent 1px),linear-gradient(90deg,rgba(0,200,5,.055) 1px,transparent 1px);
+  background-size:54px 54px;opacity:.55;-webkit-mask-image:linear-gradient(180deg,#000,transparent 85%);mask-image:linear-gradient(180deg,#000,transparent 85%)}
+.hero::after{display:none}
+.hero-in{position:relative;z-index:1}
+.eyebrow{color:var(--gold);letter-spacing:3px}
+.hero-title{font-family:var(--display);font-weight:500;text-transform:none;letter-spacing:0;line-height:1.04;
+  font-size:clamp(42px,7.6vw,80px);color:#fff;margin:10px 0 14px}
+.hero-title .hl{color:var(--gold);font-style:italic;font-weight:500}
+.hero-tag{color:#b7c3d1;font-weight:400}
+.hero-meta{color:#8ea0b5}
+.hero-meta b{color:var(--gold);font-family:var(--display);font-weight:600;font-size:34px}
+.hero-meta .wk{color:#e7ecf3}
+
+/* tabs — refined nav */
+.tab{background:transparent;border:1px solid rgba(0,200,5,.30);color:var(--muted);border-radius:8px;box-shadow:none;
+  letter-spacing:1.6px;font-size:19px;padding:13px 32px}
+.tab:hover{color:var(--text);border-color:rgba(0,200,5,.6);transform:none}
+.tab[aria-selected=true]{background:var(--gold);color:#0a1628;border-color:var(--gold)}
+
+/* referral banners */
+.refbanner{border-radius:8px;border:1px solid var(--gold);color:#0a1628;background:var(--gold);
+  box-shadow:0 16px 40px rgba(0,200,5,.20);letter-spacing:1px;text-shadow:none}
+.refbanner:hover{transform:translateY(-2px);box-shadow:0 20px 50px rgba(0,200,5,.32)}
+.refbanner:active{transform:translateY(0)}
+.refbanner.group{background:transparent;color:var(--gold);border:1px solid rgba(0,200,5,.6);box-shadow:none}
+.refbanner.group:hover{background:rgba(0,200,5,.08)}
+.socialbar{display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:16px;margin:26px auto 6px;max-width:860px;
+  padding:22px 18px;border:1px solid rgba(0,200,5,.35);border-radius:16px;background:rgba(0,200,5,.06)}
+.socialtag{width:100%;text-align:center;font-family:var(--display);font-size:26px;letter-spacing:.5px;color:var(--gold);margin-bottom:4px}
+.sociallink{display:inline-flex;align-items:center;gap:10px;padding:15px 34px;border-radius:999px;border:2px solid var(--gold);
+  color:#0a1628;background:var(--gold);text-decoration:none;font-family:var(--dispers);text-transform:uppercase;letter-spacing:1.5px;font-size:20px;font-weight:700;
+  box-shadow:0 12px 32px rgba(0,200,5,.28);transition:transform .15s,box-shadow .15s}
+.sociallink:hover{transform:translateY(-3px);box-shadow:0 18px 44px rgba(0,200,5,.45)}
+.hero-title .tm{font-size:.30em;vertical-align:super;font-style:normal;font-weight:600;opacity:.72;font-family:var(--body);margin-left:2px}
+.brandmark{color:var(--gold);margin:0 0 10px;line-height:0}
+.brandlogo{display:block;width:130px;min-width:0;height:auto;filter:drop-shadow(0 6px 18px rgba(0,200,5,.22))}
+@media(max-width:640px){.brandlogo{width:104px}}
+
+/* how-it-works steps */
+.step{background:var(--surface);border:1px solid rgba(255,255,255,.06);border-radius:10px;box-shadow:0 16px 38px rgba(0,0,0,.38)}
+.step-num{font-family:var(--display);color:var(--gold);font-weight:600}
+.step h3{color:var(--text);font-family:var(--dispers)}
+.step p{color:var(--muted)}
+
+/* panels + section headings */
+.panel{background:var(--surface);border:1px solid rgba(255,255,255,.06);border-radius:10px;
+  box-shadow:0 16px 40px rgba(0,0,0,.36);padding:18px 18px 17px}
+.panel>h2,.mkthead h2{border-left:3px solid var(--gold);padding-left:12px;color:var(--text);letter-spacing:.6px}
+.panel .hint{color:var(--muted)}
+
+/* controls */
+.controls{background:var(--surface);border:1px solid rgba(0,200,5,.16);border-radius:12px;box-shadow:0 20px 50px rgba(0,0,0,.4)}
+.controls::before{color:var(--gold);letter-spacing:2px}
+.field label,.calcrow label,.oppwrap label{color:var(--muted)}
+
+/* inputs */
+input[type=text],input[type=number],input[type=search],select,.stepper input,.calcrow input,.legodds,.fbtext,
+.pkfilters select,.pkfilters input{background:var(--surface-2);color:var(--text);border:1px solid rgba(255,255,255,.10)}
+input::placeholder{color:#6f7f93}
+input:focus,select:focus,textarea:focus,.stepper input:focus{outline:0;border-color:var(--gold);box-shadow:0 0 0 3px rgba(0,200,5,.22)}
+.acbox{background:var(--surface-2);border:1px solid rgba(255,255,255,.12);box-shadow:0 22px 50px rgba(0,0,0,.55)}
+.acitem+.acitem{border-top:1px solid rgba(255,255,255,.06)}
+.acitem:hover,.acitem.on{background:rgba(0,200,5,.14);color:var(--text)}
+.acitem:hover .acpos,.acitem.on .acpos{color:var(--gold)}
+.pmeta{color:var(--muted)} .pmeta b{color:var(--text)}
+
+/* badges */
+.badge{border:1px solid rgba(255,255,255,.14);background:var(--surface-2);color:var(--text)}
+.badge.bad{background:var(--miss);color:#1c0d10;border-color:transparent}
+.badge.warn{background:var(--gold);color:#0a1628;border-color:transparent}
+.badge.good{background:var(--hit);color:#07130d;border-color:transparent}
+.badge.info{background:transparent;color:var(--gold);border-color:rgba(0,200,5,.5)}
+
+/* this-week strip */
+.weekstrip{background:var(--surface-2);border:1px solid rgba(0,200,5,.16);color:#cdd7e2}
+.weekstrip b{color:var(--gold)} .weekstrip .lab{color:var(--muted)}
+
+/* stat chips */
+.chip{border:1px solid rgba(255,255,255,.12);background:transparent;color:var(--muted)}
+.chip:hover{color:var(--text);border-color:rgba(0,200,5,.5);background:transparent}
+.chip[aria-pressed=true]{background:var(--gold);color:#0a1628;border-color:var(--gold)}
+.grplab{color:var(--muted)}
+
+/* line stepper + over/under */
+.stepper button{background:var(--surface-2);border:1px solid rgba(255,255,255,.12);color:var(--text)}
+.stepper button:hover{background:var(--gold);color:#0a1628;border-color:var(--gold)}
+.ou{border:1px solid rgba(255,255,255,.12)}
+.ou button{background:var(--surface-2);color:var(--muted)}
+.ou button+button{border-left:1px solid rgba(255,255,255,.12)}
+.ou #over[aria-pressed=true]{background:var(--hit);color:#07130d}
+.ou #under[aria-pressed=true]{background:var(--miss);color:#fff}
+.opts{color:var(--muted)}
+
+/* result headline */
+.headline .who{font-family:var(--display);font-weight:600;text-transform:none;letter-spacing:0;color:#fff}
+.headline .q{color:var(--muted)} .headline .q b{color:var(--text)}
+.pill{border:1px solid transparent}
+.pill.over{background:var(--hit);color:#07130d} .pill.under{background:var(--miss);color:#fff}
+
+/* tiles */
+.tile{background:var(--surface);border:1px solid rgba(255,255,255,.06);border-radius:10px;box-shadow:0 14px 34px rgba(0,0,0,.34)}
+.tile::before{background:var(--muted)}
+.tile.hi::before{background:var(--hit)} .tile.mid::before{background:var(--gold)} .tile.lo::before{background:var(--miss)}
+.tile .cap,.tile .frac,.tile .avg{color:var(--muted)} .tile .frac b{color:var(--text)}
+.tile .pct{font-weight:600}
+.tile.hi .pct{color:var(--hit)} .tile.mid .pct{color:var(--gold)} .tile.lo .pct{color:var(--miss)}
+.tile.model{background:linear-gradient(180deg,#12294a,#0d1d34);border:1px solid rgba(0,200,5,.40);
+  box-shadow:0 0 0 1px rgba(0,200,5,.12) inset,0 18px 44px rgba(0,0,0,.45)}
+.tile.model .cap,.tile.model .frac,.tile.model .avg{color:#9fb0c4} .tile.model .frac b{color:#fff}
+.tile.model .pct{color:var(--gold)}
+.tile.model.hi .pct{color:var(--hit)} .tile.model.lo .pct{color:var(--miss)} .tile.model.mid .pct{color:var(--gold)}
+
+/* trend */
+.trend>div{background:var(--surface);border:1px solid rgba(255,255,255,.06);border-radius:8px}
+.trend .lab,.trend .sub{color:var(--muted)} .up{color:var(--hit)} .down{color:var(--miss)}
+.trend .big{font-family:var(--display);font-weight:600}
+
+/* charts + legend */
+.sw{border:1px solid rgba(255,255,255,.2)}
+.legend{color:var(--muted)}
+
+/* tables */
+thead th,.edgetbl th{color:var(--muted);border-bottom:1px solid rgba(0,200,5,.22)}
+tbody td,.edgetbl td{border-bottom:1px solid rgba(255,255,255,.06)}
+tbody tr:hover,.edgetbl tr:hover td{background:rgba(0,200,5,.07)}
+.edgeval{font-family:var(--display);font-weight:600}
+.edgeval.pos{color:var(--hit)} .edgeval.neg{color:var(--miss)} .rng{color:var(--muted)}
+.res{border:1px solid rgba(255,255,255,.12)}
+.res.h{background:var(--hit);color:#07130d;border-color:transparent} .res.m{background:var(--miss);color:#fff;border-color:transparent}
+.res.p,.res.d,.res.w{background:var(--surface-2);color:var(--muted);border-color:rgba(255,255,255,.1)}
+.leantag{border:1px solid rgba(255,255,255,.12)}
+.leantag.over{background:var(--hit);color:#07130d;border-color:transparent} .leantag.under{background:var(--miss);color:#fff;border-color:transparent}
+.listchip{border:1px solid rgba(255,255,255,.14)}
+.listchip.T{background:var(--gold);color:#0a1628;border-color:transparent}
+.listchip.V{background:transparent;color:var(--gold);border-color:rgba(0,200,5,.6)}
+
+/* action buttons */
+.btn{background:var(--gold);color:#0a1628;border:1px solid var(--gold);border-radius:6px;box-shadow:0 12px 30px rgba(0,200,5,.22);letter-spacing:1px}
+.btn:hover{transform:translateY(-2px);box-shadow:0 16px 38px rgba(0,200,5,.34)}
+.btn:active{transform:translateY(0)}
+.btn.ghost{background:transparent;color:var(--gold);border:1px solid rgba(0,200,5,.55);box-shadow:none}
+.btn.ghost:hover{background:rgba(0,200,5,.08)}
+.edgeload,.mktuse{background:transparent;border:1px solid rgba(0,200,5,.45);color:var(--gold)}
+.edgeload:hover,.mktuse:hover{background:var(--gold);color:#0a1628;border-color:var(--gold)}
+#edgestatus,#pkstatus{color:var(--muted)}
+
+/* watch / compare */
+.watchstar{background:transparent;border:1px solid rgba(0,200,5,.45);color:var(--gold)}
+.watchstar:hover{background:rgba(0,200,5,.10);transform:none;box-shadow:none}
+.watchstar.on{background:var(--gold);color:#0a1628;border-color:var(--gold);box-shadow:none}
+.cmpbtn.on{background:var(--gold)!important;color:#0a1628!important}
+.watchchip{background:var(--surface-2);border:1px solid rgba(255,255,255,.10)} .watchchip .wpos{color:var(--muted)}
+.watchchip .wload,#comparebody .wload,#lbbody .wload,#digestbody .wload{color:var(--gold)}
+.cmptag{background:var(--hit);color:#07130d}
+
+/* parlay + calc + splits + matchup */
+.parlaysum>div,.splitcard{background:var(--surface-2);border:1px solid rgba(255,255,255,.07)}
+.parlaysum .lab,.parlaysum .sub,.splitcard .lab,.splitcard .sub{color:var(--muted)}
+.parlaysum .big,.splitcard .big{font-family:var(--display);font-weight:600} .parlaysum .big.hit{color:var(--hit)}
+.legrm{background:var(--surface-2);border:1px solid rgba(255,255,255,.12);color:var(--miss)}
+.legrm:hover{background:var(--miss);color:#fff;border-color:transparent}
+.calcrow input{box-shadow:none;font-family:var(--display)}
+.warnbox{background:rgba(0,200,5,.10);border:1px solid rgba(0,200,5,.4);color:var(--text)}
+.matchrow{background:var(--surface-2);border:1px solid rgba(255,255,255,.07)}
+.matchrow .tag{border:1px solid rgba(255,255,255,.12)}
+.tag.soft{background:var(--hit);color:#07130d;border-color:transparent} .tag.tough{background:var(--miss);color:#fff;border-color:transparent}
+.tag.mid{background:var(--surface-2);color:var(--muted);border-color:rgba(255,255,255,.1)}
+.distsum b{color:var(--text);font-family:var(--display);font-weight:600} .distsum{color:var(--muted)}
+
+/* alerts + misc */
+#trapalert{background:var(--surface-2);border:1px solid rgba(217,138,62,.5);box-shadow:none}
+.traphead{color:var(--blaze);font-family:var(--dispers);text-shadow:none}
+.digesttrap,.corrwarn{background:var(--surface-2);border-left:3px solid var(--gold)}
+.slipdrop{background:var(--surface-2);border:1.5px dashed rgba(0,200,5,.35)}
+.slipdrop.drag{border-color:var(--gold)}
+.sliplink{color:var(--gold)} .sliptext{background:var(--surface-2);color:var(--text)}
+.beta{background:var(--blaze);color:#1a0e04}
+.chev{color:var(--gold)}
+#digestbody p{color:#c3cddb} .mktnote,.mktmuted{color:var(--muted)}
+footer{color:var(--muted);border-top:1px solid rgba(0,200,5,.2)} footer b{color:var(--text)}
+/* brighter text for readability */
+.hero-tag,.hero-meta,.hero-meta .wk,.weekstrip,#digestbody p,.step p,.mktnote,.mktmuted,.pmeta,.rng{color:#ffffff}
+.tile.model .cap,.tile.model .frac,.tile.model .avg{color:#dbe2ea}
+input::placeholder{color:#b7c0cc}
+#digestbody p{margin:9px 4px;line-height:1.65} #digestbody b{font-weight:700}
+/* keep all writing white (only the small filled pills/buttons keep their own text color) */
+.eyebrow,.hero-title,.hero-title .hl,.step-num,.hero-meta b,.weekstrip b,a,.sliplink,.chev,.traphead,
+.badge.info,.listchip.V,.refbanner.group,.watchstar,.watchchip .wload,#digestbody b,#digestbody .wload,#comparebody .wload,#lbbody .wload,
+.tile .pct,.tile.hi .pct,.tile.mid .pct,.tile.lo .pct,.tile.model .pct,.tile.model.hi .pct,.tile.model.mid .pct,.tile.model.lo .pct,
+.edgeval,.edgeval.pos,.edgeval.neg,.up,.down,.parlaysum .big.hit{color:#fff}
+table td,table th,thead th,tbody td,.edgetbl td,.edgetbl th,.caltbl td,.caltbl th,.edgeload,.mktuse{color:#fff}
 </style>
 
 <div class="wrap">
   <div class="hero">
     <div class="hero-in">
       <div>
+        <div class="brandmark">
+          <svg class="brandlogo" viewBox="0 0 260 132" role="img" aria-label="Prop Streak Lab logo" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+            <path d="M200,8 Q200,66 232,66 Q200,66 200,124 Q200,66 168,66 Q200,66 200,8 Z"/>
+            <path d="M168,60 Q118,76 66,96 Q120,82 168,60 Z"/>
+            <path d="M154,68 Q116,80 82,95 Q118,86 154,68 Z"/>
+            <path d="M132,79 Q112,85 98,93 Q114,89 132,79 Z"/>
+            <path d="M88,99 Q80,102 72,106 Q80,104 88,99 Z"/>
+            <path d="M66,107 Q61,110 56,112 Q61,109 66,107 Z"/>
+          </svg>
+        </div>
         <div class="eyebrow">NFL Player Props · Real game logs · Tracked picks</div>
-        <h1 class="hero-title">Prop <span class="hl">Streak</span> Lab</h1>
+        <h1 class="hero-title">Prop <span class="hl">Streak</span> Lab<span class="tm">™</span></h1>
         <div class="hero-tag">See how often any NFL player clears a prop, get a calibrated chance for the line, price it against Polymarket, and check how past picks actually held up.</div>
       </div>
       <div class="hero-meta"><b id="dncount">—</b>players tracked<br><br>data through<br><span class="wk" id="dnthru">—</span><br><span class="wk" id="dnweek"></span></div>
@@ -335,23 +562,53 @@ footer b{color:var(--ink)}
   </div>
 
   <div class="tabs" role="tablist">
-    <button class="tab" role="tab" data-tab="research" aria-selected="true">🔬 Research</button>
-    <button class="tab" role="tab" data-tab="picks" aria-selected="false">📒 Past picks</button>
+    <button class="tab" role="tab" data-tab="week" aria-selected="true">📅 This week</button>
+    <button class="tab" role="tab" data-tab="player" aria-selected="false">🔬 Player</button>
+    <button class="tab" role="tab" data-tab="tools" aria-selected="false">🧰 Tools</button>
+    <button class="tab" role="tab" data-tab="past" aria-selected="false">📒 Past picks</button>
   </div>
 
   <a id="refbanner" class="refbanner" href="#" target="_blank" rel="noopener" hidden></a>
   <a id="refbanner2" class="refbanner group" href="#" target="_blank" rel="noopener" hidden></a>
 
-<div id="tab-research">
+  <div id="socialbar" class="socialbar" hidden>
+    <span class="socialtag">Follow us</span>
+    <a id="social_ig" class="sociallink" href="#" target="_blank" rel="noopener" hidden>📸 Instagram</a>
+    <a id="social_tt" class="sociallink" href="#" target="_blank" rel="noopener" hidden>🎵 TikTok</a>
+  </div>
+
+<div id="page-week">
   <div class="panel" id="digestpanel" hidden>
     <div class="mkthead"><h2>📰 This week</h2><span class="mktmuted" id="digestcap"></span></div>
     <div id="digestbody"></div>
   </div>
 
+  <div class="panel" id="edgepanel">
+    <div class="mkthead">
+      <h2>🔒 25 Guaranteed</h2>
+      <button id="edgescan" class="btn">Scan the board</button>
+      <span id="edgestatus"></span>
+      <span class="mktmuted" id="recT"></span>
+    </div>
+    <div id="edgebody"><p class="mktnote">Scans every player prop on this week's Polymarket board and shows the <b>25 highest model chances</b> — the surest plays by the numbers, regardless of payout. Especially handy if you're holding <b>credits you can't withdraw without trading</b>: these are the props most likely to resolve as wins, so clearing that requirement lets you cash out your balance. Each pick is recorded before kickoff and graded in the <b>Past picks</b> tab. <span class="mktmuted">Needs the hosted website (the Polymarket API can't be reached from a local file).</span></p></div>
+  </div>
+
+  <div class="panel" id="valuepanel">
+    <div class="mkthead"><h2>⚡ Value spots</h2><span class="mktmuted">where the model's odds most beat the market</span><span class="mktmuted" id="recV"></span></div>
+    <div id="valuebody"><p class="mktnote">The top 25 bets where the model's chance is well above the market's price — even the bottom of its 80% range beats what you'd pay — ranked by that edge. Prices are the <b>ask</b> on the global Polymarket book, so check your Polymarket US price before betting.</p></div>
+  </div>
+
+  <div class="panel" id="lbpanel">
+    <div class="mkthead"><h2>🔥 Hit streak leaderboard</h2><span class="mktmuted">longest active over streaks — consecutive games clearing the site's realistic line</span></div>
+    <div id="lbbody"></div>
+  </div>
+</div><!-- /page-week -->
+
+<div id="page-player" hidden>
   <div class="howto">
     <div class="step"><div class="step-num">1</div><h3>Pick a player</h3><p>Search anyone, set a line (like 62.5 rush yds), and choose Over or Under.</p></div>
     <div class="step"><div class="step-num">2</div><h3>See the chance</h3><p>A recency-weighted model turns the game log into a calibrated chance with a range, adjusted for the Vegas line and the opponent's defense.</p></div>
-    <div class="step"><div class="step-num">3</div><h3>Price &amp; track</h3><p>Enter your Polymarket price for the payout and edge, build parlays, scan the week's board, and audit past picks.</p></div>
+    <div class="step"><div class="step-num">3</div><h3>Price &amp; track</h3><p>Enter your Polymarket price for the payout and edge, then use the <b>Tools</b> tab for parlays, comparisons and the bet-slip scanner.</p></div>
   </div>
 
   <div class="controls">
@@ -393,11 +650,6 @@ footer b{color:var(--ink)}
     </div>
   </div>
 
-  <div class="panel watchpanel" id="watchpanel" hidden>
-    <div class="mkthead"><h2>⭐ Watchlist</h2><span class="mktmuted">Players you've starred — saved on this device</span></div>
-    <div class="watchlist" id="watchlist"></div>
-  </div>
-
   <div class="weekstrip" id="weekstrip" hidden></div>
 
   <div class="headline" id="headline"></div>
@@ -411,27 +663,6 @@ footer b{color:var(--ink)}
   <div class="panel" id="calcpanel">
     <div class="mkthead"><h2>Bet calculator</h2></div>
     <div id="calcbody"></div>
-  </div>
-
-  <div class="panel" id="parlaypanel">
-    <div class="mkthead"><h2>Parlay builder</h2><button id="addleg" class="btn">➕ Add current pick</button></div>
-    <div id="parlaybody"></div>
-  </div>
-
-  <div class="panel" id="comparepanel" hidden>
-    <div class="mkthead"><h2>⚖️ Compare players</h2><span class="mktmuted" id="comparecap"></span><button id="cmpclear" class="btn ghost" type="button">Clear</button></div>
-    <p class="mktnote">Star players with <b>⚖ Compare</b> on their card, then set a stat, line and side above — every player is scored for that exact prop so you can see who's the better bet. Saved on this device.</p>
-    <div id="comparebody"></div>
-  </div>
-
-  <div class="panel" id="slippanel">
-    <div class="mkthead"><h2>🧾 Bet-slip scanner <span class="beta">beta</span></h2><span class="mktmuted">upload or paste a screenshot — we read the legs and grade them</span></div>
-    <div id="slipdrop" class="slipdrop">
-      <p style="margin:2px 0"><b>Drop a bet-slip screenshot here</b>, <label class="sliplink">browse<input type="file" id="slipfile" accept="image/*" hidden></label>, or paste it (Ctrl/⌘-V).</p>
-    </div>
-    <p class="mktnote">Best-effort OCR of a DraftKings / FanDuel / Polymarket-style slip. Each leg's player, prop, side and line are matched to the model and graded, and same-game legs are flagged as correlated. The image is read in your browser and never uploaded.</p>
-    <div id="slipstatus" class="mktmuted" style="margin:4px"></div>
-    <div id="slipbody"></div>
   </div>
 
   <div class="twocol">
@@ -468,32 +699,61 @@ footer b{color:var(--ink)}
     <h2>Recent games</h2>
     <div class="tblwrap"><table id="tbl"></table></div>
   </div>
+</div><!-- /page-player -->
 
-  <div class="panel" id="lbpanel">
-    <div class="mkthead"><h2>🔥 Hit streak leaderboard</h2><span class="mktmuted">longest active over streaks — consecutive games clearing the site's realistic line</span></div>
-    <div id="lbbody"></div>
+<div id="page-tools" hidden>
+  <div class="panel watchpanel" id="watchpanel" hidden>
+    <div class="mkthead"><h2>⭐ Watchlist</h2><span class="mktmuted">Players you've starred — saved on this device</span></div>
+    <div class="watchlist" id="watchlist"></div>
   </div>
 
-  <div class="panel" id="edgepanel">
-    <div class="mkthead">
-      <h2>🔒 25 Guaranteed</h2>
-      <button id="edgescan" class="btn">Scan the board</button>
-      <span id="edgestatus"></span>
-      <span class="mktmuted" id="recT"></span>
+  <div class="panel" id="comparepanel" hidden>
+    <div class="mkthead"><h2>⚖️ Compare players</h2><span class="mktmuted" id="comparecap"></span><button id="cmpclear" class="btn ghost" type="button">Clear</button></div>
+    <p class="mktnote">Star players with <b>⚖ Compare</b> on their card in the <b>Player</b> tab, then set a stat, line and side there — every player is scored for that exact prop so you can see who's the better bet. Saved on this device.</p>
+    <div id="comparebody"></div>
+  </div>
+
+  <div class="panel" id="autoparlaypanel">
+    <div class="mkthead"><h2>🎲 Build me a parlay</h2><span class="mktmuted">pick teams &amp; risk — we assemble the legs</span></div>
+    <div class="apwrap">
+      <div class="apfield"><label>Teams <span class="mktmuted" style="text-transform:none;letter-spacing:0;font-weight:400">— leave blank for any team playing this week</span></label><div class="apteams" id="apTeams"></div></div>
+      <div class="aprow">
+        <div class="apfield" style="margin:0"><label>Risk level</label>
+          <select id="apRisk">
+            <option value="safe">Safe — highest-chance legs</option>
+            <option value="balanced" selected>Balanced</option>
+            <option value="longshot">Long shot — bigger payout</option>
+          </select>
+        </div>
+        <div class="apfield" style="margin:0"><label>Legs</label>
+          <select id="apLegs"><option>2</option><option>3</option><option selected>4</option><option>5</option><option>6</option><option>7</option><option>8</option></select>
+        </div>
+        <button id="apBuild" class="btn" type="button">Build my parlay ↓</button>
+      </div>
+      <div id="apnote" class="mktnote" style="margin-left:0"></div>
     </div>
-    <div id="edgebody"><p class="mktnote">Scans every player prop on this week's Polymarket board and shows the <b>25 highest model chances</b> — the surest plays by the numbers, regardless of payout. Each pick is recorded before kickoff and graded in the <b>Past picks</b> tab. <span class="mktmuted">Needs the hosted website (the Polymarket API can't be reached from a local file).</span></p></div>
   </div>
 
-  <div class="panel" id="valuepanel">
-    <div class="mkthead"><h2>⚡ Value spots</h2><span class="mktmuted">where the model's odds most beat the market</span><span class="mktmuted" id="recV"></span></div>
-    <div id="valuebody"><p class="mktnote">The top 25 bets where the model's chance is well above the market's price — even the bottom of its 80% range beats what you'd pay — ranked by that edge. Prices are the <b>ask</b> on the global Polymarket book, so check your Polymarket US price before betting.</p></div>
+  <div class="panel" id="parlaypanel">
+    <div class="mkthead"><h2>Parlay builder</h2><button id="addleg" class="btn">➕ Add current pick</button></div>
+    <div id="parlaybody"></div>
   </div>
-</div><!-- /tab-research -->
+
+  <div class="panel" id="slippanel">
+    <div class="mkthead"><h2>🧾 Bet-slip scanner <span class="beta">beta</span></h2><span class="mktmuted">upload or paste a screenshot — we read the legs and grade them</span></div>
+    <div id="slipdrop" class="slipdrop">
+      <p style="margin:2px 0"><b>Drop a bet-slip screenshot here</b>, <label class="sliplink">browse<input type="file" id="slipfile" accept="image/*" hidden></label>, or paste it (Ctrl/⌘-V).</p>
+    </div>
+    <p class="mktnote">Best-effort OCR of a DraftKings / FanDuel / Polymarket-style slip. Each leg's player, prop, side and line are matched to the model and graded, and same-game legs are flagged as correlated. The image is read in your browser and never uploaded.</p>
+    <div id="slipstatus" class="mktmuted" style="margin:4px"></div>
+    <div id="slipbody"></div>
+  </div>
+</div><!-- /page-tools -->
 
 <div id="tab-picks" hidden>
   <div class="panel">
     <div class="mkthead"><h2>📒 Past picks — how they held up</h2><span id="pkstatus"></span></div>
-    <p class="mktnote"><b>Live picks</b> are recorded by the auto-updater before kickoff (every prop on the Polymarket board with a model chance, tagged 25 Guaranteed / Value where it qualified) and graded from the official box score. <b>Backtest</b> picks are what the model would have said before each past game, using only earlier games, at the site's auto-seeded line — no market prices exist for those. Filter by anything below.</p>
+    <p class="mktnote"><b>2026 picks</b> are recorded live by the auto-updater before kickoff (every prop on the Polymarket board with a model chance, tagged 25 Guaranteed / Value where it qualified) and graded from the official box score. <b>2025 picks</b> are what the model would have said before each past game, using only earlier games, at the site's auto-seeded line — no market prices exist for those. Filter by anything below.</p>
     <div class="pkfilters" id="pkfilters"></div>
     <div id="pksummary"></div>
   </div>
@@ -534,7 +794,6 @@ footer b{color:var(--ink)}
   </div>
 
   <footer>
-    <b>How the chance is computed:</b> the model takes the player's last 20 games, weights recent ones more (half-life 6 games), smooths the values into a distribution, and reads off the probability of clearing the line. Before that, the distribution is scaled for the game: this week's Vegas implied team points and spread against the player's usual, and how much the opponent's defense allows to the position versus the league average (strengths fitted on the backtest; switch it off with the checkbox to see the raw history). Small samples are shrunk toward 50/50 and every chance comes with an 80% range. The Last 5/10/15/20 tiles are the plain hit rates for comparison; a game landing exactly on the line is a push and is excluded.<br>
     <b>Data:</b> nflverse public weekly stats, schedules, injury reports and rosters (regular season + playoffs). Defense ranks blend this season with last. Injury status is the latest official report and can change on game day.<br>
     <b>Prices:</b> the board scan reads the global Polymarket book and uses the price you'd pay (the ask). Polymarket US runs a separate order book, so type the price you see there into the Bet calculator or a parlay leg for your real payout (each share pays $1, so multiplier = $1 ÷ price). Backward-looking research, <b>not betting advice</b>; past accuracy is shown in the Past picks tab so you can judge it yourself.
   </footer>
@@ -544,13 +803,15 @@ footer b{color:var(--ink)}
 const DB = __DATA__;
 
 // ▼▼▼ PASTE YOUR POLYMARKET REFERRAL LINK HERE so visitors sign up with your code ▼▼▼
-const REFERRAL = { url: "https://polymarket.us/join/boomerlux", text: "🎁 Click here to get $50 FREE when you sign up and trade on Polymarket →" };
+const REFERRAL = { url: "https://polymarket.us/join/propstreaklab", text: "🎁 Click here to get $50 FREE when you sign up and trade on Polymarket →" };
 // ▲ e.g. url: "https://polymarket.com/@yourhandle" or your invite URL. Leave "" to hide the banner. ▲
 // Second banner: join our Polymarket squad/group. Leave url "" to hide it.
-const REFERRAL2 = { url: "https://polymarket.us/squad/join/CDU9RMD97K7O1G95yAao?referrer=boomerlux", text: "👥 Join our Polymarket group →" };
+const REFERRAL2 = { url: "https://polymarket.us/squad/join/CDU9RMD97K7O1G95yAao?referrer=propstreaklab", text: "👥 Join our Polymarket group →" };
+// ▼▼▼ SOCIAL FOLLOW LINKS — put your full profile URLs here (placeholders below; replace with your real handles). Leave "" to hide a button. ▼▼▼
+const SOCIAL = { instagram: "https://www.instagram.com/propstreaklab", tiktok: "https://www.tiktok.com/@propstreaklab" };
 
 // ▼▼▼ FEATURE-SUGGESTION INBOX — replace with your company email. Suggestions open in the visitor's mail app addressed here. ▼▼▼
-const FEEDBACK_EMAIL = "feedback@example.com";
+const FEEDBACK_EMAIL = "info@propstreaklab.com";
 // ▲ e.g. "hello@yourcompany.com" ▲
 
 const $ = id => document.getElementById(id);
@@ -614,8 +875,6 @@ function contextScale(fam, hist, gamePts, gameSpr, defRatio){
 }
 // ==== END MODEL ====
 
-// Game-row layout (see build.py): 0 season 1 week 2 opp 3 type 4 pass_yds 5 pass_td 6 pass_att 7 pass_cmp 8 pass_int
-// 9 rush_att 10 rush_yds 11 rush_td 12 rec 13 tgt 14 rec_yds 15 rec_td 16 home 17 target_share 18 vegas_total 19 spread_for_team
 const STATS = [
   {key:'pass_yds',   label:'Pass Yds',      grp:'Passing',   get:g=>g[4]},
   {key:'pass_td',    label:'Pass TDs',      grp:'Passing',   get:g=>g[5]},
@@ -632,7 +891,6 @@ const STATS = [
   {key:'rush_rec_yds',label:'Rush+Rec Yds', grp:'Combo',     get:g=>g[10]+g[14]},
   {key:'pass_rush_yds',label:'Pass+Rush Yds',grp:'Combo',    get:g=>g[4]+g[10]},
   {key:'scrim_td',   label:'Rush+Rec TDs',  grp:'Combo',     get:g=>g[11]+g[15]},
-  // Standard PPR: pass yd/25, pass TD 4, INT -2, rush yd/10, rush TD 6, reception 1, rec yd/10, rec TD 6 (no fumble/2pt data)
   {key:'fantasy',    label:'Fantasy (PPR)', grp:'Fantasy',   get:g=>0.04*g[4]+4*g[5]-2*g[8]+0.1*g[10]+6*g[11]+g[12]+0.1*g[14]+6*g[15]},
 ];
 STATS.forEach(s=>{ s.kind = COUNT_STATS.has(s.key)?'count':'yards'; });
@@ -641,13 +899,15 @@ const GRPORDER = ['Passing','Rushing','Receiving','Combo','Fantasy'];
 const POS_DEFAULT = {QB:'pass_yds', RB:'rush_yds', FB:'rush_yds', WR:'rec_yds', TE:'rec_yds'};
 const statLabel = k => STATMAP[k]? STATMAP[k].label : k;
 
-// ---- indexes ----
 const byId = {}, byKey = {};
 DB.players.forEach(p=>{ p._label = `${p.n} (${p.p}, ${p.t})`; byId[p.id]=p;
   const k=pkey(p.n); if(!byKey[k] || (!byKey[k].g.length && p.g.length)) byKey[k]=p; });
 const WEEK = DB.week || {games:[]};
 const TEAM_GAME = {}; (WEEK.games||[]).forEach(g=>{ TEAM_GAME[g.away]=g; TEAM_GAME[g.home]=g; });
 function teamGame(t){ return TEAM_GAME[t]||null; }
+function gameHappened(g){ if(!g) return false; if(g.final) return true; if(!g.date) return false;
+  const m=String(g.time||'').match(/^(\d{1,2}):(\d{2})$/), tm=m?(m[1].padStart(2,'0')+':'+m[2]):'12:00';
+  const dt=new Date(g.date+'T'+tm+':00'); return isFinite(dt.getTime()) && dt.getTime()<=Date.now(); }
 function oppOf(p){ const g=teamGame(p.t); if(!g) return null; return g.away===p.t? g.home : g.away; }
 const DAYS=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'], MONS=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 function kickoff(g){
@@ -666,7 +926,6 @@ function vegas(g){
 
 let state = { player:null, stat:'pass_yds', line:0.5, ou:'over', playoffs:true, adj:true };
 
-// ---- init static bits ----
 $('dncount').textContent = DB.players.filter(p=>p.g.length).length;
 $('dnthru').textContent = DB.thru || '—';
 if(WEEK.week) $('dnweek').textContent = `${WEEK.season} · week ${WEEK.week} on deck`;
@@ -677,6 +936,11 @@ if(WEEK.week) $('dnweek').textContent = `${WEEK.season} · week ${WEEK.week} on 
 (function renderRef(){ const b=$('refbanner');
   if(REFERRAL.url){ b.href=REFERRAL.url; b.textContent=REFERRAL.text; b.hidden=false; } else b.hidden=true;
   const b2=$('refbanner2'); if(REFERRAL2.url){ b2.href=REFERRAL2.url; b2.textContent=REFERRAL2.text; b2.hidden=false; } else b2.hidden=true; })();
+(function renderSocial(){ const ig=$('social_ig'), tt=$('social_tt'), bar=$('socialbar'); if(!bar) return;
+  const S=(typeof SOCIAL!=='undefined')?SOCIAL:{};
+  if(S.instagram){ ig.href=S.instagram; ig.hidden=false; } else ig.hidden=true;
+  if(S.tiktok){ tt.href=S.tiktok; tt.hidden=false; } else tt.hidden=true;
+  bar.hidden = !(S.instagram||S.tiktok); })();
 
 (function(){
   const wrap=$('chips');
@@ -694,24 +958,25 @@ if(WEEK.week) $('dnweek').textContent = `${WEEK.season} · week ${WEEK.week} on 
 })();
 function syncChips(){ document.querySelectorAll('.chip').forEach(c=>c.setAttribute('aria-pressed', c.dataset.key===state.stat?'true':'false')); }
 
-// ---- tabs ----
+const PAGE_IDS={week:'page-week', player:'page-player', tools:'page-tools', past:'tab-picks'};
 function showTab(name){
+  if(name==='picks') name='past';
+  if(name==='research') name='week';
+  if(!PAGE_IDS[name]) name='week';
   document.querySelectorAll('.tab').forEach(t=>t.setAttribute('aria-selected', String(t.dataset.tab===name)));
-  $('tab-research').hidden = name!=='research';
-  $('tab-picks').hidden = name!=='picks';
-  if(name==='picks') initPicks();
-  try{ history.replaceState(null,'', name==='picks'? '#picks' : location.pathname+location.search); }catch(e){}
+  for(const k in PAGE_IDS){ const el=$(PAGE_IDS[k]); if(el) el.hidden = k!==name; }
+  if(name==='past') initPicks();
+  try{ history.replaceState(null,'', '#'+name); }catch(e){}
+  window.scrollTo({top:0});
 }
 document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>showTab(t.dataset.tab));
 
-// ---- game helpers (the playoff toggle applies EVERYWHERE: tiles, calculator, parlay, board) ----
 function gamesOf(p){ if(!p) return []; return state.playoffs? p.g : p.g.filter(x=>x[3]==='REG'); }
 function games(){ return gamesOf(state.player); }
 function valuesOf(p, sk){ const st=STATMAP[sk]; return gamesOf(p).map(st.get); }
 function defRatioFor(opp, pos, sk){ const dp=defPos(pos), ds=defStatFor(sk,pos);
   if(!opp||!ds||!DB.defense||!DB.defense[opp]||!DB.defense[opp][dp]||!DB.defense[opp][dp][ds]||!DB.defAvg||!DB.defAvg[dp]||!DB.defAvg[dp][ds]) return null;
   return DB.defense[opp][dp][ds].a/DB.defAvg[dp][ds]; }
-// Game-context multiplier for a player/stat: this week's Vegas line (or the slate game passed in) + opponent's defense.
 function contextFor(p, sk, oppOverride, gameOverride){
   const off={scale:1, env:1, def:1, opp:null, gamePts:null, gameSpr:null, defRatio:null, on:false};
   if(!state.adj||!p) return off;
@@ -738,7 +1003,6 @@ function rateOn(gms, statKey, line, ou){
   return {pct:cnt?Math.round(100*hit/cnt):null,hit,cnt,push,n:gms.length,avg:gms.length?sum/gms.length:0};
 }
 
-// ---- render ----
 function renderEmpty(){
   $('pmeta').innerHTML=''; $('badges').innerHTML=''; $('weekstrip').hidden=true;
   updateWatchStar(); updateCmpBtn();
@@ -821,11 +1085,9 @@ function renderTrend(){
   const l5=g.slice(-5).map(st.get), l20=g.slice(-20).map(st.get);
   const a5=l5.reduce((a,b)=>a+b,0)/Math.max(1,l5.length), a20=l20.reduce((a,b)=>a+b,0)/Math.max(1,l20.length);
   const d=a20? (a5-a20)/a20 : 0;
-  // streak vs the current line/side
   let streak=0, kind=null;
   for(let i=g.length-1;i>=0;i--){ const v=st.get(g[i]); if(v===state.line) break; const hit = state.ou==='over'? v>state.line : v<state.line;
     if(kind===null) kind=hit; if(hit!==kind) break; streak++; }
-  // usage
   let usage='';
   if(p.p==='QB'){ const u5=g.slice(-5).map(x=>x[6]), u20=g.slice(-20).map(x=>x[6]); const m5=u5.reduce((a,b)=>a+b,0)/Math.max(1,u5.length), m20=u20.reduce((a,b)=>a+b,0)/Math.max(1,u20.length);
     usage=`<div class="lab">Usage · pass attempts</div><div class="big">${fmt(m5)} <span class="sub">L5 avg</span></div><div class="sub">vs ${fmt(m20)} over L20</div>`; }
@@ -893,7 +1155,6 @@ function drawDist(){
   const W=520,H=220,padL=12,padR=12,padT=16,padB=32, plotW=W-padL-padR, plotH=H-padT-padB;
   const max=Math.max(vals[vals.length-1], state.line, 1);
   const nb=Math.min(10, Math.max(5, Math.round(Math.sqrt(vals.length))+3));
-  // bins are anchored so the line is a bin EDGE — every bar is cleanly over or under
   const bw=max/nb, off=((state.line % bw)+bw)%bw;
   const edges=[]; for(let e=off-bw; e<max+bw; e+=bw) edges.push(e);
   const bins=new Array(edges.length-1).fill(0);
@@ -919,7 +1180,6 @@ function drawDist(){
   $('disthint').textContent=`Each bar = games in that range. Green clears your line, red misses.`;
 }
 
-// ---- matchup & splits ----
 const DEF_STATS=new Set(['pass_yds','pass_td','rush_yds','rush_td','rec_yds','rec','rec_td']);
 function defPos(p){ return p==='FB'?'RB':p; }
 function ord(n){ const s=['th','st','nd','rd'], v=n%100; return n+(s[(v-20)%10]||s[v]||s[0]); }
@@ -959,7 +1219,6 @@ function renderSplits(){
   $('splitbody').innerHTML=html;
 }
 
-// ---- bet calculator ----
 function renderCalc(){
   const body=$('calcbody'); if(!state.player){ body.innerHTML=''; return; }
   const st=STATMAP[state.stat], prev=$('yourodds'), oddsVal=prev?prev.value:'';
@@ -991,7 +1250,6 @@ function updateCalc(){
   `</div><p class="mktnote" style="margin-top:8px">${conf} Edge = model chance minus the price's implied chance; EV = chance × multiplier − 1. Kelly sizing assumes the model is right — it isn't always, so a quarter of it is shown.</p>`;
 }
 
-// ---- live market (Polymarket) ----
 const MKT_STAT = [
   [/passing yards/i,'pass_yds'], [/passing touchdowns|pass(ing)? tds/i,'pass_td'],
   [/completions/i,'pass_cmp'], [/passing attempts|pass attempts/i,'pass_att'], [/interceptions/i,'pass_int'],
@@ -1019,13 +1277,13 @@ function parseMarket(m){
   const io=Array.isArray(outs)? outs.findIndex(o=>/over/i.test(String(o))) : -1;
   const mid=(io>=0&&prices[io]!=null)? parseFloat(prices[io]) : null;
   let bid=parseFloat(m.bestBid), ask=parseFloat(m.bestAsk);
-  if(isFinite(bid)&&isFinite(ask)&&io===1){ const b=bid; bid=1-ask; ask=1-b; }   // book quotes the first outcome
+  if(isFinite(bid)&&isFinite(ask)&&io===1){ const b=bid; bid=1-ask; ask=1-b; }
   let spread=(m.spread!=null&&m.spread!=='')? parseFloat(m.spread) : null;
   if(spread==null&&isFinite(bid)&&isFinite(ask)) spread=+(ask-bid).toFixed(3);
   const liq=parseFloat(m.liquidityNum||0)||0, vol=parseFloat(m.volumeNum||0)||0;
   const tight=spread!=null&&spread<=0.15, deep=liq>=300&&spread!=null&&spread<=0.60;
   let tradeable=tight||deep;
-  const overBuy=isFinite(ask)?ask:mid, underBuy=isFinite(bid)? 1-bid : (mid!=null? 1-mid : null);   // what you PAY for each side
+  const overBuy=isFinite(ask)?ask:mid, underBuy=isFinite(bid)? 1-bid : (mid!=null? 1-mid : null);
   const ok=p=>p!=null&&isFinite(p)&&p>0.02&&p<0.98;
   if(!(ok(overBuy)&&ok(underBuy))) tradeable=false;
   const line=(m.line!=null&&m.line!=='')? parseFloat(m.line) : parseFloat(mm[3]);
@@ -1095,7 +1353,7 @@ function sortRows(rows, key, dir){ return [...rows].sort((a,b)=>{
 function renderEdges(){
   const rows=sortRows(edgeRows, edgeSort.key, edgeSort.dir).slice(0,25);
   $('edgebody').innerHTML=pickTable(rows,{sort:edgeSort})+
-    `<p class="mktnote" style="margin-top:8px">The 25 props with the highest <b>model chance</b> on this week's board, regardless of payout. <b>Model</b> = the chance the Bet side hits, with its 80% range and the games it's based on. Click a header to sort. These picks are recorded before kickoff and graded in <b>Past picks</b>.</p>`;
+    `<p class="mktnote" style="margin-top:8px">The 25 props with the highest <b>model chance</b> on this week's board, regardless of payout — best if you're holding <b>credits you can't withdraw without trading</b>, since these are the props most likely to win and let you cash out. <b>Model</b> = the chance the Bet side hits, with its 80% range and the games it's based on. Click a header to sort. These picks are recorded before kickoff and graded in <b>Past picks</b>.</p>`;
   $('edgebody').querySelectorAll('.edgetbl th').forEach(t=>t.onclick=()=>{ const k=t.dataset.k; if(!k) return;
     if(edgeSort.key===k) edgeSort.dir*=-1; else { edgeSort.key=k; edgeSort.dir=['name','statText','side','matchup'].includes(k)?1:-1; } renderEdges(); });
   wireLoad($('edgebody'), rows);
@@ -1117,7 +1375,6 @@ function loadEdge(r){
   $('headline').scrollIntoView({behavior:'smooth',block:'start'});
 }
 
-// ---- parlay builder ----
 let PARLAY=[]; try{ PARLAY=JSON.parse(localStorage.getItem('psl_parlay')||'[]'); }catch(e){ PARLAY=[]; }
 function saveParlay(){ try{ localStorage.setItem('psl_parlay',JSON.stringify(PARLAY)); }catch(e){} }
 function legPlayer(lg){ return byId[lg.pid] || DB.players.find(p=>p.n===lg.name) || null; }
@@ -1173,13 +1430,85 @@ function updateParlaySum(){
     : `<p class="mktnote" style="margin-top:8px">Type every leg's Polymarket price (¢) to see your real payout multiplier. <b>Fair multiplier</b> = the break-even payout for the combined chance ($1 ÷ chance).</p>`);
 }
 
-// ---- controls wiring ----
+const AP_RISK={ safe:{lo:0.63,hi:1,legs:3,label:'Safe'}, balanced:{lo:0.555,hi:0.70,legs:4,label:'Balanced'}, longshot:{lo:0.50,hi:0.58,legs:5,label:'Long shot'} };
+function apCandidates(teamsSet){
+  if(typeof edgeRows!=='undefined' && edgeRows && edgeRows.length){
+    return edgeRows.filter(r=> r && r.prob!=null && r.pl && !isRuledOut(r.pl) && (!teamsSet.size || teamsSet.has(r.team)))
+      .map(r=>({p:r.pl, sk:r.sk, line:r.line, side:r.side, prob:r.prob, neff:r.neff, gid:(r.sg&&r.sg.id)||(r.game.away+'@'+r.game.home)}));
+  }
+  const out=[];
+  DB.players.forEach(p=>{
+    if(!p.g||p.g.length<5) return;
+    if(isRuledOut(p)) return;
+    const wg=teamGame(p.t); if(!wg||gameHappened(wg)) return;
+    if(teamsSet.size && !teamsSet.has(p.t)) return;
+    const stats=LEADER_STATS[p.p]; if(!stats) return;
+    const home=wg.home===p.t, opp=home?wg.away:wg.home;
+    const gameSpr=wg.spread!=null?(home?wg.spread:-wg.spread):null;
+    const gamePts=(gameSpr!=null&&wg.total!=null)?wg.total/2+gameSpr/2:null;
+    const hist=histContext(p.g);
+    stats.forEach(sk=>{ const st=STATMAP[sk]; if(!st) return;
+      const vals=p.g.map(st.get), line=seedLine(vals);
+      if(line < (sk==='pass_yds'?150 : st.kind==='yards'?30 : 3.5)) return;
+      const cs=contextScale(statFamily(sk,p.p),hist,gamePts,gameSpr,defRatioFor(opp,p.p,sk));
+      const mp=modelProb(vals,line,st.kind,cs.scale); if(!mp||mp.neff<5) return;
+      out.push({p, sk, line, side:'over', prob:mp.over, neff:mp.neff, gid:(wg.id||wg.away+'@'+wg.home)});
+    });
+  });
+  return out;
+}
+let apLastSig='';
+function apPick(pool, want, risk){
+  const weight=c=> risk==='longshot' ? Math.max(1,c.neff||1) : Math.pow(Math.max(0.02,c.prob),3);
+  const draw=arr=>{ let tot=0; for(const c of arr) tot+=weight(c); let r=Math.random()*tot; for(const c of arr){ r-=weight(c); if(r<=0) return c; } return arr[arr.length-1]; };
+  const rem=pool.slice(), legs=[], seenG={};
+  while(legs.length<want){ const avail=rem.filter(c=>!seenG[c.gid]); if(!avail.length) break; const c=draw(avail); legs.push(c); seenG[c.gid]=1; rem.splice(rem.indexOf(c),1); }
+  while(legs.length<want && rem.length){ const c=draw(rem); legs.push(c); rem.splice(rem.indexOf(c),1); }
+  return legs;
+}
+async function buildAutoParlay(){
+  const note=$('apnote');
+  const teams=new Set([...document.querySelectorAll('#apTeams .chip[aria-pressed="true"]')].map(b=>b.dataset.t));
+  const risk=$('apRisk').value, R=AP_RISK[risk]||AP_RISK.balanced;
+  const want=Math.max(2,Math.min(10,parseInt($('apLegs').value,10)||R.legs));
+  if(typeof scanBoard==='function' && (typeof edgeRows==='undefined' || !edgeRows.length)){
+    note.textContent='Pulling every Polymarket prop for those games…';
+    try{ await scanBoard(false); }catch(e){}
+  }
+  const cands=apCandidates(teams).filter(c=>c.prob>=R.lo&&c.prob<=R.hi);
+  const byP={}; cands.forEach(c=>{ const b=byP[c.p.id]; if(!b||c.prob>b.prob) byP[c.p.id]=c; });
+  const pool=Object.values(byP);
+  if(!pool.length){ note.textContent=`No ${R.label.toLowerCase()} legs found${teams.size?' for those teams':''} this week — try a different risk level or add teams.`; return; }
+  let legs=[];
+  for(let tries=0; tries<8; tries++){                     // draw a fresh set; don't repeat the last one unless the pool is too small to vary
+    legs=apPick(pool, want, risk);
+    const sig=legs.map(c=>c.p.id+'|'+c.sk+'|'+c.line).sort().join(',');
+    if(sig!==apLastSig || pool.length<=want){ apLastSig=sig; break; }
+  }
+  legs.sort((a,b)=>b.prob-a.prob);
+  PARLAY = legs.map(c=>({pid:c.p.id, name:c.p.n, sk:c.sk, statLabel:STATMAP[c.sk].label, line:c.line, side:c.side||'over'}));
+  saveParlay(); renderParlay();
+  const comb=legs.reduce((a,c)=>a*c.prob,1);
+  const short = legs.length<want ? ` (only ${legs.length} available in that range${teams.size?' for those teams':''})` : '';
+  note.innerHTML=`Built a <b>${legs.length}-leg ${R.label}</b> parlay${teams.size?` from ${[...teams].join(', ')}`:''}${short} — combined model chance <b>${pct(comb)}</b>. It's loaded in the Parlay builder below; type each price for your payout. <b>Tap Build again for a different set.</b>`;
+  $('parlaypanel').scrollIntoView({behavior:'smooth',block:'start'});
+}
+function initAutoParlay(){
+  const wrap=$('apTeams'); if(!wrap) return;
+  const teams=[...new Set((WEEK.games||[]).filter(g=>!gameHappened(g)).flatMap(g=>[g.away,g.home]).filter(Boolean))].sort();
+  wrap.innerHTML = teams.length ? teams.map(t=>`<button class="chip" type="button" data-t="${esc(t)}" aria-pressed="false">${esc(t)}</button>`).join('')
+    : `<span class="mktmuted">No upcoming games this week.</span>`;
+  wrap.querySelectorAll('.chip').forEach(b=>b.onclick=()=>b.setAttribute('aria-pressed', b.getAttribute('aria-pressed')!=='true'));
+  const btn=$('apBuild'); if(btn) btn.onclick=buildAutoParlay;
+}
+
 function setPlayer(p, opts={}){
   state.player=p; oppTouched=false;
   $('player').value=p.n;
   if(!opts.keepStat) state.stat = POS_DEFAULT[p.p] || 'rush_yds';
   syncChips();
   if(!opts.keepLine) reseedLine();
+  if(typeof showTab==='function') showTab('player');
   render(); save();
 }
 const acbox=$('acbox'), pinput=$('player');
@@ -1227,7 +1556,6 @@ $('adjctx').onchange=e=>{ state.adj=e.target.checked; render(); renderParlay(); 
 $('edgescan').onclick=()=>{ SLATE=null; scanBoard(true); };
 $('addleg').onclick=addLeg;
 
-// ---- persistence ----
 function save(){ try{ localStorage.setItem('psl_state', JSON.stringify({
   pid:state.player?state.player.id:null, stat:state.stat, line:state.line, ou:state.ou, playoffs:state.playoffs, adj:state.adj })); }catch(e){} }
 function restore(){
@@ -1241,10 +1569,9 @@ function restore(){
     if(typeof saved.line==='number'){ state.line=saved.line; $('line').value=saved.line; } else reseedLine();
     render(); save(); return;
   }
-  state.player=null; $('player').value=''; syncChips(); render();   // start blank — no default player
+  state.player=null; $('player').value=''; syncChips(); render();
 }
 
-// ---- watchlist (starred players, saved on this device) ----
 let WATCH=[]; try{ WATCH=JSON.parse(localStorage.getItem('psl_watch')||'[]'); if(!Array.isArray(WATCH)) WATCH=[]; }catch(e){ WATCH=[]; }
 function saveWatch(){ try{ localStorage.setItem('psl_watch', JSON.stringify(WATCH)); }catch(e){} }
 function isWatched(id){ return WATCH.includes(id); }
@@ -1262,7 +1589,6 @@ function renderWatch(){ const wrap=$('watchlist'), panel=$('watchpanel'); if(!wr
 }
 $('watchstar').onclick=()=>{ if(state.player) toggleWatch(state.player.id); };
 
-// ---- feedback (feature suggestions via the visitor's mail app) ----
 (function(){ const b=$('fbsend'), t=$('fbtext'), note=$('fbnote'); if(!b) return;
   b.onclick=()=>{ const msg=(t.value||'').trim();
     if(!msg){ note.textContent='Type a suggestion first.'; t.focus(); return; }
@@ -1271,7 +1597,6 @@ $('watchstar').onclick=()=>{ if(state.player) toggleWatch(state.player.id); };
     note.innerHTML=`Opening your email app… if nothing happens, email <a href="mailto:${esc(FEEDBACK_EMAIL)}">${esc(FEEDBACK_EMAIL)}</a>.`; };
 })();
 
-// ---- compare players (scored on the current stat/line/side, saved on this device) ----
 let CMP=[]; try{ CMP=JSON.parse(localStorage.getItem('psl_compare')||'[]'); if(!Array.isArray(CMP)) CMP=[]; }catch(e){ CMP=[]; }
 function saveCmp(){ try{ localStorage.setItem('psl_compare', JSON.stringify(CMP)); }catch(e){} }
 function inCmp(id){ return CMP.includes(id); }
@@ -1285,7 +1610,7 @@ function renderCompare(){
   panel.hidden=false;
   if(!items.length){ $('comparecap').textContent=''; body.innerHTML=`<p class="mktnote" style="margin:0">No players yet — tap <b>⚖ Compare</b> on any player's card to line them up side by side.</p>`; return; }
   const st=STATMAP[state.stat], line=state.line, side=state.ou;
-  $('comparecap').textContent=`${side==='over'?'Over':'Under'} ${fmt(line)} ${st.label} · follows the controls above`;
+  $('comparecap').textContent=`${side==='over'?'Over':'Under'} ${fmt(line)} ${st.label} · from the Player tab`;
   const rows=items.map(p=>{ const g=gamesOf(p), pr=probFor(p,state.stat,line,side);
     const l5=g.slice(-5).map(st.get), l10=g.slice(-10).map(st.get);
     const a5=l5.reduce((a,b)=>a+b,0)/Math.max(1,l5.length), a10=l10.reduce((a,b)=>a+b,0)/Math.max(1,l10.length);
@@ -1307,34 +1632,34 @@ function renderCompare(){
 $('cmpadd').onclick=()=>{ if(state.player) toggleCmp(state.player.id); };
 $('cmpclear').onclick=()=>{ CMP=[]; saveCmp(); updateCmpBtn(); renderCompare(); };
 
-// ---- hit streak leaderboard (top 10 active over streaks this season) ----
 const CUR_SEASON=DB.season;
 const LEADER_STATS={QB:['pass_yds'], RB:['rush_yds','rush_rec_yds','rec'],
   FB:['rush_yds','rec'], WR:['rec_yds','rec'], TE:['rec_yds','rec']};
+function isRuledOut(p){ if(p.st==='RES'||p.st==='RET'||p.st==='CUT') return true; return !!(p.inj && /^(out|doubtful)/i.test(String(p.inj[0]||'').trim())); }
 function computeStreaks(){
   const out=[];
   DB.players.forEach(p=>{
     if(!p.g||p.g.length<3) return;
-    if(p.st==='RET'||p.st==='CUT') return;           // skip players not currently active
+    if(isRuledOut(p)) return;
     const stats=LEADER_STATS[p.p]; if(!stats) return;
-    const live=p.g[p.g.length-1][0]===CUR_SEASON;    // most recent game already this season
+    const live=p.g[p.g.length-1][0]===CUR_SEASON;
     stats.forEach(sk=>{ const st=STATMAP[sk]; if(!st) return;
       const vals=p.g.map(st.get), line=seedLine(vals);
-      if(line < (sk==='pass_yds'?150 : st.kind==='yards'?30 : 3.5)) return;  // only substantive prop lines, not scrub-level streaks
-      let streak=0;                                  // trailing run of games over the line, newest first
+      if(line < (sk==='pass_yds'?150 : st.kind==='yards'?30 : 3.5)) return;
+      let streak=0;
       for(let i=vals.length-1;i>=0;i--){ if(vals[i]>line) streak++; else break; }
       if(streak>=3) out.push({p, sk, line, streak, live, last:vals[vals.length-1]});
     });
   });
   out.sort((a,b)=> b.streak-a.streak || (b.live-a.live) || b.line-a.line);
-  const seen=new Set(), top=[];                       // one entry (the best streak) per player
+  const seen=new Set(), top=[];
   for(const e of out){ if(seen.has(e.p.id)) continue; seen.add(e.p.id); top.push(e); if(top.length>=10) break; }
   return top;
 }
 let LB=[];
 function loadStreak(e){ state.player=e.p; $('player').value=e.p.n; state.stat=e.sk; state.line=e.line; state.ou='over';
   syncChips(); $('line').value=e.line; $('over').setAttribute('aria-pressed','true'); $('under').setAttribute('aria-pressed','false');
-  render(); save(); window.scrollTo({top:0,behavior:'smooth'}); }
+  showTab('player'); render(); save(); }
 function renderLeaderboard(){
   const body=$('lbbody'); if(!body) return;
   LB=computeStreaks();
@@ -1350,14 +1675,13 @@ function renderLeaderboard(){
   body.querySelectorAll('.wload,.edgeload').forEach(b=>b.onclick=()=>loadStreak(LB[+b.dataset.i]));
 }
 
-// ---- trap alerts / fade signals (a prop the raw hit rate oversells) ----
 function trapCheck(p, sk, line, side, mp, ctx){
   const g=gamesOf(p);
   const fr=n=>{ const r=rateOn(g.slice(-n),sk,line,side); return r.cnt? r.hit/r.cnt : null; };
   const r5=fr(5), r20=fr(20), r10=fr(10);
   const model = side==='over'? mp.over : mp.under;
-  const raw = Math.max(r5==null?0:r5, r10==null?0:r10);   // the rosy number the tiles show
-  const trap = raw>=0.7 && (raw-model)>=0.12;             // looks like a lock, model disagrees
+  const raw = Math.max(r5==null?0:r5, r10==null?0:r10);
+  const trap = raw>=0.7 && (raw-model)>=0.12;
   const reasons=[];
   if(trap){
     if(r5!=null&&r20!=null&&r5-r20>=0.3) reasons.push(`hit ${Math.round(r5*100)}% over the last 5 but ${Math.round(r20*100)}% over the last 20 — a hot streak, not a new level`);
@@ -1378,42 +1702,53 @@ function renderTrapAlert(p, sk, line, side, mp, ctx){
     `<ul class="traplist">${t.reasons.map(r=>`<li>${esc(r)}</li>`).join('')}</ul>`;
 }
 
-// ---- weekly slate digest (auto-written from the model, at realistic lines) ----
 function generateDigest(){
   const panel=$('digestpanel'), body=$('digestbody'), cap=$('digestcap'); if(!body) return;
   if(!WEEK.week || !(WEEK.games&&WEEK.games.length)){ panel.hidden=true; return; }
-  const cands=[];
+  const cands=[], outList=[], fpts=STATMAP['fantasy'];
   DB.players.forEach(p=>{
     if(!p.g||p.g.length<4) return;
-    if(p.st==='RET'||p.st==='CUT'||p.st==='RES') return;
-    const wg=teamGame(p.t); if(!wg||wg.final) return;         // an upcoming game this week
+    if(p.st==='RET'||p.st==='CUT') return;
+    const wg=teamGame(p.t); if(!wg||gameHappened(wg)) return;
     const stats=LEADER_STATS[p.p]; if(!stats) return;
     const home=wg.home===p.t, opp=home?wg.away:wg.home;
     const gameSpr = wg.spread!=null? (home?wg.spread:-wg.spread) : null;
     const gamePts = (gameSpr!=null&&wg.total!=null)? wg.total/2+gameSpr/2 : null;
-    const hist=histContext(p.g);
+    const hist=histContext(p.g), out=isRuledOut(p);
+    let substantive=false;
     stats.forEach(sk=>{ const st=STATMAP[sk]; if(!st) return;
       const vals=p.g.map(st.get), line=seedLine(vals);
       if(line < (sk==='pass_yds'?150 : st.kind==='yards'?30 : 3.5)) return;
+      substantive=true;
+      if(out) return;
       const cs=contextScale(statFamily(sk,p.p), hist, gamePts, gameSpr, defRatioFor(opp,p.p,sk));
       const mp=modelProb(vals, line, st.kind, cs.scale); if(!mp) return;
       const tc=trapCheck(p, sk, line, 'over', mp, {on:true, scale:cs.scale, opp});
       cands.push({p, sk, line, prob:mp.over, neff:mp.neff, opp, trap:tc.trap, raw:tc.raw, reasons:tc.reasons});
     });
+    if(out && substantive){ const l5=p.g.slice(-5).map(fpts.get); outList.push({p, imp:l5.reduce((a,b)=>a+b,0)/Math.max(1,l5.length)}); }
   });
-  if(!cands.length){ panel.hidden=true; return; }
+  const outNames=outList.sort((a,b)=>b.imp-a.imp).slice(0,6).map(o=>o.p.n);
+  if(!cands.length && !outNames.length){
+    body.innerHTML=`<p class="mktmuted">This week's games are all underway or finished, so there are no pre-kickoff picks to show right now. The recap fills back in once the next slate's games are still ahead — meanwhile, check the <a href="#" onclick="showTab('tools');return false;">25 Guaranteed board</a> or your <a href="#" onclick="showTab('past');return false;">Past picks</a>.</p>`;
+    if(cap) cap.textContent='waiting on the next slate';
+    panel.hidden=false; return;
+  }
   const bestByPlayer={}; cands.filter(c=>c.neff>=6).forEach(c=>{ const b=bestByPlayer[c.p.id]; if(!b||c.prob>b.prob) bestByPlayer[c.p.id]=c; });
   const best=Object.values(bestByPlayer).sort((a,b)=>b.prob-a.prob);
   const nearLocks=best.filter(c=>c.prob>=0.85);
   const trapByPlayer={}; cands.filter(c=>c.trap).forEach(c=>{ const b=trapByPlayer[c.p.id]; if(!b||(c.raw-c.prob)>(b.raw-b.prob)) trapByPlayer[c.p.id]=c; });
   const traps=Object.values(trapByPlayer).sort((a,b)=>(b.raw-b.prob)-(a.raw-a.prob));
-  const streak=(typeof LB!=='undefined'&&LB.length)? LB[0] : computeStreaks()[0];
+  const streakPool=(typeof LB!=='undefined'&&LB.length)? LB : computeStreaks();
+  const streak=streakPool.find(s=>{ const g=teamGame(s.p.t); return g && !gameHappened(g); });
   const link=(c,label)=>`<button class="wload" type="button" data-id="${esc(c.p.id)}" data-sk="${esc(c.sk)}" data-line="${c.line}">${esc(label!=null?label:(c.p.n+' over '+fmt(c.line)+' '+STATMAP[c.sk].label))}</button>`;
-  let s=`<p><b>Week ${WEEK.week} at a glance.</b> `;
-  if(best.length) s+=`The model's cleanest looks: `+best.slice(0,3).map(c=>`${link(c)} (${pct(c.prob)})`).join(', ')+`. `;
-  if(nearLocks.length) s+=`${nearLocks.length} prop${nearLocks.length===1?'':'s'} clear the 85% near-lock bar. `;
-  if(streak) s+=`Hottest hand: ${link(streak, streak.p.n)} has cleared ${fmt(streak.line)} ${esc(STATMAP[streak.sk].label)} ${streak.streak} straight. `;
-  s+=`</p>`;
+  let s='';
+  if(best.length) s+=`<p><b>Cleanest looks:</b> `+best.slice(0,3).map(c=>`${link(c)} (${pct(c.prob)})`).join(', ')+`.</p>`;
+  const mid=[];
+  if(nearLocks.length) mid.push(`<b>Near-locks:</b> ${nearLocks.length} prop${nearLocks.length===1?'':'s'} above 85%`);
+  if(streak) mid.push(`<b>Hottest hand:</b> ${link(streak, streak.p.n)} — ${streak.streak} straight over ${fmt(streak.line)} ${esc(STATMAP[streak.sk].label)}`);
+  if(mid.length) s+=`<p>`+mid.join('&nbsp;&nbsp;·&nbsp;&nbsp;')+`.</p>`;
+  if(outNames.length) s+=`<p><b>⛔ Ruled out this week:</b> ${outNames.map(n=>esc(n)).join(', ')} — not playing, so their props are off the board.</p>`;
   if(traps.length){ const t=traps[0];
     s+=`<p class="digesttrap">⚠️ <b>Biggest trap:</b> ${link(t)} has hit ${Math.round(t.raw*100)}% lately, but the model gives it just ${pct(t.prob)} — ${esc((t.reasons&&t.reasons[0])||'a hot streak the calibration discounts')}. Load it for the full ⚠️ breakdown.</p>`; }
   body.innerHTML=s;
@@ -1422,7 +1757,6 @@ function generateDigest(){
   panel.hidden=false;
 }
 
-// ---- bet-slip screenshot scanner (client-side OCR, best-effort) ----
 const NAME_INDEX=DB.players.filter(p=>p.g&&p.g.length).map(p=>({p, key:pkey(p.n)})).filter(e=>e.key.length>=5);
 const SLIP_STAT_RX=[
   [/fantasy\s*(points|score|pts|pt)/i,'fantasy'],
@@ -1437,15 +1771,15 @@ function slipMatchPlayer(win){ const w=' '+pkey(win)+' '; let best=null;
   return best? best.p : null; }
 function parseBetSlip(text){
   const lines=text.split('\n').map(s=>s.replace(/\s+/g,' ').trim()).filter(Boolean);
-  const linePlayer=lines.map(L=>slipMatchPlayer(L));          // which known player (if any) each line names
+  const linePlayer=lines.map(L=>slipMatchPlayer(L));
   const legs=[], seen=new Set();
   for(let i=0;i<lines.length;i++){
-    const L=lines[i], sk=slipStatKey(L); if(!sk) continue;    // the prop, side and line live on ONE line
+    const L=lines[i], sk=slipStatKey(L); if(!sk) continue;
     let side=null; if(/\bover\b/i.test(L)) side='over'; else if(/\bunder\b/i.test(L)) side='under';
-    const clean=L.replace(/[+-]\d{2,4}\b/g,' ');              // drop American odds like -110 / +150
+    const clean=L.replace(/[+-]\d{2,4}\b/g,' ');
     const nums=(clean.match(/\d{1,3}(?:\.\d)?/g)||[]).map(Number).filter(x=>x>0&&x<600);
     let line=nums.find(x=>x%1===0.5); if(line==null) line=nums.length?nums[nums.length-1]:null;
-    let p=linePlayer[i];                                      // player on this line, else nearest line just above
+    let p=linePlayer[i];
     if(!p){ for(let j=i-1;j>=0&&j>=i-3;j--){ if(slipStatKey(lines[j])) break; if(linePlayer[j]){ p=linePlayer[j]; break; } } }
     if(!p||side==null||line==null) continue;
     const key=p.id+'|'+sk+'|'+line+'|'+side; if(seen.has(key)) continue; seen.add(key);
@@ -1495,11 +1829,8 @@ function renderSlip(legs, raw){
   window.addEventListener('paste',e=>{ const items=e.clipboardData&&e.clipboardData.items; if(!items) return;
     for(const it of items){ if(it.type&&it.type.startsWith('image/')){ const f=it.getAsFile(); if(f){ scanSlip(f); e.preventDefault(); break; } } } }); })();
 
-// =====================================================================
-// PAST PICKS tab
-// =====================================================================
 let PICKS=null, PICKMETA=null, pkLoading=false, pkShown=150;
-const pkF={src:'all', list:'listed', season:'', week:'', team:'', opp:'', pos:'', stat:'', side:'', prob:'', res:'', q:''};
+const pkF={src:'all', list:'all', season:'', week:'', team:'', opp:'', pos:'', stat:'', side:'', prob:'', res:'', q:''};
 let pkSort={key:'date',dir:-1};
 const LIST_NAME={T:'25 Guaranteed',V:'Value'};
 async function initPicks(){
@@ -1510,7 +1841,7 @@ async function initPicks(){
     const d=await r.json(); PICKMETA=d;
     PICKS=d.picks.map(row=>{ const o={}; d.cols.forEach((c,i)=>o[c]=row[i]); return o; });
     const s=d.summary||{};
-    st.textContent=`${s.live||0} live picks (${s.liveGraded||0} graded, ${s.livePending||0} pending) · ${s.backtest||0} backtest · updated ${(d.gen||'').slice(0,10)}`;
+    st.textContent=`${s.live||0} 2026 picks (${s.liveGraded||0} graded, ${s.livePending||0} pending) · ${s.backtest||0} from 2025 · updated ${(d.gen||'').slice(0,10)}`;
     buildPickFilters(); renderPicks();
   }catch(e){
     st.textContent='';
@@ -1526,7 +1857,7 @@ function buildPickFilters(){
   const stats=uniq(PICKS.map(p=>p.stat)).sort((a,b)=>statLabel(a).localeCompare(statLabel(b)));
   const sel=(id,label,opts)=>`<div><label for="pk_${id}">${label}</label><select id="pk_${id}">${opts.map(o=>`<option value="${esc(o[0])}">${esc(o[1])}</option>`).join('')}</select></div>`;
   wrap.innerHTML=
-    sel('src','Source',[['all','Live + backtest'],['live','Live picks only'],['bt','Backtest only']])+
+    sel('src','Source',[['all','2026 + 2025'],['live','2026 only'],['bt','2025 only']])+
     sel('list','List',[['listed','Recommended (25 Guaranteed / Value)'],['T','25 Guaranteed'],['V','Value spots'],['all','All tracked props']])+
     sel('season','Season',[['','All']].concat(seasons.map(s=>[s,s])))+
     sel('week','Week',[['','All']])+
@@ -1544,7 +1875,7 @@ function buildPickFilters(){
   weekOpts();
   Object.keys(pkF).forEach(k=>{ const el=$('pk_'+k); if(!el) return;
     el.value=pkF[k]; el.addEventListener(k==='q'?'input':'change', ()=>{ pkF[k]=el.value; if(k==='season'){ pkF.week=''; weekOpts(); } pkShown=150; renderPicks(); }); });
-  $('pk_reset').onclick=()=>{ Object.assign(pkF,{src:'all',list:'listed',season:'',week:'',team:'',opp:'',pos:'',stat:'',side:'',prob:'',res:'',q:''});
+  $('pk_reset').onclick=()=>{ Object.assign(pkF,{src:'all',list:'all',season:'',week:'',team:'',opp:'',pos:'',stat:'',side:'',prob:'',res:'',q:''});
     Object.keys(pkF).forEach(k=>{ const el=$('pk_'+k); if(el) el.value=pkF[k]; }); weekOpts(); pkShown=150; renderPicks(); };
 }
 function pkRows(ignoreList){
@@ -1574,7 +1905,10 @@ function renderPicks(){
     `<div><div class="lab">Hit rate</div><div class="big ${graded.length&&hits/graded.length>=0.5?'hit':''}">${graded.length? Math.round(100*hits/graded.length)+'%' : '—'}</div><div class="sub">${hits} of ${graded.length}</div></div>`+
     `<div><div class="lab">Model said</div><div class="big">${avgPred!=null? Math.round(avgPred*100)+'%' : '—'}</div><div class="sub">average predicted chance</div></div>`+
   `</div>`;
-  drawCalibration(graded); drawByWeek(graded); renderBreakdown(pkRows(true)); renderPickTable(rows);
+  drawCalibration(graded); drawByWeek(graded); renderBreakdown(pkRows(true));
+  const tableRows = pkF.q ? rows
+    : [...rows].sort((a,b)=>((b.res==='hit'?2:b.res==='miss'?-2:0)+(b.prob||0))-((a.res==='hit'?2:a.res==='miss'?-2:0)+(a.prob||0))).slice(0,25);
+  renderPickTable(tableRows);
 }
 function recordRow(label, ps){
   const g=ps.filter(p=>p.res==='hit'||p.res==='miss'), h=g.filter(p=>p.res==='hit').length;
@@ -1637,7 +1971,7 @@ function renderPickTable(rows){
     if(typeof va==='string'||typeof vb==='string') return d*String(va??'').localeCompare(String(vb??''));
     return d*((va==null?-Infinity:va)-(vb==null?-Infinity:vb)); });
   const shown=sorted.slice(0,pkShown);
-  const cols=[['date','Week'],['player','Player'],['team','Team'],['opp','Opp'],['stat','Prop'],['line','Line'],['side','Bet'],['prob','Model'],['actual','Actual'],['res','Result'],['lists','Lists'],['src','Source']];
+  const cols=[['date','Week'],['player','Player'],['team','Team'],['opp','Opp'],['stat','Prop'],['line','Line'],['side','Bet'],['prob','Model'],['actual','Actual'],['res','Result'],['lists','Lists'],['season','Season']];
   const th=(kk,l)=>`<th data-k="${kk}" class="${pkSort.key===kk?'sorted'+(pkSort.dir>0?' asc':''):''}">${l}</th>`;
   const resTag=p=> p.res==='hit'?'<span class="res h">Hit</span>': p.res==='miss'?'<span class="res m">Miss</span>': p.res==='push'?'<span class="res p">Push</span>': p.res==='dnp'?'<span class="res d">DNP</span>':'<span class="res w">Pending</span>';
   let h=`<thead><tr>${cols.map(c=>th(c[0],c[1])).join('')}</tr></thead><tbody>`;
@@ -1646,22 +1980,41 @@ function renderPickTable(rows){
     h+=`<tr><td class="tnum">${p.season} ${wk} <span class="mktmuted">${esc((p.date||'').slice(5))}</span></td><td>${esc(p.player)} <span class="mktmuted">${esc(p.pos)}</span></td><td>${esc(p.team)}</td><td>${esc(p.opp)}</td><td>${esc(statLabel(p.stat))}</td><td class="tnum">${p.line}</td>`+
       `<td><span class="leantag ${p.side}">${p.side}</span></td><td class="tnum">${Math.round(p.prob*100)}% <span class="rng">${Math.round(p.lo*100)}–${Math.round(p.hi*100)}</span></td>`+
       `<td class="tnum">${p.actual!=null? p.actual : '—'}</td><td>${resTag(p)}</td>`+
-      `<td>${(p.lists||'').split('').filter(c=>LIST_NAME[c]).map(c=>`<span class="listchip ${c}" title="${LIST_NAME[c]}">${c}</span>`).join('')}</td><td class="mktmuted">${p.src==='live'?'live':'backtest'}</td></tr>`;
+      `<td>${(p.lists||'').split('').filter(c=>LIST_NAME[c]).map(c=>`<span class="listchip ${c}" title="${LIST_NAME[c]}">${c}</span>`).join('')}</td><td class="mktmuted">${p.season}</td></tr>`;
   });
   $('pktbl').innerHTML=h+'</tbody>';
-  $('pkcount').textContent=`${rows.length.toLocaleString()} picks match · showing ${shown.length.toLocaleString()}`;
+  $('pkcount').textContent = pkF.q ? `${rows.length.toLocaleString()} picks match · showing ${shown.length.toLocaleString()}` : `Search a player above to see their picks`;
   $('pkmore').hidden = shown.length>=rows.length;
   $('pkmore').onclick=()=>{ pkShown+=300; renderPickTable(rows); };
   $('pktbl').querySelectorAll('th').forEach(t=>t.onclick=()=>{ const kk=t.dataset.k; if(!kk) return;
     if(pkSort.key===kk) pkSort.dir*=-1; else { pkSort.key=kk; pkSort.dir=['player','team','opp','stat','side','lists','src'].includes(kk)?1:-1; } renderPickTable(rows); });
 }
 
-// ---- boot ----
 restore();
 renderParlay();
+initAutoParlay();
 renderWatch();
 renderLeaderboard();
 generateDigest();
-if(location.hash==='#picks') showTab('picks');
+(function(){
+  const OPEN_BY_DEFAULT=new Set(['digestpanel','edgepanel','calcpanel','watchpanel','comparepanel']);
+  ['page-week','page-player','page-tools'].forEach(pid=>{ const pg=$(pid); if(!pg) return;
+    pg.querySelectorAll('.panel').forEach(panel=>{
+      const head=panel.firstElementChild; if(!head) return;
+      const h2=head.matches('h2')?head:head.querySelector('h2'); if(!h2) return;
+      const label=panel.id||h2.textContent.trim().slice(0,24);
+      panel.classList.add('collapsible');
+      const chev=document.createElement('span'); chev.className='chev'; chev.textContent='▾'; chev.setAttribute('aria-hidden','true'); h2.appendChild(chev);
+      const key='psl_open_'+label;
+      let open; try{ const s=localStorage.getItem(key); open = s!=null? s==='1' : true; }catch(e){ open=true; }
+      panel.classList.toggle('collapsed', !open);
+      head.setAttribute('role','button'); head.setAttribute('tabindex','0'); head.setAttribute('aria-expanded', String(open));
+      const set=v=>{ open=v; panel.classList.toggle('collapsed',!open); head.setAttribute('aria-expanded',String(open)); try{localStorage.setItem(key,open?'1':'0');}catch(e){} };
+      head.addEventListener('click',e=>{ if(e.target.closest('button,input,select,a,label')) return; set(!open); });
+      head.addEventListener('keydown',e=>{ if((e.key==='Enter'||e.key===' ')&&!e.target.closest('button,input,select,a,label')){ e.preventDefault(); set(!open); } });
+    });
+  });
+})();
+showTab((location.hash||'').replace('#','') || 'week');
 if(/^https?:$/.test(location.protocol)) scanBoard(false);
 </script>
