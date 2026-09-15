@@ -583,6 +583,11 @@ table td,table th,thead th,tbody td,.edgetbl td,.edgetbl th,.caltbl td,.caltbl t
     <div id="digestbody"></div>
   </div>
 
+  <div class="panel" id="sharepanel">
+    <div class="mkthead"><h2>📸 Shareable card</h2><button id="sharemake" class="btn" type="button">Make this week's image</button><span class="mktmuted" id="sharecap"></span></div>
+    <div id="sharebox"><p class="mktnote">Generate a branded image of this week's top model picks — sized for Instagram, TikTok, or X. One tap, then download and post.</p></div>
+  </div>
+
   <div class="panel" id="edgepanel">
     <div class="mkthead">
       <h2>🔒 25 Guaranteed</h2>
@@ -1765,6 +1770,69 @@ function generateDigest(){
   panel.hidden=false;
 }
 
+// ---- shareable weekly card ----
+function weekTopPicks(n){
+  const out=[];
+  DB.players.forEach(p=>{
+    if(!p.g||p.g.length<4||isRuledOut(p)) return;
+    const wg=teamGame(p.t); if(!wg||gameHappened(wg)) return;
+    const stats=LEADER_STATS[p.p]; if(!stats) return;
+    const home=wg.home===p.t, opp=home?wg.away:wg.home;
+    const gameSpr=wg.spread!=null?(home?wg.spread:-wg.spread):null;
+    const gamePts=(gameSpr!=null&&wg.total!=null)?wg.total/2+gameSpr/2:null;
+    const hist=histContext(p.g); let best=null;
+    stats.forEach(sk=>{ const st=STATMAP[sk]; if(!st) return;
+      const vals=p.g.map(st.get), line=seedLine(vals);
+      if(line < (sk==='pass_yds'?150 : st.kind==='yards'?30 : 3.5)) return;
+      const cs=contextScale(statFamily(sk,p.p),hist,gamePts,gameSpr,defRatioFor(opp,p.p,sk));
+      const mp=calMp(modelProb(vals,line,st.kind,cs.scale)); if(!mp||mp.neff<6) return;
+      if(!best||mp.over>best.prob) best={p, sk, line, prob:mp.over, label:STATMAP[sk].label};
+    });
+    if(best) out.push(best);
+  });
+  return out.sort((a,b)=>b.prob-a.prob).slice(0,n);
+}
+function drawSparkle(g,cx,cy,s){
+  g.fillStyle='#00c805';
+  const path=pts=>{ g.beginPath(); pts.forEach((p,i)=>{ const x=cx+p[0]*s,y=cy+p[1]*s; i?g.lineTo(x,y):g.moveTo(x,y); }); g.closePath(); g.fill(); };
+  path([[0,-30],[4,-6],[17,0],[4,6],[0,30],[-4,6],[-17,0],[-4,-6]]);
+  path([[-24,-5],[-64,16],[-28,4]]); path([[-28,1],[-52,16],[-31,8]]);
+}
+function buildShareCanvas(picks){
+  const W=1080,H=1350,cv=document.createElement('canvas'); cv.width=W; cv.height=H; const g=cv.getContext('2d');
+  g.fillStyle='#0a1628'; g.fillRect(0,0,W,H);
+  g.strokeStyle='rgba(0,200,5,.35)'; g.lineWidth=4; g.strokeRect(22,22,W-44,H-44);
+  drawSparkle(g,118,132,2.1);
+  g.textBaseline='middle'; g.textAlign='left';
+  g.font='800 66px Arial, sans-serif'; let x=208, y=132;
+  g.fillStyle='#f5f7fa'; g.fillText('PROP ',x,y); x+=g.measureText('PROP ').width;
+  g.fillStyle='#00c805'; g.fillText('STREAK ',x,y); x+=g.measureText('STREAK ').width;
+  g.fillStyle='#f5f7fa'; g.fillText('LAB',x,y);
+  g.textAlign='center'; g.fillStyle='#00c805'; g.font='700 40px Arial, sans-serif';
+  g.fillText("THIS WEEK'S TOP MODEL PICKS", W/2, 252);
+  const top=360, bot=H-170, rowH=(bot-top)/Math.max(1,picks.length);
+  picks.forEach((pk,i)=>{
+    const cy=top+rowH*i+rowH/2;
+    g.textAlign='left'; g.fillStyle='rgba(0,200,5,.75)'; g.font='800 46px Arial'; g.fillText((i+1)+'', 58, cy);
+    g.fillStyle='#f5f7fa'; g.font='700 46px Arial'; g.fillText(pk.p.n, 138, cy-24);
+    g.fillStyle='#8393a8'; g.font='500 30px Arial'; g.fillText(pk.p.p+' · '+pk.p.t+'    Over '+fmt(pk.line)+' '+pk.label, 138, cy+28);
+    g.textAlign='right'; g.fillStyle='#00c805'; g.font='800 62px Arial'; g.fillText(Math.round(pk.prob*100)+'%', W-58, cy);
+    if(i<picks.length-1){ g.strokeStyle='rgba(255,255,255,.08)'; g.lineWidth=2; g.beginPath(); g.moveTo(58,top+rowH*(i+1)); g.lineTo(W-58,top+rowH*(i+1)); g.stroke(); }
+  });
+  g.textAlign='center'; g.fillStyle='#00c805'; g.font='700 42px Arial'; g.fillText('propstreaklab.com', W/2, H-108);
+  g.fillStyle='#8393a8'; g.font='500 27px Arial'; g.fillText('Model-calibrated chances · Research, not betting advice · 18+', W/2, H-60);
+  return cv;
+}
+function shareThisWeek(){
+  const box=$('sharebox'), cap=$('sharecap');
+  const picks=weekTopPicks(6);
+  if(!picks.length){ box.innerHTML='<p class="mktnote">No upcoming games right now — the card fills in once the next slate is posted (games still ahead).</p>'; if(cap) cap.textContent=''; return; }
+  const url=buildShareCanvas(picks).toDataURL('image/png');
+  box.innerHTML='<img alt="This week\'s top picks" src="'+url+'" style="max-width:100%;border-radius:14px;display:block;margin:0 auto 14px">'+
+    '<div style="text-align:center"><a class="btn" download="propstreaklab-week.png" href="'+url+'">⬇ Download image</a> <span class="mktmuted">then post it to your socials</span></div>';
+  if(cap) cap.textContent=picks.length+' picks';
+}
+
 const NAME_INDEX=DB.players.filter(p=>p.g&&p.g.length).map(p=>({p, key:pkey(p.n)})).filter(e=>e.key.length>=5);
 const SLIP_STAT_RX=[
   [/fantasy\s*(points|score|pts|pt)/i,'fantasy'],
@@ -2004,6 +2072,7 @@ initAutoParlay();
 renderWatch();
 renderLeaderboard();
 generateDigest();
+{ const _sb=$('sharemake'); if(_sb) _sb.onclick=shareThisWeek; }
 (function(){
   const OPEN_BY_DEFAULT=new Set(['digestpanel','edgepanel','calcpanel','watchpanel','comparepanel']);
   ['page-week','page-player','page-tools'].forEach(pid=>{ const pg=$(pid); if(!pg) return;
