@@ -990,6 +990,36 @@ def build_backtest(players, seasons_used, sched, snapshot):
     return out
 
 
+def fit_temperature(picks):
+    """Learn a calibration 'temperature' from graded picks (backtest + live) by
+    minimizing log-loss with a mild ridge toward no change. T>1 softens the model's
+    overconfident chances, T<1 sharpens. Returns 1.0 (no change) until there's enough
+    graded history. Applied to the live/displayed chances so the site keeps tuning its
+    confidence to its own tracked results each week."""
+    data = []
+    for p in picks:
+        if p.get("res") in ("hit", "miss") and p.get("prob") is not None:
+            pr = min(0.999, max(0.001, float(p["prob"])))
+            data.append((math.log(pr / (1 - pr)), 1.0 if p["res"] == "hit" else 0.0))
+    if len(data) < 400:
+        return 1.0
+
+    def loss(T):
+        s = 30.0 * (T - 1.0) ** 2                      # mild ridge toward T=1
+        for lg, y in data:
+            q = min(0.9999, max(0.0001, 1.0 / (1.0 + math.exp(-lg / T))))
+            s -= y * math.log(q) + (1 - y) * math.log(1 - q)
+        return s
+
+    best_T, best_L, T = 1.0, None, 0.70
+    while T <= 2.001:
+        L = loss(T)
+        if best_L is None or L < best_L:
+            best_L, best_T = L, T
+        T += 0.02
+    return round(min(2.0, max(0.7, best_T)), 3)
+
+
 def live_record(picks):
     """Season-to-date record of graded LIVE picks per recommendation list (shown on the site)."""
     out = {}
@@ -1125,6 +1155,13 @@ def main():
     summary = save_picks(picks + bt)
     print(f"  picks.json: {summary}")
 
+    try:
+        cal_t = fit_temperature(picks + bt)
+    except Exception as e:  # noqa: BLE001
+        print(f"  calibration: skipped ({e})")
+        cal_t = 1.0
+    print(f"  calibration temperature: T={cal_t}")
+
     db = {
         "gen": TODAY.isoformat(),
         "seasons": seasons_used,
@@ -1135,6 +1172,7 @@ def main():
         "defNote": def_note,
         "defense": defense,
         "defAvg": def_avg,
+        "calT": cal_t,
         "record": live_record(picks),
         "players": players,
     }

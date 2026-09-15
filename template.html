@@ -875,6 +875,14 @@ function contextScale(fam, hist, gamePts, gameSpr, defRatio){
 }
 // ==== END MODEL ====
 
+// Calibration: a temperature learned from the model's own graded track record
+// (build.py, stored as DB.calT). T>1 softens overconfident chances; 1 = no change.
+// Applied to the live/displayed chances so the site keeps tuning to its results.
+function _calT(){ return (typeof DB!=='undefined' && DB && DB.calT) ? DB.calT : 1; }
+function calP(p){ const T=_calT(); if(T===1||!(p>0)||!(p<1)) return p; return 1/(1+Math.exp(-Math.log(p/(1-p))/T)); }
+function calMp(mp){ if(!mp) return mp; const T=_calT(); if(T===1) return mp; const o=calP(mp.over);
+  return Object.assign({}, mp, {over:o, under:1-o, lo:calP(mp.lo), hi:calP(mp.hi)}); }
+
 const STATS = [
   {key:'pass_yds',   label:'Pass Yds',      grp:'Passing',   get:g=>g[4]},
   {key:'pass_td',    label:'Pass TDs',      grp:'Passing',   get:g=>g[5]},
@@ -989,7 +997,7 @@ function contextFor(p, sk, oppOverride, gameOverride){
   return Object.assign(contextScale(statFamily(sk,p.p), hist, gamePts, gameSpr, defRatio), {opp, gamePts, gameSpr, defRatio, on:true});
 }
 function currentOpp(){ return oppTouched? ($('oppsel').value||null) : null; }
-function modelFor(p, sk, line, ctx){ const st=STATMAP[sk]; if(!st) return null; const c=ctx||contextFor(p,sk,p===state.player?currentOpp():null); return modelProb(valuesOf(p,sk), line, st.kind, c.scale); }
+function modelFor(p, sk, line, ctx){ const st=STATMAP[sk]; if(!st) return null; const c=ctx||contextFor(p,sk,p===state.player?currentOpp():null); return calMp(modelProb(valuesOf(p,sk), line, st.kind, c.scale)); }
 function probFor(p, sk, line, side, ctx){ const mp=modelFor(p,sk,line,ctx); if(!mp) return null;
   return side==='over'? {prob:mp.over, lo:mp.lo, hi:mp.hi, mp} : {prob:mp.under, lo:1-mp.hi, hi:1-mp.lo, mp}; }
 function reseedLine(){
@@ -1451,7 +1459,7 @@ function apCandidates(teamsSet){
       const vals=p.g.map(st.get), line=seedLine(vals);
       if(line < (sk==='pass_yds'?150 : st.kind==='yards'?30 : 3.5)) return;
       const cs=contextScale(statFamily(sk,p.p),hist,gamePts,gameSpr,defRatioFor(opp,p.p,sk));
-      const mp=modelProb(vals,line,st.kind,cs.scale); if(!mp||mp.neff<5) return;
+      const mp=calMp(modelProb(vals,line,st.kind,cs.scale)); if(!mp||mp.neff<5) return;
       out.push({p, sk, line, side:'over', prob:mp.over, neff:mp.neff, gid:(wg.id||wg.away+'@'+wg.home)});
     });
   });
@@ -1722,7 +1730,7 @@ function generateDigest(){
       substantive=true;
       if(out) return;
       const cs=contextScale(statFamily(sk,p.p), hist, gamePts, gameSpr, defRatioFor(opp,p.p,sk));
-      const mp=modelProb(vals, line, st.kind, cs.scale); if(!mp) return;
+      const mp=calMp(modelProb(vals, line, st.kind, cs.scale)); if(!mp) return;
       const tc=trapCheck(p, sk, line, 'over', mp, {on:true, scale:cs.scale, opp});
       cands.push({p, sk, line, prob:mp.over, neff:mp.neff, opp, trap:tc.trap, raw:tc.raw, reasons:tc.reasons});
     });
