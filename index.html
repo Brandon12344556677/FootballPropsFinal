@@ -1648,7 +1648,7 @@ function computeStreaks(){
       if(line < (sk==='pass_yds'?150 : st.kind==='yards'?30 : 3.5)) return;
       let streak=0;
       for(let i=vals.length-1;i>=0;i--){ if(vals[i]>line) streak++; else break; }
-      if(streak>=3) out.push({p, sk, line, streak, live, last:vals[vals.length-1]});
+      if(streak>=3 && live) out.push({p, sk, line, streak, live, last:vals[vals.length-1]});
     });
   });
   out.sort((a,b)=> b.streak-a.streak || (b.live-a.live) || b.line-a.line);
