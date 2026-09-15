@@ -583,7 +583,7 @@ table td,table th,thead th,tbody td,.edgetbl td,.edgetbl th,.caltbl td,.caltbl t
     <div id="digestbody"></div>
   </div>
 
-  <div class="panel" id="sharepanel">
+  <div class="panel" id="sharepanel" hidden>
     <div class="mkthead"><h2>📸 Shareable card</h2><button id="sharemake" class="btn" type="button">Make this week's image</button><span class="mktmuted" id="sharecap"></span></div>
     <div id="sharebox"><p class="mktnote">Generate a branded image of this week's top model picks — sized for Instagram, TikTok, or X. One tap, then download and post.</p></div>
   </div>
@@ -2072,7 +2072,8 @@ initAutoParlay();
 renderWatch();
 renderLeaderboard();
 generateDigest();
-{ const _sb=$('sharemake'); if(_sb) _sb.onclick=shareThisWeek; }
+// Private creator tool — the shareable card is hidden from the public; reveal it with ?card in the URL
+if(/[?&]card\b/i.test(location.search)){ const _sp=$('sharepanel'); if(_sp){ _sp.hidden=false; const _sb=$('sharemake'); if(_sb) _sb.onclick=shareThisWeek; } }
 (function(){
   const OPEN_BY_DEFAULT=new Set(['digestpanel','edgepanel','calcpanel','watchpanel','comparepanel']);
   ['page-week','page-player','page-tools'].forEach(pid=>{ const pg=$(pid); if(!pg) return;
