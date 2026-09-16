@@ -788,7 +788,7 @@ table td,table th,thead th,tbody td,.edgetbl td,.edgetbl th,.caltbl td,.caltbl t
   <div class="panel">
     <div class="mkthead"><h2>Picks</h2><span class="mktmuted" id="pkcount"></span></div>
     <div class="chartwrap"><table class="edgetbl" id="pktbl"></table></div>
-    <div style="margin-top:10px;display:flex;gap:10px;align-items:center;flex-wrap:wrap"><button id="pkmore" class="btn ghost" hidden>Show more</button></div>
+    <div style="margin-top:10px;display:flex;gap:10px;align-items:center;flex-wrap:wrap"><button id="pkmore" class="btn ghost" hidden>Show more</button><button id="pkall" class="btn ghost" hidden>Show all</button><span class="mktmuted" id="pkcountb"></span></div>
   </div>
 </div><!-- /tab-picks -->
 
@@ -1991,9 +1991,7 @@ function renderPicks(){
     `<div><div class="lab">Model said</div><div class="big">${avgPred!=null? Math.round(avgPred*100)+'%' : '—'}</div><div class="sub">average predicted chance</div></div>`+
   `</div>`;
   drawCalibration(graded); drawByWeek(graded); renderBreakdown(pkRows(true));
-  const tableRows = pkF.q ? rows
-    : [...rows].sort((a,b)=>((b.res==='hit'?2:b.res==='miss'?-2:0)+(b.prob||0))-((a.res==='hit'?2:a.res==='miss'?-2:0)+(a.prob||0))).slice(0,25);
-  renderPickTable(tableRows);
+  renderPickTable(rows);
 }
 function recordRow(label, ps){
   const g=ps.filter(p=>p.res==='hit'||p.res==='miss'), h=g.filter(p=>p.res==='hit').length;
@@ -2068,9 +2066,16 @@ function renderPickTable(rows){
       `<td>${(p.lists||'').split('').filter(c=>LIST_NAME[c]).map(c=>`<span class="listchip ${c}" title="${LIST_NAME[c]}">${c}</span>`).join('')}</td><td class="mktmuted">${p.season}</td></tr>`;
   });
   $('pktbl').innerHTML=h+'</tbody>';
-  $('pkcount').textContent = pkF.q ? `${rows.length.toLocaleString()} picks match · showing ${shown.length.toLocaleString()}` : `Search a player above to see their picks`;
-  $('pkmore').hidden = shown.length>=rows.length;
-  $('pkmore').onclick=()=>{ pkShown+=300; renderPickTable(rows); };
+  const remaining = rows.length - shown.length, step = 150;
+  const countTxt = rows.length ? `Showing ${shown.length.toLocaleString()} of ${rows.length.toLocaleString()} picks` : `No picks match these filters`;
+  $('pkcount').textContent = countTxt;
+  $('pkcountb').textContent = remaining>0 ? countTxt : '';
+  $('pkmore').hidden = remaining<=0;
+  $('pkmore').textContent = `Show ${Math.min(step, remaining).toLocaleString()} more`;
+  $('pkmore').onclick=()=>{ pkShown+=step; renderPickTable(rows); };
+  $('pkall').hidden = remaining<=0;
+  $('pkall').textContent = `Show all ${rows.length.toLocaleString()}`;
+  $('pkall').onclick=()=>{ pkShown=rows.length; renderPickTable(rows); };
   $('pktbl').querySelectorAll('th').forEach(t=>t.onclick=()=>{ const kk=t.dataset.k; if(!kk) return;
     if(pkSort.key===kk) pkSort.dir*=-1; else { pkSort.key=kk; pkSort.dir=['player','team','opp','stat','side','lists','src'].includes(kk)?1:-1; } renderPickTable(rows); });
 }
