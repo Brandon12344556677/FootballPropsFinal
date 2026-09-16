@@ -1939,8 +1939,8 @@ function buildPickFilters(){
   const teams=uniq(PICKS.map(p=>p.team)).sort(), opps=uniq(PICKS.map(p=>p.opp)).sort();
   const stats=uniq(PICKS.map(p=>p.stat)).sort((a,b)=>statLabel(a).localeCompare(statLabel(b)));
   const sel=(id,label,opts)=>`<div><label for="pk_${id}">${label}</label><select id="pk_${id}">${opts.map(o=>`<option value="${esc(o[0])}">${esc(o[1])}</option>`).join('')}</select></div>`;
-  wrap.innerHTML=
   const pctOpts=[["","Any"]]; for(let i=50;i<=100;i++) pctOpts.push([String(i), i+"%"]);
+  wrap.innerHTML=
     sel('src','Source',[['all','2026 + 2025'],['live','2026 only'],['bt','2025 only']])+
     sel('list','List',[['listed','Recommended (25 Guaranteed / Value)'],['T','25 Guaranteed'],['V','Value spots'],['all','All tracked props']])+
     sel('season','Season',[['','All']].concat(seasons.map(s=>[s,s])))+
