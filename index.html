@@ -575,6 +575,7 @@ table td,table th,thead th,tbody td,.edgetbl td,.edgetbl th,.caltbl td,.caltbl t
     <span class="socialtag">Follow us</span>
     <a id="social_ig" class="sociallink" href="#" target="_blank" rel="noopener" hidden>📸 Instagram</a>
     <a id="social_tt" class="sociallink" href="#" target="_blank" rel="noopener" hidden>🎵 TikTok</a>
+    <a id="social_x" class="sociallink" href="#" target="_blank" rel="noopener" hidden>𝕏 Twitter</a>
   </div>
 
 <div id="page-week">
@@ -813,7 +814,7 @@ const REFERRAL = { url: "https://polymarket.us/join/propstreaklab", text: "🎁 
 // Second banner: join our Polymarket squad/group. Leave url "" to hide it.
 const REFERRAL2 = { url: "https://polymarket.us/squad/join/CDU9RMD97K7O1G95yAao?referrer=propstreaklab", text: "👥 Join our Polymarket group →" };
 // ▼▼▼ SOCIAL FOLLOW LINKS — put your full profile URLs here (placeholders below; replace with your real handles). Leave "" to hide a button. ▼▼▼
-const SOCIAL = { instagram: "https://www.instagram.com/propstreaklab", tiktok: "https://www.tiktok.com/@propstreaklab" };
+const SOCIAL = { instagram: "https://www.instagram.com/propstreaklab", tiktok: "https://www.tiktok.com/@propstreaklab", x: "https://x.com/propstreaklab" };
 
 // ▼▼▼ FEATURE-SUGGESTION INBOX — replace with your company email. Suggestions open in the visitor's mail app addressed here. ▼▼▼
 const FEEDBACK_EMAIL = "info@propstreaklab.com";
@@ -949,11 +950,12 @@ if(WEEK.week) $('dnweek').textContent = `${WEEK.season} · week ${WEEK.week} on 
 (function renderRef(){ const b=$('refbanner');
   if(REFERRAL.url){ b.href=REFERRAL.url; b.textContent=REFERRAL.text; b.hidden=false; } else b.hidden=true;
   const b2=$('refbanner2'); if(REFERRAL2.url){ b2.href=REFERRAL2.url; b2.textContent=REFERRAL2.text; b2.hidden=false; } else b2.hidden=true; })();
-(function renderSocial(){ const ig=$('social_ig'), tt=$('social_tt'), bar=$('socialbar'); if(!bar) return;
+(function renderSocial(){ const ig=$('social_ig'), tt=$('social_tt'), xa=$('social_x'), bar=$('socialbar'); if(!bar) return;
   const S=(typeof SOCIAL!=='undefined')?SOCIAL:{};
   if(S.instagram){ ig.href=S.instagram; ig.hidden=false; } else ig.hidden=true;
   if(S.tiktok){ tt.href=S.tiktok; tt.hidden=false; } else tt.hidden=true;
-  bar.hidden = !(S.instagram||S.tiktok); })();
+  if(xa){ if(S.x){ xa.href=S.x; xa.hidden=false; } else xa.hidden=true; }
+  bar.hidden = !(S.instagram||S.tiktok||S.x); })();
 
 (function(){
   const wrap=$('chips');
