@@ -778,6 +778,12 @@ table td,table th,thead th,tbody td,.edgetbl td,.edgetbl th,.caltbl td,.caltbl t
     </div>
   </div>
   <div class="panel">
+    <h2>Profit — if you'd bet 1 unit on every pick</h2>
+    <p class="hint">Running units for the filtered picks that had a recorded market price, staking 1 unit on each at the price you'd have paid. A win at 60¢ returns +0.67u; a loss is −1u. 2025 picks have no market price, so they're not counted here.</p>
+    <div class="chartwrap"><svg id="pfchart" class="small" viewBox="0 0 520 240" preserveAspectRatio="xMidYMid meet" role="img" aria-label="cumulative units won"></svg></div>
+    <div id="pfempty" class="mktnote" hidden>No priced, graded picks match these filters yet — profit tracking fills in once 2026 picks with recorded prices are graded.</div>
+  </div>
+  <div class="panel">
     <h2>Breakdown</h2>
     <p class="hint">Record by recommendation list and by prop type for the current filters (the list filter itself is ignored here so every list shows).</p>
     <div class="twocol" style="margin-bottom:0">
@@ -1985,12 +1991,14 @@ function renderPicks(){
   const rows=pkRows(), graded=rows.filter(p=>p.res==='hit'||p.res==='miss');
   const hits=graded.filter(p=>p.res==='hit').length, pushes=rows.filter(p=>p.res==='push').length, pending=rows.filter(p=>p.res==null).length, dnp=rows.filter(p=>p.res==='dnp').length;
   const avgPred=graded.length? graded.reduce((a,p)=>a+p.prob,0)/graded.length : null;
+  const priced=graded.filter(p=>p.price), units=priced.reduce((a,p)=>a+(p.res==='hit'? 100/p.price-1 : -1),0), roi=priced.length? units/priced.length*100 : null;
   $('pksummary').innerHTML=`<div class="parlaysum" style="margin-top:4px">`+
     `<div><div class="lab">Graded</div><div class="big">${graded.length.toLocaleString()}</div><div class="sub">${pushes} push · ${dnp} DNP · ${pending} pending</div></div>`+
     `<div><div class="lab">Hit rate</div><div class="big ${graded.length&&hits/graded.length>=0.5?'hit':''}">${graded.length? Math.round(100*hits/graded.length)+'%' : '—'}</div><div class="sub">${hits} of ${graded.length}</div></div>`+
     `<div><div class="lab">Model said</div><div class="big">${avgPred!=null? Math.round(avgPred*100)+'%' : '—'}</div><div class="sub">average predicted chance</div></div>`+
+    `<div><div class="lab">Units won</div><div class="big ${priced.length&&units>=0?'hit':''}">${priced.length? (units>=0?'+':'')+units.toFixed(1)+'u' : '—'}</div><div class="sub">${priced.length? priced.length.toLocaleString()+' priced bets · '+(roi>=0?'+':'')+roi.toFixed(0)+'% ROI' : 'no priced 2026 picks graded yet'}</div></div>`+
   `</div>`;
-  drawCalibration(graded); drawByWeek(graded); renderBreakdown(pkRows(true));
+  drawCalibration(graded); drawByWeek(graded); drawProfit(priced); renderBreakdown(pkRows(true));
   renderPickTable(rows);
 }
 function recordRow(label, ps){
@@ -2045,6 +2053,31 @@ function drawByWeek(graded){
     s+=`<text x="${cx}" y="${y(r)-4}" text-anchor="middle" font-size="9.5" fill="${C.text}" font-family="${DISP}">${w.n}</text>`;
     s+=`<text x="${cx}" y="${H-padB+13}" text-anchor="middle" font-size="9.5" fill="${C.muted}" font-family="${DISP}">W${w.week}</text>`;
     if(i===0||g[i-1].season!==w.season) s+=`<text x="${cx}" y="${H-padB+26}" text-anchor="middle" font-size="9.5" fill="${C.muted}" font-family="${DISP}">${w.season}</text>`; });
+  svg.innerHTML=s;
+}
+function drawProfit(priced){
+  const svg=$('pfchart'), empty=$('pfempty');
+  const C={hit:cv('--hit'),miss:cv('--miss'),line:cv('--line'),muted:cv('--muted'),text:cv('--text')};
+  const g=[...priced].sort((a,b)=>{ const ka=(a.date||'')+String(a.week).padStart(2,'0'), kb=(b.date||'')+String(b.week).padStart(2,'0'); return ka.localeCompare(kb); });
+  if(!g.length){ svg.innerHTML=''; empty.hidden=false; return; } empty.hidden=true;
+  let cum=0; const pts=g.map((p,i)=>{ cum+=(p.res==='hit'? 100/p.price-1 : -1); return {i,cum}; });
+  const finalU=cum;
+  let lo=Math.min(0,...pts.map(o=>o.cum)), hi=Math.max(0,...pts.map(o=>o.cum));
+  if(hi-lo<1){ hi+=0.5; lo-=0.5; } const pd=(hi-lo)*0.12; hi+=pd; lo-=pd;
+  const W=520,H=240,padL=46,padR=14,padT=14,padB=26, pw=W-padL-padR, ph=H-padT-padB, n=pts.length;
+  const x=i=> n<=1? padL+pw/2 : padL+i/(n-1)*pw, y=v=>padT+ph-(v-lo)/(hi-lo)*ph;
+  let s='';
+  for(let t=0;t<=4;t++){ const v=lo+(hi-lo)*t/4; s+=`<line x1="${padL}" y1="${y(v)}" x2="${W-padR}" y2="${y(v)}" stroke="${C.line}" stroke-width="0.6"/><text x="${padL-6}" y="${y(v)+4}" text-anchor="end" font-size="10" fill="${C.muted}" font-family="${DISP}">${v>=0?'+':''}${v.toFixed(1)}u</text>`; }
+  if(lo<0&&hi>0) s+=`<line x1="${padL}" y1="${y(0)}" x2="${W-padR}" y2="${y(0)}" stroke="${C.muted}" stroke-width="1.2" stroke-dasharray="4 4"/>`;
+  const col=finalU>=0?C.hit:C.miss;
+  const linePath=pts.map((o,i)=>`${i?'L':'M'}${x(o.i).toFixed(1)} ${y(o.cum).toFixed(1)}`).join(' ');
+  const baseV=(0>=lo&&0<=hi)?0:lo, base=y(baseV);
+  s+=`<path d="${linePath} L${x(n-1).toFixed(1)} ${base.toFixed(1)} L${x(0).toFixed(1)} ${base.toFixed(1)} Z" fill="${col}" opacity="0.12"/>`;
+  s+=`<path d="${linePath}" fill="none" stroke="${col}" stroke-width="2"/>`;
+  s+=`<circle cx="${x(n-1).toFixed(1)}" cy="${y(pts[n-1].cum).toFixed(1)}" r="3.5" fill="${col}"/>`;
+  s+=`<text x="${W-padR}" y="${padT+12}" text-anchor="end" font-size="13" font-weight="700" fill="${C.text}" font-family="${DISP}">${finalU>=0?'+':''}${finalU.toFixed(1)}u after ${n} bet${n===1?'':'s'}</text>`;
+  s+=`<text x="${padL}" y="${H-6}" text-anchor="start" font-size="9.5" fill="${C.muted}" font-family="${DISP}">${(g[0].date||'').slice(5)||g[0].season}</text>`;
+  s+=`<text x="${W-padR}" y="${H-6}" text-anchor="end" font-size="9.5" fill="${C.muted}" font-family="${DISP}">${(g[n-1].date||'').slice(5)||g[n-1].season}</text>`;
   svg.innerHTML=s;
 }
 function renderPickTable(rows){
