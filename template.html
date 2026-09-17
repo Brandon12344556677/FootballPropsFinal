@@ -2000,7 +2000,7 @@ function renderPicks(){
     `<div><div class="lab">Units won</div><div class="big ${priced.length&&units>=0?'hit':''}">${priced.length? (units>=0?'+':'')+units.toFixed(1)+'u' : '—'}</div><div class="sub">${priced.length? priced.length.toLocaleString()+' priced bets · '+(roi>=0?'+':'')+roi.toFixed(0)+'% ROI' : 'no priced 2026 picks graded yet'}</div></div>`+
   `</div>`;
   drawCalibration(graded); drawByWeek(graded); drawProfit(priced); renderBreakdown(pkRows(true));
-  renderPickTable(rows);
+  renderPickTable(pkF.res==='pending' ? rows : rows.filter(p=>p.res!=null));
 }
 function recordRow(label, ps){
   const g=ps.filter(p=>p.res==='hit'||p.res==='miss'), h=g.filter(p=>p.res==='hit').length;
