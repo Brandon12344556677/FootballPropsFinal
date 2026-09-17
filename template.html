@@ -777,7 +777,7 @@ table td,table th,thead th,tbody td,.edgetbl td,.edgetbl th,.caltbl td,.caltbl t
       <div id="wkempty" class="mktnote" hidden>No graded picks match these filters yet.</div>
     </div>
   </div>
-  <div class="panel">
+  <div class="panel" id="pfpanel" hidden>
     <h2>Profit — if you'd bet 1 unit on every pick</h2>
     <p class="hint">Running units for the filtered picks that had a recorded market price, staking 1 unit on each at the price you'd have paid. A win at 60¢ returns +0.67u; a loss is −1u. 2025 picks have no market price, so they're not counted here.</p>
     <div class="chartwrap"><svg id="pfchart" class="small" viewBox="0 0 520 240" preserveAspectRatio="xMidYMid meet" role="img" aria-label="cumulative units won"></svg></div>
@@ -1993,13 +1993,14 @@ function renderPicks(){
   const hits=graded.filter(p=>p.res==='hit').length, pushes=rows.filter(p=>p.res==='push').length, pending=rows.filter(p=>p.res==null).length, dnp=rows.filter(p=>p.res==='dnp').length;
   const avgPred=graded.length? graded.reduce((a,p)=>a+p.prob,0)/graded.length : null;
   const priced=graded.filter(p=>p.price), units=priced.reduce((a,p)=>a+(p.res==='hit'? 100/p.price-1 : -1),0), roi=priced.length? units/priced.length*100 : null;
+  const showProfit = priced.length>0 && units>0;
   $('pksummary').innerHTML=`<div class="parlaysum" style="margin-top:4px">`+
     `<div><div class="lab">Graded</div><div class="big">${graded.length.toLocaleString()}</div><div class="sub">${pushes} push · ${dnp} DNP · ${pending} pending</div></div>`+
     `<div><div class="lab">Hit rate</div><div class="big ${graded.length&&hits/graded.length>=0.5?'hit':''}">${graded.length? Math.round(100*hits/graded.length)+'%' : '—'}</div><div class="sub">${hits} of ${graded.length}</div></div>`+
     `<div><div class="lab">Model said</div><div class="big">${avgPred!=null? Math.round(avgPred*100)+'%' : '—'}</div><div class="sub">average predicted chance</div></div>`+
-    `<div><div class="lab">Units won</div><div class="big ${priced.length&&units>=0?'hit':''}">${priced.length? (units>=0?'+':'')+units.toFixed(1)+'u' : '—'}</div><div class="sub">${priced.length? priced.length.toLocaleString()+' priced bets · '+(roi>=0?'+':'')+roi.toFixed(0)+'% ROI' : 'no priced 2026 picks graded yet'}</div></div>`+
+    (showProfit ? `<div><div class="lab">Units won</div><div class="big hit">+${units.toFixed(1)}u</div><div class="sub">${priced.length.toLocaleString()} priced bets · +${roi.toFixed(0)}% ROI</div></div>` : ``)+
   `</div>`;
-  drawCalibration(graded); drawByWeek(graded); drawProfit(priced); renderBreakdown(pkRows(true));
+  drawCalibration(graded); drawByWeek(graded); $('pfpanel').hidden=!showProfit; if(showProfit) drawProfit(priced); renderBreakdown(pkRows(true));
   renderPickTable(pkF.res==='pending' ? rows : rows.filter(p=>p.res!=null));
 }
 function recordRow(label, ps){
