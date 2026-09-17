@@ -782,6 +782,7 @@ table td,table th,thead th,tbody td,.edgetbl td,.edgetbl th,.caltbl td,.caltbl t
     <p class="hint">Running units for the filtered picks that had a recorded market price, staking 1 unit on each at the price you'd have paid. A win at 60¢ returns +0.67u; a loss is −1u. 2025 picks have no market price, so they're not counted here.</p>
     <div class="chartwrap"><svg id="pfchart" class="small" viewBox="0 0 520 240" preserveAspectRatio="xMidYMid meet" role="img" aria-label="cumulative units won"></svg></div>
     <div id="pfempty" class="mktnote" hidden>No priced, graded picks match these filters yet — profit tracking fills in once 2026 picks with recorded prices are graded.</div>
+    <div id="pfnote" class="mktnote" hidden></div>
   </div>
   <div class="panel">
     <h2>Breakdown</h2>
@@ -1919,7 +1920,7 @@ function renderSlip(legs, raw){
     for(const it of items){ if(it.type&&it.type.startsWith('image/')){ const f=it.getAsFile(); if(f){ scanSlip(f); e.preventDefault(); break; } } } }); })();
 
 let PICKS=null, PICKMETA=null, pkLoading=false, pkShown=150;
-const pkF={src:'all', list:'all', season:'', week:'', team:'', opp:'', pos:'', stat:'', side:'', pmin:'', pmax:'', res:'', q:''};
+const pkF={src:'all', list:'listed', season:'', week:'', team:'', opp:'', pos:'', stat:'', side:'', pmin:'', pmax:'', res:'', q:''};
 let pkSort={key:'date',dir:-1};
 const LIST_NAME={T:'25 Guaranteed',V:'Value'};
 async function initPicks(){
@@ -1966,7 +1967,7 @@ function buildPickFilters(){
   weekOpts();
   Object.keys(pkF).forEach(k=>{ const el=$('pk_'+k); if(!el) return;
     el.value=pkF[k]; el.addEventListener(k==='q'?'input':'change', ()=>{ pkF[k]=el.value; if(k==='season'){ pkF.week=''; weekOpts(); } pkShown=150; renderPicks(); }); });
-  $('pk_reset').onclick=()=>{ Object.assign(pkF,{src:'all',list:'all',season:'',week:'',team:'',opp:'',pos:'',stat:'',side:'',pmin:'',pmax:'',res:'',q:''});
+  $('pk_reset').onclick=()=>{ Object.assign(pkF,{src:'all',list:'listed',season:'',week:'',team:'',opp:'',pos:'',stat:'',side:'',pmin:'',pmax:'',res:'',q:''});
     Object.keys(pkF).forEach(k=>{ const el=$('pk_'+k); if(el) el.value=pkF[k]; }); weekOpts(); pkShown=150; renderPicks(); };
 }
 function pkRows(ignoreList){
@@ -2058,8 +2059,10 @@ function drawByWeek(graded){
 function drawProfit(priced){
   const svg=$('pfchart'), empty=$('pfempty');
   const C={hit:cv('--hit'),miss:cv('--miss'),line:cv('--line'),muted:cv('--muted'),text:cv('--text')};
+  const note=$('pfnote');
   const g=[...priced].sort((a,b)=>{ const ka=(a.date||'')+String(a.week).padStart(2,'0'), kb=(b.date||'')+String(b.week).padStart(2,'0'); return ka.localeCompare(kb); });
-  if(!g.length){ svg.innerHTML=''; empty.hidden=false; return; } empty.hidden=true;
+  if(!g.length){ svg.innerHTML=''; empty.hidden=false; note.hidden=true; return; } empty.hidden=true;
+  if(g.length<200){ note.hidden=false; note.innerHTML=`⚠ <b>Small sample</b> — ${g.length.toLocaleString()} graded bet${g.length===1?'':'s'} so far. One hot or cold week swings this a lot, so don't read too much into it yet; the real verdict comes after a few hundred.`; } else note.hidden=true;
   let cum=0; const pts=g.map((p,i)=>{ cum+=(p.res==='hit'? 100/p.price-1 : -1); return {i,cum}; });
   const finalU=cum;
   let lo=Math.min(0,...pts.map(o=>o.cum)), hi=Math.max(0,...pts.map(o=>o.cum));
