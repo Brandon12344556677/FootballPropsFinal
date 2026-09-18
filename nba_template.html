@@ -597,6 +597,7 @@ tr.hit td{background:var(--hit-soft)} tr.miss td{background:var(--miss-soft)}
   <div class="tabs" role="tablist">
     <button class="tab" role="tab" data-tab="week" aria-selected="true">🗓️ Upcoming</button>
     <button class="tab" role="tab" data-tab="player" aria-selected="false">🔬 Player</button>
+    <button class="tab" role="tab" data-tab="tools" aria-selected="false">🧰 Tools</button>
     <button class="tab" role="tab" data-tab="past" aria-selected="false">📒 Past picks</button>
   </div>
 
@@ -621,6 +622,10 @@ tr.hit td{background:var(--hit-soft)} tr.miss td{background:var(--miss-soft)}
     </div>
     <div class="pmeta" id="pmeta" style="margin-top:10px"></div>
     <div class="badges" id="badges"></div>
+    <div id="playerbtns" style="margin:8px 0" hidden>
+      <button id="watchstar" class="btn ghost" type="button">☆ Watch</button>
+      <button id="cmpadd" class="btn ghost" type="button">⚖ Compare</button>
+    </div>
 
     <div class="ctrlrow">
       <div class="linectl">
@@ -666,6 +671,35 @@ tr.hit td{background:var(--hit-soft)} tr.miss td{background:var(--miss-soft)}
   <div class="panel">
     <h2>Recent games</h2>
     <div class="tblwrap"><table id="tbl"></table></div>
+  </div>
+</div>
+
+<div id="page-tools" hidden>
+  <div class="panel">
+    <div class="mkthead"><h2>⭐ Watchlist</h2><span class="mktmuted">players you've starred — saved on this device</span></div>
+    <div id="watchbody"></div>
+  </div>
+  <div class="panel">
+    <div class="mkthead"><h2>⚖️ Compare players</h2><span class="mktmuted" id="cmpcap"></span><button id="cmpclear" class="btn ghost" type="button">Clear</button></div>
+    <p class="mktnote">Add players with <b>⚖ Compare</b> on the <b>Player</b> tab, then set a stat, line and side there — everyone is scored for that exact prop so you can see who's the better bet.</p>
+    <div id="cmpbody"></div>
+  </div>
+  <div class="panel">
+    <div class="mkthead"><h2>🎲 Build me a parlay</h2><span class="mktmuted">pick risk &amp; legs — we assemble it from the model board</span></div>
+    <div class="ctrlrow">
+      <label>Risk
+        <select id="apRisk" style="height:34px;border:2.5px solid var(--ink);border-radius:8px;background:var(--surface);color:var(--text);margin-left:6px">
+          <option value="safe">Safe — highest chances</option>
+          <option value="balanced" selected>Balanced</option>
+          <option value="longshot">Long shot — bigger payout</option>
+        </select>
+      </label>
+      <label>Legs
+        <select id="apLegs" style="height:34px;border:2.5px solid var(--ink);border-radius:8px;background:var(--surface);color:var(--text);margin-left:6px"><option>2</option><option>3</option><option selected>4</option><option>5</option><option>6</option></select>
+      </label>
+      <button id="apBuild" class="btn" type="button">Build my parlay ↓</button>
+    </div>
+    <div id="apbody"></div>
   </div>
 </div>
 
@@ -800,13 +834,14 @@ function contextFor(p, sk, oppOverride, gameOverride){
 }
 
 // ---- tabs ----
-const PAGE_IDS={week:'page-week', player:'page-player', past:'tab-picks'};
+const PAGE_IDS={week:'page-week', player:'page-player', tools:'page-tools', past:'tab-picks'};
 function showTab(name){
   if(name==='picks') name='past';
   if(!PAGE_IDS[name]) name='week';
   document.querySelectorAll('.tab').forEach(t=>t.setAttribute('aria-selected', String(t.dataset.tab===name)));
   for(const k in PAGE_IDS){ const el=$(PAGE_IDS[k]); if(el) el.hidden = k!==name; }
   if(name==='past') initPicks();
+  if(name==='tools'){ renderWatch(); renderCompare(); }
   try{ history.replaceState(null,'', '#'+name); }catch(e){}
   window.scrollTo({top:0});
 }
@@ -865,6 +900,7 @@ $('adjctx').onchange=()=>{ state.adj=$('adjctx').checked; render(); };
 function tileClass(p){ return p>=0.6?'hi':p>=0.45?'mid':'lo'; }
 function render(){
   const p=state.player;
+  updatePlayerBtns();
   if(!p){ $('headline').innerHTML='<span class="q">Search a player above to see their prop chances.</span>';
     $('tiles').innerHTML=''; $('pmeta').textContent=''; drawDist([],0,'pts'); drawChart([],0,'pts'); $('tbl').innerHTML=''; $('splitbody').innerHTML=''; return; }
   const sk=state.stat, st=STATMAP[sk], gs=gamesOf(p), vals=gs.map(st.get);
@@ -1026,6 +1062,72 @@ function renderPast(){ const body=$('pkbody'); if(!body) return;
     h+=`<tr class="${cls}"><td>${esc(dlabel(p.date))}</td><td>${esc(p.player)}</td><td>${esc(p.team)} @ ${esc(p.opp)}</td><td>${esc(statLabel(p.stat))} ${esc(p.side)} ${esc(p.line)}</td><td>${p.prob!=null?pct(p.prob):'—'}</td><td>${p.actual!=null?p.actual:'—'}</td><td>${p.res?esc(p.res):'pending'}</td></tr>`; });
   body.innerHTML=h+'</tbody></table></div>';
 }
+
+// ---- Tools: watchlist, compare, parlay ----
+let WATCH=[]; try{ WATCH=JSON.parse(localStorage.getItem('psl_nba_watch')||'[]'); if(!Array.isArray(WATCH)) WATCH=[]; }catch(e){ WATCH=[]; }
+let CMP=[];   try{ CMP=JSON.parse(localStorage.getItem('psl_nba_cmp')||'[]'); if(!Array.isArray(CMP)) CMP=[]; }catch(e){ CMP=[]; }
+function saveTools(){ try{ localStorage.setItem('psl_nba_watch',JSON.stringify(WATCH)); localStorage.setItem('psl_nba_cmp',JSON.stringify(CMP)); }catch(e){} }
+function updatePlayerBtns(){ const box=$('playerbtns'), p=state.player; if(!box) return;
+  if(!p){ box.hidden=true; return; } box.hidden=false;
+  const w=WATCH.includes(p.id), c=CMP.includes(p.id);
+  $('watchstar').textContent = w? '★ Watching' : '☆ Watch';
+  $('cmpadd').textContent = c? '⚖ In compare' : '⚖ Compare';
+}
+function playerModel(p, sk, line){ const vals=valuesOf(p, sk); if(vals.length<3) return null;
+  const ctx=contextFor(p, sk); return calMp(modelProb(vals, line, floorFor(sk), ctx.scale)); }
+function renderWatch(){ const body=$('watchbody'); if(!body) return;
+  const items=WATCH.map(id=>byId[id]).filter(p=>p&&p.g&&p.g.length);
+  if(!items.length){ body.innerHTML='<p class="mktnote">No players starred yet. Open a player in the <b>Player</b> tab and tap <b>☆ Watch</b>.</p>'; return; }
+  body.innerHTML=items.map(p=>{ const sk='pts', vals=valuesOf(p,sk), line=seedLine(vals), mp=playerModel(p,sk,line);
+    const g=teamGame(p.t), opp=g?(g.away===p.t?g.home:g.away):null;
+    const prob=mp? (mp.over>=0.5?mp.over:mp.under):null, side=mp?(mp.over>=0.5?'over':'under'):'';
+    const cls=prob==null?'':prob>=0.7?'hi':prob>=0.6?'mid':'lo';
+    return `<div class="boardrow"><div><div class="bp">${esc(p.n)} <span class="bmeta">${esc(p.t)}${opp?' '+(g.home===p.t?'vs':'@')+' '+esc(opp):''}</span></div>`+
+      `<div class="bpick">Points ${side} ${line}</div></div>`+
+      `<div><button class="btn ghost" type="button" onclick="openPlayer('${esc(p.id)}')">Open</button> <button class="btn ghost" type="button" onclick="toggleWatch('${esc(p.id)}')">✕</button></div>`+
+      `<div class="bprob ${cls}">${prob!=null?pct(prob):'—'}</div></div>`; }).join('');
+}
+function renderCompare(){ const body=$('cmpbody'); if(!body) return;
+  $('cmpcap').textContent = CMP.length? `${statLabel(state.stat)} ${state.ou} ${state.line}` : '';
+  const items=CMP.map(id=>byId[id]).filter(p=>p&&p.g&&p.g.length);
+  if(!items.length){ body.innerHTML='<p class="mktnote">No players added. Use <b>⚖ Compare</b> on the Player tab.</p>'; return; }
+  const sk=state.stat, line=state.line, side=state.ou;
+  const rows=items.map(p=>{ const vals=valuesOf(p,sk), mp=playerModel(p,sk,line);
+    const prob=mp?(side==='over'?mp.over:mp.under):null;
+    const hit=vals.filter(v=>side==='over'?v>line:v<line).length;
+    const avg=vals.length?vals.reduce((a,b)=>a+b,0)/vals.length:0;
+    return {p, prob, hit, n:vals.length, avg}; }).sort((a,b)=>(b.prob||0)-(a.prob||0));
+  let h='<div class="tblwrap"><table><thead><tr><th>Player</th><th>Avg</th><th>Hit rate</th><th>Model '+esc(side)+'</th><th></th></tr></thead><tbody>';
+  rows.forEach(r=>{ h+=`<tr><td>${esc(r.p.n)} <span class="bmeta">${esc(r.p.t)}</span></td><td>${fmt(r.avg)}</td><td>${r.n?pct(r.hit/r.n):'—'} <span class="bmeta">${r.hit}/${r.n}</span></td><td><b>${r.prob!=null?pct(r.prob):'—'}</b></td><td><button class="btn ghost" type="button" onclick="toggleCmp('${esc(r.p.id)}')">✕</button></td></tr>`; });
+  body.innerHTML=h+'</tbody></table></div>';
+}
+function toggleWatch(id){ const i=WATCH.indexOf(id); if(i<0) WATCH.push(id); else WATCH.splice(i,1); saveTools(); updatePlayerBtns(); renderWatch(); }
+function toggleCmp(id){ const i=CMP.indexOf(id); if(i<0){ if(CMP.length<6) CMP.push(id); } else CMP.splice(i,1); saveTools(); updatePlayerBtns(); renderCompare(); }
+function openPlayer(id){ showTab('player'); pick(id); }
+$('watchstar').onclick=()=>{ if(state.player) toggleWatch(state.player.id); };
+$('cmpadd').onclick=()=>{ if(state.player) toggleCmp(state.player.id); };
+function buildParlay(){ const body=$('apbody');
+  const risk=$('apRisk').value, legs=parseInt($('apLegs').value,10)||4;
+  const pend=(PICKS||[]).filter(p=>p.res==null && (p.date||'')>=TODAY_ISO && p.prob!=null);
+  if(pend.length<2){ body.innerHTML='<p class="mktnote">Not enough upcoming picks to build a parlay yet — this fills in when games are on the schedule.</p>'; return; }
+  let pool=pend.slice().sort((a,b)=>b.prob-a.prob);
+  if(risk==='safe') pool=pool.slice(0, Math.max(legs, 8));
+  else if(risk==='longshot') pool=pool.filter(p=>p.prob>=0.5).slice(-Math.max(legs*3,12));
+  // one leg per player, prefer variety of games
+  const chosen=[], usedPlayers=new Set();
+  for(const p of (risk==='balanced'? shuffle(pool.slice(0,Math.max(legs*3,12))) : pool)){
+    if(usedPlayers.has(p.pid)) continue; chosen.push(p); usedPlayers.add(p.pid); if(chosen.length>=legs) break; }
+  if(chosen.length<2){ body.innerHTML='<p class="mktnote">Couldn\'t find enough distinct legs. Try fewer legs.</p>'; return; }
+  const combined=chosen.reduce((a,p)=>a*p.prob,1);
+  let h=`<p style="margin:10px 0 6px">Combined model chance: <b>${pct(combined)}</b> · fair odds ~<b>${combined>0?('+'+Math.round((1/combined-1)*100)):'—'}</b> (${chosen.length} legs)</p>`;
+  h+=chosen.map(p=>{ const cls=p.prob>=0.7?'hi':p.prob>=0.6?'mid':'lo';
+    return `<div class="boardrow"><div><div class="bp">${esc(p.player)} <span class="bmeta">${esc(p.team)} @ ${esc(p.opp)}</span></div><div class="bpick">${esc(statLabel(p.stat))} ${esc(p.side)} ${esc(p.line)}</div></div><div></div><div class="bprob ${cls}">${pct(p.prob)}</div></div>`; }).join('');
+  h+='<p class="mktnote" style="margin-top:8px">Legs are the model\'s highest-confidence upcoming picks. Correlations aren\'t modeled — treat combined chance as a rough guide, not advice.</p>';
+  body.innerHTML=h;
+}
+function shuffle(a){ a=a.slice(); for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; }
+$('apBuild').onclick=buildParlay;
+$('cmpclear').onclick=()=>{ CMP=[]; saveTools(); updatePlayerBtns(); renderCompare(); };
 
 // ---- boot ----
 renderUpcoming();     // shows "Loading…" until picks arrive
