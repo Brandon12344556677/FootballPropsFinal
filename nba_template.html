@@ -558,6 +558,7 @@ table td,table th,thead th,tbody td,.edgetbl td,.edgetbl th,.caltbl td,.caltbl t
 .lbrow{display:flex;justify-content:space-between;gap:12px;padding:10px 4px;border-bottom:1px solid var(--line)}
 .lbrow .lbn b{color:var(--gold)}
 .lbstreak{font-family:var(--display);font-size:26px;color:var(--hit)}
+.vbadge{display:inline-block;background:var(--gold);color:#04220a;font-family:var(--dispers);font-weight:700;font-size:11px;letter-spacing:.5px;padding:2px 7px;border-radius:6px}
 .linectl{display:flex;align-items:center;gap:8px}
 .linectl button{width:38px;height:38px;border:2.5px solid var(--ink);background:var(--surface);color:var(--text);
   border-radius:10px;font-size:22px;cursor:pointer;font-weight:700}
@@ -604,6 +605,10 @@ tr.hit td{background:var(--hit-soft)} tr.miss td{background:var(--miss-soft)}
   <a id="refbanner" class="refbanner" href="#" target="_blank" rel="noopener" hidden></a>
 
 <div id="page-week">
+  <div class="panel" id="valuepanel" hidden>
+    <div class="mkthead"><h2>⚡ Value spots</h2><span class="mktmuted">where the model's odds most beat the market — even the low end of its range clears the price</span></div>
+    <div id="valuebody"></div>
+  </div>
   <div class="panel" id="boardpanel">
     <div class="mkthead"><h2>🗓️ Upcoming Game Props</h2><span class="mktmuted" id="boardcap">the model's picks for games on the upcoming schedule</span></div>
     <div id="boardbody"></div>
@@ -723,6 +728,7 @@ const norm = s => String(s||'').toLowerCase().normalize('NFD').replace(/\p{Diacr
 function pkey(s){ return norm(s).replace(/[.'`\-]/g,'').replace(/\b(jr|sr|ii|iii|iv|v)\b/g,'').replace(/\s+/g,' ').trim(); }
 function fmt(x){ return (Math.round(x*10)/10).toString(); }
 function pct(p){ return Math.round(p*100)+'%'; }
+function cents(p){ return p==null? '' : Math.round(p*100)+'¢'; }
 
 // ==== MODEL (mirrored in build_nba.py — keep identical) ====
 const MODEL = {halfLife:6, maxGames:20, priorK:0.5, bwConst:0.9, z:1.2816};
@@ -1019,12 +1025,24 @@ function renderUpcoming(){
   keys.forEach(k=>{ const g=groups[k];
     h+=`<div class="mkthead" style="margin:16px 0 8px"><h2 style="font-size:19px">${esc(dlabel(g.date))} · ${esc(g.teams[0])} vs ${esc(g.teams[1])}</h2></div>`;
     const ps=g.picks.slice().sort((a,b)=>(b.prob||0)-(a.prob||0)).slice(0,15);
-    h+=ps.map(x=>{ const cls=x.prob>=0.7?'hi':x.prob>=0.6?'mid':'lo';
-      return `<div class="boardrow"><div><div class="bp">${esc(x.player)} <span class="bmeta">${esc(x.team)} @ ${esc(x.opp)}</span></div>`+
-        `<div class="bpick">${esc(statLabel(x.stat))} ${esc(x.side)} ${esc(x.line)}</div></div>`+
-        `<div></div><div class="bprob ${cls}">${x.prob!=null?pct(x.prob):'—'}</div></div>`; }).join('');
+    h+=ps.map(x=>pickRow(x)).join('');
   });
   body.innerHTML=h;
+}
+function pickRow(x){ const cls=x.prob>=0.7?'hi':x.prob>=0.6?'mid':'lo';
+  const val=(x.lists||'').includes('V');
+  const mid=[]; if(x.price!=null) mid.push(`<span class="bmeta">ask ${cents(x.price)}</span>`); if(val) mid.push(`<span class="vbadge">⚡ VALUE</span>`);
+  return `<div class="boardrow"><div><div class="bp">${esc(x.player)} <span class="bmeta">${esc(x.team)} @ ${esc(x.opp)}</span></div>`+
+    `<div class="bpick">${esc(statLabel(x.stat))} ${esc(x.side)} ${esc(x.line)}</div></div>`+
+    `<div style="text-align:right">${mid.join('<br>')}</div><div class="bprob ${cls}">${x.prob!=null?pct(x.prob):'—'}</div></div>`;
+}
+function renderValue(){ const panel=$('valuepanel'), body=$('valuebody'); if(!panel) return;
+  if(PICKS===null){ panel.hidden=true; return; }
+  const v=PICKS.filter(p=>(p.lists||'').includes('V') && p.res==null && (p.date||'')>=TODAY_ISO && p.price!=null);
+  if(!v.length){ panel.hidden=true; return; }
+  panel.hidden=false;
+  v.sort((a,b)=>((b.prob/b.price)-(a.prob/a.price)));
+  body.innerHTML=v.slice(0,25).map(x=>pickRow(x)).join('');
 }
 
 // ---- Hit streak leaderboard ----
@@ -1046,8 +1064,8 @@ let PICKS=null;
 function loadPicks(){
   fetch('./nba_picks.json',{cache:'no-store'}).then(r=>r.ok?r.json():null).then(d=>{
     if(!d||!d.picks){ PICKS=[]; } else { const cols=d.cols; PICKS=d.picks.map(row=>Object.fromEntries(cols.map((c,i)=>[c,row[i]]))); }
-    renderUpcoming(); renderPast();
-  }).catch(()=>{ PICKS=[]; renderUpcoming(); renderPast(); });
+    renderValue(); renderUpcoming(); renderPast();
+  }).catch(()=>{ PICKS=[]; renderValue(); renderUpcoming(); renderPast(); });
 }
 function initPicks(){ renderPast(); }   // Past tab opened
 function renderPast(){ const body=$('pkbody'); if(!body) return;

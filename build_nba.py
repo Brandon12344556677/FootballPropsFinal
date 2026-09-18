@@ -33,6 +33,54 @@ ESPN_CORE_EVENTS = "https://sports.core.api.espn.com/v2/sports/basketball/league
 ESPN_CDN_BOX = "https://cdn.espn.com/core/nba/boxscore?xhr=1&gameId={gid}"
 ESPN_CDN_SB = "https://cdn.espn.com/core/nba/scoreboard?xhr=1"
 
+# Polymarket NBA player-prop markets (auto-activates when the season posts them;
+# off-season it simply finds nothing and the board stays model-only). Mirrors the
+# NFL setup in build.py. The exact NBA slug/team format can only be confirmed once
+# markets exist, so team matching accepts abbreviations, cities, or nicknames.
+POLY_SLATE = ("https://gamma-api.polymarket.com/events"
+              "?closed=false&tag_slug=nba&limit=500&order=startDate&ascending=false")
+POLY_EVENT = "https://gamma-api.polymarket.com/events/slug/{slug}"
+POLY_SLUG = re.compile(r"^nba-([a-z0-9]+)-([a-z0-9]+)-(\d{4}-\d{2}-\d{2})-player-props$")
+Q_RE = re.compile(r"^(.*?):\s*(.+?)\s+O/U\s+([\d.]+)", re.I)
+# Market question text -> our stat key. Order matters (combos and threes first).
+MKT_STAT_NBA = [
+    (re.compile(r"pts\s*\+\s*reb\s*\+\s*ast|points\s*\+\s*rebounds\s*\+\s*assists|\bpra\b", re.I), "pra"),
+    (re.compile(r"pts\s*\+\s*reb|points\s*\+\s*rebounds", re.I), "pr"),
+    (re.compile(r"pts\s*\+\s*ast|points\s*\+\s*assists", re.I), "pa"),
+    (re.compile(r"reb\s*\+\s*ast|rebounds\s*\+\s*assists", re.I), "ra"),
+    (re.compile(r"three|3-?point|3pm|3s\b|treys", re.I), "tpm"),
+    (re.compile(r"rebounds?", re.I), "reb"),
+    (re.compile(r"assists?", re.I), "ast"),
+    (re.compile(r"steals?", re.I), "stl"),
+    (re.compile(r"blocks?", re.I), "blk"),
+    (re.compile(r"turnovers?", re.I), "to"),
+    (re.compile(r"points?", re.I), "pts"),
+]
+# Team nickname / city -> ESPN abbreviation, so Polymarket slugs match ESPN games
+# whether they use "lakers", "losangeles", or "lal".
+NBA_TEAMS = {
+    "hawks": "ATL", "atlanta": "ATL", "celtics": "BOS", "boston": "BOS",
+    "nets": "BKN", "brooklyn": "BKN", "hornets": "CHA", "charlotte": "CHA",
+    "bulls": "CHI", "chicago": "CHI", "cavaliers": "CLE", "cavs": "CLE", "cleveland": "CLE",
+    "mavericks": "DAL", "mavs": "DAL", "dallas": "DAL", "nuggets": "DEN", "denver": "DEN",
+    "pistons": "DET", "detroit": "DET", "warriors": "GSW", "goldenstate": "GSW",
+    "rockets": "HOU", "houston": "HOU", "pacers": "IND", "indiana": "IND",
+    "clippers": "LAC", "kings": "SAC", "sacramento": "SAC", "lakers": "LAL",
+    "grizzlies": "MEM", "memphis": "MEM", "heat": "MIA", "miami": "MIA",
+    "bucks": "MIL", "milwaukee": "MIL", "timberwolves": "MIN", "wolves": "MIN", "minnesota": "MIN",
+    "pelicans": "NOP", "neworleans": "NOP", "knicks": "NYK", "newyork": "NYK",
+    "thunder": "OKC", "oklahomacity": "OKC", "magic": "ORL", "orlando": "ORL",
+    "76ers": "PHI", "sixers": "PHI", "philadelphia": "PHI", "suns": "PHX", "phoenix": "PHX",
+    "trailblazers": "POR", "blazers": "POR", "portland": "POR", "spurs": "SAS", "sanantonio": "SAS",
+    "raptors": "TOR", "toronto": "TOR", "jazz": "UTA", "utah": "UTA",
+    "wizards": "WAS", "washington": "WAS",
+}
+
+
+def poly_team(tok):
+    tok = (tok or "").lower()
+    return NBA_TEAMS.get(tok, tok.upper())
+
 STATS_FILE = "nba_stats.json"
 PICKS_FILE = "nba_picks.json"
 DATA_FILE = "nba.json"
@@ -204,10 +252,109 @@ def num(v):
     return int(f) if float(f).is_integer() else f
 
 
+def fnum(v):
+    try:
+        return float(v) if v not in (None, "") else None
+    except (ValueError, TypeError):
+        return None
+
+
+def _jsonish(v):
+    if isinstance(v, str):
+        try:
+            return json.loads(v)
+        except ValueError:
+            return v
+    return v
+
+
 def _ma(s):
     """Parse ESPN 'made-attempted' cells like '10-19' -> (10, 19)."""
     m = re.match(r"\s*(\d+)\s*-\s*(\d+)", str(s or ""))
     return (int(m.group(1)), int(m.group(2))) if m else (0, 0)
+
+
+def mkt_stat_key(txt):
+    for rx, k in MKT_STAT_NBA:
+        if rx.search(txt or ""):
+            return k
+    return None
+
+
+def parse_market(m):
+    """One Polymarket O/U market -> dict, or None. Prices are what you'd PAY per side."""
+    q = m.get("question") or m.get("groupItemTitle") or ""
+    mm = Q_RE.match(q)
+    if not mm:
+        return None
+    player, stat_text = mm.group(1).strip(), mm.group(2).strip()
+    if re.search(r"\bvs\b", player, re.I):
+        return None
+    outs = _jsonish(m.get("outcomes")) or []
+    prices = _jsonish(m.get("outcomePrices")) or []
+    io_ = next((i for i, o in enumerate(outs) if re.search(r"over", str(o), re.I)), -1)
+    try:
+        mid = float(prices[io_]) if 0 <= io_ < len(prices) else None
+    except (TypeError, ValueError):
+        mid = None
+    bid, ask = fnum(m.get("bestBid")), fnum(m.get("bestAsk"))
+    if bid is not None and ask is not None and io_ == 1:
+        bid, ask = 1 - ask, 1 - bid
+    spread = fnum(m.get("spread"))
+    if spread is None and bid is not None and ask is not None:
+        spread = round(ask - bid, 3)
+    liq = fnum(m.get("liquidityNum")) or 0.0
+    tight = spread is not None and spread <= 0.15
+    deep = liq >= 300 and spread is not None and spread <= 0.60
+    tradeable = tight or deep
+    over_buy = ask if ask is not None else mid
+    under_buy = (1 - bid) if bid is not None else (1 - mid if mid is not None else None)
+
+    def ok(p):
+        return p is not None and 0.02 < p < 0.98
+
+    if not (ok(over_buy) and ok(under_buy)):
+        tradeable = False
+    line = fnum(m.get("line"))
+    if line is None:
+        line = float(mm.group(3))
+    return {"player": player, "statText": stat_text, "line": line,
+            "over": over_buy if ok(over_buy) else None, "under": under_buy if ok(under_buy) else None,
+            "tradeable": tradeable}
+
+
+def fetch_markets():
+    """Polymarket NBA player-prop events in a [-1,+10] day window, with markets.
+    Non-fatal; returns [] off-season or if the API/format doesn't match."""
+    try:
+        events = json.loads(http_get(POLY_SLATE))
+    except Exception as e:  # noqa: BLE001
+        print(f"  polymarket: skipped ({e})")
+        return []
+    games = []
+    for ev in events if isinstance(events, list) else []:
+        slug = ev.get("slug", "")
+        m = POLY_SLUG.match(slug)
+        if not m:
+            continue
+        try:
+            d = datetime.date.fromisoformat(m.group(3))
+        except ValueError:
+            continue
+        if not (TODAY - datetime.timedelta(days=1) <= d <= TODAY + datetime.timedelta(days=10)):
+            continue
+        games.append({"slug": slug, "away": poly_team(m.group(1)), "home": poly_team(m.group(2)), "date": m.group(3)})
+    if not games:
+        print("  polymarket: no NBA player-prop events yet (off-season or format differs)")
+        return []
+    print(f"  polymarket: {len(games)} NBA player-prop event(s)")
+    for g in games:
+        try:
+            g["markets"] = json.loads(http_get(POLY_EVENT.format(slug=g["slug"]))).get("markets", [])
+        except Exception as e:  # noqa: BLE001
+            print(f"    event {g['slug']}: skipped ({e})")
+            g["markets"] = []
+    return games
 
 
 def season_year(d):
@@ -561,6 +708,58 @@ def side_prob(mp):
     return "under", mp["under"], 1 - mp["hi"], 1 - mp["lo"]
 
 
+def build_market_picks(picks, poly_games, players_by_key, espn_slate, defense, defavg):
+    """Priced picks from Polymarket NBA markets, matched to players by name. Each
+    is modeled at the market's line so Value spots can compare model vs price.
+    Returns count added; no-op when there are no NBA markets (off-season)."""
+    have = {(p["pid"], p["date"], p["stat"], p["line"]) for p in picks}
+    added = 0
+    for g in poly_games:
+        eg = next((x for x in espn_slate if {x["away"], x["home"]} == {g["away"], g["home"]}), None)
+        gid = f"{g['date']}-{g['away']}-{g['home']}"
+        for m in g.get("markets", []):
+            pm = parse_market(m)
+            if not pm:
+                continue
+            sk = mkt_stat_key(pm["statText"])
+            if not sk:
+                continue
+            pl = players_by_key.get(pkey(pm["player"]))
+            if not pl or len(pl["g"]) < 5:
+                continue
+            team = pl["t"]
+            opp = g["home"] if team == g["away"] else (g["away"] if team == g["home"] else None)
+            if opp is None:
+                continue
+            key = (pl["id"], g["date"], sk, pm["line"])
+            if key in have:
+                continue
+            rows = pl["g"]
+            hp = hist_context(rows)
+            gpts = None
+            if eg and eg.get("total") is not None:
+                sp = eg.get("spread") if team == eg["home"] else (-(eg["spread"]) if eg.get("spread") is not None else None)
+                gpts = eg["total"] / 2 + (sp / 2 if sp is not None else 0)
+            dr = def_ratio(defense, defavg, opp, sk)
+            scale = context_scale(hp, gpts, dr)
+            vals = [stat_get(r, sk) for r in rows]
+            mp = model_prob(vals, pm["line"], BW_FLOOR.get(sk, 1.0), scale)
+            if not mp:
+                continue
+            side, prob, lo, hi = side_prob(mp)
+            price = (pm["over"] if side == "over" else pm["under"]) if pm.get("tradeable") else None
+            picks.append({"src": "live", "gid": gid, "season": rows[-1][0], "date": g["date"],
+                          "pid": pl["id"], "player": pl["n"], "pos": pl["p"], "team": team, "opp": opp,
+                          "stat": sk, "line": pm["line"], "side": side,
+                          "prob": round(prob, 3), "lo": round(lo, 3), "hi": round(hi, 3),
+                          "neff": round(mp["neff"], 1), "price": round(price, 3) if price is not None else None,
+                          "lists": "", "rec": f"{sk} {side} {pm['line']}", "actual": None, "res": None,
+                          "adj": round(scale, 3)})
+            have.add(key)
+            added += 1
+    return added
+
+
 def build_board_picks(picks, slate, players_by_team, defense, defavg):
     """One pick per (player, board stat) for players on teams playing an upcoming
     game — the highest-confidence side. Deduped against already-recorded picks."""
@@ -622,12 +821,22 @@ def grade_picks(picks, by_pid):
 
 
 def assign_lists(picks):
+    """T = 25 highest model chances. V = up to 25 best-value priced picks where even
+    the low end of the model range beats the market price (empty until markets exist)."""
     for p in picks:
         p["lists"] = ""
-    ranked = sorted([p for p in picks if p.get("res") is None],
-                    key=lambda p: (-p["prob"], -p["neff"]))
-    for p in ranked[:TOP_N]:
+    pending = [p for p in picks if p.get("res") is None]
+    for p in sorted(pending, key=lambda p: (-p["prob"], -p["neff"]))[:TOP_N]:
         p["lists"] += "T"
+    vals = []
+    for p in pending:
+        pr = p.get("price")
+        if pr is None or p["neff"] < VALUE_MIN_NEFF:
+            continue
+        if p["lo"] > pr:
+            vals.append((p["prob"] / pr - 1.0, p))
+    for _, p in sorted(vals, key=lambda x: -x[0])[:TOP_N]:
+        p["lists"] += "V"
 
 
 def fit_temperature(picks):
@@ -785,14 +994,30 @@ def main():
     players = build_players(store["rows"])
     by_pid = {p["id"]: p for p in players}
     players_by_team = {}
+    players_by_key = {}
     for p in players:
         players_by_team.setdefault(p["t"], []).append(p)
+        players_by_key.setdefault(pkey(p["n"]), p)
     defense, defavg, dgames = build_defense(store["rows"], cur_season)
+
+    # Polymarket NBA markets (auto-activates in-season; no-op off-season).
+    try:
+        poly_games = fetch_markets()
+    except Exception as e:  # noqa: BLE001
+        print(f"  polymarket: skipped ({e})")
+        poly_games = []
 
     picks = load_picks()
     graded = grade_picks(picks, by_pid)
+    try:
+        mkt_added = build_market_picks(picks, poly_games, players_by_key, slate, defense, defavg)
+    except Exception as e:  # noqa: BLE001
+        print(f"  market picks: skipped ({e})")
+        mkt_added = 0
     added_picks = build_board_picks(picks, slate, players_by_team, defense, defavg)
     assign_lists(picks)
+    if mkt_added:
+        print(f"  market picks: +{mkt_added} priced (Polymarket)")
     print(f"  picks: graded {graded}, added {added_picks} board pick(s)")
     try:
         cal_t = fit_temperature(picks)
