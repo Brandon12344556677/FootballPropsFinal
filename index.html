@@ -991,17 +991,19 @@ if(WEEK.week) $('dnweek').textContent = `${WEEK.season} · week ${WEEK.week} on 
 function syncChips(){ document.querySelectorAll('.chip').forEach(c=>c.setAttribute('aria-pressed', c.dataset.key===state.stat?'true':'false')); }
 
 const PAGE_IDS={week:'page-week', player:'page-player', tools:'page-tools', past:'tab-picks'};
-function showTab(name){
+function showTab(name, opts){
   if(name==='picks') name='past';
   if(name==='research') name='week';
   if(!PAGE_IDS[name]) name='week';
+  const _prev=document.querySelector('.tab[aria-selected="true"]');
+  const _changed=!_prev || _prev.dataset.tab!==name;
   document.querySelectorAll('.tab').forEach(t=>t.setAttribute('aria-selected', String(t.dataset.tab===name)));
   for(const k in PAGE_IDS){ const el=$(PAGE_IDS[k]); if(el) el.hidden = k!==name; }
   if(name==='past') initPicks();
   try{ history.replaceState(null,'', '#'+name); }catch(e){}
-  window.scrollTo({top:0});
+  if(opts && opts.scroll && _changed) window.scrollTo({top:0});
 }
-document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>showTab(t.dataset.tab));
+document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>showTab(t.dataset.tab,{scroll:true}));
 
 function gamesOf(p){ if(!p) return []; return state.playoffs? p.g : p.g.filter(x=>x[3]==='REG'); }
 function games(){ return gamesOf(state.player); }
@@ -1420,7 +1422,6 @@ function addLeg(){
   if(!state.player) return;
   PARLAY.push({ pid:state.player.id, name:state.player.n, sk:state.stat, statLabel:STATMAP[state.stat].label, line:state.line, side:state.ou });
   saveParlay(); renderParlay();
-  $('parlaypanel').scrollIntoView({behavior:'smooth',block:'nearest'});
 }
 function removeLeg(i){ PARLAY.splice(i,1); saveParlay(); renderParlay(); }
 function renderParlay(){
@@ -1622,7 +1623,7 @@ function renderWatch(){ const wrap=$('watchlist'), panel=$('watchpanel'); if(!wr
   panel.hidden=false;
   if(!items.length){ wrap.innerHTML=`<p class="mktnote" style="margin:0">No players yet — tap <b>☆ Watch</b> on any player's card to keep an eye on them here.</p>`; return; }
   wrap.innerHTML=items.map(p=>`<span class="watchchip"><button class="wload" type="button" data-id="${esc(p.id)}">${esc(p.n)}</button><span class="wpos">${esc(p.p)} · ${esc(p.t)}</span><button class="wx" type="button" data-rm="${esc(p.id)}" title="Remove from watchlist" aria-label="Remove ${esc(p.n)} from watchlist">×</button></span>`).join('');
-  wrap.querySelectorAll('.wload').forEach(b=>b.onclick=()=>{ const p=byId[b.dataset.id]; if(p){ setPlayer(p); window.scrollTo({top:0,behavior:'smooth'}); } });
+  wrap.querySelectorAll('.wload').forEach(b=>b.onclick=()=>{ const p=byId[b.dataset.id]; if(p){ setPlayer(p); } });
   wrap.querySelectorAll('.wx').forEach(b=>b.onclick=()=>toggleWatch(b.dataset.rm));
 }
 $('watchstar').onclick=()=>{ if(state.player) toggleWatch(state.player.id); };
@@ -1664,7 +1665,7 @@ function renderCompare(){
       `<td class="tnum">${r.r10.cnt? Math.round(100*r.r10.hit/r.r10.cnt)+'%' : '—'} <span class="mktmuted">${r.r10.hit}/${r.r10.cnt}</span></td>`+
       `<td><button class="wx" type="button" data-rm="${esc(p.id)}" title="Remove from comparison" aria-label="Remove ${esc(p.n)}">×</button></td></tr>`; });
   body.innerHTML=h+'</tbody></table></div>';
-  body.querySelectorAll('.wload').forEach(b=>b.onclick=()=>{ const p=byId[b.dataset.id]; if(p){ setPlayer(p,{keepStat:true,keepLine:true}); window.scrollTo({top:0,behavior:'smooth'}); } });
+  body.querySelectorAll('.wload').forEach(b=>b.onclick=()=>{ const p=byId[b.dataset.id]; if(p){ setPlayer(p,{keepStat:true,keepLine:true}); } });
   body.querySelectorAll('.wx').forEach(b=>b.onclick=()=>toggleCmp(b.dataset.rm));
 }
 $('cmpadd').onclick=()=>{ if(state.player) toggleCmp(state.player.id); };
