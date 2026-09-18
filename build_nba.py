@@ -38,8 +38,13 @@ PAGE = "nba.html"
 # How many previously-unseen games to fetch box scores for in a single run. The
 # store fills newest-first, so the freshest games land first and older games
 # backfill over subsequent runs. Keeps any one Action run bounded.
-MAX_NEW_GAMES = 160
+MAX_NEW_GAMES = 140
 CANDIDATE_SEASONS = 2          # this season + the previous one
+# Hard wall-clock budget for the whole ESPN ingestion. ESPN throttles a data-center
+# IP that hammers it, so a run stops fetching once this elapses and saves what it
+# has — the `done`-date cache means the backfill resumes cheaply next run.
+BUDGET_SEC = 210
+_START = time.time()
 
 # ---------------------------------------------------------------------------
 # Row layout — the NBA page reads game rows by index. Keep in sync with
@@ -148,7 +153,7 @@ def grade_result(actual, line, side):
 # ---------------------------------------------------------------------------
 # Fetch + parse helpers
 # ---------------------------------------------------------------------------
-def http_get(url, timeout=90, tries=3):
+def http_get(url, timeout=20, tries=2):
     err = None
     for i in range(tries):
         try:
@@ -157,11 +162,16 @@ def http_get(url, timeout=90, tries=3):
                 return resp.read()
         except Exception as e:  # noqa: BLE001
             err = e
-            if getattr(e, "code", None) == 404:
+            code = getattr(e, "code", None)
+            if code in (403, 404):     # blocked/not-found won't recover on retry
                 break
             if i < tries - 1:
-                time.sleep(2 * (i + 1))
+                time.sleep(1.5)
     raise err
+
+
+def over_budget():
+    return (time.time() - _START) > BUDGET_SEC
 
 
 def get_json(url):
@@ -266,11 +276,11 @@ def fetch_new_games(store):
     seasons = [cur - i for i in range(CANDIDATE_SEASONS)]
     settle = TODAY - datetime.timedelta(days=2)   # dates newer than this may still gain games
     for season in seasons:
-        if added >= MAX_NEW_GAMES:
+        if added >= MAX_NEW_GAMES or over_budget():
             interrupted = True
             break
         for date_iso in scan_dates(season):
-            if added >= MAX_NEW_GAMES:
+            if added >= MAX_NEW_GAMES or over_budget():
                 interrupted = True
                 break
             if date_iso in done:
@@ -290,7 +300,7 @@ def fetch_new_games(store):
                 if not status.get("completed"):
                     complete_date = False       # a game that day isn't final yet
                     continue
-                if added >= MAX_NEW_GAMES:
+                if added >= MAX_NEW_GAMES or over_budget():
                     complete_date = False        # ran out of budget before finishing this date
                     break
                 cs = comp.get("competitors") or []
@@ -333,6 +343,8 @@ def fetch_new_games(store):
 def fetch_slate():
     games = []
     for i in range(0, 8):
+        if over_budget():
+            break
         d = (TODAY + datetime.timedelta(days=i))
         try:
             sb = get_json(ESPN_SB.format(date=d.isoformat().replace("-", "")))

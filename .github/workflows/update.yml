@@ -33,6 +33,8 @@ jobs:
         run: python build.py
 
       - name: Build NBA data (non-fatal)
+        continue-on-error: true
+        timeout-minutes: 6
         run: python build_nba.py || echo "NBA build failed — skipping NBA files this run"
 
       - name: Commit and push if anything changed
