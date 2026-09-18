@@ -25,9 +25,13 @@ import json, math, os, re, sys, time, datetime, unicodedata, urllib.request
 TODAY = datetime.date.today()
 UA = {"User-Agent": "prop-streak-lab/2.0 (+https://propstreaklab.com)"}
 
-ESPN_SB = ("https://site.api.espn.com/apis/site/v2/sports/basketball/nba/"
-           "scoreboard?dates={date}&limit=100")
-ESPN_SUM = "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/summary?event={event}"
+# ESPN blocks site.api.espn.com from data-center IPs (Akamai 403), but two hosts
+# still serve NBA data from CI: the core API (honors a date -> game ids) and the
+# cdn "core" boxscore (full player stats by game id). The cdn scoreboard ignores
+# the date param, so it's only used for the current/upcoming slate.
+ESPN_CORE_EVENTS = "https://sports.core.api.espn.com/v2/sports/basketball/leagues/nba/events?dates={date}&limit=100"
+ESPN_CDN_BOX = "https://cdn.espn.com/core/nba/boxscore?xhr=1&gameId={gid}"
+ESPN_CDN_SB = "https://cdn.espn.com/core/nba/scoreboard?xhr=1"
 
 STATS_FILE = "nba_stats.json"
 PICKS_FILE = "nba_picks.json"
@@ -226,10 +230,35 @@ def scan_dates(season):
     return out
 
 
-def parse_box(summ, season, date_iso, stype, home, away):
-    """One ESPN summary -> stat row dicts for every player who logged minutes."""
+def core_event_ids(date_iso):
+    """Game ids on a date, via the core API (which honors the date param)."""
+    data = get_json(ESPN_CORE_EVENTS.format(date=date_iso.replace("-", "")))
+    ids = []
+    for it in data.get("items", []) or []:
+        m = re.search(r"/events/(\d+)", it.get("$ref", "") or "")
+        if m:
+            ids.append(m.group(1))
+    return ids
+
+
+def header_meta(gpj):
+    """From a cdn boxscore's gamepackageJSON header: (completed, home, away, date, type)."""
+    header = gpj.get("header") or {}
+    comp = (header.get("competitions") or [{}])[0]
+    status = ((comp.get("status") or {}).get("type") or {})
+    completed = bool(status.get("completed"))
+    cs = comp.get("competitors") or []
+    home = team_code(next((c.get("team", {}).get("abbreviation") for c in cs if c.get("homeAway") == "home"), None))
+    away = team_code(next((c.get("team", {}).get("abbreviation") for c in cs if c.get("homeAway") == "away"), None))
+    date_g = (comp.get("date") or "")[:10]
+    stype = "PST" if (header.get("season") or {}).get("type") == 3 else "REG"
+    return completed, home, away, date_g, stype
+
+
+def parse_box(box, season, date_iso, stype, home, away):
+    """One cdn boxscore dict -> stat row dicts for every player who logged minutes."""
     rows = []
-    for tb in (summ.get("boxscore") or {}).get("players") or []:
+    for tb in (box or {}).get("players") or []:
         team = team_code((tb.get("team") or {}).get("abbreviation"))
         opp = away if team == home else home
         for cat in tb.get("statistics") or []:
@@ -286,38 +315,34 @@ def fetch_new_games(store):
             if date_iso in done:
                 continue
             try:
-                sb = get_json(ESPN_SB.format(date=date_iso.replace("-", "")))
+                ids = core_event_ids(date_iso)
             except Exception as e:  # noqa: BLE001
-                print(f"    scoreboard {date_iso}: skipped ({e})")
+                print(f"    events {date_iso}: skipped ({e})")
                 continue
             complete_date = True
-            for ev in sb.get("events", []):
-                gid = str(ev.get("id") or "")
+            for gid in ids:
+                gid = str(gid)
                 if not gid or gid in seen:
-                    continue
-                comp = (ev.get("competitions") or [{}])[0]
-                status = ((comp.get("status") or {}).get("type") or {})
-                if not status.get("completed"):
-                    complete_date = False       # a game that day isn't final yet
                     continue
                 if added >= MAX_NEW_GAMES or over_budget():
                     complete_date = False        # ran out of budget before finishing this date
                     break
-                cs = comp.get("competitors") or []
-                home = team_code(next((c.get("team", {}).get("abbreviation") for c in cs if c.get("homeAway") == "home"), None))
-                away = team_code(next((c.get("team", {}).get("abbreviation") for c in cs if c.get("homeAway") == "away"), None))
-                if not home or not away:
-                    continue
-                stype = "PST" if (ev.get("season") or {}).get("type") == 3 else "REG"
-                d0 = (ev.get("date") or "")[:10]
-                date_g = d0 if re.match(r"\d{4}-\d{2}-\d{2}", d0) else date_iso
                 try:
-                    summ = get_json(ESPN_SUM.format(event=gid))
+                    bx = get_json(ESPN_CDN_BOX.format(gid=gid))
                 except Exception as e:  # noqa: BLE001
-                    print(f"    summary {gid}: skipped ({e})")
+                    print(f"    box {gid}: skipped ({e})")
                     complete_date = False
                     continue
-                rows = parse_box(summ, season, date_g, stype, home, away)
+                gpj = bx.get("gamepackageJSON") or {}
+                completed, home, away, date_g, stype = header_meta(gpj)
+                if not completed:
+                    complete_date = False        # a game that day isn't final yet
+                    continue
+                if not home or not away:
+                    continue
+                if not re.match(r"\d{4}-\d{2}-\d{2}", date_g or ""):
+                    date_g = date_iso
+                rows = parse_box(gpj.get("boxscore") or {}, season, date_g, stype, home, away)
                 if not rows:
                     continue
                 for r in rows:
@@ -341,48 +366,44 @@ def fetch_new_games(store):
 # Tonight's / upcoming slate (for the board) — completed games are ignored here.
 # ---------------------------------------------------------------------------
 def fetch_slate():
+    """The current/upcoming board (the cdn scoreboard returns today's games; it
+    ignores a date param, which is fine — the NBA page shows tonight's slate)."""
     games = []
-    for i in range(0, 8):
-        if over_budget():
-            break
-        d = (TODAY + datetime.timedelta(days=i))
-        try:
-            sb = get_json(ESPN_SB.format(date=d.isoformat().replace("-", "")))
-        except Exception as e:  # noqa: BLE001
-            print(f"    slate {d}: skipped ({e})")
+    try:
+        sb = get_json(ESPN_CDN_SB)
+    except Exception as e:  # noqa: BLE001
+        print(f"    slate: skipped ({e})")
+        return games
+    events = ((sb.get("content") or {}).get("sbData") or {}).get("events", []) or []
+    for ev in events:
+        comp = (ev.get("competitions") or [{}])[0]
+        status = ((comp.get("status") or {}).get("type") or {})
+        if status.get("completed"):
             continue
-        for ev in sb.get("events", []):
-            comp = (ev.get("competitions") or [{}])[0]
-            status = ((comp.get("status") or {}).get("type") or {})
-            if status.get("completed"):
-                continue
-            cs = comp.get("competitors") or []
-            home = team_code(next((c.get("team", {}).get("abbreviation") for c in cs if c.get("homeAway") == "home"), None))
-            away = team_code(next((c.get("team", {}).get("abbreviation") for c in cs if c.get("homeAway") == "away"), None))
-            if not home or not away:
-                continue
-            total = spread = None
-            odds = (comp.get("odds") or [{}])
-            if odds:
-                o = odds[0]
-                total = o.get("overUnder")
-                sp = o.get("spread")
-                if sp is not None:
-                    # ESPN 'spread' is the home line (negative = home favored);
-                    # store as the home team's spread with + = favored.
-                    try:
-                        spread = -float(sp)
-                    except (TypeError, ValueError):
-                        spread = None
-            start = ev.get("date") or ""
-            tm = ""
-            m = re.search(r"T(\d{2}):(\d{2})", start)
-            if m:
-                # ESPN times are UTC (Z). Convert to ET (UTC-4/-5 — use -4, in-season).
-                hh = (int(m.group(1)) - 4) % 24
-                tm = f"{hh:02d}:{m.group(2)}"
-            games.append({"away": away, "home": home, "date": start[:10],
-                          "time": tm, "total": total, "spread": spread, "final": False})
+        cs = comp.get("competitors") or []
+        home = team_code(next((c.get("team", {}).get("abbreviation") for c in cs if c.get("homeAway") == "home"), None))
+        away = team_code(next((c.get("team", {}).get("abbreviation") for c in cs if c.get("homeAway") == "away"), None))
+        if not home or not away:
+            continue
+        total = spread = None
+        odds = comp.get("odds") or []
+        if odds:
+            o = odds[0]
+            total = o.get("overUnder")
+            sp = o.get("spread")
+            if sp is not None:
+                try:
+                    spread = -float(sp)   # ESPN spread is the home line (neg = home fav); store + = favored
+                except (TypeError, ValueError):
+                    spread = None
+        start = ev.get("date") or ""
+        tm = ""
+        m = re.search(r"T(\d{2}):(\d{2})", start)
+        if m:
+            hh = (int(m.group(1)) - 4) % 24    # UTC -> ET (in-season, ~UTC-4)
+            tm = f"{hh:02d}:{m.group(2)}"
+        games.append({"away": away, "home": home, "date": start[:10],
+                      "time": tm, "total": total, "spread": spread, "final": False})
     games.sort(key=lambda g: (g["date"], g["time"]))
     return games
 
