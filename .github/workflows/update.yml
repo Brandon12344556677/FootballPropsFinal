@@ -54,5 +54,14 @@ jobs:
             echo "No changes."
           else
             git commit -m "Auto-update data ($(date -u +'%Y-%m-%d %H:%M UTC'))"
-            git push
+            # Push with rebase-retry so two runs finishing close together can't
+            # fail on a non-fast-forward.
+            for i in 1 2 3 4 5; do
+              if git push; then
+                echo "pushed"; break
+              fi
+              echo "push rejected, rebasing (attempt $i)…"
+              git pull --rebase --autostash origin main || true
+              sleep 3
+            done
           fi

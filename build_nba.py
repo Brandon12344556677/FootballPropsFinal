@@ -679,56 +679,57 @@ def _keys(d):
     return list(d.keys()) if isinstance(d, dict) else f"<{type(d).__name__}>"
 
 
+def _cdn_events(dstr):
+    sb = get_json(f"https://cdn.espn.com/core/nba/scoreboard?xhr=1&dates={dstr}")
+    return ((sb.get("content") or {}).get("sbData") or {}).get("events", [])
+
+
 def probe():
-    """One-off shape check for the cdn.espn.com endpoints that work from CI."""
-    print("  --- cdn shape probe ---")
+    """Decide the data source: does cdn honor dates, and where are box scores?"""
+    print("  --- data-source probe ---")
     try:
-        sb = get_json("https://cdn.espn.com/core/nba/scoreboard?xhr=1&dates=20260310")
-        print(f"    SB top keys: {_keys(sb)}")
-        content = sb.get("content", {})
-        print(f"    SB content keys: {_keys(content)}")
-        sbd = content.get("sbData", {})
-        print(f"    SB sbData keys: {_keys(sbd)}")
-        events = sbd.get("events", [])
-        print(f"    SB events: {len(events)}")
-        if events:
-            ev = events[0]
-            print(f"    SB event keys: {_keys(ev)} id={ev.get('id')}")
-            comp = (ev.get("competitions") or [{}])[0]
-            print(f"    SB comp keys: {_keys(comp)}")
-            print(f"    SB status: {(comp.get('status') or {}).get('type')}")
-            print(f"    SB odds: {comp.get('odds')}")
-            cs = comp.get("competitors") or []
-            print(f"    SB competitor0 keys: {_keys(cs[0]) if cs else 'none'}")
-            gid = ev.get("id")
+        for dstr in ("20251225", "20260110"):
+            evs = _cdn_events(dstr)
+            first = evs[0] if evs else {}
+            comp = (first.get("competitions") or [{}])[0]
+            comp_state = (comp.get("status") or {}).get("type", {})
+            print(f"    CDN sb dates={dstr}: {len(evs)} events; first date={first.get('date')} "
+                  f"completed={comp_state.get('completed')} id={first.get('id')}")
+    except Exception as e:  # noqa: BLE001
+        print(f"    CDN sb ERROR: {e}")
+    # core API (honors dates) -> pull a real completed game id, then try cdn boxscore
+    try:
+        core = get_json("https://sports.core.api.espn.com/v2/sports/basketball/leagues/nba/events?dates=20251225")
+        items = core.get("items", [])
+        print(f"    CORE events dates=20251225: count={core.get('count')} items={len(items)}")
+        ref = (items[0] or {}).get("$ref", "") if items else ""
+        gid = re.search(r"/events/(\d+)", ref)
+        gid = gid.group(1) if gid else None
+        print(f"    CORE first event id={gid} ref={ref[:80]}")
+        if gid:
             bx = get_json(f"https://cdn.espn.com/core/nba/boxscore?xhr=1&gameId={gid}")
-            print(f"    BOX top keys: {_keys(bx)}")
-            gpj = bx.get("gamepackageJSON") or bx.get("content", {}).get("gamepackageJSON") or {}
-            print(f"    BOX gpj keys: {_keys(gpj)}")
+            gpj = bx.get("gamepackageJSON") or {}
             box = gpj.get("boxscore", {})
-            print(f"    BOX boxscore keys: {_keys(box)}")
             players = box.get("players", [])
-            print(f"    BOX players teams: {len(players)}")
+            print(f"    CDN box gid={gid}: boxscore keys={_keys(box)} players_teams={len(players)}")
             if players:
                 tb = players[0]
-                print(f"    BOX team0 keys: {_keys(tb)} team={(tb.get('team') or {}).get('abbreviation')}")
                 stcats = tb.get("statistics") or []
-                print(f"    BOX stat cats: {len(stcats)}")
+                print(f"    CDN box team0={(tb.get('team') or {}).get('abbreviation')} cats={len(stcats)}")
                 if stcats:
                     c0 = stcats[0]
-                    print(f"    BOX cat keys: {_keys(c0)}")
-                    print(f"    BOX labels: {c0.get('labels')}")
-                    print(f"    BOX names: {c0.get('names')}")
-                    ath = c0.get("athletes") or []
+                    print(f"    CDN box labels={c0.get('labels')}")
+                    ath = (c0.get('athletes') or [])
                     if ath:
                         a0 = ath[0]
-                        print(f"    BOX athlete keys: {_keys(a0)}")
-                        print(f"    BOX athlete.athlete keys: {_keys(a0.get('athlete') or {})}")
-                        print(f"    BOX athlete stats: {a0.get('stats')}")
-                        print(f"    BOX starter={a0.get('starter')} dnp={a0.get('didNotPlay')}")
+                        print(f"    CDN box athlete={(a0.get('athlete') or {}).get('displayName')} "
+                              f"id={(a0.get('athlete') or {}).get('id')} stats={a0.get('stats')} "
+                              f"starter={a0.get('starter')} dnp={a0.get('didNotPlay')}")
+            # also: does the scheduled date on this event look like Dec 25?
+            print(f"    CDN box header date={(gpj.get('header') or {}).get('competitions',[{}])[0].get('date') if gpj.get('header') else '?'}")
     except Exception as e:  # noqa: BLE001
         import traceback
-        print(f"    PROBE ERROR: {e}\n{traceback.format_exc()}")
+        print(f"    CORE/BOX ERROR: {e}\n{traceback.format_exc()[:400]}")
     print("  --- end probe ---")
 
 
