@@ -11,6 +11,11 @@ on:
     - cron: "0 5 * * 1"   # Mon ~1 AM ET    — after Sunday games + SNF
     - cron: "0 5 * * 2"   # Tue ~1 AM ET    — after Monday Night Football
   workflow_dispatch:
+    inputs:
+      probe:
+        description: "Set to 1 to log an NBA endpoint connectivity probe"
+        required: false
+        default: ""
 
 permissions:
   contents: write
@@ -35,6 +40,8 @@ jobs:
       - name: Build NBA data (non-fatal)
         continue-on-error: true
         timeout-minutes: 6
+        env:
+          NBA_PROBE: ${{ github.event.inputs.probe }}
         run: python build_nba.py || echo "NBA build failed — skipping NBA files this run"
 
       - name: Commit and push if anything changed

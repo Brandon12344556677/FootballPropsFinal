@@ -675,9 +675,34 @@ def prune_store(store, cur_season):
     store["rows"] = [r for r in store["rows"] if r.get("season") in keep_seasons]
 
 
+def probe():
+    """One-off connectivity check: which endpoints/hosts actually serve NBA data
+    from this runner. Logs the HTTP status of each candidate."""
+    tests = [
+        ("site NBA sb", "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20260310"),
+        ("site NBA sb bare", "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard"),
+        ("site NFL sb (control)", "https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard?dates=2025&seasontype=2&week=1"),
+        ("cdn NBA sb", "https://cdn.espn.com/core/nba/scoreboard?xhr=1&dates=20260310"),
+        ("core NBA events", "https://sports.core.api.espn.com/v2/sports/basketball/leagues/nba/events?dates=20260310"),
+        ("balldontlie", "https://api.balldontlie.io/v1/games?dates[]=2026-03-10"),
+    ]
+    print("  --- endpoint probe ---")
+    for name, url in tests:
+        try:
+            req = urllib.request.Request(url, headers=UA)
+            with urllib.request.urlopen(req, timeout=15) as resp:
+                body = resp.read(120)
+                print(f"    PROBE {name}: {resp.status} ok, starts {body[:60]!r}")
+        except Exception as e:  # noqa: BLE001
+            print(f"    PROBE {name}: FAIL {getattr(e,'code',None)} {e}")
+    print("  --- end probe ---")
+
+
 def main():
     cur_season = season_year(TODAY)
     print(f"NBA build — season {cur_season}, {TODAY.isoformat()}")
+    if os.environ.get("NBA_PROBE"):
+        probe()
 
     store = load_store()
     before = len(store.get("seen", []))
