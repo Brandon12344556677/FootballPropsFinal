@@ -1,9 +1,9 @@
 name: Update NFL data
 
 # Pulls fresh stats (nflverse + ESPN box scores for games nflverse hasn't posted
-# yet), grades finished picks, refreshes this week's board, and redeploys.
-# Runs the morning catch-all plus the nights games finish so results post within
-# hours. Cron is UTC; ET times are approximate (shift 1h with daylight saving).
+# yet), grades finished picks, refreshes this week's board, and redeploys. Also
+# builds the NBA page from ESPN box scores (non-fatal: an NBA failure never blocks
+# the NFL deploy). Cron is UTC; ET times are approximate (shift 1h with DST).
 on:
   schedule:
     - cron: "0 9 * * *"   # daily ~5 AM ET  — catch-all
@@ -32,14 +32,18 @@ jobs:
       - name: Build site data
         run: python build.py
 
+      - name: Build NBA data (non-fatal)
+        run: python build_nba.py || echo "NBA build failed — skipping NBA files this run"
+
       - name: Commit and push if anything changed
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add index.html data.json slate.json picks.json
+          git add index.html data.json slate.json picks.json sitemap.xml robots.txt
+          git add nba.html nba.json nba_stats.json nba_picks.json 2>/dev/null || true
           if git diff --cached --quiet; then
             echo "No changes."
           else
-            git commit -m "Auto-update NFL data ($(date -u +'%Y-%m-%d %H:%M UTC'))"
+            git commit -m "Auto-update data ($(date -u +'%Y-%m-%d %H:%M UTC'))"
             git push
           fi

@@ -1186,6 +1186,24 @@ def main():
         die("template.html is missing the __DATA__ placeholder")
     with open("index.html", "w", encoding="utf-8") as f:
         f.write(template.replace("__DATA__", payload))
+
+    # SEO: sitemap (with a fresh lastmod each build) and robots.txt.
+    site = "https://propstreaklab.com"
+    with open("sitemap.xml", "w", encoding="utf-8") as f:
+        f.write(
+            '<?xml version="1.0" encoding="UTF-8"?>\n'
+            '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
+            f"  <url>\n    <loc>{site}/</loc>\n"
+            f"    <lastmod>{TODAY.isoformat()}</lastmod>\n"
+            "    <changefreq>daily</changefreq>\n    <priority>1.0</priority>\n  </url>\n"
+            f"  <url>\n    <loc>{site}/nba.html</loc>\n"
+            f"    <lastmod>{TODAY.isoformat()}</lastmod>\n"
+            "    <changefreq>daily</changefreq>\n    <priority>0.9</priority>\n  </url>\n"
+            "</urlset>\n"
+        )
+    with open("robots.txt", "w", encoding="utf-8") as f:
+        f.write(f"User-agent: *\nAllow: /\n\nSitemap: {site}/sitemap.xml\n")
+
     print(f"Data: {len(with_games)} players with games ({len(players)} total), seasons {seasons_used}, "
           f"through {thru}; week {wk} has {len(week_games)} games; {len(injuries)} injury reports.")
 
