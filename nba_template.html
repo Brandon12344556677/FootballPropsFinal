@@ -595,7 +595,7 @@ tr.hit td{background:var(--hit-soft)} tr.miss td{background:var(--miss-soft)}
   </div>
 
   <div class="tabs" role="tablist">
-    <button class="tab" role="tab" data-tab="week" aria-selected="true">🏀 Tonight</button>
+    <button class="tab" role="tab" data-tab="week" aria-selected="true">🗓️ Upcoming</button>
     <button class="tab" role="tab" data-tab="player" aria-selected="false">🔬 Player</button>
     <button class="tab" role="tab" data-tab="past" aria-selected="false">📒 Past picks</button>
   </div>
@@ -604,7 +604,7 @@ tr.hit td{background:var(--hit-soft)} tr.miss td{background:var(--miss-soft)}
 
 <div id="page-week">
   <div class="panel" id="boardpanel">
-    <div class="mkthead"><h2>🎯 Tonight's model board</h2><span class="mktmuted" id="boardcap">the highest model chances across tonight's slate</span></div>
+    <div class="mkthead"><h2>🗓️ Upcoming games</h2><span class="mktmuted" id="boardcap">the model's picks for games on the upcoming schedule</span></div>
     <div id="boardbody"></div>
   </div>
   <div class="panel" id="lbpanel">
@@ -958,28 +958,37 @@ function renderMatchup(p, sk){ const sel=$('oppsel'); const teams=Object.keys(DB
     `That's <b>${esc(softness)}</b> (ranked ${rank}/${n}, 1 = allows the most).</p>`;
 }
 
-// ---- Tonight board ----
-const BOARD_STATS=['pts','reb','ast','tpm','pra'];
-function buildBoard(){
-  const games=(WEEK.games||[]).filter(g=>!g.final);
+// ---- Upcoming games (from recorded, not-yet-graded picks) ----
+const TODAY_ISO = DB.gen || new Date().toISOString().slice(0,10);
+function gameTeams(p){ return [p.team, p.opp].sort(); }
+function renderUpcoming(){
   const body=$('boardbody');
-  if(!games.length){ body.innerHTML='<p class="mktnote">No NBA games on the upcoming slate yet — the board fills automatically once the schedule posts games. The <b>Player</b> tab works now on recent game logs.</p>'; return; }
-  const teams=new Set(); games.forEach(g=>{ teams.add(g.away); teams.add(g.home); });
-  const picks=[];
-  DB.players.forEach(p=>{ if(!teams.has(p.t)||!p.g||p.g.length<5) return;
-    const g=teamGame(p.t); if(!g) return; const opp=g.away===p.t?g.home:g.away;
-    BOARD_STATS.forEach(sk=>{ const vals=valuesOf(p, sk); const line=seedLine(vals);
-      const ctx=contextFor(p, sk, opp, g); const mp=calMp(modelProb(vals, line, floorFor(sk), ctx.scale));
-      if(!mp||mp.neff<6) return; const sp=sideProb(mp);
-      picks.push({p, sk, line, opp, g, side:sp.side, prob:sp.prob}); });
+  if(PICKS===null){ body.innerHTML='<p class="mktnote">Loading…</p>'; return; }
+  const up=PICKS.filter(p=>p.res==null && (p.date||'')>=TODAY_ISO);
+  if(!up.length){
+    const games=(WEEK.games||[]).filter(g=>!g.final);
+    if(games.length){
+      body.innerHTML=games.map(g=>`<div class="boardrow"><div><div class="bp">${esc(g.away)} @ ${esc(g.home)}</div>`+
+        `<div class="bmeta">${esc(dlabel(g.date))}${g.time?' · '+esc(g.time)+' ET':''}</div></div><div></div>`+
+        `<div class="bmeta">picks post before tip-off</div></div>`).join('');
+      return;
+    }
+    body.innerHTML='<p class="mktnote">No upcoming games on the schedule yet — this fills in automatically once games are posted. The <b>Player</b> tab works now on recent game logs.</p>'; return;
+  }
+  const groups={};
+  up.forEach(p=>{ const tt=gameTeams(p); const k=(p.date||'')+'|'+tt.join('@');
+    (groups[k]=groups[k]||{date:p.date||'', teams:tt, picks:[]}); groups[k].picks.push(p); });
+  const keys=Object.keys(groups).sort((a,b)=>groups[a].date.localeCompare(groups[b].date));
+  let h='';
+  keys.forEach(k=>{ const g=groups[k];
+    h+=`<div class="mkthead" style="margin:16px 0 8px"><h2 style="font-size:19px">${esc(dlabel(g.date))} · ${esc(g.teams[0])} vs ${esc(g.teams[1])}</h2></div>`;
+    const ps=g.picks.slice().sort((a,b)=>(b.prob||0)-(a.prob||0)).slice(0,15);
+    h+=ps.map(x=>{ const cls=x.prob>=0.7?'hi':x.prob>=0.6?'mid':'lo';
+      return `<div class="boardrow"><div><div class="bp">${esc(x.player)} <span class="bmeta">${esc(x.team)} @ ${esc(x.opp)}</span></div>`+
+        `<div class="bpick">${esc(statLabel(x.stat))} ${esc(x.side)} ${esc(x.line)}</div></div>`+
+        `<div></div><div class="bprob ${cls}">${x.prob!=null?pct(x.prob):'—'}</div></div>`; }).join('');
   });
-  picks.sort((a,b)=>b.prob-a.prob);
-  const top=picks.slice(0,25);
-  if(!top.length){ body.innerHTML='<p class="mktnote">Players are scheduled but there aren\'t enough recent games logged yet to rate them. Check back as the store fills in.</p>'; return; }
-  body.innerHTML=top.map(x=>{ const cls=x.prob>=0.7?'hi':x.prob>=0.6?'mid':'lo';
-    return `<div class="boardrow"><div><div class="bp">${esc(x.p.n)} <span class="bmeta">${esc(x.p.t)} ${x.g.home===x.p.t?'vs':'@'} ${esc(x.opp)}</span></div>`+
-      `<div class="bpick">${esc(statLabel(x.sk))} ${x.side} ${x.line}</div></div>`+
-      `<div></div><div class="bprob ${cls}">${pct(x.prob)}</div></div>`; }).join('');
+  body.innerHTML=h;
 }
 
 // ---- Hit streak leaderboard ----
@@ -996,20 +1005,22 @@ function buildLeaderboard(){
   body.innerHTML=rows.slice(0,20).map(r=>`<div class="lbrow"><div class="lbn"><b>${esc(r.p.n)}</b> · ${esc(r.p.t)} · ${esc(statLabel(r.sk))} over ${r.line}</div><div class="lbstreak">${r.s} 🔥</div></div>`).join('');
 }
 
-// ---- Past picks ----
+// ---- Picks store (drives both Upcoming and Past) ----
 let PICKS=null;
-function initPicks(){ if(PICKS!==null){ renderPicks(); return; }
-  $('pkbody').innerHTML='<p class="mktnote">Loading…</p>';
+function loadPicks(){
   fetch('./nba_picks.json',{cache:'no-store'}).then(r=>r.ok?r.json():null).then(d=>{
     if(!d||!d.picks){ PICKS=[]; } else { const cols=d.cols; PICKS=d.picks.map(row=>Object.fromEntries(cols.map((c,i)=>[c,row[i]]))); }
-    renderPicks();
-  }).catch(()=>{ PICKS=[]; renderPicks(); });
+    renderUpcoming(); renderPast();
+  }).catch(()=>{ PICKS=[]; renderUpcoming(); renderPast(); });
 }
-function renderPicks(){ const graded=PICKS.filter(p=>p.res==='hit'||p.res==='miss'); const body=$('pkbody');
-  if(!PICKS.length){ body.innerHTML='<p class="mktnote">No NBA picks recorded yet. The model records a pick for every board play before tip-off and grades it here once the box score is final — this fills in when the season starts.</p>'; return; }
-  const hit=graded.filter(p=>p.res==='hit').length;
-  let h = graded.length? `<p><b>Record: ${hit}/${graded.length} (${Math.round(100*hit/graded.length)}%)</b> on graded picks.</p>` : `<p class="mktnote">${PICKS.length} pick(s) recorded, none graded yet.</p>`;
-  const show=PICKS.slice().sort((a,b)=>(b.date||'').localeCompare(a.date||'')).slice(0,200);
+function initPicks(){ renderPast(); }   // Past tab opened
+function renderPast(){ const body=$('pkbody'); if(!body) return;
+  if(PICKS===null){ body.innerHTML='<p class="mktnote">Loading…</p>'; return; }
+  const graded=PICKS.filter(p=>p.res==='hit'||p.res==='miss'||p.res==='push');
+  if(!graded.length){ body.innerHTML='<p class="mktnote">No graded NBA picks yet. Every upcoming pick is recorded before tip-off and shows here once the box score is final — this fills in as games are played.</p>'; return; }
+  const hm=graded.filter(p=>p.res!=='push'); const hit=hm.filter(p=>p.res==='hit').length;
+  let h = hm.length? `<p><b>Record: ${hit}/${hm.length} (${Math.round(100*hit/hm.length)}%)</b> on graded picks.</p>` : '';
+  const show=graded.slice().sort((a,b)=>(b.date||'').localeCompare(a.date||'')).slice(0,200);
   h+='<div class="tblwrap"><table><thead><tr><th>Date</th><th>Player</th><th>Matchup</th><th>Pick</th><th>Chance</th><th>Actual</th><th>Result</th></tr></thead><tbody>';
   show.forEach(p=>{ const cls=p.res==='hit'?'hit':p.res==='miss'?'miss':'';
     h+=`<tr class="${cls}"><td>${esc(dlabel(p.date))}</td><td>${esc(p.player)}</td><td>${esc(p.team)} @ ${esc(p.opp)}</td><td>${esc(statLabel(p.stat))} ${esc(p.side)} ${esc(p.line)}</td><td>${p.prob!=null?pct(p.prob):'—'}</td><td>${p.actual!=null?p.actual:'—'}</td><td>${p.res?esc(p.res):'pending'}</td></tr>`; });
@@ -1017,7 +1028,8 @@ function renderPicks(){ const graded=PICKS.filter(p=>p.res==='hit'||p.res==='mis
 }
 
 // ---- boot ----
-buildBoard();
+renderUpcoming();     // shows "Loading…" until picks arrive
+loadPicks();
 buildLeaderboard();
 render();
 (function(){ const h=(location.hash||'').replace('#',''); if(h) showTab(h); })();
