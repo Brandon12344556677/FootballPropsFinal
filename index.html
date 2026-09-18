@@ -1572,7 +1572,7 @@ function renderAC(){
   const on=acbox.querySelector('.acitem.on'); if(on) on.scrollIntoView({block:'nearest'});
 }
 function openAC(){ acItems=searchPlayers(pinput.value); acActive=acItems.length?0:-1; renderAC(); }
-function chooseAC(p){ acbox.hidden=true; pinput.setAttribute('aria-expanded','false'); setPlayer(p); }
+function chooseAC(p){ acbox.hidden=true; pinput.setAttribute('aria-expanded','false'); setPlayer(p); const h=$('headline'); if(h) h.scrollIntoView({block:'start'}); }
 pinput.addEventListener('input', openAC);
 pinput.addEventListener('focus', ()=>{ pinput.select(); if(pinput.value) openAC(); });
 pinput.addEventListener('keydown', e=>{
