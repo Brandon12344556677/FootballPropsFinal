@@ -675,26 +675,60 @@ def prune_store(store, cur_season):
     store["rows"] = [r for r in store["rows"] if r.get("season") in keep_seasons]
 
 
+def _keys(d):
+    return list(d.keys()) if isinstance(d, dict) else f"<{type(d).__name__}>"
+
+
 def probe():
-    """One-off connectivity check: which endpoints/hosts actually serve NBA data
-    from this runner. Logs the HTTP status of each candidate."""
-    tests = [
-        ("site NBA sb", "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20260310"),
-        ("site NBA sb bare", "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard"),
-        ("site NFL sb (control)", "https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard?dates=2025&seasontype=2&week=1"),
-        ("cdn NBA sb", "https://cdn.espn.com/core/nba/scoreboard?xhr=1&dates=20260310"),
-        ("core NBA events", "https://sports.core.api.espn.com/v2/sports/basketball/leagues/nba/events?dates=20260310"),
-        ("balldontlie", "https://api.balldontlie.io/v1/games?dates[]=2026-03-10"),
-    ]
-    print("  --- endpoint probe ---")
-    for name, url in tests:
-        try:
-            req = urllib.request.Request(url, headers=UA)
-            with urllib.request.urlopen(req, timeout=15) as resp:
-                body = resp.read(120)
-                print(f"    PROBE {name}: {resp.status} ok, starts {body[:60]!r}")
-        except Exception as e:  # noqa: BLE001
-            print(f"    PROBE {name}: FAIL {getattr(e,'code',None)} {e}")
+    """One-off shape check for the cdn.espn.com endpoints that work from CI."""
+    print("  --- cdn shape probe ---")
+    try:
+        sb = get_json("https://cdn.espn.com/core/nba/scoreboard?xhr=1&dates=20260310")
+        print(f"    SB top keys: {_keys(sb)}")
+        content = sb.get("content", {})
+        print(f"    SB content keys: {_keys(content)}")
+        sbd = content.get("sbData", {})
+        print(f"    SB sbData keys: {_keys(sbd)}")
+        events = sbd.get("events", [])
+        print(f"    SB events: {len(events)}")
+        if events:
+            ev = events[0]
+            print(f"    SB event keys: {_keys(ev)} id={ev.get('id')}")
+            comp = (ev.get("competitions") or [{}])[0]
+            print(f"    SB comp keys: {_keys(comp)}")
+            print(f"    SB status: {(comp.get('status') or {}).get('type')}")
+            print(f"    SB odds: {comp.get('odds')}")
+            cs = comp.get("competitors") or []
+            print(f"    SB competitor0 keys: {_keys(cs[0]) if cs else 'none'}")
+            gid = ev.get("id")
+            bx = get_json(f"https://cdn.espn.com/core/nba/boxscore?xhr=1&gameId={gid}")
+            print(f"    BOX top keys: {_keys(bx)}")
+            gpj = bx.get("gamepackageJSON") or bx.get("content", {}).get("gamepackageJSON") or {}
+            print(f"    BOX gpj keys: {_keys(gpj)}")
+            box = gpj.get("boxscore", {})
+            print(f"    BOX boxscore keys: {_keys(box)}")
+            players = box.get("players", [])
+            print(f"    BOX players teams: {len(players)}")
+            if players:
+                tb = players[0]
+                print(f"    BOX team0 keys: {_keys(tb)} team={(tb.get('team') or {}).get('abbreviation')}")
+                stcats = tb.get("statistics") or []
+                print(f"    BOX stat cats: {len(stcats)}")
+                if stcats:
+                    c0 = stcats[0]
+                    print(f"    BOX cat keys: {_keys(c0)}")
+                    print(f"    BOX labels: {c0.get('labels')}")
+                    print(f"    BOX names: {c0.get('names')}")
+                    ath = c0.get("athletes") or []
+                    if ath:
+                        a0 = ath[0]
+                        print(f"    BOX athlete keys: {_keys(a0)}")
+                        print(f"    BOX athlete.athlete keys: {_keys(a0.get('athlete') or {})}")
+                        print(f"    BOX athlete stats: {a0.get('stats')}")
+                        print(f"    BOX starter={a0.get('starter')} dnp={a0.get('didNotPlay')}")
+    except Exception as e:  # noqa: BLE001
+        import traceback
+        print(f"    PROBE ERROR: {e}\n{traceback.format_exc()}")
     print("  --- end probe ---")
 
 
