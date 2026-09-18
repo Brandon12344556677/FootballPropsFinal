@@ -1327,8 +1327,11 @@ async function scanBoard(force){
       done++; status.textContent=`Scanning ${done}/${gamesL.length}…`; return ev; });
     if(gamesL.length && events.every(e=>!e)) throw new Error('polymarket unreachable');
     const rows=[]; const seen=new Set();
+    const todayStr=new Date().toISOString().slice(0,10);
     gamesL.forEach((g,gi)=>{ const ev=events[gi]; if(!ev) return;
       const sg=(WEEK.games||[]).find(x=>(x.away===g.away&&x.home===g.home)||(x.away===g.home&&x.home===g.away));
+      // Don't show props for games that have already kicked off or finished.
+      if(sg? gameHappened(sg) : (g.date && g.date < todayStr)) return;
       (ev.markets||[]).forEach(mk=>{
         const pm=parseMarket(mk); if(!pm) return;
         const sk=mktStatKey(pm.statText); if(!sk) return;
@@ -2150,5 +2153,9 @@ if(/[?&]card\b/i.test(location.search)){ const _sp=$('sharepanel'); if(_sp){ _sp
   });
 })();
 showTab((location.hash||'').replace('#','') || 'week');
-if(/^https?:$/.test(location.protocol)) scanBoard(false);
+if(/^https?:$/.test(location.protocol)){
+  scanBoard(false);
+  // Re-scan hourly so a long-open tab drops games as they kick off and refreshes prices.
+  setInterval(()=>{ if(!document.hidden) scanBoard(true); }, 3600000);
+}
 </script>
