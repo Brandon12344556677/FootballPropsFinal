@@ -691,6 +691,10 @@ tr.hit td{background:var(--hit-soft)} tr.miss td{background:var(--miss-soft)}
   </div>
   <div class="panel">
     <div class="mkthead"><h2>🎲 Build me a parlay</h2><span class="mktmuted">pick risk &amp; legs — we assemble it from the model board</span></div>
+    <div style="margin:6px 0 10px">
+      <label style="display:block;font-size:14px;color:var(--muted);margin-bottom:6px">Teams <span class="mktmuted" style="text-transform:none;letter-spacing:0">— leave blank for any team with upcoming games</span></label>
+      <div class="apteams" id="apTeams" style="display:flex;flex-wrap:wrap;gap:8px"></div>
+    </div>
     <div class="ctrlrow">
       <label>Risk
         <select id="apRisk" style="height:34px;border:2.5px solid var(--ink);border-radius:8px;background:var(--surface);color:var(--text);margin-left:6px">
@@ -864,7 +868,7 @@ function showTab(name){
   document.querySelectorAll('.tab').forEach(t=>t.setAttribute('aria-selected', String(t.dataset.tab===name)));
   for(const k in PAGE_IDS){ const el=$(PAGE_IDS[k]); if(el) el.hidden = k!==name; }
   if(name==='past') initPicks();
-  if(name==='tools'){ renderWatch(); renderCompare(); }
+  if(name==='tools'){ renderWatch(); renderCompare(); renderApTeams(); }
   try{ history.replaceState(null,'', '#'+name); }catch(e){}
   window.scrollTo({top:0});
 }
@@ -1081,8 +1085,8 @@ let PICKS=null;
 function loadPicks(){
   fetch('./nba_picks.json',{cache:'no-store'}).then(r=>r.ok?r.json():null).then(d=>{
     if(!d||!d.picks){ PICKS=[]; } else { const cols=d.cols; PICKS=d.picks.map(row=>Object.fromEntries(cols.map((c,i)=>[c,row[i]]))); }
-    renderValue(); renderUpcoming(); renderPast();
-  }).catch(()=>{ PICKS=[]; renderValue(); renderUpcoming(); renderPast(); });
+    renderValue(); renderUpcoming(); renderPast(); renderApTeams();
+  }).catch(()=>{ PICKS=[]; renderValue(); renderUpcoming(); renderPast(); renderApTeams(); });
 }
 function initPicks(){ renderPast(); }   // Past tab opened
 function renderPast(){ const body=$('pkbody'); if(!body) return;
@@ -1141,10 +1145,20 @@ function toggleCmp(id){ const i=CMP.indexOf(id); if(i<0){ if(CMP.length<6) CMP.p
 function openPlayer(id){ showTab('player'); pick(id); }
 $('watchstar').onclick=()=>{ if(state.player) toggleWatch(state.player.id); };
 $('cmpadd').onclick=()=>{ if(state.player) toggleCmp(state.player.id); };
+function apTeamList(){ return [...new Set((PICKS||[]).filter(p=>p.res==null && (p.date||'')>=TODAY_ISO && p.prob!=null).map(p=>p.team))].filter(Boolean).sort(); }
+function renderApTeams(){ const wrap=$('apTeams'); if(!wrap) return;
+  const teams=apTeamList();
+  const chosen=new Set([...wrap.querySelectorAll('.chip[aria-pressed="true"]')].map(b=>b.dataset.t));
+  wrap.innerHTML = teams.length ? teams.map(t=>`<button class="chip" type="button" data-t="${esc(t)}" aria-pressed="${chosen.has(t)?'true':'false'}">${esc(t)}</button>`).join('')
+    : '<span class="mktmuted">No upcoming games yet — fills in when the schedule posts games.</span>';
+  wrap.querySelectorAll('.chip').forEach(b=>b.onclick=()=>b.setAttribute('aria-pressed', b.getAttribute('aria-pressed')!=='true'));
+}
 function buildParlay(){ const body=$('apbody');
   const risk=$('apRisk').value, legs=parseInt($('apLegs').value,10)||4;
-  const pend=(PICKS||[]).filter(p=>p.res==null && (p.date||'')>=TODAY_ISO && p.prob!=null);
-  if(pend.length<2){ body.innerHTML='<p class="mktnote">Not enough upcoming picks to build a parlay yet — this fills in when games are on the schedule.</p>'; return; }
+  const teams=new Set([...document.querySelectorAll('#apTeams .chip[aria-pressed="true"]')].map(b=>b.dataset.t));
+  let pend=(PICKS||[]).filter(p=>p.res==null && (p.date||'')>=TODAY_ISO && p.prob!=null);
+  if(teams.size) pend=pend.filter(p=>teams.has(p.team));
+  if(pend.length<2){ body.innerHTML='<p class="mktnote">'+(teams.size?'Not enough upcoming picks for the selected team(s) — try adding more teams or clearing the filter.':'Not enough upcoming picks to build a parlay yet — this fills in when games are on the schedule.')+'</p>'; return; }
   let pool=pend.slice().sort((a,b)=>b.prob-a.prob);
   if(risk==='safe') pool=pool.slice(0, Math.max(legs, 8));
   else if(risk==='longshot') pool=pool.filter(p=>p.prob>=0.5).slice(-Math.max(legs*3,12));
