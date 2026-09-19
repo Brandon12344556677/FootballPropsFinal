@@ -832,7 +832,7 @@ table td,table th,thead th,tbody td,.edgetbl td,.edgetbl th,.caltbl td,.caltbl t
 
   <footer>
     <b>Data:</b> nflverse public weekly stats, schedules, injury reports and rosters (regular season + playoffs). Defense ranks blend this season with last. Injury status is the latest official report and can change on game day.<br>
-    <b>Prices:</b> the board scan reads the global Polymarket book and uses the price you'd pay (the ask). Polymarket US runs a separate order book, so type the price you see there into the Bet calculator or a parlay leg for your real payout (each share pays $1, so multiplier = $1 ÷ price). Backward-looking research, <b>not betting advice</b>; past accuracy is shown in the Past picks tab so you can judge it yourself.
+    <b>Prices:</b> the live odds on a player's page come from Polymarket US and refresh every few seconds. The board scan still reads the global Polymarket book and uses the price you'd pay (the ask); Polymarket US runs a separate order book, so type the price you see there into the Bet calculator or a parlay leg for your real payout (each share pays $1, so multiplier = $1 ÷ price). Backward-looking research, <b>not betting advice</b>; past accuracy is shown in the Past picks tab so you can judge it yourself.
   </footer>
 </div>
 
@@ -1341,103 +1341,117 @@ function parseMarket(m){
 }
 
 /* ===== Live Polymarket odds on the player page =====
-   Quote (best buy price) comes from the same gamma-api the board scan uses.
-   Last-traded price ticks live over the Polymarket real-time WebSocket
-   (wss://ws-live-data.polymarket.com, topic "activity"/"trades"). */
-const PM = { req:0, slug:null, condition:null, evslug:null, over:null, under:null, mline:null };
-const PM_LAST = {};                 // marketSlug -> { over, ts }
-let PM_WS=null, PM_WS_SUB=null, PM_TICK=null;
+   Prices come from Polymarket US (gateway.polymarket.us: public, no key, CORS-open),
+   the exchange the referral links point to. The global gamma-api book the board scan
+   reads is mostly one-sided for NFL props, so its Under prices can't be trusted here.
+   Polymarket US props are "N+" markets, i.e. Over/Under N-0.5. The game's markets are
+   listed once, then the chosen market's best bid/ask is re-polled while it's on screen. */
+const PMUS = 'https://gateway.polymarket.us';
+const PMUS_STAT = {
+  football_player_passing_yards:'pass_yds', football_player_passing_touchdowns:'pass_td',
+  football_player_passing_completions:'pass_cmp', football_player_passing_attempts:'pass_att',
+  football_player_interceptions_thrown:'pass_int', football_player_rushing_yards:'rush_yds',
+  football_player_rushing_attempts:'rush_att', football_player_receiving_yards:'rec_yds',
+  football_player_receptions:'rec', football_player_scrimmage_yards:'rush_rec_yds',
+  football_player_touchdowns:'scrim_td', football_player_fantasy_points_ppr:'fantasy',
+};
+const PMUS_TEAM = { LA:'lar' };      // nflverse code -> Polymarket US code (the rest are just lower-cased)
+const PMUS_POLL_MS = 10000, PMUS_LIST_MS = 5*60*1000;
+const PM = { req:0, slug:null, line:null, quote:null, at:0, err:false, timer:null, poll:0, auto:null };
+const pmGames = {};                  // event slug -> { t, idx: { "pkey|stat": [{line, slug}] } }
 
-function hideMarketOdds(){ const mo=$('marketodds'); if(mo) mo.hidden=true; PM.slug=null; PM.condition=null; pmSubscribe(null); }
+function pmusEventSlug(g){ const c=t=>PMUS_TEAM[t]||String(t).toLowerCase(); return `nfl-${c(g.away)}-${c(g.home)}-${g.date}`; }
+
+async function pmusGame(g){
+  const slug=pmusEventSlug(g), c=pmGames[slug];
+  if(c && Date.now()-c.t<PMUS_LIST_MS) return c.idx;
+  const r=await fetch(PMUS+'/v1/events/slug/'+encodeURIComponent(slug));
+  const idx={};
+  if(r.status!==404){
+    if(!r.ok) throw new Error('polymarket us '+r.status);
+    const ev=(await r.json()).event||{};
+    (ev.markets||[]).forEach(m=>{
+      const sk=PMUS_STAT[m.sportsMarketType], who=(m.subject&&m.subject.name)||(m.metadata&&m.metadata.playerName);
+      const n=parseFloat(m.line);
+      if(!sk || !who || !isFinite(n) || m.closed || m.active===false) return;
+      const k=pkey(who)+'|'+sk; (idx[k]=idx[k]||[]).push({line:n-0.5, slug:m.slug});
+    });
+  }
+  pmGames[slug]={t:Date.now(), idx}; return idx;
+}
+
+async function pmusQuote(slug){
+  const r=await fetch(PMUS+'/v1/markets/'+encodeURIComponent(slug)+'/bbo', {cache:'no-store'});
+  if(!r.ok) throw new Error('polymarket us bbo '+r.status);
+  const d=(await r.json()).marketData||{};
+  const px=a=>{ const v=a? parseFloat(a.value) : NaN; return v>0&&v<1? v : null; };
+  const bid=px(d.bestBid), ask=px(d.bestAsk);
+  // What you'd PAY for each side: Over = best ask, Under = 1 - best bid.
+  return { over:ask, under: bid!=null? 1-bid : null, open: !d.state || d.state==='MARKET_STATE_OPEN' };
+}
 
 async function pmResolve(p, sk, line){
-  const slate=await getSlate();
-  const g=(slate.games||[]).find(x=> x.away===p.t || x.home===p.t);
-  if(!g) return null;
-  const ev=await getEvent(g.slug);
+  const g=teamGame(p.t); if(!g || g.final || !g.date) return null;
+  const list=(await pmusGame(g))[pkey(p.n)+'|'+sk]; if(!list) return null;
   let best=null;
-  for(const mk of (ev.markets||[])){
-    const pm=parseMarket(mk); if(!pm) continue;
-    if(pkey(pm.player)!==pkey(p.n)) continue;
-    if(mktStatKey(pm.statText)!==sk) continue;
-    if(pm.over==null && pm.under==null) continue;
-    if(!best || Math.abs(pm.line-line)<Math.abs(best.line-line)) best=pm;
-    if(pm.line===line){ best=pm; break; }
-  }
-  if(!best) return null;
-  return {evslug:g.slug, slug:best.slug, condition:best.condition, over:best.over, under:best.under, mline:best.line};
+  for(const m of list){ if(!best || Math.abs(m.line-line)<Math.abs(best.line-line)) best=m; }
+  return best;
 }
+
+function pmStop(){ clearTimeout(PM.timer); PM.timer=null; PM.poll++; PM.slug=null; PM.quote=null; PM.err=false; }
+function hideMarketOdds(){ const mo=$('marketodds'); if(mo) mo.hidden=true; PM.req++; pmStop(); }
+function pmClearAuto(){ const yo=$('yourodds'); if(yo && PM.auto!=null && yo.value===PM.auto){ yo.value=''; if(typeof updateCalc==='function') updateCalc(); } PM.auto=null; }
 
 async function renderMarketOdds(){
   const mo=$('marketodds'); if(!mo) return;
   const p=state.player; if(!p || !games().length){ hideMarketOdds(); return; }
-  const sk=state.stat, line=state.line, ou=state.ou, req=++PM.req;
-  mo.hidden=false; mo.className='mktodds loading';
-  mo.innerHTML=`<div class="mo-cap">Polymarket</div><div class="mo-body mktmuted">checking live market…</div>`;
-  let m=null; try{ m=await pmResolve(p, sk, line); }catch(e){ m=null; }
+  const sk=state.stat, line=state.line, req=++PM.req;
+  if(mo.hidden || !PM.slug){ mo.hidden=false; mo.className='mktodds loading';
+    mo.innerHTML=`<div class="mo-cap">Polymarket</div><div class="mo-body mktmuted">checking live market…</div>`; }
+  let m=null, err=false; try{ m=await pmResolve(p, sk, line); }catch(e){ err=true; }
   if(req!==PM.req) return;
-  const price = m? (ou==='over'? m.over : m.under) : null;
-  if(!m || price==null){
-    mo.className='mktodds none';
-    mo.innerHTML=`<div class="mo-cap">Polymarket</div><div class="mo-body mktmuted">No live market for ${esc(STATMAP[sk].label)} at this line right now.</div>`;
-    PM.slug=null; PM.condition=null; pmSubscribe(null); return;
+  if(!m){
+    pmStop(); pmClearAuto(); mo.hidden=false; mo.className='mktodds none';
+    mo.innerHTML=`<div class="mo-cap">Polymarket</div><div class="mo-body mktmuted">${err
+      ? `Couldn't reach Polymarket right now.`
+      : `No Polymarket market for ${esc(STATMAP[sk].label)} this week.`}</div>`;
+    return;
   }
-  PM.slug=m.slug; PM.condition=m.condition; PM.evslug=m.evslug; PM.over=m.over; PM.under=m.under; PM.mline=m.mline;
-  const cents=Math.round(price*100), mult=1/price, lineTxt=fmt(m.mline);
-  const diff = (m.mline!==line)? ` <span class="mktmuted">· market line ${lineTxt}</span>` : '';
+  if(m.slug!==PM.slug){ pmStop(); PM.slug=m.slug; PM.line=m.line; pmDraw(); pmPoll(); }
+  else { pmDraw(); if(!PM.timer) pmPoll(); }
+}
+
+async function pmPoll(){
+  clearTimeout(PM.timer); PM.timer=null;
+  const slug=PM.slug, tok=++PM.poll; if(!slug) return;
+  try{ const q=await pmusQuote(slug); if(tok!==PM.poll) return; PM.quote=q; PM.at=Date.now(); PM.err=false; }
+  catch(e){ if(tok!==PM.poll) return; PM.err=true; }
+  pmDraw();
+  if(!document.hidden) PM.timer=setTimeout(pmPoll, PMUS_POLL_MS);
+}
+document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && PM.slug && !PM.timer) pmPoll(); });
+
+function pmDraw(){
+  const mo=$('marketodds'); if(!mo || !PM.slug) return;
+  const q=PM.quote, ou=state.ou, lineTxt=fmt(PM.line);
+  const cap=`<div class="mo-cap">Polymarket <span class="mo-side ${ou}">${ou.toUpperCase()} ${lineTxt}</span></div>`;
+  mo.hidden=false;
+  if(!q){ mo.className='mktodds '+(PM.err?'none':'loading');
+    mo.innerHTML=cap+`<div class="mo-body mktmuted">${PM.err? `Couldn't reach Polymarket right now — retrying.` : 'checking live market…'}</div>`; return; }
+  const price = ou==='over'? q.over : q.under;
+  if(!q.open || price==null){ mo.className='mktodds none';
+    mo.innerHTML=cap+`<div class="mo-body mktmuted">${q.open? `Nobody is selling the ${ou} at this line right now.` : 'This market is not open for trading right now.'}</div>`; return; }
+  const cents=Math.round(price*100), c=v=> v==null? '—' : Math.round(v*100)+'¢';
+  const diff = (PM.line!==state.line)? ` <span class="mktmuted">· market line ${lineTxt}</span>` : '';
+  const secs=Math.round((Date.now()-PM.at)/1000), fresh=!PM.err && secs<30;
+  const when = fresh? 'refreshes every 10s' : `updated ${secs<60? secs+'s' : Math.round(secs/60)+'m'} ago`;
   mo.className='mktodds live';
-  mo.innerHTML =
-    `<div class="mo-cap">Polymarket <span class="mo-side ${ou}">${ou.toUpperCase()} ${lineTxt}</span></div>`+
-    `<div class="mo-price"><span class="mo-cents">${cents}¢</span><span class="mo-sub">to buy · implied <b>${Math.round(price*100)}%</b> · pays ${mult.toFixed(2)}×${diff}</span></div>`+
-    `<div class="mo-last" id="mktlast"></div>`;
-  const yo=$('yourodds'); if(yo && !yo.value){ yo.value=cents; if(typeof updateCalc==='function') updateCalc(); }
-  pmSubscribe(m.evslug);
-  pmRenderLast();
-}
-
-function pmRenderLast(){
-  const el=$('mktlast'); if(!el) return;
-  const last = PM.slug? PM_LAST[PM.slug] : null;
-  const connected = PM_WS && PM_WS.readyState===1;
-  if(!last){ el.innerHTML=`<span class="mktmuted">last trade — ${connected?'watching for live trades…':'connecting…'}</span>`; return; }
-  const price = state.ou==='over'? last.over : (1-last.over);
-  const cents=Math.round(price*100);
-  const secs=Math.max(0,Math.round((Date.now()-last.ts)/1000));
-  const ago = secs<2?'just now': secs<60? secs+'s ago' : secs<3600? Math.round(secs/60)+'m ago' : Math.round(secs/3600)+'h ago';
-  el.innerHTML=`last trade <b>${cents}¢</b> · ${ago} <span class="pmlive ${connected?'on':''}">● LIVE</span>`;
-}
-
-function pmConnect(){
-  if(PM_WS && (PM_WS.readyState===0||PM_WS.readyState===1)) return;
-  let ws; try{ ws=new WebSocket('wss://ws-live-data.polymarket.com'); }catch(e){ return; }
-  PM_WS=ws;
-  ws.onopen=()=>{ pmPing(); if(PM_WS_SUB) pmSend('subscribe', PM_WS_SUB); pmRenderLast(); };
-  ws.onmessage=(ev)=>{
-    if(typeof ev.data!=='string' || ev.data.indexOf('payload')<0) return;
-    let msg; try{ msg=JSON.parse(ev.data); }catch(e){ return; }
-    if(msg.topic!=='activity' || !msg.payload) return;
-    const t=msg.payload;
-    const match = PM.slug && (t.slug===PM.slug || (PM.condition && t.conditionId===PM.condition));
-    if(!match) return;
-    const pr=parseFloat(t.price); if(!isFinite(pr)) return;
-    const isOver=/over/i.test(String(t.outcome||''));
-    const ts = t.timestamp? (t.timestamp>1e12? t.timestamp : t.timestamp*1000) : Date.now();
-    PM_LAST[PM.slug]={ over: isOver? pr : 1-pr, ts };
-    pmRenderLast();
-  };
-  ws.onclose=()=>{ if(PM_WS===ws) PM_WS=null; pmRenderLast(); setTimeout(()=>{ if(PM_WS_SUB) pmConnect(); }, 3000); };
-  ws.onerror=()=>{ try{ ws.close(); }catch(e){} };
-}
-function pmPing(){ if(PM_WS && PM_WS.readyState===1){ try{ PM_WS.send('ping'); }catch(e){} setTimeout(pmPing, 5000); } }
-function pmSend(action, evslug){ if(!PM_WS || PM_WS.readyState!==1 || !evslug) return;
-  try{ PM_WS.send(JSON.stringify({action, subscriptions:[{topic:'activity', type:'trades', filters:JSON.stringify({event_slug:evslug})}]})); }catch(e){} }
-function pmSubscribe(evslug){
-  if(evslug===PM_WS_SUB) return;
-  if(PM_WS_SUB) pmSend('unsubscribe', PM_WS_SUB);
-  PM_WS_SUB=evslug;
-  if(!evslug) return;
-  if(!PM_WS || PM_WS.readyState>1) pmConnect(); else pmSend('subscribe', evslug);
-  if(!PM_TICK) PM_TICK=setInterval(pmRenderLast, 5000);
+  mo.innerHTML = cap+
+    `<div class="mo-price"><span class="mo-cents">${cents}¢</span><span class="mo-sub">to buy · implied <b>${cents}%</b> · pays ${(1/price).toFixed(2)}×${diff}</span></div>`+
+    `<div class="mo-last">Over <b>${c(q.over)}</b> · Under <b>${c(q.under)}</b> · ${when} <span class="pmlive ${fresh?'on':''}">● LIVE</span></div>`;
+  // Pre-fill the calculator, and keep it tracking the market until the user types their own price.
+  const yo=$('yourodds');
+  if(yo && (!yo.value || yo.value===PM.auto)){ PM.auto=String(cents); if(yo.value!==PM.auto){ yo.value=PM.auto; if(typeof updateCalc==='function') updateCalc(); } }
 }
 
 let edgeRows=[], valueRows=[], edgeSort={key:'prob',dir:-1};
