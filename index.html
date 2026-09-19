@@ -178,6 +178,18 @@ input:focus,select:focus{outline:3px solid var(--accent);outline-offset:1px}
 .tile.lo .pct{color:var(--miss)} .tile.lo .bar{background:var(--miss)}
 .tile.model.hi .pct{color:#3fd98a} .tile.model.mid .pct{color:var(--gold)} .tile.model.lo .pct{color:#ff6b57}
 .tile .avg{font-size:12px;color:var(--muted);margin-top:5px;font-weight:500}
+/* live Polymarket odds strip */
+.mktodds{background:linear-gradient(90deg,var(--surface-2),var(--surface));border:2px solid var(--line);border-left:5px solid var(--accent);border-radius:14px;padding:13px 18px;margin:-6px 0 20px;display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 20px}
+.mktodds.none,.mktodds.loading{border-left-color:var(--line)}
+.mktodds .mo-cap{font-family:var(--dispers);text-transform:uppercase;letter-spacing:1px;font-weight:700;font-size:15px;color:var(--muted)}
+.mktodds .mo-side{color:var(--accent);margin-left:2px} .mktodds .mo-side.under{color:var(--blaze)}
+.mktodds .mo-price{display:flex;align-items:baseline;gap:10px;flex:1;min-width:210px}
+.mktodds .mo-cents{font-family:var(--display);font-size:clamp(28px,5vw,40px);line-height:1;color:var(--text);font-weight:700}
+.mktodds .mo-sub{font-size:13px;color:var(--muted)} .mktodds .mo-sub b{color:var(--text)}
+.mktodds .mo-last{font-family:var(--dispers);letter-spacing:.4px;font-size:14px;color:var(--muted);width:100%} .mktodds .mo-last b{color:var(--text)}
+.pmlive{color:#7d8794;font-weight:700;font-size:12px;letter-spacing:.5px}
+.pmlive.on{color:var(--accent);animation:pmpulse 1.6s ease-in-out infinite}
+@keyframes pmpulse{0%,100%{opacity:1}50%{opacity:.35}}
 
 /* trend strip */
 .trend{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:22px}
@@ -667,6 +679,8 @@ table td,table th,thead th,tbody td,.edgetbl td,.edgetbl th,.caltbl td,.caltbl t
 
   <div class="tiles" id="tiles"></div>
 
+  <div id="marketodds" class="mktodds" hidden></div>
+
   <div id="trapalert" hidden></div>
 
   <div class="trend" id="trend"></div>
@@ -1044,6 +1058,7 @@ function renderEmpty(){
   $('tiles').innerHTML=`<div class="tile mid" style="grid-column:1/-1"><div class="cap">No player selected</div><div class="frac">Type a name in the search box, or open one from your watchlist below.</div></div>`;
   $('trend').innerHTML=''; $('chart').innerHTML=''; $('tbl').innerHTML=''; $('dist').innerHTML=''; $('distsum').innerHTML=''; $('disthint').textContent=''; $('charthint').textContent='';
   $('trapalert').hidden=true;
+  hideMarketOdds();
   renderSplits(); renderCalc(); renderCompare();
 }
 function render(){
@@ -1057,7 +1072,7 @@ function render(){
   if(!g.length){
     $('tiles').innerHTML=`<div class="tile mid" style="grid-column:1/-1"><div class="cap">No games in the dataset yet</div><div class="frac">${p.rk?'Rookie — ':''}a game log appears after their first NFL box score. Check the injury/roster badges above and the Matchup panel for the defense they face.</div></div>`;
     $('trend').innerHTML=''; $('chart').innerHTML=''; $('tbl').innerHTML=''; $('dist').innerHTML=''; $('distsum').innerHTML=''; $('disthint').textContent='';
-    $('trapalert').hidden=true; $('charthint').textContent=''; renderSplits(); renderCalc(); renderCompare(); return;
+    $('trapalert').hidden=true; $('charthint').textContent=''; hideMarketOdds(); renderSplits(); renderCalc(); renderCompare(); return;
   }
   const ctx=contextFor(p, state.stat, currentOpp());
   const mp=modelFor(p, state.stat, state.line, ctx);
@@ -1079,6 +1094,7 @@ function render(){
         <div class="bar" style="width:${r.cnt?pc:0}%"></div></div>`;
   });
   $('tiles').innerHTML=tiles;
+  try{ renderMarketOdds(); }catch(e){}
   renderTrapAlert(p, state.stat, state.line, state.ou, mp, ctx);
   renderTrend();
   drawChart(); drawTable(); drawDist(); renderSplits(); renderCalc();
@@ -1321,7 +1337,107 @@ function parseMarket(m){
   const ok=p=>p!=null&&isFinite(p)&&p>0.02&&p<0.98;
   if(!(ok(overBuy)&&ok(underBuy))) tradeable=false;
   const line=(m.line!=null&&m.line!=='')? parseFloat(m.line) : parseFloat(mm[3]);
-  return {player, statText, line, mid, over:ok(overBuy)?overBuy:null, under:ok(underBuy)?underBuy:null, tradeable, spread, liq, vol};
+  return {player, statText, line, mid, over:ok(overBuy)?overBuy:null, under:ok(underBuy)?underBuy:null, tradeable, spread, liq, vol, slug:m.slug||null, condition:m.conditionId||null};
+}
+
+/* ===== Live Polymarket odds on the player page =====
+   Quote (best buy price) comes from the same gamma-api the board scan uses.
+   Last-traded price ticks live over the Polymarket real-time WebSocket
+   (wss://ws-live-data.polymarket.com, topic "activity"/"trades"). */
+const PM = { req:0, slug:null, condition:null, evslug:null, over:null, under:null, mline:null };
+const PM_LAST = {};                 // marketSlug -> { over, ts }
+let PM_WS=null, PM_WS_SUB=null, PM_TICK=null;
+
+function hideMarketOdds(){ const mo=$('marketodds'); if(mo) mo.hidden=true; PM.slug=null; PM.condition=null; pmSubscribe(null); }
+
+async function pmResolve(p, sk, line){
+  const slate=await getSlate();
+  const g=(slate.games||[]).find(x=> x.away===p.t || x.home===p.t);
+  if(!g) return null;
+  const ev=await getEvent(g.slug);
+  let best=null;
+  for(const mk of (ev.markets||[])){
+    const pm=parseMarket(mk); if(!pm) continue;
+    if(pkey(pm.player)!==pkey(p.n)) continue;
+    if(mktStatKey(pm.statText)!==sk) continue;
+    if(pm.over==null && pm.under==null) continue;
+    if(!best || Math.abs(pm.line-line)<Math.abs(best.line-line)) best=pm;
+    if(pm.line===line){ best=pm; break; }
+  }
+  if(!best) return null;
+  return {evslug:g.slug, slug:best.slug, condition:best.condition, over:best.over, under:best.under, mline:best.line};
+}
+
+async function renderMarketOdds(){
+  const mo=$('marketodds'); if(!mo) return;
+  const p=state.player; if(!p || !games().length){ hideMarketOdds(); return; }
+  const sk=state.stat, line=state.line, ou=state.ou, req=++PM.req;
+  mo.hidden=false; mo.className='mktodds loading';
+  mo.innerHTML=`<div class="mo-cap">Polymarket</div><div class="mo-body mktmuted">checking live market…</div>`;
+  let m=null; try{ m=await pmResolve(p, sk, line); }catch(e){ m=null; }
+  if(req!==PM.req) return;
+  const price = m? (ou==='over'? m.over : m.under) : null;
+  if(!m || price==null){
+    mo.className='mktodds none';
+    mo.innerHTML=`<div class="mo-cap">Polymarket</div><div class="mo-body mktmuted">No live market for ${esc(STATMAP[sk].label)} at this line right now.</div>`;
+    PM.slug=null; PM.condition=null; pmSubscribe(null); return;
+  }
+  PM.slug=m.slug; PM.condition=m.condition; PM.evslug=m.evslug; PM.over=m.over; PM.under=m.under; PM.mline=m.mline;
+  const cents=Math.round(price*100), mult=1/price, lineTxt=fmt(m.mline);
+  const diff = (m.mline!==line)? ` <span class="mktmuted">· market line ${lineTxt}</span>` : '';
+  mo.className='mktodds live';
+  mo.innerHTML =
+    `<div class="mo-cap">Polymarket <span class="mo-side ${ou}">${ou.toUpperCase()} ${lineTxt}</span></div>`+
+    `<div class="mo-price"><span class="mo-cents">${cents}¢</span><span class="mo-sub">to buy · implied <b>${Math.round(price*100)}%</b> · pays ${mult.toFixed(2)}×${diff}</span></div>`+
+    `<div class="mo-last" id="mktlast"></div>`;
+  const yo=$('yourodds'); if(yo && !yo.value){ yo.value=cents; if(typeof updateCalc==='function') updateCalc(); }
+  pmSubscribe(m.evslug);
+  pmRenderLast();
+}
+
+function pmRenderLast(){
+  const el=$('mktlast'); if(!el) return;
+  const last = PM.slug? PM_LAST[PM.slug] : null;
+  const connected = PM_WS && PM_WS.readyState===1;
+  if(!last){ el.innerHTML=`<span class="mktmuted">last trade — ${connected?'watching for live trades…':'connecting…'}</span>`; return; }
+  const price = state.ou==='over'? last.over : (1-last.over);
+  const cents=Math.round(price*100);
+  const secs=Math.max(0,Math.round((Date.now()-last.ts)/1000));
+  const ago = secs<2?'just now': secs<60? secs+'s ago' : secs<3600? Math.round(secs/60)+'m ago' : Math.round(secs/3600)+'h ago';
+  el.innerHTML=`last trade <b>${cents}¢</b> · ${ago} <span class="pmlive ${connected?'on':''}">● LIVE</span>`;
+}
+
+function pmConnect(){
+  if(PM_WS && (PM_WS.readyState===0||PM_WS.readyState===1)) return;
+  let ws; try{ ws=new WebSocket('wss://ws-live-data.polymarket.com'); }catch(e){ return; }
+  PM_WS=ws;
+  ws.onopen=()=>{ pmPing(); if(PM_WS_SUB) pmSend('subscribe', PM_WS_SUB); pmRenderLast(); };
+  ws.onmessage=(ev)=>{
+    if(typeof ev.data!=='string' || ev.data.indexOf('payload')<0) return;
+    let msg; try{ msg=JSON.parse(ev.data); }catch(e){ return; }
+    if(msg.topic!=='activity' || !msg.payload) return;
+    const t=msg.payload;
+    const match = PM.slug && (t.slug===PM.slug || (PM.condition && t.conditionId===PM.condition));
+    if(!match) return;
+    const pr=parseFloat(t.price); if(!isFinite(pr)) return;
+    const isOver=/over/i.test(String(t.outcome||''));
+    const ts = t.timestamp? (t.timestamp>1e12? t.timestamp : t.timestamp*1000) : Date.now();
+    PM_LAST[PM.slug]={ over: isOver? pr : 1-pr, ts };
+    pmRenderLast();
+  };
+  ws.onclose=()=>{ if(PM_WS===ws) PM_WS=null; pmRenderLast(); setTimeout(()=>{ if(PM_WS_SUB) pmConnect(); }, 3000); };
+  ws.onerror=()=>{ try{ ws.close(); }catch(e){} };
+}
+function pmPing(){ if(PM_WS && PM_WS.readyState===1){ try{ PM_WS.send('ping'); }catch(e){} setTimeout(pmPing, 5000); } }
+function pmSend(action, evslug){ if(!PM_WS || PM_WS.readyState!==1 || !evslug) return;
+  try{ PM_WS.send(JSON.stringify({action, subscriptions:[{topic:'activity', type:'trades', filters:JSON.stringify({event_slug:evslug})}]})); }catch(e){} }
+function pmSubscribe(evslug){
+  if(evslug===PM_WS_SUB) return;
+  if(PM_WS_SUB) pmSend('unsubscribe', PM_WS_SUB);
+  PM_WS_SUB=evslug;
+  if(!evslug) return;
+  if(!PM_WS || PM_WS.readyState>1) pmConnect(); else pmSend('subscribe', evslug);
+  if(!PM_TICK) PM_TICK=setInterval(pmRenderLast, 5000);
 }
 
 let edgeRows=[], valueRows=[], edgeSort={key:'prob',dir:-1};
