@@ -669,7 +669,7 @@ table td,table th,thead th,tbody td,.edgetbl td,.edgetbl th,.caltbl td,.caltbl t
         <li><span class="vrnum">1</span><span class="vrtxt"><b>Polymarket gives it at least a 30% chance.</b> The price you'd pay has to be <b>30¢ or more</b>. <span class="vrwhy">This is the rule that keeps penny longshots off the list — a 6¢ ask against an 11% model chance looks like a huge edge in percentage terms and is still a bad bet.</span></span></li>
         <li><span class="vrnum">2</span><span class="vrtxt"><b>Our model puts it at least 15 points higher.</b> <span class="vreg">30¢ ask → needs 45%</span> · <span class="vreg">50¢ → 65%</span> · <span class="vreg">70¢ → 85%</span>. <span class="vrwhy">The gap between the two, in percentage points, is the <b>edge</b> shown in the Polymarket column.</span></span></li>
       </ol>
-      <div class="vrfoot">Both rules are checked on the <b>over</b> and the <b>under</b> of every market separately, so either side can qualify, and a prop also needs <b>6+ effective games</b> of history behind it. Everything that clears both rules is listed — there's no fixed top 25 — ranked by that edge in points. The rules are tested against the ask on the <b>global Polymarket book</b> (the number the recorded picks use); the live <b>Polymarket US</b> price in each row is a separate order book, so where it has drifted a cent or two the board ask is shown beside it.</div>
+      <div class="vrfoot">Both rules are tested against the <b>live Polymarket US price in the row</b> — the price you'd actually pay — so the edge shown is always the edge it qualified on, and a prop drops off the list as soon as the price moves against it. Where Polymarket US has no market for a prop, the global book's ask is used instead and shown as <span class="pmdim">board 46¢ · +15 edge</span>. Both rules are checked on the <b>over</b> and the <b>under</b> of every market separately, so either side can qualify, and a prop also needs <b>6+ effective games</b> of history behind it. Everything clearing both rules is listed — no fixed top 25 — ranked by that edge, and the list re-checks itself about once a minute.</div>
     </div>
     <div id="valuebody"><p class="mktnote">The board scan fills this in. <span class="mktmuted">Needs the hosted website (the Polymarket API can't be reached from a local file).</span></p></div>
   </div>
@@ -887,7 +887,7 @@ table td,table th,thead th,tbody td,.edgetbl td,.edgetbl th,.caltbl td,.caltbl t
 
   <footer>
     <b>Data:</b> nflverse public weekly stats, schedules, injury reports and rosters (regular season + playoffs). Defense ranks blend this season with last. Injury status is the latest official report and can change on game day.<br>
-    <b>Prices:</b> live odds come from Polymarket US — every few seconds on a player's page, about once a minute in the <b>Polymarket</b> column of the week's boards. The board scan itself still ranks on the global Polymarket book and uses the price you'd pay (the ask); Polymarket US runs a separate order book, so trust the live column and type the price you see there into the Bet calculator or a parlay leg for your real payout (each share pays $1, so multiplier = $1 ÷ price). Backward-looking research, <b>not betting advice</b>; past accuracy is shown in the Past picks tab so you can judge it yourself.
+    <b>Prices:</b> live odds come from Polymarket US, the exchange the referral links point to — every few seconds on a player's page, about once a minute in the <b>Polymarket</b> column of the week's boards, and at build time for the picks recorded in Past picks. Value spots are judged on that price, so the edge shown is the edge the pick qualified on. The global Polymarket book is only used where Polymarket US has no market for a prop at that line; its Under prices come off a mostly one-sided book and run rich, which is why they aren't trusted. Each share pays $1, so multiplier = $1 ÷ price. Backward-looking research, <b>not betting advice</b>; past accuracy is shown in the Past picks tab so you can judge it yourself.
   </footer>
 </div>
 
@@ -1692,7 +1692,12 @@ async function fillLive(items, force){
       const list=idx[pkey(it.pl.n)+'|'+it.sk];
       if(!list || !list.length){ livePx.set(it.mk,{none:true}); return; }
       let best=null; for(const m of list){ if(!best || Math.abs(m.line-it.line)<Math.abs(best.line-it.line)) best=m; }
-      livePx.set(it.mk, Object.assign({mline:best.line, slug:best.slug, at:Date.now()}, best.q||{}));
+      // Nearest line, plus whether it is actually the same bet. Polymarket US often
+      // lists a prop at a different number than the line we're pricing (the hit-streak
+      // board uses the site's own seeded lines), and a price for 9.5 says nothing about
+      // 50.5 — so an inexact match is reported, never priced off.
+      const exact=Math.abs(best.line-it.line)<0.01;
+      livePx.set(it.mk, Object.assign({mline:best.line, exact, slug:best.slug, at:Date.now()}, best.q||{}));
     });
   });
 }
@@ -1700,26 +1705,33 @@ async function fillLive(items, force){
 // d = {mk, side, line, prob, ask} — ask is the global-book price the boards rank on,
 // kept visible whenever it disagrees with the live Polymarket US quote.
 function liveCell(d){
-  const board = d.ask==null? '' : ` <span class="pmdim" title="the ask on the global Polymarket book — the price this board's rules are tested against">board ${Math.round(d.ask*100)}¢</span>`;
+  const signed = v => (v>=0?'+':'\u2212')+Math.abs(Math.round(v*100));
+  // Two ways the global book's ask gets shown: as a bare comparison when the two
+  // books disagree, and with its own edge when Polymarket US has no market and the
+  // board ask is therefore the price the row was judged on.
+  const cents = d.ask==null? '' : Math.round(d.ask*100)+'\u00a2';
+  const boardBare = d.ask==null? '' : ' <span class="pmdim" title="the ask on the global Polymarket book, which quotes separately from Polymarket US">board '+cents+'</span>';
+  const boardFull = d.ask==null? '' : ' <span class="pmdim" title="the ask on the global Polymarket book \u2014 with no Polymarket US market, this is the price the rules were tested on">board '+cents+(d.prob==null? '' : ' \u00b7 '+signed(d.prob-d.ask)+' edge')+'</span>';
   const L=livePx.get(d.mk);
-  if(!L) return `<span class="pmdim">…</span>${board}`;
-  if(L.err) return `<span class="pmdim" title="Couldn't reach Polymarket just now — retrying">—</span>${board}`;
-  if(L.none) return `<span class="pmdim" title="Polymarket US has no market for this prop right now">no market</span>${board}`;
-  if(!L.open) return `<span class="pmdim" title="Not open for trading right now">closed</span>${board}`;
+  if(!L) return '<span class="pmdim">\u2026</span>'+boardBare;
+  if(L.err) return '<span class="pmdim" title="Couldn\u2019t reach Polymarket US just now \u2014 retrying">\u2014</span>'+boardFull;
+  if(L.none) return '<span class="pmdim" title="Polymarket US has no market for this prop right now">no US market</span>'+boardFull;
+  if(!L.open) return '<span class="pmdim" title="Not open for trading on Polymarket US right now">closed</span>'+boardFull;
+  if(L.exact===false){
+    // Polymarket US lists this player/stat, but at a different number. That price is
+    // for a different bet, so it is shown as context and no edge is computed from it.
+    const other = d.side==='over'? L.over : L.under;
+    const at = other==null? '' : ' \u00b7 '+Math.round(other*100)+'\u00a2';
+    return '<span class="pmdim" title="Polymarket US lists this prop at '+fmt(L.mline)+', not '+fmt(d.line)+' \u2014 a different bet, so no edge is shown">US line '+fmt(L.mline)+at+'</span>'+boardFull;
+  }
   const px = d.side==='over'? L.over : L.under;
-  if(px==null) return `<span class="pmdim" title="Nobody is offering this side at the moment">no ask</span>${board}`;
+  if(px==null) return '<span class="pmdim" title="Nobody is offering this side on Polymarket US at the moment">no ask</span>'+boardFull;
   const edge = d.prob==null? null : d.prob-px;
   const cls = edge==null? '' : edge>=0.04? 'pos' : edge<=-0.04? 'neg' : '';
-  const off = (L.mline!=null && d.line!=null && Math.abs(L.mline-d.line)>0.01)? ` <span class="pmdim">@${fmt(L.mline)}</span>` : '';
-  const sub = edge==null
-    ? `${(1/px).toFixed(2)}×`
-    : `${edge>=0?'+':'−'}${Math.abs(Math.round(edge*100))} edge · ${(1/px).toFixed(2)}×`;
-  // Show the board ask when the two books disagree enough to matter, and always when
-  // the live edge has slipped under the stated bar that the board ask cleared —
-  // otherwise a qualifying row can look like it breaks the rule it got in on.
-  const slipped = d.ask!=null && d.prob!=null && (d.prob-px)<VALUE_MIN_EDGE && (d.prob-d.ask)>=VALUE_MIN_EDGE;
-  const gap = (d.ask!=null && (Math.abs(d.ask-px)>=0.03 || slipped))? board : '';
-  return `<span class="pmpx ${cls}">${Math.round(px*100)}¢</span>${off} <span class="rng">${sub}</span>${gap}`;
+  const off = '';   // an off-line market never reaches here
+  const sub = edge==null? (1/px).toFixed(2)+'\u00d7' : signed(edge)+' edge \u00b7 '+(1/px).toFixed(2)+'\u00d7';
+  const gap = (d.ask!=null && Math.abs(d.ask-px)>=0.03)? boardBare : '';
+  return '<span class="pmpx '+cls+'">'+Math.round(px*100)+'\u00a2</span>'+off+' <span class="rng">'+sub+'</span>'+gap;
 }
 function liveTd(r){
   const d={mk:mkOf(r), side:r.side||'over', line:r.line, prob:r.prob==null?null:r.prob, ask:r.price==null?null:r.price};
@@ -1737,6 +1749,7 @@ function liveHead(){ return `<th title="Live price on Polymarket US for the side
 
 /* Tell the live layer which rows a board is showing; it fetches anything new and
    keeps every board on screen refreshed together. */
+function scheduleLive(){ clearTimeout(liveTimer); liveTimer=setTimeout(liveTick, LIVE_MS); }
 function trackLive(key, rows){
   liveWant.set(key, rows.map(r=>({mk:mkOf(r), pl:r.pl, sk:r.sk, line:r.line})));
   const all=new Map();
@@ -1744,25 +1757,30 @@ function trackLive(key, rows){
   const need=[...all.values()].filter(it=>!livePx.has(it.mk));
   if(need.length){ const gen=liveGen; fillLive(need,false).then(()=>{ if(gen===liveGen) paintLive(); }).catch(()=>{}); }
   else paintLive();
-  if(!liveTimer) liveTimer=setTimeout(liveTick, LIVE_MS);
+  scheduleLive();
 }
 function liveTick(){
   liveTimer=null;
   const all=new Map(); liveWant.forEach(list=>list.forEach(it=>all.set(it.mk,it)));
   if(!all.size) return;
   const wk=$('page-week');
-  if(document.hidden || (wk && wk.hidden)){ liveTimer=setTimeout(liveTick, LIVE_MS); return; }
+  if(document.hidden || (wk && wk.hidden)){ scheduleLive(); return; }
   const gen=++liveGen;
   fillLive([...all.values()], true)
-    .then(()=>{ if(gen===liveGen) paintLive(); })
+    .then(()=>{ if(gen!==liveGen) return;
+      // Prices moved, so who counts as a value spot may have moved with them.
+      const rows=computeValueRows();
+      const changed = valueSig(rows)!==valueSig(valueRows);
+      valueRows=rows;
+      if(changed) renderValue(); else paintLive(); })
     .catch(()=>{})
-    .then(()=>{ liveTimer=setTimeout(liveTick, LIVE_MS); });
+    .then(scheduleLive);
 }
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && liveWant.size && !liveTimer) liveTick(); });
 /* The price you'd actually pay right now, when we have it. */
 function livePriceFor(r){
   const L=livePx.get(mkOf(r));
-  if(!L || !L.open) return null;
+  if(!L || !L.open || !L.exact) return null;
   const px = (r.side||'over')==='over'? L.over : L.under;
   return px!=null? px : null;
 }
@@ -1777,7 +1795,32 @@ function valueQualifies(prob, price){
   if(price==null) return false;
   return price>=VALUE_MIN_PRICE && prob-price>=VALUE_MIN_EDGE;
 }
-let edgeRows=[], valueRows=[], edgeSort={key:'prob',dir:-1};
+let edgeRows=[], valueRows=[], valueCands=[], edgeSort={key:'prob',dir:-1};
+
+/* The price a Value row is judged on: the live Polymarket US ask when there is one,
+   since that is what you'd actually pay, falling back to the global book's ask when
+   Polymarket US has no market for the prop. */
+function valuePrice(c){
+  const L=livePx.get(mkOf(c));
+  if(L && L.open && L.exact){ const px = c.side==='over'? L.over : L.under; if(px!=null) return {px, live:true}; }
+  return c.price!=null? {px:c.price, live:false} : null;
+}
+function computeValueRows(){
+  const out=[];
+  valueCands.forEach(c=>{
+    const e=valuePrice(c); if(!e) return;
+    if(!valueQualifies(c.prob, e.px)) return;
+    out.push(Object.assign({}, c, {vprice:e.px, vlive:e.live, vedge:c.prob-e.px, ev:c.prob/e.px-1}));
+  });
+  out.sort((a,b)=>b.vedge-a.vedge);
+  const rows=[], seen=new Set();
+  for(const r of out){
+    const k=mkOf(r); if(seen.has(k)) continue; seen.add(k);   // one side per market
+    rows.push(r); if(rows.length>=VALUE_MAX) break;
+  }
+  return rows;
+}
+function valueSig(rows){ return rows.map(r=>mkOf(r)+'|'+r.side).join(','); }
 async function scanBoard(force){
   const body=$('edgebody'), status=$('edgestatus');
   status.textContent='Loading slate…';
@@ -1816,26 +1859,23 @@ async function scanBoard(force){
     });
     const modeled=rows.filter(r=>!r.nohist);
     modeled.slice().sort((a,b)=>(b.prob-a.prob)||(b.neff-a.neff)).slice(0,25).forEach(r=>r.lists+='T');
-    // Value: test the over AND the under of every market against their own asks.
-    // Only one side can ever clear either bar, so the winner is whichever one does.
-    const cands=[];
+    // Value candidates: the over AND the under of every tradeable market. Which of
+    // them actually clears the two rules is decided in computeValueRows(), against
+    // the live Polymarket US price where there is one — the price you would really
+    // pay — so the edge printed in each row is the edge the rules were tested on.
+    valueCands=[];
     modeled.forEach(r=>{
       if(!(r.neff>=6) || !r.sides) return;
       ['over','under'].forEach(sd=>{
-        const c=r.sides[sd];
-        if(!valueQualifies(c.prob, c.price)) return;
-        cands.push(Object.assign({}, r, {side:sd, prob:c.prob, lo:c.lo, hi:c.hi, price:c.price,
-          ev:c.prob/c.price-1, vedge:c.prob-c.price, base:r}));
+        const c=r.sides[sd]; if(!c || c.price==null) return;
+        valueCands.push(Object.assign({}, r, {side:sd, prob:c.prob, lo:c.lo, hi:c.hi, price:c.price, base:r}));
       });
     });
-    cands.sort((a,b)=>b.vedge-a.vedge);
-    valueRows=[]; const vseen=new Set();
-    for(const c of cands){
-      const k=c.pl.id+'|'+c.sk+'|'+c.line; if(vseen.has(k)) continue; vseen.add(k);
-      if(!c.base.lists.includes('V')) c.base.lists+='V';
-      valueRows.push(c);
-      if(valueRows.length>=VALUE_MAX) break;
-    }
+    // One request per game prices every candidate, so this is ~13 calls, not ~260.
+    const seedMk=new Map();
+    valueCands.forEach(c=>{ const k=mkOf(c); if(!seedMk.has(k)) seedMk.set(k,{mk:k, pl:c.pl, sk:c.sk, line:c.line}); });
+    try{ await fillLive([...seedMk.values()], false); }catch(e){}
+    valueRows=computeValueRows();
     edgeRows=modeled;
     const nohist=rows.filter(r=>r.nohist).length;
     const vU=valueRows.filter(r=>r.side==='under').length;
@@ -1886,7 +1926,8 @@ function renderValue(){
   if(!valueRows.length){ body.innerHTML=`<p class="mktnote">No value spots right now — nothing on the board, over <i>or</i> under, clears <b>both</b> rules above. That's normal when markets are thin or efficient; the list fills back in as prices move.</p>`; liveWant.delete('V'); return; }
   const rows=sortRows(valueRows,'vedge',-1);
   const unders=rows.filter(r=>r.side==='under').length, overs=rows.length-unders;
-  body.innerHTML=pickTable(rows,{})+`<p class="mktnote" style="margin-top:8px"><b>${rows.length}</b> prop${rows.length===1?'':'s'} clear both rules right now — ${overs} over${overs===1?'':'s'} and ${unders} under${unders===1?'':'s'} — ranked by the model's edge in points. Each pick is recorded before kickoff and graded in <b>Past picks</b>. Always check the live price before betting. Backward-looking; not advice.</p>`;
+  const stale=rows.filter(r=>!r.vlive).length;
+  body.innerHTML=pickTable(rows,{})+`<p class="mktnote" style="margin-top:8px"><b>${rows.length}</b> prop${rows.length===1?'':'s'} clear both rules at the price you'd pay right now — ${overs} over${overs===1?'':'s'} and ${unders} under${unders===1?'':'s'}${stale?`, ${stale} judged on the global book because Polymarket US has no market for them`:''}. Rechecked about once a minute, so a row leaves as soon as its price moves against it. Picks are recorded before kickoff and graded in <b>Past picks</b> — that record is taken from the global book at record time, so it can differ slightly from this list. Backward-looking; not advice.</p>`;
   wireLoad(body, rows);
   trackLive('V', rows);
 }
@@ -2205,7 +2246,7 @@ function renderLeaderboard(){
     liveTd(e)+
     `<td><button class="edgeload" type="button" data-i="${i}">Load</button></td></tr>`; });
   body.innerHTML=h+'</tbody></table></div>'+
-    `<p class="mktnote" style="margin-top:8px">A streak is consecutive games clearing the site's own realistic line — not a market line. <b>Model</b> is the calibrated chance that the streak extends this week, and <b>Polymarket</b> is the live Polymarket US price for that over, with the model's edge over it. A long streak on its own is not an edge: check the model number and the price together.</p>`;
+    `<p class="mktnote" style="margin-top:8px">A streak is consecutive games clearing the site's own realistic line — not a market line. <b>Model</b> is the calibrated chance that the streak extends this week. <b>Polymarket</b> shows the live Polymarket US price for that over <i>when the market is at the same line</i>, with the model's edge over it; where Polymarket US lists the prop at a different number it says so and shows that price as context only, since an edge against a different bet would be meaningless. A long streak on its own is not an edge: check the model number and the price together.</p>`;
   body.querySelectorAll('.wload,.edgeload').forEach(b=>b.onclick=()=>loadStreak(LB[+b.dataset.i]));
   trackLive('L', LB);
 }

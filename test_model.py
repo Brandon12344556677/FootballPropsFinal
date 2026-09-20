@@ -331,6 +331,26 @@ class ListTests(unittest.TestCase):
         B.build_live_picks(picks, slate, sched, by_key, {"teams": {}, "avg": {}})
         self.assertIn(graded, picks)
 
+    def test_live_picks_prefer_the_polymarket_us_price(self):
+        """Polymarket US quotes both sides properly; the global book's Under price is
+        derived from a one-sided book and runs rich, so US wins when it lists the same
+        prop at the same line."""
+        slate, sched, by_key = self._live_fixture(bid=0.40, ask=0.60)
+        us = {(B.pkey("Test Player"), "rec_yds", 59.5): {"over": 41, "under": 60}}
+        picks = []
+        B.build_live_picks(picks, slate, sched, by_key, {"teams": {}, "avg": {}}, us)
+        over = next(p for p in picks if p["side"] == "over")
+        self.assertEqual(over["price"], 41)          # US ask, not the global book's 60c
+
+    def test_live_picks_ignore_a_us_price_for_a_different_line(self):
+        """A price for 49.5 says nothing about 59.5 — it is a different bet."""
+        slate, sched, by_key = self._live_fixture(bid=0.40, ask=0.60)
+        us = {(B.pkey("Test Player"), "rec_yds", 49.5): {"over": 41, "under": 60}}
+        picks = []
+        B.build_live_picks(picks, slate, sched, by_key, {"teams": {}, "avg": {}}, us)
+        over = next(p for p in picks if p["side"] == "over")
+        self.assertEqual(over["price"], 60)          # falls back to the global book
+
     def test_grade_picks_waits_for_box_score(self):
         sched = {"2026_01_A_B": {"final": True}}
         pl = {"id": "p1", "g": [[2026, 1, "B", "REG"] + [0] * 12 + [1, 0, 44.5, 1.5]]}
@@ -354,6 +374,64 @@ class SeasonTests(unittest.TestCase):
         self.assertEqual(B.season_year(datetime.date(2027, 7, 1)), 2026)
         self.assertEqual(B.season_year(datetime.date(2027, 8, 15)), 2027)
 
+
+class PolymarketUSTests(unittest.TestCase):
+    def test_event_slug(self):
+        self.assertEqual(B.pmus_event_slug("CAR", "ATL", "2026-09-20"), "nfl-car-atl-2026-09-20")
+        self.assertEqual(B.pmus_event_slug("NYG", "LA", "2026-09-21"), "nfl-nyg-lar-2026-09-21")
+
+    def _event(self, markets):
+        return json.dumps({"event": {"markets": markets}}).encode()
+
+    def _market(self, **kw):
+        m = {"sportsMarketType": "football_player_receiving_yards", "line": 60,
+             "metadata": {"playerName": "Test Player"}, "status": "MARKET_STATUS_OPEN",
+             "closed": False, "active": True,
+             "bestBidQuote": {"value": "0.4000"}, "bestAskQuote": {"value": "0.4200"}}
+        m.update(kw)
+        return m
+
+    def _run(self, markets, sched=None, games=None):
+        calls = []
+
+        def fake_get(url, timeout=120, tries=3):
+            calls.append(url)
+            if any(url.endswith(s) for s in (games or ["nfl-aaa-bbb-2026-09-20"])):
+                return self._event(markets)
+            raise OSError("404")
+
+        real, B.http_get = B.http_get, fake_get
+        try:
+            out, n = B.fetch_pmus_prices(
+                [{"away": "AAA", "home": "BBB", "date": "2026-09-20"}], sched)
+        finally:
+            B.http_get = real
+        return out, n, calls
+
+    def test_parses_both_sides_as_what_you_pay(self):
+        """Over = best ask; Under = 1 - best bid. An "N+" market is the O/U line N-0.5."""
+        out, n, _ = self._run([self._market()])
+        self.assertEqual(n, 1)
+        self.assertEqual(out[(B.pkey("Test Player"), "rec_yds", 59.5)], {"over": 42, "under": 60})
+
+    def test_skips_closed_and_unpriced_markets(self):
+        for bad in ({"closed": True}, {"active": False}, {"status": "MARKET_STATUS_HALTED"},
+                    {"bestBidQuote": None, "bestAskQuote": None}):
+            out, _, _ = self._run([self._market(**bad)])
+            self.assertEqual(out, {}, bad)
+
+    def test_falls_back_to_the_slate_date_for_night_games(self):
+        """The slate dates SNF/MNF a day later than the schedule; the schedule date is
+        tried first, then the slate date."""
+        sched = {"g": {"id": "g", "away": "AAA", "home": "BBB", "date": "2026-09-19"}}
+        out, n, calls = self._run([self._market()], sched=sched)
+        self.assertEqual(n, 1)                                  # found on the slate date
+        self.assertTrue(calls[0].endswith("nfl-aaa-bbb-2026-09-19"))   # schedule date first
+        self.assertTrue(calls[1].endswith("nfl-aaa-bbb-2026-09-20"))
+
+    def test_a_game_that_cannot_be_fetched_is_simply_skipped(self):
+        out, n, _ = self._run([self._market()], games=["never-matches"])
+        self.assertEqual((out, n), ({}, 0))
 
 if __name__ == "__main__":
     unittest.main()

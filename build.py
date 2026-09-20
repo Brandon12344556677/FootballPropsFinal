@@ -17,7 +17,7 @@ Outputs
 The probability model here is mirrored line-for-line in template.html (the block
 marked "MODEL"). tests/test_model.py checks the two agree. Change both or neither.
 """
-import csv, io, json, math, os, re, sys, time, datetime, unicodedata, urllib.request
+import csv, io, json, math, os, re, sys, time, datetime, unicodedata, urllib.parse, urllib.request
 
 TODAY = datetime.date.today()
 
@@ -747,6 +747,98 @@ def parse_market(m):
             "tradeable": tradeable, "spread": spread, "liq": liq, "vol": vol}
 
 
+# ---------------------------------------------------------------------------
+# Polymarket US prices. The global book the slate comes from is mostly one-sided
+# for NFL props, so its Under price (derived as 1 - bestBid) runs far too rich and
+# quietly keeps unders off the Value list. Polymarket US is the exchange the site
+# links to and quotes both sides properly, so picks are priced there when it lists
+# the same prop at the same line. One request per game prices every prop in it.
+# Mirrors the live pricing the page does in pmusGame()/valuePrice().
+# ---------------------------------------------------------------------------
+PMUS_BASE = "https://gateway.polymarket.us"
+PMUS_TEAM = {"LA": "lar"}        # nflverse code -> Polymarket US code; the rest lower-case
+PMUS_STAT = {
+    "football_player_passing_yards": "pass_yds",
+    "football_player_passing_touchdowns": "pass_td",
+    "football_player_passing_completions": "pass_cmp",
+    "football_player_passing_attempts": "pass_att",
+    "football_player_interceptions_thrown": "pass_int",
+    "football_player_rushing_yards": "rush_yds",
+    "football_player_rushing_attempts": "rush_att",
+    "football_player_receiving_yards": "rec_yds",
+    "football_player_receptions": "rec",
+    "football_player_scrimmage_yards": "rush_rec_yds",
+    "football_player_touchdowns": "scrim_td",
+}
+
+
+def pmus_event_slug(away, home, date):
+    def code(t):
+        return PMUS_TEAM.get(t, str(t).lower())
+    return f"nfl-{code(away)}-{code(home)}-{date}"
+
+
+def _pmus_quote(q):
+    v = fnum((q or {}).get("value"))
+    return v if (v is not None and 0 < v < 1) else None
+
+
+def fetch_pmus_prices(slate_games, sched=None):
+    """(player key, stat, line) -> {"over": cents, "under": cents}.
+    What you would PAY: Over = best ask, Under = 1 - best bid. Polymarket US lists a
+    prop as "N+", so its line N is the O/U line N - 0.5. Never fatal: a game that
+    cannot be fetched simply keeps the global book's price.
+
+    The slate dates Sunday-night and Monday-night games a day later than the schedule
+    does (UTC vs ET), and Polymarket US slugs follow the schedule, so the matched
+    schedule date is tried first and the slate date second."""
+    out, games = {}, 0
+    for g in slate_games:
+        if not g.get("date") or not g.get("away") or not g.get("home"):
+            continue
+        dates = []
+        sg = match_sched_game(g, sched) if sched else None
+        if sg and sg.get("date"):
+            dates.append(sg["date"])
+        if g["date"] not in dates:
+            dates.append(g["date"])
+        ev = None
+        for d in dates:
+            try:
+                raw = http_get(PMUS_BASE + "/v1/events/slug/"
+                               + urllib.parse.quote(pmus_event_slug(g["away"], g["home"], d)),
+                               timeout=45, tries=2)
+                cand = (json.loads(raw) or {}).get("event") or {}
+            except Exception:  # noqa: BLE001
+                continue
+            if cand.get("markets"):
+                ev = cand
+                break
+        if ev is None:
+            continue
+        games += 1
+        for m in ev.get("markets") or []:
+            sk = PMUS_STAT.get(m.get("sportsMarketType"))
+            who = ((m.get("subject") or {}).get("name")
+                   or (m.get("metadata") or {}).get("playerName"))
+            n = fnum(m.get("line"))
+            if not sk or not who or n is None:
+                continue
+            if m.get("closed") or m.get("active") is False:
+                continue
+            if m.get("status") and m["status"] != "MARKET_STATUS_OPEN":
+                continue
+            bid, ask = _pmus_quote(m.get("bestBidQuote")), _pmus_quote(m.get("bestAskQuote"))
+            over = ask
+            under = (1 - bid) if bid is not None else None
+            if over is None and under is None:
+                continue
+            out[(pkey(who), sk, round(n - 0.5, 1))] = {
+                "over": int(round(over * 100)) if over is not None else None,
+                "under": int(round(under * 100)) if under is not None else None}
+    return out, games
+
+
 def fetch_slate():
     """Polymarket player-prop events in a [-1, +10] day window, with their markets."""
     events = json.loads(http_get(SLATE_URL))
@@ -879,7 +971,7 @@ def assign_lists(picks):
         p["lists"] += "V"
 
 
-def build_live_picks(picks, slate_games, sched, by_key, snap):
+def build_live_picks(picks, slate_games, sched, by_key, snap, pmus=None):
     now = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
     fresh = []
     for g in slate_games:
@@ -921,6 +1013,14 @@ def build_live_picks(picks, slate_games, sched, by_key, snap):
                 for sd in ("over", "under"):
                     pr = pm[sd]
                     cents[sd] = int(round(pr * 100)) if pr is not None else None
+                # Prefer the Polymarket US quote for the same prop at the same line --
+                # the price the site shows and the one you would actually pay. An
+                # inexact line is a different bet, so it is never substituted.
+                us = (pmus or {}).get((pkey(pm["player"]), sk, round(float(pm["line"]), 1)))
+                if us:
+                    for sd in ("over", "under"):
+                        if us[sd] is not None:
+                            cents[sd] = us[sd]
             fresh.append(make_pick("live", sg["id"], sg["season"], sg["week"], sg["date"], pl, opp,
                                    sk, pm["line"], mp, cents[fav], now, side=fav))
             # The other side is recorded too when it's a plausible value play, so an
@@ -1176,7 +1276,14 @@ def main():
     except Exception as e:  # noqa: BLE001
         print(f"  slate: skipped ({e}) — keeping existing slate.json; no new live picks this run")
     if slate_games is not None:
-        total, added, updated = build_live_picks(picks, slate_games, sched, by_key, snapshot(SEASON))
+        pmus, pmus_games = {}, 0
+        try:
+            pmus, pmus_games = fetch_pmus_prices(slate_games, sched)
+        except Exception as e:  # noqa: BLE001
+            print(f"  polymarket us: skipped ({e}) — pricing picks off the global book")
+        if pmus_games:
+            print(f"  polymarket us: {len(pmus)} prop prices from {pmus_games} game(s)")
+        total, added, updated = build_live_picks(picks, slate_games, sched, by_key, snapshot(SEASON), pmus)
         print(f"  slate: {len(slate_games)} games, {total} props modeled ({added} new, {updated} refreshed)")
         names = {}
         for g in slate_games:

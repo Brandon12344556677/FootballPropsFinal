@@ -60,18 +60,24 @@ the site.
   edge and a bad bet. Everything clearing both is listed, ranked by that edge in
   points — no fixed top 25 — and props still need 6+ effective games of history.
   **Both sides of every market are tested**, so an under appears whenever its ask is
-  the cheap one; only one side can ever qualify, since clearing the bar on both would
-  need the two asks to sum to less than 0.7. The rules are tested against the global
-  book's ask (the number the recorded picks use); where the live Polymarket US price
-  has drifted, the board ask is shown beside it in the row.
+  the cheap one. Both rules are judged on the **live Polymarket US price shown in the
+  row** — the price you'd actually pay — so the edge printed is always the edge the
+  row qualified on, and a prop leaves the list as soon as its price moves against it.
+  This matters more than it sounds: the global book's Under prices are derived from
+  `1 - bestBid` on a mostly one-sided NFL book, so they run far too rich and were
+  quietly keeping unders off the list. On a live board it roughly doubled the list and
+  took it from all-overs to about half unders. `build.py` prices its recorded picks
+  the same way (see below), so Past picks and the board agree.
 - **Hit streak leaderboard** — longest active over streaks, now alongside the
   model's chance that the streak extends and the live Polymarket price for it.
 
 The **Polymarket** column on those three boards reads Polymarket US, the exchange
 the referral links point to. One request per game prices every prop in it, so the
-three boards share a single refresh about once a minute. The lists themselves are
-still ranked on the global book the scan reads, which can quote differently —
-the live column is the number to bet off.
+three boards share a single refresh about once a minute. A price is only ever used
+for the **same line** — where Polymarket US lists a prop at a different number (the
+hit-streak board uses the site's own seeded lines, so this is common there) the row
+says so and shows that price as context, with no edge, since an edge against a
+different bet is meaningless.
 
 ### Past picks tab
 - **Live picks** — everything the auto-updater recorded before kickoff (all modeled
@@ -118,11 +124,14 @@ Put your referral link in `url`. Leave it `""` to hide the banner.
    lines, and blended defense-vs-position ranks.
 3. It grades any pending live picks whose game is final **and** whose box score is
    in the stats file.
-4. It fetches this week's Polymarket board, models every prop, assigns the
-   25 Guaranteed / Value tags, and upserts them into `picks.json` (a pick is
-   refreshed on every run until kickoff, then frozen and graded). Picks are keyed
-   by side, so the opposite side of a market is recorded too when it is a value
-   candidate.
+4. It fetches this week's Polymarket board, prices every prop off **Polymarket US**
+   where that exchange lists the same prop at the same line (one request per game;
+   the global book is the fallback), models them, assigns the 25 Guaranteed / Value
+   tags, and upserts them into `picks.json` (a pick is refreshed on every run until
+   kickoff, then frozen and graded). Picks are keyed by side, so the opposite side of
+   a market is recorded too when it is a value candidate. The slate dates Sunday- and
+   Monday-night games a day later than the schedule does, so the schedule date is
+   tried first when building the Polymarket US slug.
 5. It regenerates the walk-forward backtest, refuses to publish if the dataset
    shrank suspiciously, and writes `index.html`.
 
