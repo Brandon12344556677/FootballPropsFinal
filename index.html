@@ -549,6 +549,34 @@ input::placeholder{color:#b7c0cc}
 .tile .pct,.tile.hi .pct,.tile.mid .pct,.tile.lo .pct,.tile.model .pct,.tile.model.hi .pct,.tile.model.mid .pct,.tile.model.lo .pct,
 .edgeval,.edgeval.pos,.edgeval.neg,.up,.down,.parlaysum .big.hit{color:#fff}
 table td,table th,thead th,tbody td,.edgetbl td,.edgetbl th,.caltbl td,.caltbl th,.edgeload,.mktuse{color:#fff}
+
+/* ---- "Why this number" — the model's reasoning on the player page ---- */
+.whybox{background:linear-gradient(180deg,#12294a,#0d1d34);border:1px solid rgba(0,200,5,.30);border-radius:14px;
+  padding:15px 19px;margin:-6px 0 20px;box-shadow:0 14px 34px rgba(0,0,0,.34)}
+.whybox .whyhead{font-family:var(--dispers);text-transform:uppercase;letter-spacing:1px;font-weight:700;font-size:16px;
+  color:var(--gold);display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 10px}
+.whybox .whyhead .whysub{color:#fff;font-size:13px;letter-spacing:.3px;text-transform:none;font-weight:500}
+.whybox .whylede{margin:8px 0 12px;font-size:15px;color:#fff;line-height:1.55}
+.whybox .whylist{list-style:none;margin:0;padding:0;display:grid;gap:9px}
+.whybox .whylist li{display:flex;gap:10px;align-items:flex-start;font-size:14px;color:#fff;line-height:1.55}
+.whybox .whylist li .wico{flex:0 0 auto;width:18px;text-align:center;line-height:1.5}
+.whybox .whylist li .wtxt{flex:1;min-width:0}
+.whybox .whylist li .wlab{font-family:var(--dispers);text-transform:uppercase;letter-spacing:.6px;font-weight:700;color:var(--gold)}
+.whybox .whyup{color:var(--hit);font-weight:700} .whybox .whydown{color:var(--miss);font-weight:700}
+.whybox .whymath{margin-top:12px;padding-top:10px;border-top:1px solid rgba(255,255,255,.12);
+  font-size:12.5px;color:#cbd5e1;font-variant-numeric:tabular-nums;line-height:1.7}
+.whybox .whymath b{color:#fff} .whybox .whymath .ar{color:var(--gold);padding:0 2px}
+.whytoggle{background:none;border:0;padding:0;margin-left:auto;font-family:var(--dispers);text-transform:uppercase;
+  letter-spacing:.6px;font-weight:700;font-size:12.5px;color:var(--gold);cursor:pointer}
+.whytoggle:hover{text-decoration:underline}
+
+/* ---- live Polymarket prices in the week's lists ---- */
+.edgetbl td.livecell{white-space:nowrap}
+.pmpx{font-family:var(--display);font-size:17px;font-weight:600;color:#fff}
+.pmpx.pos{color:var(--hit)} .pmpx.neg{color:var(--miss)}
+.pmdim{color:#aeb9c8;font-size:12.5px}
+.livehead{display:inline-flex;align-items:center;gap:5px}
+.livedot{width:6px;height:6px;border-radius:50%;background:var(--accent);display:inline-block;animation:pmpulse 1.6s ease-in-out infinite}
 </style>
 
 <div class="wrap">
@@ -613,16 +641,16 @@ table td,table th,thead th,tbody td,.edgetbl td,.edgetbl th,.caltbl td,.caltbl t
       <span id="edgestatus"></span>
       <span class="mktmuted" id="recT"></span>
     </div>
-    <div id="edgebody"><p class="mktnote">Scans every player prop on this week's Polymarket board and shows the <b>25 highest model chances</b> — the surest plays by the numbers, regardless of payout. Especially handy if you're holding <b>credits you can't withdraw without trading</b>: these are the props most likely to resolve as wins, so clearing that requirement lets you cash out your balance. Each pick is recorded before kickoff and graded in the <b>Past picks</b> tab. <span class="mktmuted">Needs the hosted website (the Polymarket API can't be reached from a local file).</span></p></div>
+    <div id="edgebody"><p class="mktnote">Scans every player prop on this week's Polymarket board and shows the <b>25 highest model chances</b>, each next to its <b>live Polymarket US price</b> — the surest plays by the numbers, regardless of payout. Especially handy if you're holding <b>credits you can't withdraw without trading</b>: these are the props most likely to resolve as wins, so clearing that requirement lets you cash out your balance. Each pick is recorded before kickoff and graded in the <b>Past picks</b> tab. <span class="mktmuted">Needs the hosted website (the Polymarket API can't be reached from a local file).</span></p></div>
   </div>
 
   <div class="panel" id="valuepanel">
-    <div class="mkthead"><h2>⚡ Value spots</h2><span class="mktmuted">where the model's odds most beat the market</span><span class="mktmuted" id="recV"></span></div>
-    <div id="valuebody"><p class="mktnote">The top 25 bets where the model's chance is well above the market's price — even the bottom of its 80% range beats what you'd pay — ranked by that edge. Prices are the <b>ask</b> on the global Polymarket book, so check your Polymarket US price before betting.</p></div>
+    <div class="mkthead"><h2>⚡ Value spots</h2><span class="mktmuted">where the model's odds most beat the market — overs and unders both</span><span class="mktmuted" id="recV"></span></div>
+    <div id="valuebody"><p class="mktnote">The top 25 bets where the model's chance is well above the market's price — even the bottom of its 80% range beats what you'd pay — ranked by that edge. <b>Both sides of every market are tested</b>: an under lands here whenever its ask is the cheap one, so this list is a mix of overs and unders rather than overs only. Ranking uses the <b>ask</b> on the global Polymarket book; the <b>Polymarket</b> column shows the live Polymarket US price for the same side, which can differ — check it before betting.</p></div>
   </div>
 
   <div class="panel" id="lbpanel">
-    <div class="mkthead"><h2>🔥 Hit streak leaderboard</h2><span class="mktmuted">longest active over streaks — consecutive games clearing the site's realistic line</span></div>
+    <div class="mkthead"><h2>🔥 Hit streak leaderboard</h2><span class="mktmuted">longest active over streaks — with the model's chance and the live Polymarket price</span></div>
     <div id="lbbody"></div>
   </div>
 </div><!-- /page-week -->
@@ -678,6 +706,8 @@ table td,table th,thead th,tbody td,.edgetbl td,.edgetbl th,.caltbl td,.caltbl t
   <div class="headline" id="headline"></div>
 
   <div class="tiles" id="tiles"></div>
+
+  <div id="whybox" class="whybox" hidden></div>
 
   <div id="marketodds" class="mktodds" hidden></div>
 
@@ -816,7 +846,7 @@ table td,table th,thead th,tbody td,.edgetbl td,.edgetbl th,.caltbl td,.caltbl t
     <div class="mktmuted" style="margin:-4px 0 12px;display:flex;gap:8px 18px;align-items:center;flex-wrap:wrap;font-size:13px;line-height:1.5">
       <span style="text-transform:uppercase;letter-spacing:.6px;font-weight:700;font-family:var(--dispers)">Lists key:</span>
       <span><span class="listchip T">T</span> = 25 Guaranteed — the week's 25 highest-confidence model picks</span>
-      <span><span class="listchip V">V</span> = Value — top spots where the model's odds most beat the market price</span>
+      <span><span class="listchip V">V</span> = Value — top spots where the model's odds most beat the market price, over <i>or</i> under</span>
     </div>
     <div class="chartwrap"><table class="edgetbl" id="pktbl"></table></div>
     <div style="margin-top:10px;display:flex;gap:10px;align-items:center;flex-wrap:wrap"><button id="pkmore" class="btn ghost" hidden>Show more</button><button id="pkall" class="btn ghost" hidden>Show all</button><span class="mktmuted" id="pkcountb"></span></div>
@@ -832,7 +862,7 @@ table td,table th,thead th,tbody td,.edgetbl td,.edgetbl th,.caltbl td,.caltbl t
 
   <footer>
     <b>Data:</b> nflverse public weekly stats, schedules, injury reports and rosters (regular season + playoffs). Defense ranks blend this season with last. Injury status is the latest official report and can change on game day.<br>
-    <b>Prices:</b> the live odds on a player's page come from Polymarket US and refresh every few seconds. The board scan still reads the global Polymarket book and uses the price you'd pay (the ask); Polymarket US runs a separate order book, so type the price you see there into the Bet calculator or a parlay leg for your real payout (each share pays $1, so multiplier = $1 ÷ price). Backward-looking research, <b>not betting advice</b>; past accuracy is shown in the Past picks tab so you can judge it yourself.
+    <b>Prices:</b> live odds come from Polymarket US — every few seconds on a player's page, about once a minute in the <b>Polymarket</b> column of the week's boards. The board scan itself still ranks on the global Polymarket book and uses the price you'd pay (the ask); Polymarket US runs a separate order book, so trust the live column and type the price you see there into the Bet calculator or a parlay leg for your real payout (each share pays $1, so multiplier = $1 ÷ price). Backward-looking research, <b>not betting advice</b>; past accuracy is shown in the Past picks tab so you can judge it yourself.
   </footer>
 </div>
 
@@ -1057,7 +1087,7 @@ function renderEmpty(){
   $('headline').innerHTML=`<span class="q">Search a player above to see the model's chance for any prop.</span>`;
   $('tiles').innerHTML=`<div class="tile mid" style="grid-column:1/-1"><div class="cap">No player selected</div><div class="frac">Type a name in the search box, or open one from your watchlist below.</div></div>`;
   $('trend').innerHTML=''; $('chart').innerHTML=''; $('tbl').innerHTML=''; $('dist').innerHTML=''; $('distsum').innerHTML=''; $('disthint').textContent=''; $('charthint').textContent='';
-  $('trapalert').hidden=true;
+  $('trapalert').hidden=true; clearWhy();
   hideMarketOdds();
   renderSplits(); renderCalc(); renderCompare();
 }
@@ -1072,7 +1102,7 @@ function render(){
   if(!g.length){
     $('tiles').innerHTML=`<div class="tile mid" style="grid-column:1/-1"><div class="cap">No games in the dataset yet</div><div class="frac">${p.rk?'Rookie — ':''}a game log appears after their first NFL box score. Check the injury/roster badges above and the Matchup panel for the defense they face.</div></div>`;
     $('trend').innerHTML=''; $('chart').innerHTML=''; $('tbl').innerHTML=''; $('dist').innerHTML=''; $('distsum').innerHTML=''; $('disthint').textContent='';
-    $('trapalert').hidden=true; $('charthint').textContent=''; hideMarketOdds(); renderSplits(); renderCalc(); renderCompare(); return;
+    $('trapalert').hidden=true; clearWhy(); $('charthint').textContent=''; hideMarketOdds(); renderSplits(); renderCalc(); renderCompare(); return;
   }
   const ctx=contextFor(p, state.stat, currentOpp());
   const mp=modelFor(p, state.stat, state.line, ctx);
@@ -1094,12 +1124,158 @@ function render(){
         <div class="bar" style="width:${r.cnt?pc:0}%"></div></div>`;
   });
   $('tiles').innerHTML=tiles;
+  renderWhy(p, state.stat, state.line, state.ou, mp, ctx);
   try{ renderMarketOdds(); }catch(e){}
   renderTrapAlert(p, state.stat, state.line, state.ou, mp, ctx);
   renderTrend();
   drawChart(); drawTable(); drawDist(); renderSplits(); renderCalc();
   $('charthint').innerHTML = `Last ${Math.min(20,g.length)} games, oldest → newest. Bar height = ${esc(st.label)}; the blue line is your <b>${fmt(state.line)}</b>.`;
   renderCompare();
+}
+
+/* ===== "Why this number" — the model's reasoning, in plain English =====
+   Walks the same chain the model actually walks — recency-weighted history, this
+   game's context, the shrink for a thin sample, then the calibration learned from
+   the site's own graded record — and shows the number at every step. */
+const WHY = { open:(function(){ try{ return localStorage.getItem('psl_whymath')==='1'; }catch(e){ return false; } })() };
+function clearWhy(){ const b=$('whybox'); if(b){ b.hidden=true; b.innerHTML=''; } }
+function whyDefLabel(sk, pos){ const ds=defStatFor(sk,pos); return (ds&&STATMAP[ds])? STATMAP[ds].label.toLowerCase() : 'this stat'; }
+
+function buildWhy(p, sk, line, side, mp, ctx){
+  const st=STATMAP[sk], g=gamesOf(p), vals=g.map(st.get);
+  if(!st || !vals.length) return null;
+  const hist=modelProb(vals, line, st.kind, 1);            // history only
+  const adj =modelProb(vals, line, st.kind, ctx.scale);    // + this game's context, pre-calibration
+  if(!hist || !adj) return null;
+  const S = v => side==='over'? v : 1-v;                   // read a two-sided number off the chosen side
+  const k=MODEL.priorK, neff=adj.neff, used=Math.min(MODEL.maxGames, vals.length);
+  const unshrink = o => (o*(neff+k)-k*0.5)/neff;           // undo the pull toward 50/50
+  const pHist=S(unshrink(hist.over)), pAdj=S(unshrink(adj.over));
+  const pShrunk=S(adj.over), pFinal=S(mp.over);
+  const w=[]; for(let i=0;i<used;i++) w.push(Math.pow(0.5,(used-1-i)/MODEL.halfLife));
+  const W=w.reduce((a,b)=>a+b,0), w5=w.slice(-5).reduce((a,b)=>a+b,0)/W;
+  const z = hist.sd>0? (line-hist.mean)/hist.sd : 0;
+  const lo = side==='over'? mp.lo : 1-mp.hi, hi = side==='over'? mp.hi : 1-mp.lo;
+  const T=_calT(), R=[];
+  const same=(a,b)=>Math.round(a*100)===Math.round(b*100);   // the reader compares rounded percentages
+
+  R.push(['📈','Recent form',
+    `The last <b>${used}</b> game${used===1?'':'s'} of ${esc(st.label.toLowerCase())}, with the newest weighted heaviest `+
+    `(half-life ${MODEL.halfLife} games, so the last 5 carry <b>${Math.round(w5*100)}%</b> of the weight): a weighted average of `+
+    `<b>${fmt(hist.mean)}</b>, swinging about <b>±${fmt(hist.sd)}</b> from game to game.`]);
+
+  R.push(['🎯','Where your line sits',
+    (Math.abs(z)<0.005
+      ? `<b>${fmt(line)}</b> sits right on that average`
+      : `<b>${fmt(line)}</b> sits <b>${Math.abs(z).toFixed(2)} standard deviation${Math.abs(z)>=0.995&&Math.abs(z)<1.005?'':'s'}</b> ${z<0?'below':'above'} it`)+
+    `, so smoothing those ${used} games into a distribution and reading off the <b>${side}</b> gives <b>${pct(pHist)}</b> before anything else is applied.`]);
+
+  if(!ctx.on){
+    R.push(['⚙️','Game context is off',
+      `The <b>Adjust for Vegas line &amp; opponent</b> box is unchecked, so nothing is scaled for the matchup — this is the raw history.`]);
+  } else if(ctx.gamePts==null && ctx.defRatio==null){
+    R.push(['⚙️','Game context',
+      `No Vegas number or defensive rank is on file for this matchup yet, so the distribution is left alone (×1.00).`]);
+  } else {
+    const h=histContext(g), bits=[];
+    if(ctx.gamePts!=null && h.pts) bits.push(`Vegas implies about <b>${fmt(ctx.gamePts)}</b> points for ${esc(p.t)} this week against the <b>${fmt(h.pts)}</b> their recent games have averaged (×${ctx.env.toFixed(2)})`);
+    if(ctx.defRatio!=null){ const d=Math.round((ctx.defRatio-1)*100);
+      bits.push(Math.abs(d)<1
+        ? `${esc(ctx.opp||'the opponent')} gives up about the league average to ${esc(defPos(p.p))}s on ${whyDefLabel(sk,p.p)} (×${ctx.def.toFixed(2)})`
+        : `${esc(ctx.opp||'the opponent')} allows <b>${Math.abs(d)}% ${d>0?'more':'less'}</b> than the league average to ${esc(defPos(p.p))}s on ${whyDefLabel(sk,p.p)} (×${ctx.def.toFixed(2)})`); }
+    const helps = side==='over'? ctx.scale>1.005 : ctx.scale<0.995;   // a bigger scale lifts the over and sinks the under
+    const hurts = side==='over'? ctx.scale<0.995 : ctx.scale>1.005;
+    const cls = helps? 'whyup' : hurts? 'whydown' : '';
+    R.push(['⚙️','This week’s matchup',
+      `${bits.join('; ')}. Net, every game in the log is scaled <b class="${cls}">×${ctx.scale.toFixed(2)}</b>, `+
+      (same(pAdj,pHist)? `which barely moves the ${side} (<b>${pct(pAdj)}</b>).`
+        : `which moves the ${side} to <b>${pct(pAdj)}</b>.`)]);
+  }
+
+  R.push(['🧮','How much history there is',
+    `Those ${used} games are worth <b>${neff.toFixed(1)} effective games</b> once the older ones are discounted. `+
+    (!same(pShrunk,pAdj)
+      ? `${neff<8?'That’s thin':'That’s a moderate sample'}, so the model pulls the number back toward a coin flip: <b>${pct(pAdj)} → ${pct(pShrunk)}</b>.`
+      : `That’s enough history that the pull toward a coin flip barely registers (<b>${pct(pShrunk)}</b>).`)]);
+
+  if(Math.abs(T-1)>0.005){
+    R.push(['🎚️','Calibration from its own record',
+      `The site’s graded picks say the model has been running <b>${T>1?'a little hot':'a little cold'}</b>, so every chance is `+
+      `${T>1?'softened':'sharpened'} by a temperature of <b>${T.toFixed(2)}</b>: <b>${pct(pShrunk)} → ${pct(pFinal)}</b>. `+
+      `<a href="#picks" onclick="showTab('picks');return false;">See the calibration chart</a>.`]);
+  }
+
+  const wid=Math.round((hi-lo)*100);
+  R.push(['📏','How sure it is',
+    `The 80% range is <b>${Math.round(lo*100)}–${Math.round(hi*100)}%</b> — `+
+    `${wid>=30? `wide: ${neff.toFixed(1)} effective games pin the chance down only to about ±${Math.round(wid/2)} points`
+      : wid>=18? 'a normal width for this much history'
+      : 'tight, because the log is long and the results are consistent'}. `+
+    `Price a bet off the low end, not the headline number.`]);
+
+  if(mp.push>0.005){
+    R.push(['🤝','Whole-number line',
+      `Landing on exactly ${fmt(line)} is a push (stake back) and it’s live at <b>${pct(mp.push)}</b>. `+
+      `Over and under are read off the ${pct(1-mp.push)} of outcomes that actually settle.`]);
+  }
+
+  const r10=rateOn(g.slice(-10), sk, line, side);
+  if(r10.cnt){
+    const rawp=r10.hit/r10.cnt, gap=rawp-pFinal;
+    if(Math.abs(gap)>=0.08){
+      const because=[];
+      because.push('it weights recent games instead of counting them all equally');
+      because.push('it reads the whole distribution rather than a yes/no tally');
+      if(ctx.on && Math.abs(ctx.scale-1)>0.005) because.push('it scales for this matchup');
+      if(neff<10) because.push('it shrinks a thin sample toward 50/50');
+      const why = because.length>1? because.slice(0,-1).join(', ')+' and '+because[because.length-1] : because[0];
+      const tally = r10.push
+        ? `<b>${r10.hit}</b> of the ${r10.cnt} games in the last ${r10.n} that settled (${pct(rawp)}; ${r10.push} push${r10.push===1?'':'es'})`
+        : `<b>${r10.hit}/${r10.cnt}</b> (${pct(rawp)}) over the last ${r10.n}`;
+      R.push(['🔍','Versus the plain tally',
+        `The raw count is ${tally}. The model lands `+
+        `<b>${Math.abs(Math.round(gap*100))} points ${gap>0?'lower':'higher'}</b> because ${why}.`]);
+    }
+  }
+
+  const verdict = pFinal>=0.7? 'a strong lean' : pFinal>=0.58? 'a lean' : pFinal>=0.42? 'close to a coin flip'
+    : pFinal>=0.3? 'a lean the other way' : 'a strong lean the other way';
+  const drivers=[`${esc(p.n)} has averaged <b>${fmt(hist.mean)}</b> ${esc(st.label.toLowerCase())} in recency-weighted terms against a line of <b>${fmt(line)}</b>`];
+  if(ctx.on && Math.abs(ctx.scale-1)>0.005){
+    const helps = side==='over'? ctx.scale>1 : ctx.scale<1;   // a bigger scale lifts the over and sinks the under
+    drivers.push(`this week’s matchup ${helps?'helps':'works against it'} (×${ctx.scale.toFixed(2)})`);
+  }
+  if(neff<8) drivers.push(`and with only ${neff.toFixed(1)} effective games behind it the number gets pulled toward 50/50`);
+  const lede = `<b>${pct(pFinal)}</b> — ${verdict} on <b>${esc(side)} ${fmt(line)} ${esc(st.label)}</b>. ${drivers.join(', ')}.`;
+
+  const math =
+    `weighted mean <b>${fmt(hist.mean)}</b> ±${fmt(hist.sd)} over ${used} g · n<sub>eff</sub> <b>${neff.toFixed(1)}</b> · `+
+    `line ${fmt(line)} = ${z<0?'−':'+'}${Math.abs(z).toFixed(2)} SD`+
+    `<span class="ar">→</span>history <b>${pct(pHist)}</b>`+
+    (ctx.on? `<span class="ar">→</span>×${ctx.scale.toFixed(2)} context <b>${pct(pAdj)}</b>` : '')+
+    `<span class="ar">→</span>shrink (k=${MODEL.priorK}) <b>${pct(pShrunk)}</b>`+
+    (Math.abs(T-1)>0.005? `<span class="ar">→</span>calibration T=${T.toFixed(2)} <b>${pct(pFinal)}</b>` : '')+
+    ` · 80% range <b>${Math.round(lo*100)}–${Math.round(hi*100)}%</b>${mp.push>0.005? ` · push ${pct(mp.push)}`:''}`;
+
+  return {p:pFinal, rows:R, lede, math};
+}
+
+function renderWhy(p, sk, line, side, mp, ctx){
+  const box=$('whybox'); if(!box) return;
+  let w=null; try{ w = mp? buildWhy(p, sk, line, side, mp, ctx) : null; }catch(e){ w=null; }
+  if(!w){ clearWhy(); return; }
+  box.hidden=false;
+  box.innerHTML =
+    `<div class="whyhead">🧠 Why ${pct(w.p)}<span class="whysub">how the model got to this number</span>`+
+    `<button type="button" class="whytoggle" id="whymathbtn">${WHY.open?'Hide the math':'Show the math'}</button></div>`+
+    `<p class="whylede">${w.lede}</p>`+
+    `<ul class="whylist">${w.rows.map(r=>`<li><span class="wico" aria-hidden="true">${r[0]}</span><span class="wtxt"><span class="wlab">${esc(r[1])}</span> — ${r[2]}</span></li>`).join('')}</ul>`+
+    `<div class="whymath"${WHY.open?'':' hidden'}>${w.math}</div>`;
+  const btn=$('whymathbtn');
+  if(btn) btn.onclick=()=>{ WHY.open=!WHY.open;
+    try{ localStorage.setItem('psl_whymath', WHY.open?'1':'0'); }catch(e){}
+    const m=box.querySelector('.whymath'); if(m) m.hidden=!WHY.open;
+    btn.textContent = WHY.open? 'Hide the math' : 'Show the math'; };
 }
 
 function renderMeta(){
@@ -1362,10 +1538,19 @@ const pmGames = {};                  // event slug -> { t, idx: { "pkey|stat": [
 
 function pmusEventSlug(g){ const c=t=>PMUS_TEAM[t]||String(t).toLowerCase(); return `nfl-${c(g.away)}-${c(g.home)}-${g.date}`; }
 
-async function pmusGame(g){
+// The event listing already carries each market's best bid/ask, so one request
+// prices every prop in a game. Same convention as the bbo endpoint: what you'd
+// PAY is Over = best ask, Under = 1 - best bid.
+function pmusQuoteOf(m){
+  const px=q=>{ const v=(q&&q.value!=null)? parseFloat(q.value) : NaN; return (v>0&&v<1)? v : null; };
+  const bid=px(m.bestBidQuote), ask=px(m.bestAskQuote);
+  return { over:ask, under: bid!=null? 1-bid : null,
+           open: m.closed!==true && m.active!==false && (!m.status || m.status==='MARKET_STATUS_OPEN') };
+}
+async function pmusGame(g, force){
   const slug=pmusEventSlug(g), c=pmGames[slug];
-  if(c && Date.now()-c.t<PMUS_LIST_MS) return c.idx;
-  const r=await fetch(PMUS+'/v1/events/slug/'+encodeURIComponent(slug));
+  if(c && !force && Date.now()-c.t<PMUS_LIST_MS) return c.idx;
+  const r=await fetch(PMUS+'/v1/events/slug/'+encodeURIComponent(slug), force?{cache:'no-store'}:undefined);
   const idx={};
   if(r.status!==404){
     if(!r.ok) throw new Error('polymarket us '+r.status);
@@ -1374,7 +1559,7 @@ async function pmusGame(g){
       const sk=PMUS_STAT[m.sportsMarketType], who=(m.subject&&m.subject.name)||(m.metadata&&m.metadata.playerName);
       const n=parseFloat(m.line);
       if(!sk || !who || !isFinite(n) || m.closed || m.active===false) return;
-      const k=pkey(who)+'|'+sk; (idx[k]=idx[k]||[]).push({line:n-0.5, slug:m.slug});
+      const k=pkey(who)+'|'+sk; (idx[k]=idx[k]||[]).push({line:n-0.5, slug:m.slug, q:pmusQuoteOf(m)});
     });
   }
   pmGames[slug]={t:Date.now(), idx}; return idx;
@@ -1454,6 +1639,105 @@ function pmDraw(){
   if(yo && (!yo.value || yo.value===PM.auto)){ PM.auto=String(cents); if(yo.value!==PM.auto){ yo.value=PM.auto; if(typeof updateCalc==='function') updateCalc(); } }
 }
 
+/* ===== Live Polymarket prices for the week's boards =====
+   25 Guaranteed, Value spots and the hit-streak leaderboard all share one cache.
+   Prices come from Polymarket US (the exchange the referral links point to), and
+   one request per game prices every prop in it, so a refresh costs ~1 call per
+   game rather than one per row. Cells repaint in place on a timer. */
+const LIVE_MS = 60000;
+const livePx = new Map();        // "pid|stat|line" -> {over,under,open,mline,slug,at} | {none:true} | {err:true}
+const liveWant = new Map();      // board key -> [{mk, pl, sk, line}]
+let liveTimer=null, liveGen=0;
+function mkOf(r){ return r.pl.id+'|'+r.sk+'|'+r.line; }
+
+async function fillLive(items, force){
+  const byEvent=new Map();
+  items.forEach(it=>{
+    const g=teamGame(it.pl.t);
+    if(!g || gameHappened(g)){ livePx.set(it.mk,{none:true}); return; }
+    const slug=pmusEventSlug(g);
+    if(!byEvent.has(slug)) byEvent.set(slug,{g, its:[]});
+    byEvent.get(slug).its.push(it);
+  });
+  await mapLimit([...byEvent.values()], 4, async grp=>{
+    let idx=null;
+    try{ idx=await pmusGame(grp.g, force); }
+    catch(e){ grp.its.forEach(it=>{ const cur=livePx.get(it.mk); if(!cur||cur.over==null) livePx.set(it.mk,{err:true}); }); return; }
+    grp.its.forEach(it=>{
+      const list=idx[pkey(it.pl.n)+'|'+it.sk];
+      if(!list || !list.length){ livePx.set(it.mk,{none:true}); return; }
+      let best=null; for(const m of list){ if(!best || Math.abs(m.line-it.line)<Math.abs(best.line-it.line)) best=m; }
+      livePx.set(it.mk, Object.assign({mline:best.line, slug:best.slug, at:Date.now()}, best.q||{}));
+    });
+  });
+}
+
+// d = {mk, side, line, prob, ask} — ask is the global-book price the boards rank on,
+// kept visible whenever it disagrees with the live Polymarket US quote.
+function liveCell(d){
+  const board = d.ask==null? '' : ` <span class="pmdim" title="the ask on the global Polymarket book — what this board's ranking uses">board ${Math.round(d.ask*100)}¢</span>`;
+  const L=livePx.get(d.mk);
+  if(!L) return `<span class="pmdim">…</span>${board}`;
+  if(L.err) return `<span class="pmdim" title="Couldn't reach Polymarket just now — retrying">—</span>${board}`;
+  if(L.none) return `<span class="pmdim" title="Polymarket US has no market for this prop right now">no market</span>${board}`;
+  if(!L.open) return `<span class="pmdim" title="Not open for trading right now">closed</span>${board}`;
+  const px = d.side==='over'? L.over : L.under;
+  if(px==null) return `<span class="pmdim" title="Nobody is offering this side at the moment">no ask</span>${board}`;
+  const edge = d.prob==null? null : d.prob-px;
+  const cls = edge==null? '' : edge>=0.04? 'pos' : edge<=-0.04? 'neg' : '';
+  const off = (L.mline!=null && d.line!=null && Math.abs(L.mline-d.line)>0.01)? ` <span class="pmdim">@${fmt(L.mline)}</span>` : '';
+  const sub = edge==null
+    ? `${(1/px).toFixed(2)}×`
+    : `${edge>=0?'+':'−'}${Math.abs(Math.round(edge*100))} edge · ${(1/px).toFixed(2)}×`;
+  const gap = (d.ask!=null && Math.abs(d.ask-px)>=0.03)? board : '';
+  return `<span class="pmpx ${cls}">${Math.round(px*100)}¢</span>${off} <span class="rng">${sub}</span>${gap}`;
+}
+function liveTd(r){
+  const d={mk:mkOf(r), side:r.side||'over', line:r.line, prob:r.prob==null?null:r.prob, ask:r.price==null?null:r.price};
+  return `<td class="livecell" data-mk="${esc(d.mk)}" data-side="${esc(d.side)}" data-line="${d.line}"`+
+         ` data-p="${d.prob==null?'':d.prob.toFixed(4)}" data-ask="${d.ask==null?'':d.ask.toFixed(4)}">${liveCell(d)}</td>`;
+}
+function paintLive(){
+  document.querySelectorAll('td.livecell').forEach(td=>{
+    const num=v=> (v==null||v==='')? null : parseFloat(v);
+    td.innerHTML=liveCell({mk:td.dataset.mk, side:td.dataset.side, line:num(td.dataset.line),
+                           prob:num(td.dataset.p), ask:num(td.dataset.ask)});
+  });
+}
+function liveHead(){ return `<th title="Live price on Polymarket US for the side listed — what you'd pay, plus the model's edge over it"><span class="livehead"><span class="livedot"></span>Polymarket</span></th>`; }
+
+/* Tell the live layer which rows a board is showing; it fetches anything new and
+   keeps every board on screen refreshed together. */
+function trackLive(key, rows){
+  liveWant.set(key, rows.map(r=>({mk:mkOf(r), pl:r.pl, sk:r.sk, line:r.line})));
+  const all=new Map();
+  liveWant.forEach(list=>list.forEach(it=>all.set(it.mk,it)));
+  const need=[...all.values()].filter(it=>!livePx.has(it.mk));
+  if(need.length){ const gen=liveGen; fillLive(need,false).then(()=>{ if(gen===liveGen) paintLive(); }).catch(()=>{}); }
+  else paintLive();
+  if(!liveTimer) liveTimer=setTimeout(liveTick, LIVE_MS);
+}
+function liveTick(){
+  liveTimer=null;
+  const all=new Map(); liveWant.forEach(list=>list.forEach(it=>all.set(it.mk,it)));
+  if(!all.size) return;
+  const wk=$('page-week');
+  if(document.hidden || (wk && wk.hidden)){ liveTimer=setTimeout(liveTick, LIVE_MS); return; }
+  const gen=++liveGen;
+  fillLive([...all.values()], true)
+    .then(()=>{ if(gen===liveGen) paintLive(); })
+    .catch(()=>{})
+    .then(()=>{ liveTimer=setTimeout(liveTick, LIVE_MS); });
+}
+document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && liveWant.size && !liveTimer) liveTick(); });
+/* The price you'd actually pay right now, when we have it. */
+function livePriceFor(r){
+  const L=livePx.get(mkOf(r));
+  if(!L || !L.open) return null;
+  const px = (r.side||'over')==='over'? L.over : L.under;
+  return px!=null? px : null;
+}
+
 let edgeRows=[], valueRows=[], edgeSort={key:'prob',dir:-1};
 async function scanBoard(force){
   const body=$('edgebody'), status=$('edgestatus');
@@ -1478,39 +1762,68 @@ async function scanBoard(force){
         const ctx=contextFor(pl, sk, null, sg||{home:g.home, away:g.away, spread:null, total:null});
         const mp=modelFor(pl, sk, pm.line, ctx); if(!mp) return;
         const sp=sideProb(mp);
-        const price = pm.tradeable? (sp.side==='over'? pm.over : pm.under) : null;
         const opp = pl.t===g.away? g.home : pl.t===g.home? g.away : (g.away+'/'+g.home);
+        // Both sides are priced and kept: the model leans one way, but the value can
+        // sit on the other side of the same market when the ask is cheap enough.
+        const sides={
+          over:  {prob:mp.over,  lo:mp.lo,     hi:mp.hi,     price: pm.tradeable? pm.over  : null},
+          under: {prob:mp.under, lo:1-mp.hi,   hi:1-mp.lo,   price: pm.tradeable? pm.under : null},
+        };
+        const price=sides[sp.side].price;
         const r={pl, name:pl.n, team:pl.t, opp, game:g, sg, statText:pm.statText, sk, line:pm.line, side:sp.side, prob:sp.prob, lo:sp.lo, hi:sp.hi,
-          neff:mp.neff, n:mp.n, adj:ctx.scale, price, ev: price? sp.prob/price-1 : null, lists:''};
+          neff:mp.neff, n:mp.n, adj:ctx.scale, price, ev: price? sp.prob/price-1 : null, sides, lists:''};
         rows.push(r);
       });
     });
     const modeled=rows.filter(r=>!r.nohist);
     modeled.slice().sort((a,b)=>(b.prob-a.prob)||(b.neff-a.neff)).slice(0,25).forEach(r=>r.lists+='T');
-    modeled.filter(r=>r.price!=null&&r.neff>=6&&r.lo>r.price).sort((a,b)=>b.ev-a.ev).slice(0,25).forEach(r=>r.lists+='V');
-    edgeRows=modeled; valueRows=modeled.filter(r=>r.lists.includes('V'));
+    // Value: test the over AND the under of every market against their own asks.
+    // Only one side can ever clear (the two asks sum to 1 + the spread, and the 80%
+    // range is narrower than that), so the winner is whichever one does.
+    const cands=[];
+    modeled.forEach(r=>{
+      if(!(r.neff>=6) || !r.sides) return;
+      ['over','under'].forEach(sd=>{
+        const c=r.sides[sd];
+        if(!c || c.price==null || !(c.lo>c.price)) return;
+        cands.push(Object.assign({}, r, {side:sd, prob:c.prob, lo:c.lo, hi:c.hi, price:c.price, ev:c.prob/c.price-1, base:r}));
+      });
+    });
+    cands.sort((a,b)=>b.ev-a.ev);
+    valueRows=[]; const vseen=new Set();
+    for(const c of cands){
+      const k=c.pl.id+'|'+c.sk+'|'+c.line; if(vseen.has(k)) continue; vseen.add(k);
+      if(!c.base.lists.includes('V')) c.base.lists+='V';
+      valueRows.push(c);
+      if(valueRows.length>=25) break;
+    }
+    edgeRows=modeled;
     const nohist=rows.filter(r=>r.nohist).length;
-    status.textContent=`${modeled.length} props modeled · ${valueRows.length} value · ${gamesL.length} games${nohist?` · ${nohist} skipped (no game log)`:''}`;
+    const vU=valueRows.filter(r=>r.side==='under').length;
+    status.textContent=`${modeled.length} props modeled · ${valueRows.length} value (${valueRows.length-vU} over / ${vU} under) · ${gamesL.length} games${nohist?` · ${nohist} skipped (no game log)`:''}`;
     if(!modeled.length){
       const msg = gamesL.length
         ? `<p class="mktnote">No props matched players yet — early in the week the board is thin. Check back closer to game day.</p>`
         : `<p class="mktnote">📅 <b>Polymarket hasn't posted this week's player-prop markets yet.</b> They usually go up a day or two before kickoff — this board fills in automatically once they do. Nothing's broken; there's just nothing to scan yet.</p>`;
       body.innerHTML=msg; $('valuebody').innerHTML=msg;
+      liveWant.delete('T'); liveWant.delete('V');
     } else { renderEdges(); renderValue(); }
   }catch(err){
     body.innerHTML=`<p class="mktnote">Couldn't reach Polymarket from here. The board scan works on the <b>hosted website</b>; a local file or a sandboxed preview can't call the API.</p>`;
     $('valuebody').innerHTML=`<p class="mktnote">Loads on the hosted website.</p>`;
+    liveWant.delete('T'); liveWant.delete('V');
     status.textContent='';
   }
 }
 function pickTable(rows, opts){
   const cols=[['name','Player'],['matchup','Game'],['statText','Prop'],['line','Line'],['side','Bet'],['prob','Model']];
   const th=(k,l)=>`<th data-k="${k}" class="${opts.sort&&opts.sort.key===k?'sorted'+(opts.sort.dir>0?' asc':''):''}">${l}</th>`;
-  let h=`<div class="chartwrap"><table class="edgetbl"><thead><tr>${cols.map(c=>th(c[0],c[1])).join('')}<th></th></tr></thead><tbody>`;
+  let h=`<div class="chartwrap"><table class="edgetbl"><thead><tr>${cols.map(c=>th(c[0],c[1])).join('')}${liveHead()}<th></th></tr></thead><tbody>`;
   rows.forEach((r,idx)=>{
     h+=`<tr><td>${esc(r.name)} <span class="mktmuted">${esc(r.team)}</span></td><td class="mktmuted">${esc(r.game.away)} @ ${esc(r.game.home)}</td><td>${esc(r.statText)}</td><td class="tnum">${r.line}</td>`+
        `<td><span class="leantag ${r.side}">${r.side}</span></td>`+
        `<td class="tnum"><span class="edgeval pos">${pct(r.prob)}</span> <span class="rng">${Math.round(r.lo*100)}–${Math.round(r.hi*100)} · ${r.n}g</span></td>`+
+       liveTd(r)+
        `<td><button class="edgeload" data-i="${idx}">Load</button></td></tr>`;
   });
   return h+`</tbody></table></div>`;
@@ -1523,17 +1836,20 @@ function sortRows(rows, key, dir){ return [...rows].sort((a,b)=>{
 function renderEdges(){
   const rows=sortRows(edgeRows, edgeSort.key, edgeSort.dir).slice(0,25);
   $('edgebody').innerHTML=pickTable(rows,{sort:edgeSort})+
-    `<p class="mktnote" style="margin-top:8px">The 25 props with the highest <b>model chance</b> on this week's board, regardless of payout — best if you're holding <b>credits you can't withdraw without trading</b>, since these are the props most likely to win and let you cash out. <b>Model</b> = the chance the Bet side hits, with its 80% range and the games it's based on. Click a header to sort. These picks are recorded before kickoff and graded in <b>Past picks</b>.</p>`;
+    `<p class="mktnote" style="margin-top:8px">The 25 props with the highest <b>model chance</b> on this week's board, regardless of payout — best if you're holding <b>credits you can't withdraw without trading</b>, since these are the props most likely to win and let you cash out. <b>Model</b> = the chance the Bet side hits, with its 80% range and the games it's based on. <b>Polymarket</b> is the live price on Polymarket US for that exact side — what you'd pay right now, the model's edge over it, and the payout multiplier; it refreshes about once a minute. Click a header to sort. These picks are recorded before kickoff and graded in <b>Past picks</b>.</p>`;
   $('edgebody').querySelectorAll('.edgetbl th').forEach(t=>t.onclick=()=>{ const k=t.dataset.k; if(!k) return;
     if(edgeSort.key===k) edgeSort.dir*=-1; else { edgeSort.key=k; edgeSort.dir=['name','statText','side','matchup'].includes(k)?1:-1; } renderEdges(); });
   wireLoad($('edgebody'), rows);
+  trackLive('T', rows);
 }
 function renderValue(){
   const body=$('valuebody');
-  if(!valueRows.length){ body.innerHTML=`<p class="mktnote">No value spots right now: nothing on the board where the model's <i>low-end</i> chance beats the ask. That's normal when markets are thin or efficient.</p>`; return; }
+  if(!valueRows.length){ body.innerHTML=`<p class="mktnote">No value spots right now: nothing on the board — over <i>or</i> under — where the model's <i>low-end</i> chance beats the ask. That's normal when markets are thin or efficient.</p>`; liveWant.delete('V'); return; }
   const rows=sortRows(valueRows,'ev',-1).slice(0,25);
-  body.innerHTML=pickTable(rows,{})+`<p class="mktnote" style="margin-top:8px">The top 25 bets where the model's chance most beats the market — only props whose <b>bottom of the 80% range</b> still clears the price you'd pay, ranked by that edge. A price on the global book can differ from Polymarket US — check before betting. Backward-looking; not advice.</p>`;
+  const unders=rows.filter(r=>r.side==='under').length, overs=rows.length-unders;
+  body.innerHTML=pickTable(rows,{})+`<p class="mktnote" style="margin-top:8px">The top 25 bets where the model's chance most beats the market — only props whose <b>bottom of the 80% range</b> still clears the price you'd pay, ranked by that edge. <b>Both sides of every market are tested</b>, so an <span class="leantag under">under</span> shows up here whenever its ask is the cheap one — right now ${overs} over${overs===1?'':'s'} and ${unders} under${unders===1?'':'s'}. The <b>Model</b> and ranking use the ask on the global Polymarket book; the <b>Polymarket</b> column is the live Polymarket US price for that same side, which can differ — check it before betting. Backward-looking; not advice.</p>`;
   wireLoad(body, rows);
+  trackLive('V', rows);
 }
 function loadEdge(r){
   setPlayer(r.pl,{keepStat:true,keepLine:true});
@@ -1541,7 +1857,8 @@ function loadEdge(r){
   $('line').value=r.line;
   $('over').setAttribute('aria-pressed', state.ou==='over'); $('under').setAttribute('aria-pressed', state.ou==='under');
   syncChips(); render(); save();
-  if(r.price!=null){ const yo=$('yourodds'); if(yo){ yo.value=Math.round(r.price*100); updateCalc(); } }
+  const px = livePriceFor(r) ?? r.price;
+  if(px!=null){ const yo=$('yourodds'); if(yo){ yo.value=Math.round(px*100); updateCalc(); } }
   $('headline').scrollIntoView({behavior:'smooth',block:'start'});
 }
 
@@ -1817,7 +2134,13 @@ function computeStreaks(){
       if(line < (sk==='pass_yds'?150 : st.kind==='yards'?30 : 3.5)) return;
       let streak=0;
       for(let i=vals.length-1;i>=0;i--){ if(vals[i]>line) streak++; else break; }
-      if(streak>=3 && live) out.push({p, sk, line, streak, live, last:vals[vals.length-1]});
+      if(streak>=3 && live){
+        // Same model the player page runs, so the live price next to it has something to beat.
+        let prob=null, lo=null, hi=null;
+        try{ const ctx=contextFor(p, sk, null); const mp=modelFor(p, sk, line, ctx);
+             if(mp){ prob=mp.over; lo=mp.lo; hi=mp.hi; } }catch(e){}
+        out.push({p, pl:p, sk, line, side:'over', streak, live, last:vals[vals.length-1], prob, lo, hi});
+      }
     });
   });
   out.sort((a,b)=> b.streak-a.streak || (b.live-a.live) || b.line-a.line);
@@ -1833,15 +2156,19 @@ function renderLeaderboard(){
   const body=$('lbbody'); if(!body) return;
   LB=computeStreaks();
   if(!LB.length){ body.innerHTML='<p class="mktnote">No active over streaks of 3+ games yet this season.</p>'; return; }
-  let h=`<div class="chartwrap"><table class="edgetbl"><thead><tr><th>#</th><th>Player</th><th>Prop</th><th>Streak</th><th>Latest</th><th></th></tr></thead><tbody>`;
+  let h=`<div class="chartwrap"><table class="edgetbl"><thead><tr><th>#</th><th>Player</th><th>Prop</th><th>Streak</th><th>Latest</th><th>Model</th>${liveHead()}<th></th></tr></thead><tbody>`;
   LB.forEach((e,i)=>{ h+=`<tr><td class="tnum">${i+1}</td>`+
     `<td><button class="wload" type="button" data-i="${i}">${esc(e.p.n)}</button> <span class="mktmuted">${esc(e.p.p)}·${esc(e.p.t)}</span></td>`+
     `<td>Over ${fmt(e.line)} ${esc(STATMAP[e.sk].label)}</td>`+
     `<td class="tnum"><span class="edgeval pos">${e.streak} straight</span></td>`+
     `<td class="tnum">${fmt(e.last)}</td>`+
+    `<td class="tnum">${e.prob==null? '<span class="pmdim">—</span>' : `<span class="edgeval pos">${pct(e.prob)}</span> <span class="rng">${Math.round(e.lo*100)}–${Math.round(e.hi*100)}</span>`}</td>`+
+    liveTd(e)+
     `<td><button class="edgeload" type="button" data-i="${i}">Load</button></td></tr>`; });
-  body.innerHTML=h+'</tbody></table></div>';
+  body.innerHTML=h+'</tbody></table></div>'+
+    `<p class="mktnote" style="margin-top:8px">A streak is consecutive games clearing the site's own realistic line — not a market line. <b>Model</b> is the calibrated chance that the streak extends this week, and <b>Polymarket</b> is the live Polymarket US price for that over, with the model's edge over it. A long streak on its own is not an edge: check the model number and the price together.</p>`;
   body.querySelectorAll('.wload,.edgeload').forEach(b=>b.onclick=()=>loadStreak(LB[+b.dataset.i]));
+  trackLive('L', LB);
 }
 
 function trapCheck(p, sk, line, side, mp, ctx){

@@ -43,10 +43,28 @@ the site.
   your line, home/away splits, history vs the opponent (auto-selected for this
   week) and the opponent's defense-vs-position rank, blended across this season
   and last.
+- **Why this number** — under the tiles, the model shows its work: the
+  recency-weighted average and spread, how many standard deviations your line sits
+  from it, what the Vegas number and the opponent's defense scaled it by, how much
+  a thin sample was shrunk toward 50/50, and the calibration temperature — each
+  step with the running probability. "Show the math" prints the whole chain on one
+  line.
 - **25 Guaranteed** — the 25 player props on this week's Polymarket board with the
-  highest model chance, regardless of payout.
+  highest model chance, regardless of payout, each with the **live Polymarket US
+  price** for that side and the model's edge over it.
 - **Value spots** — the top 25 props where even the low end of the model's range
-  beats the ask, ranked by that edge.
+  beats the ask, ranked by that edge. **Both sides of every market are tested**, so
+  an under appears whenever its ask is the cheap one; only one side of a market can
+  ever qualify, since the two asks sum to at least 1 while the 80% range is
+  narrower than that.
+- **Hit streak leaderboard** — longest active over streaks, now alongside the
+  model's chance that the streak extends and the live Polymarket price for it.
+
+The **Polymarket** column on those three boards reads Polymarket US, the exchange
+the referral links point to. One request per game prices every prop in it, so the
+three boards share a single refresh about once a minute. The lists themselves are
+still ranked on the global book the scan reads, which can quote differently —
+the live column is the number to bet off.
 
 ### Past picks tab
 - **Live picks** — everything the auto-updater recorded before kickoff (all modeled
@@ -95,7 +113,9 @@ Put your referral link in `url`. Leave it `""` to hide the banner.
    in the stats file.
 4. It fetches this week's Polymarket board, models every prop, assigns the
    25 Guaranteed / Value tags, and upserts them into `picks.json` (a pick is
-   refreshed on every run until kickoff, then frozen and graded).
+   refreshed on every run until kickoff, then frozen and graded). Picks are keyed
+   by side, so the opposite side of a market is recorded too when it is a value
+   candidate.
 5. It regenerates the walk-forward backtest, refuses to publish if the dataset
    shrank suspiciously, and writes `index.html`.
 

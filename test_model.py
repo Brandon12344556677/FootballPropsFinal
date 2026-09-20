@@ -246,6 +246,79 @@ class ListTests(unittest.TestCase):
         self.assertNotIn("B", picks[0]["lists"])    # near-locks removed — no B tag anymore
         self.assertNotIn("V", picks[4]["lists"])    # too few effective games
 
+    def test_value_list_takes_unders_too(self):
+        """A pick whose side is 'under' reaches V on its own ask, and a sub-50%
+        row can never take a 25 Guaranteed slot."""
+        over = self._pick(0.62, 0.55, 70)
+        under = dict(self._pick(0.61, 0.54, 45), side="under")
+        cheap_under = dict(self._pick(0.40, 0.34, 30), side="under")
+        B.assign_lists([over, under, cheap_under])
+        self.assertIn("V", under["lists"])          # lo 0.54 > price 0.45
+        self.assertIn("V", cheap_under["lists"])    # lo 0.34 > price 0.30, even under 50%
+        self.assertNotIn("V", over["lists"])        # lo 0.55 < price 0.70
+        self.assertNotIn("T", cheap_under["lists"])  # 25 Guaranteed is model-favored sides only
+
+    def test_make_pick_can_record_the_other_side(self):
+        mp = {"over": 0.62, "under": 0.38, "lo": 0.5, "hi": 0.74, "neff": 12.0, "scale": 1.0}
+        pl = {"id": "p1", "n": "A B", "p": "WR", "t": "X"}
+        fav = B.make_pick("live", "g", 2026, 1, "2026-09-20", pl, "Y", "rec_yds", 60.5, mp, 55, "now")
+        opp = B.make_pick("live", "g", 2026, 1, "2026-09-20", pl, "Y", "rec_yds", 60.5, mp, 30, "now",
+                          side="under")
+        self.assertEqual(fav["side"], "over")
+        self.assertEqual((fav["prob"], fav["lo"], fav["hi"]), (0.62, 0.5, 0.74))
+        self.assertEqual(opp["side"], "under")
+        self.assertEqual((opp["prob"], opp["lo"], opp["hi"]), (0.38, 0.26, 0.5))
+
+    def _slate_market(self, question, line, bid, ask):
+        return {"question": question, "line": line, "outcomes": ["Over", "Under"],
+                "outcomePrices": [str(ask), str(1 - bid)], "bestBid": str(bid), "bestAsk": str(ask),
+                "spread": "0.02", "liquidityNum": "5000", "volumeNum": "5000"}
+
+    def _live_fixture(self, bid, ask):
+        """One scheduled game, one player with 20 identical-ish games, one market."""
+        sched = {"2026_02_AAA_BBB": {"id": "2026_02_AAA_BBB", "season": 2026, "week": 2,
+                                     "date": "2026-09-20", "away": "AAA", "home": "BBB",
+                                     "final": False, "spread": None, "total": None}}
+        rows = []
+        for i in range(20):
+            r = [2026, i + 1, "BBB", "REG"] + [0] * 12 + [0, 0, None, None]
+            r[14] = 70 if i % 2 else 50        # rec_yds alternates
+            rows.append(r)
+        pl = {"id": "p1", "n": "Test Player", "p": "WR", "t": "AAA", "g": rows}
+        slate = [{"away": "AAA", "home": "BBB", "date": "2026-09-20",
+                  "markets": [self._slate_market("Test Player: Receiving Yards O/U 59.5", 59.5, bid, ask)]}]
+        return slate, sched, {B.pkey("Test Player"): pl}
+
+    def test_live_picks_record_the_value_side_as_well(self):
+        # Over ask 0.90 is far above the model; the under costs 1 - 0.88 = 0.12 and is
+        # the cheap side, so both sides of the market get recorded.
+        slate, sched, by_key = self._live_fixture(bid=0.88, ask=0.90)
+        picks = []
+        B.build_live_picks(picks, slate, sched, by_key, {"teams": {}, "avg": {}})
+        sides = sorted(p["side"] for p in picks)
+        self.assertEqual(sides, ["over", "under"])
+        under = next(p for p in picks if p["side"] == "under")
+        self.assertIn("V", under["lists"])
+        self.assertEqual(under["price"], 12)
+
+    def test_live_picks_prune_a_flipped_side_instead_of_duplicating(self):
+        """A pending row on a side we no longer carry is dropped, not left to grade."""
+        slate, sched, by_key = self._live_fixture(bid=0.40, ask=0.60)
+        stale = {"src": "live", "gid": "2026_02_AAA_BBB", "pid": "p1", "stat": "rec_yds",
+                 "line": 59.5, "side": "under", "res": None, "lists": "V", "prob": 0.5}
+        picks = [stale]
+        B.build_live_picks(picks, slate, sched, by_key, {"teams": {}, "avg": {}})
+        self.assertNotIn(stale, picks)
+        self.assertEqual([p["side"] for p in picks], ["over"])
+
+    def test_live_picks_keep_a_graded_row_on_the_other_side(self):
+        slate, sched, by_key = self._live_fixture(bid=0.40, ask=0.60)
+        graded = {"src": "live", "gid": "2026_02_AAA_BBB", "pid": "p1", "stat": "rec_yds",
+                  "line": 59.5, "side": "under", "res": "hit", "lists": "V", "prob": 0.5}
+        picks = [graded]
+        B.build_live_picks(picks, slate, sched, by_key, {"teams": {}, "avg": {}})
+        self.assertIn(graded, picks)
+
     def test_grade_picks_waits_for_box_score(self):
         sched = {"2026_01_A_B": {"final": True}}
         pl = {"id": "p1", "g": [[2026, 1, "B", "REG"] + [0] * 12 + [1, 0, 44.5, 1.5]]}

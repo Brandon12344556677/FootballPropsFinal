@@ -825,8 +825,14 @@ def side_prob(mp):
     return side, mp["under"], 1 - mp["hi"], 1 - mp["lo"]
 
 
-def make_pick(src, gid, season, week, date, pl, opp, sk, line, mp, price, rec):
-    side, prob, lo, hi = side_prob(mp)
+def make_pick(src, gid, season, week, date, pl, opp, sk, line, mp, price, rec, side=None):
+    """side=None records the side the model leans; pass it explicitly to record the
+    other side of the same market (a value spot can sit on either one)."""
+    fav, prob, lo, hi = side_prob(mp)
+    if side is None:
+        side = fav
+    elif side != fav:
+        prob, lo, hi = 1 - prob, 1 - hi, 1 - lo
     return {"src": src, "gid": gid, "season": season, "week": week, "date": date,
             "pid": pl["id"], "player": pl["n"], "pos": pl["p"], "team": pl["t"], "opp": opp,
             "stat": sk, "line": line, "side": side,
@@ -837,10 +843,11 @@ def make_pick(src, gid, season, week, date, pl, opp, sk, line, mp, price, rec):
 
 def assign_lists(picks):
     """T = the 25 highest model chances ('25 Guaranteed'), V = the 25 best expected values
-    at a real market price (the interval must clear the price). Operates in place."""
+    at a real market price (the interval must clear the price). V is side-agnostic: an
+    under qualifies whenever its own ask is the cheap one. Operates in place."""
     for p in picks:
         p["lists"] = ""
-    ranked = sorted(picks, key=lambda p: (-p["prob"], -p["neff"]))
+    ranked = sorted((p for p in picks if p["prob"] >= 0.5), key=lambda p: (-p["prob"], -p["neff"]))
     for p in ranked[:TOP_N]:
         p["lists"] += "T"
     vals = []
@@ -892,18 +899,38 @@ def build_live_picks(picks, slate_games, sched, by_key, snap):
             mp = model_prob(vals, pm["line"], stat_kind(sk), ctx["scale"])
             if not mp:
                 continue
-            side = "over" if mp["over"] >= 0.5 else "under"
-            price = None
+            fav = "over" if mp["over"] >= 0.5 else "under"
+            cents = {"over": None, "under": None}
             if pm["tradeable"]:
-                pr = pm["over"] if side == "over" else pm["under"]
-                price = int(round(pr * 100)) if pr is not None else None
+                for sd in ("over", "under"):
+                    pr = pm[sd]
+                    cents[sd] = int(round(pr * 100)) if pr is not None else None
             fresh.append(make_pick("live", sg["id"], sg["season"], sg["week"], sg["date"], pl, opp,
-                                   sk, pm["line"], mp, price, now))
+                                   sk, pm["line"], mp, cents[fav], now, side=fav))
+            # The other side is recorded too when it's a plausible value play, so an
+            # under can reach the Value list even though the model leans over (and
+            # vice-versa). Only one side can ever clear: the two asks sum to at least
+            # 1 while lo(over) + lo(under) = 1 - (hi - lo) < 1.
+            other = "under" if fav == "over" else "over"
+            op = cents[other]
+            if op is not None and mp["neff"] >= VALUE_MIN_NEFF:
+                lo_other = mp["lo"] if other == "over" else 1 - mp["hi"]
+                if lo_other > op / 100.0:
+                    fresh.append(make_pick("live", sg["id"], sg["season"], sg["week"], sg["date"], pl, opp,
+                                           sk, pm["line"], mp, op, now, side=other))
     assign_lists(fresh)
-    existing = {(p["gid"], p["pid"], p["stat"], p["line"]): p for p in picks if p["src"] == "live"}
+    fresh_markets = {(f["gid"], f["pid"], f["stat"], f["line"]) for f in fresh}
+    fresh_keys = {(f["gid"], f["pid"], f["stat"], f["line"], f["side"]) for f in fresh}
+    # A market we just re-scanned may have flipped which side we carry. Drop the
+    # stale pending row rather than leaving two sides of one market to be graded.
+    picks[:] = [p for p in picks
+                if not (p["src"] == "live" and p["res"] is None
+                        and (p["gid"], p["pid"], p["stat"], p["line"]) in fresh_markets
+                        and (p["gid"], p["pid"], p["stat"], p["line"], p["side"]) not in fresh_keys)]
+    existing = {(p["gid"], p["pid"], p["stat"], p["line"], p["side"]): p for p in picks if p["src"] == "live"}
     added = updated = 0
     for f in fresh:
-        key = (f["gid"], f["pid"], f["stat"], f["line"])
+        key = (f["gid"], f["pid"], f["stat"], f["line"], f["side"])
         ex = existing.get(key)
         if ex is None:
             picks.append(f)
