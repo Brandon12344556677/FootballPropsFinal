@@ -801,7 +801,22 @@ PICK_COLS = ["src", "gid", "season", "week", "date", "pid", "player", "pos", "te
              "stat", "line", "side", "prob", "lo", "hi", "neff", "price", "lists", "rec", "actual", "res", "adj"]
 VALUE_MIN_NEFF = 6.0
 TOP_N = 25
-VALUE_N = 25
+VALUE_N = 50            # a safety cap; the bar below keeps the real list far shorter
+# The Value bar, applied to each side of a market separately: the market itself has
+# to give the prop at least a 30% chance (an ask of 30c or more) AND the model has to
+# be at least 15 points above that -- so a 30c ask needs a 45% model chance, a 50c ask
+# needs 65%. The price floor is what keeps penny longshots off the list.
+VALUE_MIN_PRICE = 0.30
+VALUE_MIN_EDGE = 0.15
+
+
+def value_qualifies(prob, price):
+    """prob and price are fractions. price is what you'd pay for this side."""
+    if price is None:
+        return False
+    return price >= VALUE_MIN_PRICE and prob - price >= VALUE_MIN_EDGE
+
+
 BT_STATS = {"QB": ["pass_yds", "pass_td", "pass_cmp"], "RB": ["rush_yds", "rush_rec_yds", "rec"],
             "WR": ["rec_yds", "rec", "rec_td"], "TE": ["rec_yds", "rec", "rec_td"], "FB": ["rush_yds", "rec"]}
 BT_MIN_PRIOR = 5
@@ -842,9 +857,10 @@ def make_pick(src, gid, season, week, date, pl, opp, sk, line, mp, price, rec, s
 
 
 def assign_lists(picks):
-    """T = the 25 highest model chances ('25 Guaranteed'), V = the 25 best expected values
-    at a real market price (the interval must clear the price). V is side-agnostic: an
-    under qualifies whenever its own ask is the cheap one. Operates in place."""
+    """T = the 25 highest model chances ('25 Guaranteed'). V = every prop the market
+    prices at 30c or more that the model puts 15+ points higher, ranked by that edge.
+    V is side-agnostic: an under qualifies whenever its own ask is the cheap one.
+    Operates in place."""
     for p in picks:
         p["lists"] = ""
     ranked = sorted((p for p in picks if p["prob"] >= 0.5), key=lambda p: (-p["prob"], -p["neff"]))
@@ -856,8 +872,8 @@ def assign_lists(picks):
         if pr is None or p["neff"] < VALUE_MIN_NEFF:
             continue
         price = pr / 100.0
-        if p["lo"] > price:
-            vals.append((p["prob"] / price - 1.0, p))
+        if value_qualifies(p["prob"], price):
+            vals.append((p["prob"] - price, p))
     vals.sort(key=lambda x: -x[0])
     for _, p in vals[:VALUE_N]:
         p["lists"] += "V"
@@ -914,8 +930,7 @@ def build_live_picks(picks, slate_games, sched, by_key, snap):
             other = "under" if fav == "over" else "over"
             op = cents[other]
             if op is not None and mp["neff"] >= VALUE_MIN_NEFF:
-                lo_other = mp["lo"] if other == "over" else 1 - mp["hi"]
-                if lo_other > op / 100.0:
+                if value_qualifies(mp[other], op / 100.0):
                     fresh.append(make_pick("live", sg["id"], sg["season"], sg["week"], sg["date"], pl, opp,
                                            sk, pm["line"], mp, op, now, side=other))
     assign_lists(fresh)

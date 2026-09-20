@@ -239,24 +239,35 @@ class ListTests(unittest.TestCase):
                  self._pick(0.86, 0.75, None), self._pick(0.7, 0.6, 65, neff=3)]
         B.assign_lists(picks)
         self.assertIn("T", picks[0]["lists"])       # all fit in the top 25 by chance
-        self.assertIn("V", picks[0]["lists"])       # lo 0.80 > price 0.70
-        self.assertNotIn("V", picks[1]["lists"])    # lo 0.60 < price 0.65
-        self.assertNotIn("V", picks[2]["lists"])    # lo 0.45 < price 0.50
+        self.assertIn("V", picks[0]["lists"])       # price 0.70 >= 0.30, model 20 pts above
+        self.assertNotIn("V", picks[1]["lists"])    # only 5 points above 0.65
+        self.assertNotIn("V", picks[2]["lists"])    # only 5 points above 0.50
         self.assertNotIn("V", picks[3]["lists"])    # no price
         self.assertNotIn("B", picks[0]["lists"])    # near-locks removed — no B tag anymore
         self.assertNotIn("V", picks[4]["lists"])    # too few effective games
+
+    def test_value_needs_the_market_to_give_it_30_percent(self):
+        """The price floor is what keeps penny longshots off the list, however big
+        the edge looks in points."""
+        longshot = self._pick(0.40, 0.30, 10)       # 30 points of edge, but a 10c ask
+        just_under = self._pick(0.60, 0.50, 29)     # 31 points of edge, but 29c < 30c
+        ok = self._pick(0.45, 0.35, 30)             # 30c ask, model exactly 15 points up
+        B.assign_lists([longshot, just_under, ok])
+        self.assertNotIn("V", longshot["lists"])
+        self.assertNotIn("V", just_under["lists"])
+        self.assertIn("V", ok["lists"])
 
     def test_value_list_takes_unders_too(self):
         """A pick whose side is 'under' reaches V on its own ask, and a sub-50%
         row can never take a 25 Guaranteed slot."""
         over = self._pick(0.62, 0.55, 70)
         under = dict(self._pick(0.61, 0.54, 45), side="under")
-        cheap_under = dict(self._pick(0.40, 0.34, 30), side="under")
-        B.assign_lists([over, under, cheap_under])
-        self.assertIn("V", under["lists"])          # lo 0.54 > price 0.45
-        self.assertIn("V", cheap_under["lists"])    # lo 0.34 > price 0.30, even under 50%
-        self.assertNotIn("V", over["lists"])        # lo 0.55 < price 0.70
-        self.assertNotIn("T", cheap_under["lists"])  # 25 Guaranteed is model-favored sides only
+        slim_under = dict(self._pick(0.48, 0.40, 32), side="under")
+        B.assign_lists([over, under, slim_under])
+        self.assertIn("V", under["lists"])           # 45c ask, model 16 points above
+        self.assertIn("V", slim_under["lists"])      # 32c ask, 16 points up, still under 50%
+        self.assertNotIn("V", over["lists"])         # model is below the 70c ask
+        self.assertNotIn("T", slim_under["lists"])   # 25 Guaranteed is model-favored sides only
 
     def test_make_pick_can_record_the_other_side(self):
         mp = {"over": 0.62, "under": 0.38, "lo": 0.5, "hi": 0.74, "neff": 12.0, "scale": 1.0}
@@ -290,16 +301,17 @@ class ListTests(unittest.TestCase):
         return slate, sched, {B.pkey("Test Player"): pl}
 
     def test_live_picks_record_the_value_side_as_well(self):
-        # Over ask 0.90 is far above the model; the under costs 1 - 0.88 = 0.12 and is
-        # the cheap side, so both sides of the market get recorded.
-        slate, sched, by_key = self._live_fixture(bid=0.88, ask=0.90)
+        # The model leans over (53%), but the over costs 71c. The under costs
+        # 1 - 0.69 = 31c against a 47% model chance — 16 points of edge on a 31c ask —
+        # so the under is recorded alongside the favored side.
+        slate, sched, by_key = self._live_fixture(bid=0.69, ask=0.71)
         picks = []
         B.build_live_picks(picks, slate, sched, by_key, {"teams": {}, "avg": {}})
         sides = sorted(p["side"] for p in picks)
         self.assertEqual(sides, ["over", "under"])
         under = next(p for p in picks if p["side"] == "under")
         self.assertIn("V", under["lists"])
-        self.assertEqual(under["price"], 12)
+        self.assertEqual(under["price"], 31)
 
     def test_live_picks_prune_a_flipped_side_instead_of_duplicating(self):
         """A pending row on a side we no longer carry is dropped, not left to grade."""

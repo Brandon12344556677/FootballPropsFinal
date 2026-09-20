@@ -577,6 +577,23 @@ table td,table th,thead th,tbody td,.edgetbl td,.edgetbl th,.caltbl td,.caltbl t
 .pmdim{color:#aeb9c8;font-size:12.5px}
 .livehead{display:inline-flex;align-items:center;gap:5px}
 .livedot{width:6px;height:6px;border-radius:50%;background:var(--accent);display:inline-block;animation:pmpulse 1.6s ease-in-out infinite}
+
+/* ---- what counts as a value spot: the rules, stated on the panel ---- */
+.valrules{background:rgba(0,200,5,.05);border:1px solid rgba(0,200,5,.28);border-radius:12px;
+  padding:13px 16px;margin:2px 0 14px}
+.valrules .vrhead{font-family:var(--dispers);text-transform:uppercase;letter-spacing:.9px;font-weight:700;
+  font-size:13.5px;color:var(--gold);margin-bottom:9px}
+.valrules .vrlist{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+.valrules .vrlist li{display:flex;gap:10px;align-items:flex-start;font-size:14px;color:#fff;line-height:1.5}
+.valrules .vrnum{flex:0 0 auto;width:21px;height:21px;border-radius:50%;background:var(--accent);color:#07130d;
+  font-family:var(--dispers);font-weight:700;font-size:13px;display:flex;align-items:center;justify-content:center;margin-top:1px}
+.valrules .vrtxt{flex:1;min-width:0}
+.valrules .vrtxt b{color:#fff}
+.valrules .vrwhy{color:#cbd5e1;font-size:13px}
+.valrules .vreg{font-variant-numeric:tabular-nums;color:var(--gold);font-weight:600;white-space:nowrap}
+.valrules .vrfoot{margin-top:10px;padding-top:9px;border-top:1px solid rgba(255,255,255,.12);
+  font-size:12.5px;color:#cbd5e1;line-height:1.6}
+.valrules .vrfoot b{color:#fff}
 </style>
 
 <div class="wrap">
@@ -645,8 +662,16 @@ table td,table th,thead th,tbody td,.edgetbl td,.edgetbl th,.caltbl td,.caltbl t
   </div>
 
   <div class="panel" id="valuepanel">
-    <div class="mkthead"><h2>⚡ Value spots</h2><span class="mktmuted">where the model's odds most beat the market — overs and unders both</span><span class="mktmuted" id="recV"></span></div>
-    <div id="valuebody"><p class="mktnote">The top 25 bets where the model's chance is well above the market's price — even the bottom of its 80% range beats what you'd pay — ranked by that edge. <b>Both sides of every market are tested</b>: an under lands here whenever its ask is the cheap one, so this list is a mix of overs and unders rather than overs only. Ranking uses the <b>ask</b> on the global Polymarket book; the <b>Polymarket</b> column shows the live Polymarket US price for the same side, which can differ — check it before betting.</p></div>
+    <div class="mkthead"><h2>⚡ Value spots</h2><span class="mktmuted">market gives it 30%+, model is 15+ points better — overs and unders both</span><span class="mktmuted" id="recV"></span></div>
+    <div class="valrules">
+      <div class="vrhead">What counts as a value spot — both rules have to be true</div>
+      <ol class="vrlist">
+        <li><span class="vrnum">1</span><span class="vrtxt"><b>Polymarket gives it at least a 30% chance.</b> The price you'd pay has to be <b>30¢ or more</b>. <span class="vrwhy">This is the rule that keeps penny longshots off the list — a 6¢ ask against an 11% model chance looks like a huge edge in percentage terms and is still a bad bet.</span></span></li>
+        <li><span class="vrnum">2</span><span class="vrtxt"><b>Our model puts it at least 15 points higher.</b> <span class="vreg">30¢ ask → needs 45%</span> · <span class="vreg">50¢ → 65%</span> · <span class="vreg">70¢ → 85%</span>. <span class="vrwhy">The gap between the two, in percentage points, is the <b>edge</b> shown in the Polymarket column.</span></span></li>
+      </ol>
+      <div class="vrfoot">Both rules are checked on the <b>over</b> and the <b>under</b> of every market separately, so either side can qualify, and a prop also needs <b>6+ effective games</b> of history behind it. Everything that clears both rules is listed — there's no fixed top 25 — ranked by that edge in points. The rules are tested against the ask on the <b>global Polymarket book</b> (the number the recorded picks use); the live <b>Polymarket US</b> price in each row is a separate order book, so where it has drifted a cent or two the board ask is shown beside it.</div>
+    </div>
+    <div id="valuebody"><p class="mktnote">The board scan fills this in. <span class="mktmuted">Needs the hosted website (the Polymarket API can't be reached from a local file).</span></p></div>
   </div>
 
   <div class="panel" id="lbpanel">
@@ -846,7 +871,7 @@ table td,table th,thead th,tbody td,.edgetbl td,.edgetbl th,.caltbl td,.caltbl t
     <div class="mktmuted" style="margin:-4px 0 12px;display:flex;gap:8px 18px;align-items:center;flex-wrap:wrap;font-size:13px;line-height:1.5">
       <span style="text-transform:uppercase;letter-spacing:.6px;font-weight:700;font-family:var(--dispers)">Lists key:</span>
       <span><span class="listchip T">T</span> = 25 Guaranteed — the week's 25 highest-confidence model picks</span>
-      <span><span class="listchip V">V</span> = Value — top spots where the model's odds most beat the market price, over <i>or</i> under</span>
+      <span><span class="listchip V">V</span> = Value — Polymarket priced it at 30¢+ and the model was 15+ points higher, over <i>or</i> under</span>
     </div>
     <div class="chartwrap"><table class="edgetbl" id="pktbl"></table></div>
     <div style="margin-top:10px;display:flex;gap:10px;align-items:center;flex-wrap:wrap"><button id="pkmore" class="btn ghost" hidden>Show more</button><button id="pkall" class="btn ghost" hidden>Show all</button><span class="mktmuted" id="pkcountb"></span></div>
@@ -1675,7 +1700,7 @@ async function fillLive(items, force){
 // d = {mk, side, line, prob, ask} — ask is the global-book price the boards rank on,
 // kept visible whenever it disagrees with the live Polymarket US quote.
 function liveCell(d){
-  const board = d.ask==null? '' : ` <span class="pmdim" title="the ask on the global Polymarket book — what this board's ranking uses">board ${Math.round(d.ask*100)}¢</span>`;
+  const board = d.ask==null? '' : ` <span class="pmdim" title="the ask on the global Polymarket book — the price this board's rules are tested against">board ${Math.round(d.ask*100)}¢</span>`;
   const L=livePx.get(d.mk);
   if(!L) return `<span class="pmdim">…</span>${board}`;
   if(L.err) return `<span class="pmdim" title="Couldn't reach Polymarket just now — retrying">—</span>${board}`;
@@ -1689,7 +1714,11 @@ function liveCell(d){
   const sub = edge==null
     ? `${(1/px).toFixed(2)}×`
     : `${edge>=0?'+':'−'}${Math.abs(Math.round(edge*100))} edge · ${(1/px).toFixed(2)}×`;
-  const gap = (d.ask!=null && Math.abs(d.ask-px)>=0.03)? board : '';
+  // Show the board ask when the two books disagree enough to matter, and always when
+  // the live edge has slipped under the stated bar that the board ask cleared —
+  // otherwise a qualifying row can look like it breaks the rule it got in on.
+  const slipped = d.ask!=null && d.prob!=null && (d.prob-px)<VALUE_MIN_EDGE && (d.prob-d.ask)>=VALUE_MIN_EDGE;
+  const gap = (d.ask!=null && (Math.abs(d.ask-px)>=0.03 || slipped))? board : '';
   return `<span class="pmpx ${cls}">${Math.round(px*100)}¢</span>${off} <span class="rng">${sub}</span>${gap}`;
 }
 function liveTd(r){
@@ -1738,6 +1767,16 @@ function livePriceFor(r){
   return px!=null? px : null;
 }
 
+/* The Value bar, tested on each side of a market separately: the market itself has to
+   give the prop at least a 30% chance (an ask of 30¢ or more) AND the model has to be
+   at least 15 points above that — a 30¢ ask needs a 45% model chance, a 50¢ ask needs
+   65%. The price floor is what keeps penny longshots off the list.
+   Mirrored in build.py's value_qualifies() so the recorded picks match the board. */
+const VALUE_MIN_PRICE=0.30, VALUE_MIN_EDGE=0.15, VALUE_MAX=50;
+function valueQualifies(prob, price){
+  if(price==null) return false;
+  return price>=VALUE_MIN_PRICE && prob-price>=VALUE_MIN_EDGE;
+}
 let edgeRows=[], valueRows=[], edgeSort={key:'prob',dir:-1};
 async function scanBoard(force){
   const body=$('edgebody'), status=$('edgestatus');
@@ -1778,24 +1817,24 @@ async function scanBoard(force){
     const modeled=rows.filter(r=>!r.nohist);
     modeled.slice().sort((a,b)=>(b.prob-a.prob)||(b.neff-a.neff)).slice(0,25).forEach(r=>r.lists+='T');
     // Value: test the over AND the under of every market against their own asks.
-    // Only one side can ever clear (the two asks sum to 1 + the spread, and the 80%
-    // range is narrower than that), so the winner is whichever one does.
+    // Only one side can ever clear either bar, so the winner is whichever one does.
     const cands=[];
     modeled.forEach(r=>{
       if(!(r.neff>=6) || !r.sides) return;
       ['over','under'].forEach(sd=>{
         const c=r.sides[sd];
-        if(!c || c.price==null || !(c.lo>c.price)) return;
-        cands.push(Object.assign({}, r, {side:sd, prob:c.prob, lo:c.lo, hi:c.hi, price:c.price, ev:c.prob/c.price-1, base:r}));
+        if(!valueQualifies(c.prob, c.price)) return;
+        cands.push(Object.assign({}, r, {side:sd, prob:c.prob, lo:c.lo, hi:c.hi, price:c.price,
+          ev:c.prob/c.price-1, vedge:c.prob-c.price, base:r}));
       });
     });
-    cands.sort((a,b)=>b.ev-a.ev);
+    cands.sort((a,b)=>b.vedge-a.vedge);
     valueRows=[]; const vseen=new Set();
     for(const c of cands){
       const k=c.pl.id+'|'+c.sk+'|'+c.line; if(vseen.has(k)) continue; vseen.add(k);
       if(!c.base.lists.includes('V')) c.base.lists+='V';
       valueRows.push(c);
-      if(valueRows.length>=25) break;
+      if(valueRows.length>=VALUE_MAX) break;
     }
     edgeRows=modeled;
     const nohist=rows.filter(r=>r.nohist).length;
@@ -1844,10 +1883,10 @@ function renderEdges(){
 }
 function renderValue(){
   const body=$('valuebody');
-  if(!valueRows.length){ body.innerHTML=`<p class="mktnote">No value spots right now: nothing on the board — over <i>or</i> under — where the model's <i>low-end</i> chance beats the ask. That's normal when markets are thin or efficient.</p>`; liveWant.delete('V'); return; }
-  const rows=sortRows(valueRows,'ev',-1).slice(0,25);
+  if(!valueRows.length){ body.innerHTML=`<p class="mktnote">No value spots right now — nothing on the board, over <i>or</i> under, clears <b>both</b> rules above. That's normal when markets are thin or efficient; the list fills back in as prices move.</p>`; liveWant.delete('V'); return; }
+  const rows=sortRows(valueRows,'vedge',-1);
   const unders=rows.filter(r=>r.side==='under').length, overs=rows.length-unders;
-  body.innerHTML=pickTable(rows,{})+`<p class="mktnote" style="margin-top:8px">The top 25 bets where the model's chance most beats the market — only props whose <b>bottom of the 80% range</b> still clears the price you'd pay, ranked by that edge. <b>Both sides of every market are tested</b>, so an <span class="leantag under">under</span> shows up here whenever its ask is the cheap one — right now ${overs} over${overs===1?'':'s'} and ${unders} under${unders===1?'':'s'}. The <b>Model</b> and ranking use the ask on the global Polymarket book; the <b>Polymarket</b> column is the live Polymarket US price for that same side, which can differ — check it before betting. Backward-looking; not advice.</p>`;
+  body.innerHTML=pickTable(rows,{})+`<p class="mktnote" style="margin-top:8px"><b>${rows.length}</b> prop${rows.length===1?'':'s'} clear both rules right now — ${overs} over${overs===1?'':'s'} and ${unders} under${unders===1?'':'s'} — ranked by the model's edge in points. Each pick is recorded before kickoff and graded in <b>Past picks</b>. Always check the live price before betting. Backward-looking; not advice.</p>`;
   wireLoad(body, rows);
   trackLive('V', rows);
 }

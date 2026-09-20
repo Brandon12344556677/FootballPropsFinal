@@ -52,11 +52,18 @@ the site.
 - **25 Guaranteed** — the 25 player props on this week's Polymarket board with the
   highest model chance, regardless of payout, each with the **live Polymarket US
   price** for that side and the model's edge over it.
-- **Value spots** — the top 25 props where even the low end of the model's range
-  beats the ask, ranked by that edge. **Both sides of every market are tested**, so
-  an under appears whenever its ask is the cheap one; only one side of a market can
-  ever qualify, since the two asks sum to at least 1 while the 80% range is
-  narrower than that.
+- **Value spots** — two rules, both stated on the panel itself so readers know what
+  qualifies: **(1)** Polymarket gives it at least a **30% chance** (an ask of 30¢ or
+  more) and **(2)** the model puts it at least **15 points higher** — so a 30¢ ask
+  needs 45%, a 50¢ ask needs 65%, a 70¢ ask needs 85%. Rule 1 is what keeps penny
+  longshots off the list: a 6¢ ask against an 11% model chance is a huge percentage
+  edge and a bad bet. Everything clearing both is listed, ranked by that edge in
+  points — no fixed top 25 — and props still need 6+ effective games of history.
+  **Both sides of every market are tested**, so an under appears whenever its ask is
+  the cheap one; only one side can ever qualify, since clearing the bar on both would
+  need the two asks to sum to less than 0.7. The rules are tested against the global
+  book's ask (the number the recorded picks use); where the live Polymarket US price
+  has drifted, the board ask is shown beside it in the row.
 - **Hit streak leaderboard** — longest active over streaks, now alongside the
   model's chance that the streak extends and the live Polymarket price for it.
 
