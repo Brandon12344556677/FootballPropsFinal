@@ -425,6 +425,75 @@ def fetch_espn_recent(sched, stats_gids, nfl_index, season):
     return rows
 
 
+TOP_CACHE_FILE = "top_cache.json"
+
+
+def fetch_team_top(sched, season):
+    """Average offensive time of possession (seconds per game) per team this season,
+    from ESPN box scores -> {team: seconds}. Each game is fetched once and cached in
+    top_cache.json, so a build only pulls games it hasn't seen. Fully wrapped: any
+    failure just leaves that game out (worst case returns {} and no ToP is shown)."""
+    def parse_mmss(s):
+        m = re.match(r"\s*(\d+):(\d{1,2})", str(s or ""))
+        return int(m.group(1)) * 60 + int(m.group(2)) if m else None
+    try:
+        with open(TOP_CACHE_FILE, "r", encoding="utf-8") as f:
+            cache = json.load(f)          # gid -> {team: seconds}
+    except (OSError, ValueError):
+        cache = {}
+    games = [g for g in sched.values() if g["season"] == season and g["final"] and g["type"] == "REG"]
+    need = [g for g in games if g["id"] not in cache]
+    by_week = {}
+    for g in need:
+        by_week.setdefault(g["week"], []).append(g)
+    for wk in sorted(by_week):
+        try:
+            sb = json.loads(http_get(ESPN_SB.format(season=season, week=wk)))
+        except Exception as e:  # noqa: BLE001
+            print(f"    ESPN ToP scoreboard wk{wk}: skipped ({e})")
+            continue
+        for ev in sb.get("events", []):
+            comp = (ev.get("competitions") or [{}])[0]
+            if not (((comp.get("status") or {}).get("type") or {}).get("completed")):
+                continue
+            cs = comp.get("competitors") or []
+            home = team_code(next((c.get("team", {}).get("abbreviation") for c in cs if c.get("homeAway") == "home"), None))
+            away = team_code(next((c.get("team", {}).get("abbreviation") for c in cs if c.get("homeAway") == "away"), None))
+            sg = next((g for g in by_week[wk] if {g["away"], g["home"]} == {home, away}), None)
+            if not sg:
+                continue
+            try:
+                summ = json.loads(http_get(ESPN_SUM.format(event=ev.get("id"))))
+            except Exception:  # noqa: BLE001
+                continue
+            tops = {}
+            for tb in (summ.get("boxscore") or {}).get("teams") or []:
+                team = team_code((tb.get("team") or {}).get("abbreviation"))
+                for st in tb.get("statistics") or []:
+                    if st.get("name") == "possessionTime":
+                        sec = parse_mmss(st.get("displayValue"))
+                        if team and sec:
+                            tops[team] = sec
+                        break
+            if tops:
+                cache[sg["id"]] = tops
+    try:
+        with open(TOP_CACHE_FILE, "w", encoding="utf-8") as f:
+            json.dump(cache, f, separators=(",", ":"))
+    except OSError:
+        pass
+    season_gids = {g["id"] for g in games}
+    acc = {}
+    for gid, tops in cache.items():
+        if gid not in season_gids:
+            continue
+        for team, sec in tops.items():
+            a = acc.setdefault(team, [0, 0])
+            a[0] += sec
+            a[1] += 1
+    return {t: round(v[0] / v[1]) for t, v in acc.items() if v[1]}
+
+
 # ---------------------------------------------------------------------------
 # Injuries + rosters (current season)
 # ---------------------------------------------------------------------------
@@ -1355,6 +1424,13 @@ def main():
         cal_t = 1.0
     print(f"  calibration temperature: T={cal_t}")
 
+    try:
+        team_top = fetch_team_top(sched, SEASON)
+    except Exception as e:  # noqa: BLE001
+        print(f"  time of possession: skipped ({e})")
+        team_top = {}
+    print(f"  time of possession: {len(team_top)} teams")
+
     db = {
         "gen": TODAY.isoformat(),
         "seasons": seasons_used,
@@ -1366,6 +1442,7 @@ def main():
         "defense": defense,
         "defAvg": def_avg,
         "calT": cal_t,
+        "top": team_top,
         "record": live_record(picks),
         "players": players,
     }

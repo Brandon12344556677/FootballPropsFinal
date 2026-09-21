@@ -1338,6 +1338,7 @@ function renderWhy(p, sk, line, side, mp, ctx){
     btn.textContent = WHY.open? 'Hide the math' : 'Show the math'; };
 }
 
+function topStr(team){ const s=(typeof DB!=='undefined'&&DB.top)?DB.top[team]:null; if(!s) return null; return Math.floor(s/60)+':'+String(Math.round(s%60)).padStart(2,'0'); }
 function renderMeta(){
   const p=state.player, g=games();
   $('pmeta').innerHTML = `<b>${esc(p.n)}</b> &middot; ${esc(p.p)} &middot; ${esc(p.t)} &middot; ${p.g.length} game${p.g.length===1?'':'s'} in dataset`;
@@ -1358,8 +1359,10 @@ function renderMeta(){
   if(wg && WEEK.week){
     const opp=oppOf(p), home=wg.home===p.t;
     const score = wg.final? `<span><span class="lab">Final</span> ${esc(wg.away)} ${wg.as} – ${esc(wg.home)} ${wg.hs}</span>` : '';
+    const tp=topStr(p.t), to=topStr(opp);
     ws.innerHTML=`<span><span class="lab">Week ${WEEK.week}</span> <b>${home?'vs':'@'} ${esc(opp)}</b></span>`+
-      `<span>${esc(kickoff(wg))}</span>`+(vegas(wg)?`<span><span class="lab">Vegas</span> ${esc(vegas(wg))}</span>`:'')+score;
+      `<span>${esc(kickoff(wg))}</span>`+(vegas(wg)?`<span><span class="lab">Vegas</span> ${esc(vegas(wg))}</span>`:'')+
+      (tp?`<span title="average offensive time of possession per game this season, from ESPN box scores"><span class="lab">Poss/gm</span> <b>${esc(p.t)} ${tp}</b>${to?` · ${esc(opp)} ${to}`:''}</span>`:'')+score;
     ws.hidden=false;
   } else if(WEEK.week){
     ws.innerHTML=`<span><span class="lab">Week ${WEEK.week}</span> ${esc(p.t)} has no game on the schedule this week${p.t?'':' (team unknown)'}.</span>`; ws.hidden=false;
