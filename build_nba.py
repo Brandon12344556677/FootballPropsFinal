@@ -887,6 +887,29 @@ def save_picks(picks):
     return f"{len(keep)} pick(s), {graded} graded"
 
 
+def write_weekly(picks):
+    """Most recent week that has graded LIVE Value picks -> nba_weekly.json, for the
+    homepage 'units up' banner. Units = payout profit per 1u bet (win: 100/price-1, loss: -1)."""
+    try:
+        v = [p for p in picks if p.get("src") == "live" and "V" in (p.get("lists") or "")
+             and p.get("res") in ("hit", "miss") and p.get("week") is not None]
+        if not v:
+            return
+        season = max(p["season"] for p in v)
+        week = max(p["week"] for p in v if p["season"] == season)
+        wk = [p for p in v if p["season"] == season and p["week"] == week]
+        priced = [p for p in wk if p.get("price")]
+        units = sum((100.0 / p["price"] - 1) if p["res"] == "hit" else -1 for p in priced)
+        out = {"season": season, "week": week, "n": len(wk),
+               "hit": sum(1 for p in wk if p["res"] == "hit"),
+               "priced": len(priced), "units": round(units, 2)}
+        with open("nba_weekly.json", "w", encoding="utf-8") as f:
+            json.dump(out, f, separators=(",", ":"), ensure_ascii=False)
+        print(f"  nba_weekly.json: Week {week} value {out['hit']}/{out['n']} {out['units']:+}u")
+    except Exception as e:
+        print(f"  nba_weekly.json: skipped ({e})")
+
+
 # ---------------------------------------------------------------------------
 def load_store():
     try:
@@ -1027,6 +1050,7 @@ def main():
     print(f"  calibration temperature: T={cal_t}")
     summary = save_picks(picks)
     print(f"  {PICKS_FILE}: {summary}")
+    write_weekly(picks)
 
     seasons_used = sorted({r["season"] for r in store["rows"]}, reverse=True)
     thru = max((r["date"] for r in store["rows"]), default=None)
