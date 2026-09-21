@@ -1885,8 +1885,10 @@ async function scanBoard(force){
     valueRows=computeValueRows();
     edgeRows=modeled;
     // Good odds: the older value rule — even the low end of the model's 80% range beats
-    // the board ask, 6+ effective games, ranked by expected value, top 25.
-    goodRows=modeled.filter(r=>r.price!=null && r.neff>=6 && r.lo>r.price)
+    // the board ask, 6+ effective games, ranked by expected value, top 25. A market that
+    // already made Value spots is left out so nothing shows up in both lists.
+    const vKeys=new Set(valueRows.map(r=>mkOf(r)));
+    goodRows=modeled.filter(r=>r.price!=null && r.neff>=6 && r.lo>r.price && !vKeys.has(mkOf(r)))
                     .sort((a,b)=>(b.ev==null?-1:b.ev)-(a.ev==null?-1:a.ev)).slice(0,25);
     const nohist=rows.filter(r=>r.nohist).length;
     const vU=valueRows.filter(r=>r.side==='under').length;

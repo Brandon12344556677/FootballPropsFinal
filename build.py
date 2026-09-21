@@ -974,11 +974,15 @@ def assign_lists(picks):
     for p in vals[:VALUE_N]:
         p["lists"] += "V"
     # G -- Good odds: the older EV rule, on the side the model leans (prob >= 0.5) --
-    # even the low end of the 80% range beats the ask, 6+ games, ranked by expected value
+    # even the low end of the 80% range beats the ask, 6+ games, ranked by expected value.
+    # A market that already made Value is skipped so nothing lands in both lists.
+    v_markets = {(p["gid"], p["pid"], p["stat"], p["line"]) for p in picks if "V" in p["lists"]}
     goods = []
     for p in picks:
         pr = p.get("price")
         if pr is None or p["neff"] < VALUE_MIN_NEFF or p["prob"] < 0.5:
+            continue
+        if (p["gid"], p["pid"], p["stat"], p["line"]) in v_markets:
             continue
         price = pr / 100.0
         if p["lo"] > price:
