@@ -49,6 +49,16 @@ h2{margin:0}
 .hero-meta{font-family:var(--dispers);text-transform:uppercase;letter-spacing:1px;font-size:12px;color:#9096a0;text-align:right;line-height:1.6}
 .hero-meta b{color:var(--gold);font-family:var(--display);font-size:30px;display:block;line-height:1}
 .hero-meta .wk{color:#fff;font-size:14px}
+/* value-spots weekly units banner (hero) */
+.vwbar{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:center;gap:6px 14px;text-decoration:none;
+  margin:0 0 18px;padding:14px 22px;border-radius:14px;border:2px solid var(--line);border-left:6px solid var(--accent);
+  background:linear-gradient(90deg,var(--surface-2),var(--surface));font-family:var(--dispers);text-transform:uppercase;letter-spacing:.5px;box-shadow:var(--hard-sm)}
+.vwbar.down{border-left-color:var(--miss)}
+.vwbar .lbl{font-weight:700;font-size:16px;color:var(--muted)}
+.vwbar .big{font-family:var(--display);font-size:clamp(28px,5vw,38px);line-height:1;font-weight:700;color:var(--accent)}
+.vwbar.down .big{color:var(--miss)}
+.vwbar .sub{width:100%;text-align:center;font-size:13px;color:var(--muted);letter-spacing:.3px;text-transform:none;font-family:var(--body)}
+.vwbar:hover{transform:translateY(-1px)}
 
 /* tabs */
 .tabs{display:flex;gap:12px;margin:0 0 24px;flex-wrap:wrap;justify-content:center}
@@ -619,6 +629,8 @@ table td,table th,thead th,tbody td,.edgetbl td,.edgetbl th,.caltbl td,.caltbl t
     </div>
   </div>
 
+  <a id="valueweekbar" class="vwbar" href="#" onclick="showTab('past');return false;" hidden></a>
+
   <div class="sportbar" style="display:flex;gap:10px;justify-content:center;margin:0 0 18px">
     <a href="./" aria-current="true" style="display:inline-flex;align-items:center;gap:8px;border:2.5px solid var(--ink);background:var(--ink);color:#fff;border-radius:999px;padding:8px 20px;font-family:var(--dispers);font-weight:700;text-transform:uppercase;letter-spacing:.8px;font-size:16px;text-decoration:none;box-shadow:var(--hard-sm)">🏈 NFL</a>
     <a href="./nba.html" style="display:inline-flex;align-items:center;gap:8px;border:2.5px solid var(--ink);background:var(--surface);color:var(--muted);border-radius:999px;padding:8px 20px;font-family:var(--dispers);font-weight:700;text-transform:uppercase;letter-spacing:.8px;font-size:16px;text-decoration:none;box-shadow:var(--hard-sm)">🏀 NBA</a>
@@ -1043,6 +1055,20 @@ if(WEEK.week) $('dnweek').textContent = `${WEEK.season} · week ${WEEK.week} on 
 (function renderRef(){ const b=$('refbanner');
   if(REFERRAL.url){ b.href=REFERRAL.url; b.textContent=REFERRAL.text; b.hidden=false; } else b.hidden=true;
   const b2=$('refbanner2'); if(REFERRAL2.url){ b2.href=REFERRAL2.url; b2.textContent=REFERRAL2.text; b2.hidden=false; } else b2.hidden=true; })();
+(function renderValueWeek(){
+  const el=$('valueweekbar'); if(!el) return;
+  fetch('weekly.json',{cache:'no-store'}).then(r=>r.ok?r.json():null).then(d=>{
+    if(!d || !d.n){ el.hidden=true; return; }
+    const up = d.units>=0, u=(up?'+':'')+(+d.units).toFixed(1);
+    el.className='vwbar'+(up?'':' down');
+    el.innerHTML =
+      `<span class="lbl">⚡ Value spots · Week ${d.week}</span>`+
+      `<span class="big">${up?'▲':'▼'} ${u} units</span>`+
+      `<span class="lbl">${d.hit}/${d.n} hit</span>`+
+      `<span class="sub">Every Value pick recorded before kickoff and graded from the box score — tap for the full record.</span>`;
+    el.hidden=false;
+  }).catch(()=>{ el.hidden=true; });
+})();
 (function renderSocial(){ const ig=$('social_ig'), tt=$('social_tt'), xa=$('social_x'), bar=$('socialbar'); if(!bar) return;
   const S=(typeof SOCIAL!=='undefined')?SOCIAL:{};
   if(S.instagram){ ig.href=S.instagram; ig.hidden=false; } else ig.hidden=true;

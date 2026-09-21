@@ -1209,6 +1209,28 @@ def save_picks(picks):
     return doc["summary"]
 
 
+def write_weekly(picks):
+    """Most recent week that has graded LIVE Value picks -> weekly.json, for the
+    homepage 'units up' banner. Units = payout profit per 1u bet (win: 100/price-1, loss: -1)."""
+    try:
+        v = [p for p in picks if p["src"] == "live" and "V" in (p["lists"] or "") and p["res"] in ("hit", "miss")]
+        if not v:
+            return
+        season = max(p["season"] for p in v)
+        week = max(p["week"] for p in v if p["season"] == season)
+        wk = [p for p in v if p["season"] == season and p["week"] == week]
+        priced = [p for p in wk if p.get("price")]
+        units = sum((100.0 / p["price"] - 1) if p["res"] == "hit" else -1 for p in priced)
+        out = {"season": season, "week": week, "n": len(wk),
+               "hit": sum(1 for p in wk if p["res"] == "hit"),
+               "priced": len(priced), "units": round(units, 2)}
+        with open("weekly.json", "w", encoding="utf-8") as f:
+            json.dump(out, f, separators=(",", ":"), ensure_ascii=False)
+        print(f"  weekly.json: Week {week} value {out['hit']}/{out['n']} {out['units']:+}u")
+    except Exception as e:
+        print(f"  weekly.json: skipped ({e})")
+
+
 # ---------------------------------------------------------------------------
 def sanity_check(db):
     """Refuse to publish a dataset that shrank suspiciously versus the last build."""
@@ -1324,6 +1346,7 @@ def main():
     bt = build_backtest(with_games, seasons_used, sched, snapshot)
     summary = save_picks(picks + bt)
     print(f"  picks.json: {summary}")
+    write_weekly(picks + bt)
 
     try:
         cal_t = fit_temperature(picks + bt)
