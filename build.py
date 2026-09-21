@@ -893,13 +893,14 @@ PICK_COLS = ["src", "gid", "season", "week", "date", "pid", "player", "pos", "te
              "stat", "line", "side", "prob", "lo", "hi", "neff", "price", "lists", "rec", "actual", "res", "adj"]
 VALUE_MIN_NEFF = 6.0
 TOP_N = 25
-VALUE_N = 50            # a safety cap; the bar below keeps the real list far shorter
+VALUE_N = 20            # Value: the 20 with the highest model chance that clear the bar
+GOOD_N = 25             # Good odds: the older EV rule, top 25
 # The Value bar, applied to each side of a market separately: the market itself has
-# to give the prop at least a 30% chance (an ask of 30c or more) AND the model has to
-# be at least 15 points above that -- so a 30c ask needs a 45% model chance, a 50c ask
-# needs 65%. The price floor is what keeps penny longshots off the list.
-VALUE_MIN_PRICE = 0.30
-VALUE_MIN_EDGE = 0.15
+# to give the prop at least a 35% chance (an ask of 35c or more) AND the model has to
+# be at least 25 points above that -- so a 35c ask needs a 60% model chance, a 50c ask
+# needs 75%. The price floor is what keeps penny longshots off the list.
+VALUE_MIN_PRICE = 0.35
+VALUE_MIN_EDGE = 0.25
 
 
 def value_qualifies(prob, price):
@@ -949,15 +950,18 @@ def make_pick(src, gid, season, week, date, pl, opp, sk, line, mp, price, rec, s
 
 
 def assign_lists(picks):
-    """T = the 25 highest model chances ('25 Guaranteed'). V = every prop the market
-    prices at 30c or more that the model puts 15+ points higher, ranked by that edge.
-    V is side-agnostic: an under qualifies whenever its own ask is the cheap one.
-    Operates in place."""
+    """T = the 25 highest model chances ('25 Guaranteed'). V = 'Value' — every prop the
+    market prices at 35c or more that the model puts 25+ points higher, shown as the 20
+    with the highest model chance (V is side-agnostic: an under qualifies whenever its
+    own ask is the cheap one). G = 'Good odds' — the older rule, on the side the model
+    leans: even the low end of the 80% range beats the ask, ranked by expected value,
+    top 25. Operates in place."""
     for p in picks:
         p["lists"] = ""
     ranked = sorted((p for p in picks if p["prob"] >= 0.5), key=lambda p: (-p["prob"], -p["neff"]))
     for p in ranked[:TOP_N]:
         p["lists"] += "T"
+    # V -- Value: clears the market/edge bar, ranked by model chance, top 20
     vals = []
     for p in picks:
         pr = p.get("price")
@@ -965,10 +969,23 @@ def assign_lists(picks):
             continue
         price = pr / 100.0
         if value_qualifies(p["prob"], price):
-            vals.append((p["prob"] - price, p))
-    vals.sort(key=lambda x: -x[0])
-    for _, p in vals[:VALUE_N]:
+            vals.append(p)
+    vals.sort(key=lambda p: -p["prob"])
+    for p in vals[:VALUE_N]:
         p["lists"] += "V"
+    # G -- Good odds: the older EV rule, on the side the model leans (prob >= 0.5) --
+    # even the low end of the 80% range beats the ask, 6+ games, ranked by expected value
+    goods = []
+    for p in picks:
+        pr = p.get("price")
+        if pr is None or p["neff"] < VALUE_MIN_NEFF or p["prob"] < 0.5:
+            continue
+        price = pr / 100.0
+        if p["lo"] > price:
+            goods.append((p["prob"] / price - 1.0, p))
+    goods.sort(key=lambda x: -x[0])
+    for _, p in goods[:GOOD_N]:
+        p["lists"] += "G"
 
 
 def build_live_picks(picks, slate_games, sched, by_key, snap, pmus=None):
@@ -1165,7 +1182,7 @@ def fit_temperature(picks):
 def live_record(picks):
     """Season-to-date record of graded LIVE picks per recommendation list (shown on the site)."""
     out = {}
-    for k in ("T", "V", "all"):
+    for k in ("T", "V", "G", "all"):
         ps = [p for p in picks if p["src"] == "live" and p["res"] in ("hit", "miss") and (k == "all" or k in (p["lists"] or ""))]
         hits = sum(1 for p in ps if p["res"] == "hit")
         priced = [p for p in ps if p.get("price")]

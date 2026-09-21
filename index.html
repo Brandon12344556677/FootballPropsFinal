@@ -286,7 +286,7 @@ select{background:var(--surface-2);color:var(--text);border:2px solid var(--ink)
 .leantag{font-family:var(--dispers);font-weight:700;font-size:11px;padding:2px 8px;border-radius:5px;text-transform:uppercase;border:1.5px solid var(--ink)}
 .leantag.over{background:var(--hit);color:#fff} .leantag.under{background:var(--miss);color:#fff}
 .listchip{display:inline-block;font-family:var(--dispers);font-weight:700;font-size:10.5px;padding:1px 6px;border-radius:4px;border:1.5px solid var(--ink);margin-right:3px;text-transform:uppercase}
-.listchip.T{background:var(--ink);color:#fff} .listchip.V{background:var(--accent);color:#fff} .listchip.B{background:var(--gold);color:var(--ink)}
+.listchip.T{background:var(--ink);color:#fff} .listchip.V{background:var(--accent);color:#fff} .listchip.B{background:var(--gold);color:var(--ink)} .listchip.G{background:var(--blaze);color:#fff}
 .edgeload,.mktuse{background:var(--surface);border:2px solid var(--ink);border-radius:8px;padding:3px 11px;font-family:var(--dispers);font-weight:700;font-size:13px;cursor:pointer;text-transform:uppercase;color:var(--ink)}
 .edgeload:hover,.mktuse:hover{background:var(--accent);color:#fff}
 .rng{color:var(--muted);font-size:11px}
@@ -493,6 +493,7 @@ tbody tr:hover,.edgetbl tr:hover td{background:rgba(0,200,5,.07)}
 .listchip{border:1px solid rgba(255,255,255,.14)}
 .listchip.T{background:var(--gold);color:#0a1628;border-color:transparent}
 .listchip.V{background:transparent;color:var(--gold);border-color:rgba(0,200,5,.6)}
+.listchip.G{background:var(--blaze);color:#0a1628;border-color:transparent}
 
 /* action buttons */
 .btn{background:var(--gold);color:#0a1628;border:1px solid var(--gold);border-radius:6px;box-shadow:0 12px 30px rgba(0,200,5,.22);letter-spacing:1px}
@@ -662,16 +663,21 @@ table td,table th,thead th,tbody td,.edgetbl td,.edgetbl th,.caltbl td,.caltbl t
   </div>
 
   <div class="panel" id="valuepanel">
-    <div class="mkthead"><h2>⚡ Value spots</h2><span class="mktmuted">market gives it 30%+, model is 15+ points better — overs and unders both</span><span class="mktmuted" id="recV"></span></div>
+    <div class="mkthead"><h2>⚡ Value spots</h2><span class="mktmuted">market gives it 35%+, model is 25+ points better — top 20 by model chance</span><span class="mktmuted" id="recV"></span></div>
     <div class="valrules">
       <div class="vrhead">What counts as a value spot — both rules have to be true</div>
       <ol class="vrlist">
-        <li><span class="vrnum">1</span><span class="vrtxt"><b>Polymarket gives it at least a 30% chance.</b> The price you'd pay has to be <b>30¢ or more</b>. <span class="vrwhy">This is the rule that keeps penny longshots off the list — a 6¢ ask against an 11% model chance looks like a huge edge in percentage terms and is still a bad bet.</span></span></li>
-        <li><span class="vrnum">2</span><span class="vrtxt"><b>Our model puts it at least 15 points higher.</b> <span class="vreg">30¢ ask → needs 45%</span> · <span class="vreg">50¢ → 65%</span> · <span class="vreg">70¢ → 85%</span>. <span class="vrwhy">The gap between the two, in percentage points, is the <b>edge</b> shown in the Polymarket column.</span></span></li>
+        <li><span class="vrnum">1</span><span class="vrtxt"><b>Polymarket gives it at least a 35% chance.</b> The price you'd pay has to be <b>35¢ or more</b>. <span class="vrwhy">This is the rule that keeps penny longshots off the list — a 6¢ ask against an 11% model chance looks like a huge edge in percentage terms and is still a bad bet.</span></span></li>
+        <li><span class="vrnum">2</span><span class="vrtxt"><b>Our model puts it at least 25 points higher.</b> <span class="vreg">35¢ ask → needs 60%</span> · <span class="vreg">50¢ → 75%</span> · <span class="vreg">70¢ → 95%</span>. <span class="vrwhy">The gap between the two, in percentage points, is the <b>edge</b> shown in the Polymarket column.</span></span></li>
       </ol>
-      <div class="vrfoot">Both rules are tested against the <b>live Polymarket US price in the row</b> — the price you'd actually pay — so the edge shown is always the edge it qualified on, and a prop drops off the list as soon as the price moves against it. Where Polymarket US has no market for a prop, the global book's ask is used instead and shown as <span class="pmdim">board 46¢ · +15 edge</span>. Both rules are checked on the <b>over</b> and the <b>under</b> of every market separately, so either side can qualify, and a prop also needs <b>6+ effective games</b> of history behind it. Everything clearing both rules is listed — no fixed top 25 — ranked by that edge, and the list re-checks itself about once a minute.</div>
+      <div class="vrfoot">Both rules are tested against the <b>live Polymarket US price in the row</b> — the price you'd actually pay — so the edge shown is always the edge it qualified on, and a prop drops off the list as soon as the price moves against it. Where Polymarket US has no market for a prop, the global book's ask is used instead and shown as <span class="pmdim">board 46¢ · +15 edge</span>. Both rules are checked on the <b>over</b> and the <b>under</b> of every market separately, so either side can qualify, and a prop also needs <b>6+ effective games</b> of history behind it. The <b>20 with the highest model chance</b> that clear both rules are listed — ranked by model chance — and the list re-checks itself about once a minute.</div>
     </div>
     <div id="valuebody"><p class="mktnote">The board scan fills this in. <span class="mktmuted">Needs the hosted website (the Polymarket API can't be reached from a local file).</span></p></div>
+  </div>
+
+  <div class="panel" id="goodpanel">
+    <div class="mkthead"><h2>🎯 Good odds</h2><span class="mktmuted">even the low end of the model's range beats the ask — ranked by edge</span><span class="mktmuted" id="recG"></span></div>
+    <div id="goodbody"><p class="mktnote">The board scan fills this in. <span class="mktmuted">Needs the hosted website (the Polymarket API can't be reached from a local file).</span></p></div>
   </div>
 
   <div class="panel" id="lbpanel">
@@ -871,7 +877,8 @@ table td,table th,thead th,tbody td,.edgetbl td,.edgetbl th,.caltbl td,.caltbl t
     <div class="mktmuted" style="margin:-4px 0 12px;display:flex;gap:8px 18px;align-items:center;flex-wrap:wrap;font-size:13px;line-height:1.5">
       <span style="text-transform:uppercase;letter-spacing:.6px;font-weight:700;font-family:var(--dispers)">Lists key:</span>
       <span><span class="listchip T">T</span> = 25 Guaranteed — the week's 25 highest-confidence model picks</span>
-      <span><span class="listchip V">V</span> = Value — Polymarket priced it at 30¢+ and the model was 15+ points higher, over <i>or</i> under</span>
+      <span><span class="listchip V">V</span> = Value — Polymarket priced it at 35¢+ and the model was 25+ points higher, over <i>or</i> under</span>
+      <span><span class="listchip G">G</span> = Good odds — even the low end of the model's range beat the ask (ranked by edge)</span>
     </div>
     <div class="chartwrap"><table class="edgetbl" id="pktbl"></table></div>
     <div style="margin-top:10px;display:flex;gap:10px;align-items:center;flex-wrap:wrap"><button id="pkmore" class="btn ghost" hidden>Show more</button><button id="pkall" class="btn ghost" hidden>Show all</button><span class="mktmuted" id="pkcountb"></span></div>
@@ -1030,7 +1037,7 @@ $('dncount').textContent = DB.players.filter(p=>p.g.length).length;
 $('dnthru').textContent = DB.thru || '—';
 if(WEEK.week) $('dnweek').textContent = `${WEEK.season} · week ${WEEK.week} on deck`;
 (function renderRecords(){ const R=DB.record||{};
-  ['T','V'].forEach(k=>{ const r=R[k], el=$('rec'+k); if(!el) return;
+  ['T','V','G'].forEach(k=>{ const r=R[k], el=$('rec'+k); if(!el) return;
     if(!r||!r.n){ el.innerHTML='· live record: no graded picks yet — <a href="#picks" onclick="showTab(\'picks\');return false;">Past picks</a>'; return; }
     el.innerHTML=`· <b>live record ${r.hit}/${r.n} (${Math.round(100*r.hit/r.n)}%)</b> — <a href="#picks" onclick="showTab(\'picks\');return false;">details</a>`; }); })();
 (function renderRef(){ const b=$('refbanner');
@@ -1790,12 +1797,12 @@ function livePriceFor(r){
    at least 15 points above that — a 30¢ ask needs a 45% model chance, a 50¢ ask needs
    65%. The price floor is what keeps penny longshots off the list.
    Mirrored in build.py's value_qualifies() so the recorded picks match the board. */
-const VALUE_MIN_PRICE=0.30, VALUE_MIN_EDGE=0.15, VALUE_MAX=50;
+const VALUE_MIN_PRICE=0.35, VALUE_MIN_EDGE=0.25, VALUE_MAX=20;
 function valueQualifies(prob, price){
   if(price==null) return false;
   return price>=VALUE_MIN_PRICE && prob-price>=VALUE_MIN_EDGE;
 }
-let edgeRows=[], valueRows=[], valueCands=[], edgeSort={key:'prob',dir:-1};
+let edgeRows=[], valueRows=[], valueCands=[], goodRows=[], edgeSort={key:'prob',dir:-1};
 
 /* The price a Value row is judged on: the live Polymarket US ask when there is one,
    since that is what you'd actually pay, falling back to the global book's ask when
@@ -1812,7 +1819,7 @@ function computeValueRows(){
     if(!valueQualifies(c.prob, e.px)) return;
     out.push(Object.assign({}, c, {vprice:e.px, vlive:e.live, vedge:c.prob-e.px, ev:c.prob/e.px-1}));
   });
-  out.sort((a,b)=>b.vedge-a.vedge);
+  out.sort((a,b)=>b.prob-a.prob);   // top 20 by model chance, per the Value rule
   const rows=[], seen=new Set();
   for(const r of out){
     const k=mkOf(r); if(seen.has(k)) continue; seen.add(k);   // one side per market
@@ -1877,6 +1884,10 @@ async function scanBoard(force){
     try{ await fillLive([...seedMk.values()], false); }catch(e){}
     valueRows=computeValueRows();
     edgeRows=modeled;
+    // Good odds: the older value rule — even the low end of the model's 80% range beats
+    // the board ask, 6+ effective games, ranked by expected value, top 25.
+    goodRows=modeled.filter(r=>r.price!=null && r.neff>=6 && r.lo>r.price)
+                    .sort((a,b)=>(b.ev==null?-1:b.ev)-(a.ev==null?-1:a.ev)).slice(0,25);
     const nohist=rows.filter(r=>r.nohist).length;
     const vU=valueRows.filter(r=>r.side==='under').length;
     status.textContent=`${modeled.length} props modeled · ${valueRows.length} value (${valueRows.length-vU} over / ${vU} under) · ${gamesL.length} games${nohist?` · ${nohist} skipped (no game log)`:''}`;
@@ -1884,12 +1895,13 @@ async function scanBoard(force){
       const msg = gamesL.length
         ? `<p class="mktnote">No props matched players yet — early in the week the board is thin. Check back closer to game day.</p>`
         : `<p class="mktnote">📅 <b>Polymarket hasn't posted this week's player-prop markets yet.</b> They usually go up a day or two before kickoff — this board fills in automatically once they do. Nothing's broken; there's just nothing to scan yet.</p>`;
-      body.innerHTML=msg; $('valuebody').innerHTML=msg;
+      body.innerHTML=msg; $('valuebody').innerHTML=msg; $('goodbody').innerHTML=msg;
       liveWant.delete('T'); liveWant.delete('V');
-    } else { renderEdges(); renderValue(); }
+    } else { renderEdges(); renderValue(); renderGood(); }
   }catch(err){
     body.innerHTML=`<p class="mktnote">Couldn't reach Polymarket from here. The board scan works on the <b>hosted website</b>; a local file or a sandboxed preview can't call the API.</p>`;
     $('valuebody').innerHTML=`<p class="mktnote">Loads on the hosted website.</p>`;
+    $('goodbody').innerHTML=`<p class="mktnote">Loads on the hosted website.</p>`;
     liveWant.delete('T'); liveWant.delete('V');
     status.textContent='';
   }
@@ -1924,12 +1936,19 @@ function renderEdges(){
 function renderValue(){
   const body=$('valuebody');
   if(!valueRows.length){ body.innerHTML=`<p class="mktnote">No value spots right now — nothing on the board, over <i>or</i> under, clears <b>both</b> rules above. That's normal when markets are thin or efficient; the list fills back in as prices move.</p>`; liveWant.delete('V'); return; }
-  const rows=sortRows(valueRows,'vedge',-1);
+  const rows=sortRows(valueRows,'prob',-1);
   const unders=rows.filter(r=>r.side==='under').length, overs=rows.length-unders;
   const stale=rows.filter(r=>!r.vlive).length;
   body.innerHTML=pickTable(rows,{})+`<p class="mktnote" style="margin-top:8px"><b>${rows.length}</b> prop${rows.length===1?'':'s'} clear both rules at the price you'd pay right now — ${overs} over${overs===1?'':'s'} and ${unders} under${unders===1?'':'s'}${stale?`, ${stale} judged on the global book because Polymarket US has no market for them`:''}. Rechecked about once a minute, so a row leaves as soon as its price moves against it. Picks are recorded before kickoff and graded in <b>Past picks</b> — that record is taken from the global book at record time, so it can differ slightly from this list. Backward-looking; not advice.</p>`;
   wireLoad(body, rows);
   trackLive('V', rows);
+}
+function renderGood(){
+  const body=$('goodbody'); if(!body) return;
+  if(!goodRows.length){ body.innerHTML=`<p class="mktnote">No good-odds spots right now — nothing on the board where even the model's <i>low-end</i> chance beats the ask. That's normal when markets are thin or efficient.</p>`; return; }
+  const rows=sortRows(goodRows,'ev',-1).slice(0,25);
+  body.innerHTML=pickTable(rows,{})+`<p class="mktnote" style="margin-top:8px">The top 25 bets where the model's chance most beats the market — only props whose <b>bottom of the 80% range</b> still clears the price you'd pay, ranked by that edge. Prices are the <b>ask</b> on the global Polymarket book, so check your Polymarket US price before betting. Picks are recorded before kickoff and graded in <b>Past picks</b>. Backward-looking; not advice.</p>`;
+  wireLoad(body, rows);
 }
 function loadEdge(r){
   setPlayer(r.pl,{keepStat:true,keepLine:true});
@@ -2473,7 +2492,7 @@ function renderSlip(legs, raw){
 let PICKS=null, PICKMETA=null, pkLoading=false, pkShown=150;
 const pkF={src:'all', list:'listed', season:'', week:'', team:'', opp:'', pos:'', stat:'', side:'', pmin:'', pmax:'', res:'', q:''};
 let pkSort={key:'date',dir:-1};
-const LIST_NAME={T:'25 Guaranteed',V:'Value'};
+const LIST_NAME={T:'25 Guaranteed',V:'Value',G:'Good odds'};
 async function initPicks(){
   if(PICKS||pkLoading) return; pkLoading=true;
   const st=$('pkstatus'); st.textContent='Loading picks…';
@@ -2500,7 +2519,7 @@ function buildPickFilters(){
   const pctOpts=[['','Any']]; for(let i=50;i<=100;i++) pctOpts.push([String(i), i+'%']);
   wrap.innerHTML=
     sel('src','Source',[['all','2026 + 2025'],['live','2026 only'],['bt','2025 only']])+
-    sel('list','List',[['listed','Recommended (25 Guaranteed / Value)'],['T','25 Guaranteed'],['V','Value spots'],['all','All tracked props']])+
+    sel('list','List',[['listed','Recommended (25 Guaranteed / Value / Good odds)'],['T','25 Guaranteed'],['V','Value spots'],['G','Good odds'],['all','All tracked props']])+
     sel('season','Season',[['','All']].concat(seasons.map(s=>[s,s])))+
     sel('week','Week',[['','All']])+
     sel('team','Team',[['','All']].concat(teams.map(t=>[t,t])))+
@@ -2564,7 +2583,7 @@ function recordRow(label, ps){
 function renderBreakdown(rows){
   const head=`<thead><tr><th>List</th><th>Graded</th><th>Hit</th><th>Model said</th><th>Gap</th></tr></thead><tbody>`;
   $('bylist').innerHTML=head+
-    recordRow('25 Guaranteed', rows.filter(p=>(p.lists||'').includes('T')))+recordRow('Value spots', rows.filter(p=>(p.lists||'').includes('V')))+
+    recordRow('25 Guaranteed', rows.filter(p=>(p.lists||'').includes('T')))+recordRow('Value spots', rows.filter(p=>(p.lists||'').includes('V')))+recordRow('Good odds', rows.filter(p=>(p.lists||'').includes('G')))+
     recordRow('Any recommended', rows.filter(p=>p.lists))+
     recordRow('Not recommended', rows.filter(p=>!p.lists))+'</tbody>';
   const stats=uniq(rows.map(p=>p.stat)).sort((a,b)=>statLabel(a).localeCompare(statLabel(b)));
