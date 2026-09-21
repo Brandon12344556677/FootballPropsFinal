@@ -1290,11 +1290,13 @@ render();
   fetch('nba_weekly.json',{cache:'no-store'}).then(r=>r.ok?r.json():null).then(d=>{
     if(!d || !d.n){ el.hidden=true; return; }
     const up = d.units>=0, u=(up?'+':'')+(+d.units).toFixed(1);
+    const roi = d.priced ? d.units/d.priced : null;
+    const roiStr = roi==null ? '' : ` · ${roi>=0?'+':''}${Math.round(roi*100)}% ROI`;
     el.className='vwbar'+(up?'':' down');
     el.innerHTML =
       `<span class="lbl">⚡ Value spots · Week ${d.week}</span>`+
       `<span class="big">${up?'▲':'▼'} ${u} units</span>`+
-      `<span class="lbl">${d.hit}/${d.n} hit</span>`+
+      `<span class="lbl">${d.hit}/${d.n} hit${roiStr}</span>`+
       `<span class="sub">Every Value pick recorded before tip-off and graded from the box score — tap for the full record.</span>`;
     el.hidden=false;
   }).catch(()=>{ el.hidden=true; });
