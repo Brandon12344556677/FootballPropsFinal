@@ -901,14 +901,42 @@ table td,table th,thead th,tbody td,.edgetbl td,.edgetbl th,.caltbl td,.caltbl t
     <div class="mkthead"><h2>💡 Suggest a feature</h2></div>
     <p class="mktnote">Got an idea for something we should add or build into the site? Send it our way — it goes straight to the team.</p>
     <textarea id="fbtext" class="fbtext" rows="3" placeholder="What would you like us to add?"></textarea>
+    <label style="display:flex;gap:8px;align-items:flex-start;margin:10px 0 4px;font-size:13px;color:var(--muted);cursor:pointer">
+      <input type="checkbox" id="fbconsent" style="margin-top:3px;flex:none">
+      <span>I understand this opens my own email app and sends my message and email address to Prop Streak Lab so we can handle my request. See the <a href="privacy.html">Privacy Policy</a>.</span>
+    </label>
     <div class="fbrow"><button id="fbsend" class="btn" type="button">Send suggestion</button><span class="mktmuted" id="fbnote"></span></div>
   </div>
 
   <footer>
     <b>Data:</b> nflverse public weekly stats, schedules, injury reports and rosters (regular season + playoffs). Defense ranks blend this season with last. Injury status is the latest official report and can change on game day.<br>
     <b>Prices:</b> live odds come from Polymarket US, the exchange the referral links point to — every few seconds on a player's page, about once a minute in the <b>Polymarket</b> column of the week's boards, and at build time for the picks recorded in Past picks. Value spots are judged on that price, so the edge shown is the edge the pick qualified on. The global Polymarket book is only used where Polymarket US has no market for a prop at that line; its Under prices come off a mostly one-sided book and run rich, which is why they aren't trusted. Each share pays $1, so multiplier = $1 ÷ price. Backward-looking research, <b>not betting advice</b>; past accuracy is shown in the Past picks tab so you can judge it yourself.
+    <div style="margin-top:16px;padding-top:12px;border-top:1px solid var(--line)">
+      <a href="privacy.html">Privacy Policy</a> · <a href="terms.html">Terms &amp; Conditions</a> · <a href="cookies.html">Cookies Policy</a> · <a href="mailto:info@propstreaklab.com">Contact</a><br>
+      <span style="color:var(--muted)">Informational and entertainment use only — not betting or financial advice. Some links to Polymarket are affiliate links. © 2026 Prop Streak Lab.</span>
+    </div>
   </footer>
 </div>
+
+<style>
+.pslcookie{position:fixed;left:12px;right:12px;bottom:12px;z-index:9999;background:#0f2038;border:1px solid #2a3f5f;border-radius:12px;box-shadow:0 18px 44px rgba(0,0,0,.5);max-width:720px;margin:0 auto}
+.pslcookie-in{display:flex;gap:14px;align-items:center;justify-content:space-between;flex-wrap:wrap;padding:12px 16px}
+.pslcookie p{margin:0;font-size:13px;color:#dfe6ef;line-height:1.5;flex:1;min-width:230px}
+.pslcookie a{color:#35c46b}
+.pslcookie button{background:#00c805;color:#06210b;border:0;border-radius:8px;font-weight:700;padding:9px 18px;cursor:pointer;font-family:inherit;font-size:14px}
+.pslcookie button:hover{filter:brightness(1.08)}
+</style>
+<div id="pslcookie" class="pslcookie" role="region" aria-label="Privacy notice" hidden>
+  <div class="pslcookie-in">
+    <p>We use only <b>essential local storage</b> for your preferences and <b>cookieless, privacy-friendly analytics</b> — no ads, no cross-site tracking. <a href="cookies.html">Cookie Policy</a> · <a href="privacy.html">Privacy</a></p>
+    <button id="pslcookieok" type="button">Got it</button>
+  </div>
+</div>
+<script>
+(function(){var K='psl_notice_ok';try{if(localStorage.getItem(K)==='1')return;}catch(e){}
+var el=document.getElementById('pslcookie');if(!el)return;el.hidden=false;
+var ok=document.getElementById('pslcookieok');if(ok)ok.onclick=function(){el.hidden=true;try{localStorage.setItem(K,'1');}catch(e){}};})();
+</script>
 
 <script>
 const DB = __DATA__;
@@ -2210,6 +2238,7 @@ $('watchstar').onclick=()=>{ if(state.player) toggleWatch(state.player.id); };
 (function(){ const b=$('fbsend'), t=$('fbtext'), note=$('fbnote'); if(!b) return;
   b.onclick=()=>{ const msg=(t.value||'').trim();
     if(!msg){ note.textContent='Type a suggestion first.'; t.focus(); return; }
+    const c=$('fbconsent'); if(c && !c.checked){ note.textContent='Please tick the box first so we can open your email app.'; return; }
     const subject=encodeURIComponent('Prop Streak Lab — feature suggestion');
     window.location.href=`mailto:${FEEDBACK_EMAIL}?subject=${subject}&body=${encodeURIComponent(msg)}`;
     note.innerHTML=`Opening your email app… if nothing happens, email <a href="mailto:${esc(FEEDBACK_EMAIL)}">${esc(FEEDBACK_EMAIL)}</a>.`; };
