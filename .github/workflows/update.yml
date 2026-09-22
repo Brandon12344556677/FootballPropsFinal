@@ -6,10 +6,21 @@ name: Update NFL data
 # the NFL deploy). Cron is UTC; ET times are approximate (shift 1h with DST).
 on:
   schedule:
+    # Grading / catch-all runs (after games finish)
     - cron: "0 9 * * *"   # daily ~5 AM ET  — catch-all
     - cron: "0 5 * * 5"   # Fri ~1 AM ET    — after Thursday Night Football
     - cron: "0 5 * * 1"   # Mon ~1 AM ET    — after Sunday games + SNF
     - cron: "0 5 * * 2"   # Tue ~1 AM ET    — after Monday Night Football
+    # Pre-kickoff snapshot runs — fire shortly before the standard NFL slots so the
+    # board frozen into Past picks is the one right before kickoff, not the 5 AM one.
+    # build.py stops refreshing a pick once its game has started, so each game keeps
+    # the last run before its own kickoff. UTC assumes EDT; in EST (after early Nov)
+    # they fire ~1 h earlier ET — still safely pre-kickoff, just a bit further out.
+    - cron: "30 16 * * 0" # Sun ~12:30 PM ET — before the 1 PM slate
+    - cron: "50 19 * * 0" # Sun ~3:50 PM ET  — before the 4 PM slate
+    - cron: "50 23 * * 0" # Sun ~7:50 PM ET  — before Sunday Night Football
+    - cron: "45 23 * * 1" # Mon ~7:45 PM ET  — before Monday Night Football
+    - cron: "45 23 * * 4" # Thu ~7:45 PM ET  — before Thursday Night Football
   workflow_dispatch:
     inputs:
       probe:

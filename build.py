@@ -18,6 +18,7 @@ The probability model here is mirrored line-for-line in template.html (the block
 marked "MODEL"). tests/test_model.py checks the two agree. Change both or neither.
 """
 import csv, io, json, math, os, re, sys, time, datetime, unicodedata, urllib.parse, urllib.request
+from zoneinfo import ZoneInfo
 
 TODAY = datetime.date.today()
 
@@ -954,6 +955,23 @@ def match_sched_game(g, sched):
     return best[1] if best else None
 
 
+ET_ZONE = ZoneInfo("America/New_York")
+
+
+def kickoff_utc(sg):
+    """Kickoff as an aware UTC datetime from nflverse gameday + gametime (ET), or None
+    when either is missing/unparseable — the caller then falls back to freezing at 'final'."""
+    try:
+        d, t = sg.get("date"), sg.get("time")
+        if not d or not t:
+            return None
+        hh, mm = (t.split(":") + ["0"])[:2]
+        kt = datetime.datetime.fromisoformat(d).replace(hour=int(hh), minute=int(mm), tzinfo=ET_ZONE)
+        return kt.astimezone(datetime.timezone.utc)
+    except Exception:
+        return None
+
+
 # ---------------------------------------------------------------------------
 # Picks: live (from the Polymarket board, recorded before kickoff, graded after)
 # and backtest (what the model would have picked each past week, graded).
@@ -1062,11 +1080,19 @@ def assign_lists(picks):
 
 
 def build_live_picks(picks, slate_games, sched, by_key, snap, pmus=None):
-    now = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    now_dt = datetime.datetime.now(datetime.timezone.utc)
+    now = now_dt.strftime("%Y-%m-%dT%H:%M:%SZ")
     fresh = []
     for g in slate_games:
         sg = match_sched_game(g, sched)
         if not sg or sg["final"]:
+            continue
+        # Freeze the recorded board at kickoff: once a game has started, stop
+        # refreshing its picks so Past picks holds the last pre-kickoff snapshot
+        # rather than a mid-game or next-morning one. Unparseable kickoff -> old
+        # behavior (keep refreshing until the game is final).
+        ko = kickoff_utc(sg)
+        if ko is not None and now_dt >= ko:
             continue
         seen = set()
         for m in g.get("markets", []):
