@@ -4,13 +4,13 @@ Prop Streak Lab — data builder.
 
 Downloads nflverse public data (weekly player stats, schedule, injury reports,
 rosters), builds the compact dataset the site runs on, records and grades the
-site's picks, and injects the dataset into template.html to produce index.html.
+site's picks, and injects the dataset into template.html to produce nfl.html.
 
 Python 3 standard library only — nothing to install. Run locally: python build.py
 
 Outputs
   data.json   player game logs, this week's schedule, injuries, defense ranks
-  index.html  template.html with data.json baked in (the website)
+  nfl.html    template.html with data.json baked in (the NFL page; index.html is the static home page)
   slate.json  this week's Polymarket player-prop events (for the live board scan)
   picks.json  every pick the site has made (live + backtest), graded as games finish
 
@@ -1480,23 +1480,23 @@ def main():
         template = f.read()
     if "__DATA__" not in template:
         die("template.html is missing the __DATA__ placeholder")
-    with open("index.html", "w", encoding="utf-8") as f:
+    # The NFL page lives at nfl.html; index.html is the static home page (not generated).
+    with open("nfl.html", "w", encoding="utf-8") as f:
         f.write(template.replace("__DATA__", payload))
 
     # SEO: sitemap (with a fresh lastmod each build) and robots.txt.
     site = "https://propstreaklab.com"
+    pages = [("/", "daily", "1.0"), ("/nfl.html", "daily", "0.9"), ("/nba.html", "daily", "0.9"),
+             ("/nhl.html", "daily", "0.9"), ("/privacy.html", "monthly", "0.3"),
+             ("/terms.html", "monthly", "0.3"), ("/cookies.html", "monthly", "0.3")]
     with open("sitemap.xml", "w", encoding="utf-8") as f:
-        f.write(
-            '<?xml version="1.0" encoding="UTF-8"?>\n'
-            '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
-            f"  <url>\n    <loc>{site}/</loc>\n"
-            f"    <lastmod>{TODAY.isoformat()}</lastmod>\n"
-            "    <changefreq>daily</changefreq>\n    <priority>1.0</priority>\n  </url>\n"
-            f"  <url>\n    <loc>{site}/nba.html</loc>\n"
-            f"    <lastmod>{TODAY.isoformat()}</lastmod>\n"
-            "    <changefreq>daily</changefreq>\n    <priority>0.9</priority>\n  </url>\n"
-            "</urlset>\n"
-        )
+        f.write('<?xml version="1.0" encoding="UTF-8"?>\n'
+                '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n')
+        for path, freq, prio in pages:
+            f.write(f"  <url>\n    <loc>{site}{path}</loc>\n"
+                    f"    <lastmod>{TODAY.isoformat()}</lastmod>\n"
+                    f"    <changefreq>{freq}</changefreq>\n    <priority>{prio}</priority>\n  </url>\n")
+        f.write("</urlset>\n")
     with open("robots.txt", "w", encoding="utf-8") as f:
         f.write(f"User-agent: *\nAllow: /\n\nSitemap: {site}/sitemap.xml\n")
 

@@ -549,7 +549,7 @@ table td,table th,thead th,tbody td,.edgetbl td,.edgetbl th,.caltbl td,.caltbl t
 
 <style>
 /* sport toggle */
-.sportbar{display:flex;gap:10px;justify-content:center;margin:0 0 18px}
+.sportbar{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin:0 0 18px}
 .sportbtn{display:inline-flex;align-items:center;gap:8px;border:2.5px solid var(--ink);background:var(--surface);
   color:var(--muted);border-radius:999px;padding:8px 20px;font-family:var(--dispers);font-weight:700;
   text-transform:uppercase;letter-spacing:.8px;font-size:16px;cursor:pointer;text-decoration:none;box-shadow:var(--hard-sm)}
@@ -626,7 +626,8 @@ tr.hit td{background:var(--hit-soft)} tr.miss td{background:var(--miss-soft)}
   <a id="valueweekbar" class="vwbar" href="#" onclick="showTab('past');return false;" hidden></a>
 
   <div class="sportbar">
-    <a class="sportbtn" href="./" >🏈 NFL</a>
+    <a class="sportbtn" href="./">🏠 Home</a>
+    <a class="sportbtn" href="./nfl.html">🏈 NFL</a>
     <a class="sportbtn" href="./nba.html">🏀 NBA</a>
     <a class="sportbtn" href="./nhl.html" aria-current="true">🏒 NHL</a>
   </div>
@@ -808,7 +809,7 @@ tr.hit td{background:var(--hit-soft)} tr.miss td{background:var(--miss-soft)}
   </div>
 
   <footer style="text-align:center;color:var(--muted);font-size:13px;margin-top:40px">
-    Prop Streak Lab · model estimates for entertainment, not betting advice · <a href="./">NFL</a> · <a href="./nba.html">NBA</a> · 🏒 NHL<br>
+    Prop Streak Lab · model estimates for entertainment, not betting advice · <a href="./">Home</a> · <a href="./nfl.html">NFL</a> · <a href="./nba.html">NBA</a> · 🏒 NHL<br>
     <span style="display:inline-block;margin-top:10px"><a href="privacy.html">Privacy Policy</a> · <a href="terms.html">Terms &amp; Conditions</a> · <a href="cookies.html">Cookies Policy</a> · <a href="mailto:info@propstreaklab.com">Contact</a></span><br>
     <span style="display:inline-block;margin-top:6px">Informational and entertainment use only. Some links to Polymarket are affiliate links. © 2026 Prop Streak Lab.</span><br>
     <span style="display:inline-block;margin-top:6px;font-size:11px;opacity:.8">Data accuracy: stats, lines, injury reports and prices come from third-party sources (ESPN, Polymarket) and may be delayed, incomplete, or occasionally wrong. Model outputs are estimates, not guarantees — verify independently before relying on anything here.</span><br>
