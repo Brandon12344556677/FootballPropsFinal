@@ -1,6 +1,6 @@
 ﻿<meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Prop Streak Lab — NBA Player Props</title>
+<title>Prop Streak Lab — NHL Player Props</title>
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2064%2064'%3E%3Crect%20width='64'%20height='64'%20rx='14'%20fill='%230a1628'/%3E%3Cpath%20d='M32,6%20Q32,32%2054,32%20Q32,32%2032,58%20Q32,32%2010,32%20Q32,32%2032,6%20Z'%20fill='%2300c805'/%3E%3C/svg%3E">
 <script data-goatcounter="https://propstreaklive.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
 <link rel="stylesheet" href="fonts.css">
@@ -590,9 +590,9 @@ tr.hit td{background:var(--hit-soft)} tr.miss td{background:var(--miss-soft)}
   <div class="hero">
     <div class="hero-in">
       <div>
-        <div class="eyebrow">NBA Player Props · Real game logs · Tracked picks</div>
+        <div class="eyebrow">NHL Player Props · Real game logs · Tracked picks</div>
         <h1 class="hero-title">Prop <span class="hl">Streak</span> Lab<span class="tm">™</span></h1>
-        <div class="hero-tag">See how often any NBA player clears a prop, get a calibrated chance for the line, factor in pace &amp; the opponent, and check how past picks actually held up.</div>
+        <div class="hero-tag">See how often any NHL player clears a prop, get a calibrated chance for the line, factor in pace &amp; the opponent, and check how past picks actually held up.</div>
       </div>
       <div class="hero-meta"><b id="dncount">—</b>players tracked<br><br>data through<br><span class="wk" id="dnthru">—</span></div>
     </div>
@@ -602,8 +602,8 @@ tr.hit td{background:var(--hit-soft)} tr.miss td{background:var(--miss-soft)}
 
   <div class="sportbar">
     <a class="sportbtn" href="./" >🏈 NFL</a>
-    <a class="sportbtn" href="./nba.html" aria-current="true">🏀 NBA</a>
-    <a class="sportbtn" href="./nhl.html">🏒 NHL</a>
+    <a class="sportbtn" href="./nba.html">🏀 NBA</a>
+    <a class="sportbtn" href="./nhl.html" aria-current="true">🏒 NHL</a>
   </div>
 
   <div class="tabs" role="tablist">
@@ -727,14 +727,14 @@ tr.hit td{background:var(--hit-soft)} tr.miss td{background:var(--miss-soft)}
     <div id="slipdrop" class="slipdrop">
       <p style="margin:2px 0"><b>Drop a bet-slip screenshot here</b>, <label class="sliplink">browse<input type="file" id="slipfile" accept="image/*" hidden></label>, or paste it (Ctrl/⌘-V).</p>
     </div>
-    <p class="mktnote">Best-effort OCR of a DraftKings / FanDuel / Polymarket-style NBA slip. Each leg's player, prop, side and line are matched to the model and graded, and same-game legs are flagged as correlated. The image is read in your browser and never uploaded.</p>
+    <p class="mktnote">Best-effort OCR of a DraftKings / FanDuel / Polymarket-style NHL slip. Each leg's player, prop, side and line are matched to the model and graded, and same-game legs are flagged as correlated. The image is read in your browser and never uploaded.</p>
     <div id="slipstatus" class="mktmuted" style="margin:4px"></div>
     <div id="slipbody"></div>
   </div>
 
   <div class="panel" id="feedbackpanel">
     <div class="mkthead"><h2>💡 Suggest a feature</h2></div>
-    <p class="mktnote">Got an idea for something we should add to the NBA side? Send it our way — it goes straight to the team.</p>
+    <p class="mktnote">Got an idea for something we should add to the NHL side? Send it our way — it goes straight to the team.</p>
     <textarea id="fbtext" class="fbtext" rows="3" placeholder="What would you like us to add?"></textarea>
     <label style="display:flex;gap:8px;align-items:flex-start;margin:10px 0 4px;font-size:13px;color:var(--muted);cursor:pointer">
       <input type="checkbox" id="fbconsent" style="margin-top:3px;flex:none">
@@ -746,13 +746,13 @@ tr.hit td{background:var(--hit-soft)} tr.miss td{background:var(--miss-soft)}
 
 <div id="tab-picks" hidden>
   <div class="panel">
-    <div class="mkthead"><h2>📒 Past picks</h2><span class="mktmuted" id="pkcap">every NBA pick the model has recorded, graded as games finish</span></div>
+    <div class="mkthead"><h2>📒 Past picks</h2><span class="mktmuted" id="pkcap">every NHL pick the model has recorded, graded as games finish</span></div>
     <div id="pkbody"></div>
   </div>
 </div>
 
   <footer style="text-align:center;color:var(--muted);font-size:13px;margin-top:40px">
-    Prop Streak Lab · model estimates for entertainment, not betting advice · <a href="./">NFL</a> · 🏀 NBA<br>
+    Prop Streak Lab · model estimates for entertainment, not betting advice · <a href="./">NFL</a> · <a href="./nba.html">NBA</a> · 🏒 NHL<br>
     <span style="display:inline-block;margin-top:10px"><a href="privacy.html">Privacy Policy</a> · <a href="terms.html">Terms &amp; Conditions</a> · <a href="cookies.html">Cookies Policy</a> · <a href="mailto:info@propstreaklab.com">Contact</a></span><br>
     <span style="display:inline-block;margin-top:6px">Informational and entertainment use only. Some links to Polymarket are affiliate links. © 2026 Prop Streak Lab.</span><br>
     <span style="display:inline-block;margin-top:6px;font-size:11px;opacity:.8">Data accuracy: stats, lines, injury reports and prices come from third-party sources (ESPN, Polymarket) and may be delayed, incomplete, or occasionally wrong. Model outputs are estimates, not guarantees — verify independently before relying on anything here.</span><br>
@@ -781,7 +781,7 @@ var ok=document.getElementById('pslcookieok');if(ok)ok.onclick=function(){el.hid
 </script>
 
 <script>
-const DB = __NBADATA__;
+const DB = __NHLDATA__;
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const norm = s => String(s||'').toLowerCase().normalize('NFD').replace(/\p{Diacritic}/gu,'');
@@ -790,10 +790,9 @@ function fmt(x){ return (Math.round(x*10)/10).toString(); }
 function pct(p){ return Math.round(p*100)+'%'; }
 function cents(p){ return p==null? '' : Math.round(p*100)+'¢'; }
 
-// ==== MODEL (mirrored in build_nba.py — keep identical) ====
+// ==== MODEL (mirrored in build_nhl.py — keep identical) ====
 const MODEL = {halfLife:6, maxGames:20, priorK:0.5, bwConst:0.9, z:1.2816};
-const BW_FLOOR = {pts:3.0, reb:1.2, ast:1.0, tpm:0.7, stl:0.5, blk:0.5, to:0.7, min:3.0,
-  fgm:1.4, fga:2.0, ftm:1.2, fta:1.4, pra:4.0, pr:3.4, pa:3.4, ra:1.6};
+const BW_FLOOR = {pts:0.6, g:0.5, a:0.5, sog:1.0, blk:0.7, hit:1.0, sv:4.0, toi:3.0};
 const CTX = {betaPts:0.30, gamma:0.45, clampLo:0.6, clampHi:1.6};
 function erf(x){ const s=x>=0?1:-1; x=Math.abs(x); const t=1/(1+0.3275911*x);
   const y=1-(((((1.061405429*t-1.453152027)*t)+1.421413741)*t-0.284496736)*t+0.254829592)*t*Math.exp(-x*x); return s*y; }
@@ -823,7 +822,7 @@ function seedLine(values){ const last=values.slice(-10); if(!last.length) return
 function gradeResult(actual, line, side){ if(actual===line) return 'push'; if(side==='over') return actual>line?'hit':'miss'; return actual<line?'hit':'miss'; }
 function sideProb(mp){ if(mp.over>=0.5) return {side:'over', prob:mp.over, lo:mp.lo, hi:mp.hi}; return {side:'under', prob:mp.under, lo:1-mp.hi, hi:1-mp.lo}; }
 function histPts(rows){ const r=rows.slice(-MODEL.maxGames), n=r.length; let sp=0, wp=0;
-  r.forEach((g,i)=>{ const tot=g[18], spr=g[19]; if(tot==null||spr==null) return;
+  r.forEach((g,i)=>{ const tot=g[14], spr=g[15]; if(tot==null||spr==null) return;
     const w=Math.pow(0.5,(n-1-i)/MODEL.halfLife); sp+=w*(tot/2+spr/2); wp+=w; });
   return wp? sp/wp : null; }
 function contextScale(hp, gamePts, defR){
@@ -841,20 +840,14 @@ function calMp(mp){ if(!mp) return mp; const T=_calT(); if(T===1) return mp; con
 // Row indices: 0 season 1 date 2 opp 3 type 4 pts 5 reb 6 ast 7 tpm 8 stl 9 blk 10 to 11 min
 //              12 fgm 13 fga 14 ftm 15 fta 16 home 17 started 18 total 19 spread
 const STATS = [
-  {key:'pts', label:'Points',      grp:'Scoring',   get:g=>g[4]},
-  {key:'tpm', label:'3-Pointers',  grp:'Scoring',   get:g=>g[7]},
-  {key:'fgm', label:'FG Made',     grp:'Scoring',   get:g=>g[12]},
-  {key:'ftm', label:'FT Made',     grp:'Scoring',   get:g=>g[14]},
-  {key:'reb', label:'Rebounds',    grp:'Boards & Dimes', get:g=>g[5]},
-  {key:'ast', label:'Assists',     grp:'Boards & Dimes', get:g=>g[6]},
-  {key:'stl', label:'Steals',      grp:'Defense',   get:g=>g[8]},
-  {key:'blk', label:'Blocks',      grp:'Defense',   get:g=>g[9]},
-  {key:'to',  label:'Turnovers',   grp:'Defense',   get:g=>g[10]},
-  {key:'pra', label:'Pts+Reb+Ast', grp:'Combos',    get:g=>g[4]+g[5]+g[6]},
-  {key:'pr',  label:'Pts+Reb',     grp:'Combos',    get:g=>g[4]+g[5]},
-  {key:'pa',  label:'Pts+Ast',     grp:'Combos',    get:g=>g[4]+g[6]},
-  {key:'ra',  label:'Reb+Ast',     grp:'Combos',    get:g=>g[5]+g[6]},
-  {key:'min', label:'Minutes',     grp:'Combos',    get:g=>g[11]},
+  {key:'pts', label:'Points',        grp:'Scoring',      get:g=>g[4]},
+  {key:'g',   label:'Goals',         grp:'Scoring',      get:g=>g[5]},
+  {key:'a',   label:'Assists',       grp:'Scoring',      get:g=>g[6]},
+  {key:'sog', label:'Shots on Goal', grp:'Shots & Hits', get:g=>g[7]},
+  {key:'blk', label:'Blocked Shots', grp:'Shots & Hits', get:g=>g[8]},
+  {key:'hit', label:'Hits',          grp:'Shots & Hits', get:g=>g[9]},
+  {key:'sv',  label:'Saves',         grp:'Goalie',       get:g=>g[10]},
+  {key:'toi', label:'Time on Ice',   grp:'Goalie',       get:g=>g[11]},
 ];
 const STATMAP = Object.fromEntries(STATS.map(s=>[s.key,s]));
 const GRPORDER = ['Scoring','Boards & Dimes','Defense','Combos'];
@@ -884,8 +877,8 @@ function gamesOf(p){ if(!p) return []; return state.playoffs? p.g : p.g.filter(x
 function games(){ return gamesOf(state.player); }
 function valuesOf(p, sk){ const st=STATMAP[sk]; return gamesOf(p).map(st.get); }
 function defRatioFor(opp, sk){ const ds=DEF_FOR[sk];
-  if(!opp||!ds||!DB.defense||!DB.defense[opp]||!DB.defense[opp]['NBA']||!DB.defense[opp]['NBA'][ds]||!DB.defAvg||!DB.defAvg['NBA']||!DB.defAvg['NBA'][ds]) return null;
-  return DB.defense[opp]['NBA'][ds].a/DB.defAvg['NBA'][ds]; }
+  if(!opp||!ds||!DB.defense||!DB.defense[opp]||!DB.defense[opp]['NHL']||!DB.defense[opp]['NHL'][ds]||!DB.defAvg||!DB.defAvg['NHL']||!DB.defAvg['NHL'][ds]) return null;
+  return DB.defense[opp]['NHL'][ds].a/DB.defAvg['NHL'][ds]; }
 function contextFor(p, sk, oppOverride, gameOverride){
   const off={scale:1, env:1, def:1, opp:null, gamePts:null, defRatio:null, on:false};
   if(!state.adj||!p) return off;
@@ -1053,8 +1046,8 @@ function renderMatchup(p, sk){ const sel=$('oppsel'); const teams=Object.keys(DB
   if(sel.value==='' && auto){ sel.value=auto; }
   $('oppauto').textContent = auto? (sel.value===auto?'(tonight\'s opponent)':'') : '';
   const ds=DEF_FOR[sk];
-  if(!opp||!ds||!DB.defense[opp]||!DB.defense[opp]['NBA']||!DB.defense[opp]['NBA'][ds]){ $('splitbody').innerHTML='<p class="mktnote">No defensive matchup data for this stat/opponent yet.</p>'; return; }
-  const d=DB.defense[opp]['NBA'][ds], L=DB.defAvg['NBA'][ds], ratio=d.a/L;
+  if(!opp||!ds||!DB.defense[opp]||!DB.defense[opp]['NHL']||!DB.defense[opp]['NHL'][ds]){ $('splitbody').innerHTML='<p class="mktnote">No defensive matchup data for this stat/opponent yet.</p>'; return; }
+  const d=DB.defense[opp]['NHL'][ds], L=DB.defAvg['NHL'][ds], ratio=d.a/L;
   const rank=d.r, n=d.n, softness= rank<=Math.ceil(n/3)?'a soft spot':rank>=Math.ceil(2*n/3)?'a tough matchup':'middle of the pack';
   $('splitbody').innerHTML=`<p>Vs <b>${esc(opp)}</b>, opponents average <b>${d.a}</b> ${esc(ds)} — league avg ${L} (×${fmt(ratio)}). `+
     `That's <b>${esc(softness)}</b> (ranked ${rank}/${n}, 1 = allows the most).</p>`;
@@ -1107,7 +1100,7 @@ function renderValue(){ const panel=$('valuepanel'), body=$('valuebody'); if(!pa
 
 // ---- Hit streak leaderboard ----
 function computeStreak(vals, line){ let s=0; for(let i=vals.length-1;i>=0;i--){ if(vals[i]>line) s++; else break; } return s; }
-const LEADER_STATS=['pts','reb','ast','tpm','pra'];
+const LEADER_STATS=['pts','sog','g'];
 function buildLeaderboard(){
   const rows=[];
   DB.players.forEach(p=>{ if(!p.g||p.g.length<4) return; const live=p.g[p.g.length-1][0]===CUR_SEASON; if(!live) return;
@@ -1131,7 +1124,7 @@ function initPicks(){ renderPast(); }   // Past tab opened
 function renderPast(){ const body=$('pkbody'); if(!body) return;
   if(PICKS===null){ body.innerHTML='<p class="mktnote">Loading…</p>'; return; }
   const graded=PICKS.filter(p=>p.res==='hit'||p.res==='miss'||p.res==='push');
-  if(!graded.length){ body.innerHTML='<p class="mktnote">No graded NBA picks yet. Every upcoming pick is recorded before tip-off and shows here once the box score is final — this fills in as games are played.</p>'; return; }
+  if(!graded.length){ body.innerHTML='<p class="mktnote">No graded NHL picks yet. Every upcoming pick is recorded before tip-off and shows here once the box score is final — this fills in as games are played.</p>'; return; }
   const hm=graded.filter(p=>p.res!=='push'); const hit=hm.filter(p=>p.res==='hit').length;
   let h = hm.length? `<p><b>Record: ${hit}/${hm.length} (${Math.round(100*hit/hm.length)}%)</b> on graded picks.</p>` : '';
   const show=graded.slice().sort((a,b)=>(b.date||'').localeCompare(a.date||'')).slice(0,200);
@@ -1223,7 +1216,7 @@ const FEEDBACK_EMAIL = "info@propstreaklab.com";
   b.onclick=()=>{ const msg=(t.value||'').trim();
     if(!msg){ note.textContent='Type a suggestion first.'; t.focus(); return; }
     const c=$('fbconsent'); if(c && !c.checked){ note.textContent='Please tick the box first so we can open your email app.'; return; }
-    const subject=encodeURIComponent('Prop Streak Lab NBA — feature suggestion');
+    const subject=encodeURIComponent('Prop Streak Lab NHL — feature suggestion');
     window.location.href=`mailto:${FEEDBACK_EMAIL}?subject=${subject}&body=${encodeURIComponent(msg)}`;
     note.innerHTML=`Opening your email app… if nothing happens, email <a href="mailto:${esc(FEEDBACK_EMAIL)}">${esc(FEEDBACK_EMAIL)}</a>.`; };
 })();
