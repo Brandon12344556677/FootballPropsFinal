@@ -235,6 +235,20 @@ h2 i{color:var(--green)}
   border-radius:999px;padding:11px 20px;font-family:var(--cond);font-weight:700;letter-spacing:.1em;text-transform:uppercase;font-size:15px;transition:all .15s ease}
 .social a:hover{border-color:var(--green);color:var(--green);transform:translateY(-2px)}
 
+/* promo strip at the top of the page */
+.promo{padding:18px 0 0}
+.promo .ref{margin:0 auto}
+.promo .ref2{margin:10px auto 0}
+.promo .social{margin-top:14px;align-items:center;gap:10px}
+.promo .social a{padding:8px 16px;font-size:14px}
+.promo .follow{font-family:var(--display);font-size:22px;color:var(--green);margin-right:4px}
+.promo + .hero{padding-top:44px}
+@media (max-width:620px){
+  .promo .ref{font-size:14.5px;padding:13px 14px}
+  .promo .ref2{font-size:14px;padding:11px 14px}
+  .promo .follow{width:100%;text-align:center;margin:0}
+}
+
 /* footer */
 footer{margin-top:80px;border-top:1px solid rgba(255,255,255,.07);padding:36px 0 60px;color:var(--muted);font-size:13.5px}
 footer .row{display:flex;flex-wrap:wrap;gap:18px;justify-content:space-between;align-items:center;margin-bottom:18px}
@@ -318,6 +332,20 @@ footer .fine a{color:#8394ab}
 </header>
 
 <main>
+  <!-- PROMO: Polymarket code, group, and social handles — first thing on the page -->
+  <div class="promo">
+    <div class="wrap">
+      <a class="ref" href="https://polymarket.us/join/propstreaklab" target="_blank" rel="noopener sponsored">🎁 Get $50 FREE with code PROPSTREAKLAB — sign up &amp; trade on Polymarket →</a>
+      <a class="ref2" href="https://polymarket.us/squad/join/CDU9RMD97K7O1G95yAao?referrer=propstreaklab" target="_blank" rel="noopener sponsored">👥 Join our Polymarket group →</a>
+      <div class="social" aria-label="Follow us">
+        <span class="follow">Follow us</span>
+        <a href="https://www.instagram.com/propstreaklab" target="_blank" rel="noopener">📸 Instagram</a>
+        <a href="https://www.tiktok.com/@propstreaklab" target="_blank" rel="noopener">🎵 TikTok</a>
+        <a href="https://x.com/propstreaklab" target="_blank" rel="noopener">𝕏 Twitter</a>
+      </div>
+    </div>
+  </div>
+
   <!-- HERO -->
   <section class="hero" aria-labelledby="hero-h">
     <div class="wrap">
@@ -546,13 +574,6 @@ footer .fine a{color:#8394ab}
           <a class="sport" href="./nba.html"><span class="ico" aria-hidden="true">🏀</span><span><b>NBA</b><small>Open the board</small></span></a>
           <a class="sport" href="./nhl.html"><span class="ico" aria-hidden="true">🏒</span><span><b>NHL</b><small>Open the board</small></span></a>
         </div>
-      </div>
-      <a class="ref rv" href="https://polymarket.us/join/propstreaklab" target="_blank" rel="noopener sponsored">🎁 Get $50 FREE with code PROPSTREAKLAB — sign up &amp; trade on Polymarket →</a>
-      <a class="ref2 rv" href="https://polymarket.us/squad/join/CDU9RMD97K7O1G95yAao?referrer=propstreaklab" target="_blank" rel="noopener sponsored">👥 Join our Polymarket group →</a>
-      <div class="social rv" aria-label="Follow us">
-        <a href="https://www.instagram.com/propstreaklab" target="_blank" rel="noopener">📸 Instagram</a>
-        <a href="https://www.tiktok.com/@propstreaklab" target="_blank" rel="noopener">🎵 TikTok</a>
-        <a href="https://x.com/propstreaklab" target="_blank" rel="noopener">𝕏 Twitter</a>
       </div>
     </div>
   </section>
