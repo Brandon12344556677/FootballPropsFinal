@@ -607,7 +607,7 @@ tr.hit td{background:var(--hit-soft)} tr.miss td{background:var(--miss-soft)}
   </div>
 
   <div class="tabs" role="tablist">
-    <button class="tab" role="tab" data-tab="week" aria-selected="true">🗓️ Upcoming</button>
+    <button class="tab" role="tab" data-tab="week" aria-selected="true">📅 This week</button>
     <button class="tab" role="tab" data-tab="player" aria-selected="false">🔬 Player</button>
     <button class="tab" role="tab" data-tab="tools" aria-selected="false">🧰 Tools</button>
     <button class="tab" role="tab" data-tab="past" aria-selected="false">📒 Past picks</button>
@@ -616,13 +616,21 @@ tr.hit td{background:var(--hit-soft)} tr.miss td{background:var(--miss-soft)}
   <a id="refbanner" class="refbanner" href="#" target="_blank" rel="noopener" hidden></a>
 
 <div id="page-week">
+  <div class="panel" id="digestpanel" hidden>
+    <div class="mkthead"><h2>📰 This week</h2><span class="mktmuted" id="digestcap"></span></div>
+    <div id="digestbody"></div>
+  </div>
+  <div class="panel" id="edgepanel">
+    <div class="mkthead"><h2>🔒 25 Guaranteed</h2><span class="mktmuted">the 25 highest model chances on the upcoming slate — the surest plays by the numbers</span></div>
+    <div id="edgebody"></div>
+  </div>
   <div class="panel" id="valuepanel" hidden>
-    <div class="mkthead"><h2>⚡ Value spots</h2><span class="mktmuted">where the model's odds most beat the market — even the low end of its range clears the price</span></div>
+    <div class="mkthead"><h2>⚡ Value spots</h2><span class="mktmuted">where the model's chance most beats the live market price</span></div>
     <div id="valuebody"></div>
   </div>
-  <div class="panel" id="boardpanel">
-    <div class="mkthead"><h2>🗓️ Upcoming Game Props</h2><span class="mktmuted" id="boardcap">the model's picks for games on the upcoming schedule</span></div>
-    <div id="boardbody"></div>
+  <div class="panel" id="goodpanel" hidden>
+    <div class="mkthead"><h2>🎯 Good odds</h2><span class="mktmuted">even the low end of the model's range beats the ask — ranked by edge</span></div>
+    <div id="goodbody"></div>
   </div>
   <div class="panel" id="lbpanel">
     <div class="mkthead"><h2>🔥 Hit streak leaderboard</h2><span class="mktmuted">longest active over streaks — consecutive games clearing the site's realistic line</span></div>
@@ -1056,31 +1064,39 @@ function renderMatchup(p, sk){ const sel=$('oppsel'); const teams=Object.keys(DB
 // ---- Upcoming games (from recorded, not-yet-graded picks) ----
 const TODAY_ISO = DB.gen || new Date().toISOString().slice(0,10);
 function gameTeams(p){ return [p.team, p.opp].sort(); }
-function renderUpcoming(){
-  const body=$('boardbody');
+function upcomingPicks(){ return (PICKS||[]).filter(p=>p.res==null && (p.date||'')>=TODAY_ISO); }
+function scheduleNote(what){
+  const games=(WEEK.games||[]).filter(g=>!g.final);
+  if(games.length) return games.map(g=>`<div class="boardrow"><div><div class="bp">${esc(g.away)} @ ${esc(g.home)}</div>`+
+    `<div class="bmeta">${esc(dlabel(g.date))}${g.time?' · '+esc(g.time)+' ET':''}</div></div><div></div>`+
+    `<div class="bmeta">picks post before puck drop</div></div>`).join('');
+  return `<p class="mktnote">No upcoming games on the schedule yet — ${what} fills in automatically before puck drop once the season's games are posted. The <b>Player</b> tab works now on recent game logs.</p>`;
+}
+function renderEdges(){ const body=$('edgebody'); if(!body) return;
   if(PICKS===null){ body.innerHTML='<p class="mktnote">Loading…</p>'; return; }
-  const up=PICKS.filter(p=>p.res==null && (p.date||'')>=TODAY_ISO);
-  if(!up.length){
-    const games=(WEEK.games||[]).filter(g=>!g.final);
-    if(games.length){
-      body.innerHTML=games.map(g=>`<div class="boardrow"><div><div class="bp">${esc(g.away)} @ ${esc(g.home)}</div>`+
-        `<div class="bmeta">${esc(dlabel(g.date))}${g.time?' · '+esc(g.time)+' ET':''}</div></div><div></div>`+
-        `<div class="bmeta">picks post before tip-off</div></div>`).join('');
-      return;
-    }
-    body.innerHTML='<p class="mktnote">No upcoming games on the schedule yet — this fills in automatically once games are posted. The <b>Player</b> tab works now on recent game logs.</p>'; return;
-  }
-  const groups={};
-  up.forEach(p=>{ const tt=gameTeams(p); const k=(p.date||'')+'|'+tt.join('@');
-    (groups[k]=groups[k]||{date:p.date||'', teams:tt, picks:[]}); groups[k].picks.push(p); });
-  const keys=Object.keys(groups).sort((a,b)=>groups[a].date.localeCompare(groups[b].date));
-  let h='';
-  keys.forEach(k=>{ const g=groups[k];
-    h+=`<div class="mkthead" style="margin:16px 0 8px"><h2 style="font-size:19px">${esc(dlabel(g.date))} · ${esc(g.teams[0])} vs ${esc(g.teams[1])}</h2></div>`;
-    const ps=g.picks.slice().sort((a,b)=>(b.prob||0)-(a.prob||0)).slice(0,15);
-    h+=ps.map(x=>pickRow(x)).join('');
-  });
-  body.innerHTML=h;
+  const t=upcomingPicks().filter(p=>(p.lists||'').includes('T'));
+  if(!t.length){ body.innerHTML=scheduleNote('the 25 Guaranteed board'); return; }
+  const rows=t.slice().sort((a,b)=>(b.prob||0)-(a.prob||0)).slice(0,25);
+  body.innerHTML=rows.map(pickRow).join('')+`<p class="mktnote" style="margin-top:8px">The <b>${rows.length}</b> highest model chances on the upcoming slate, regardless of payout — the surest plays by the numbers. Recorded before puck drop and graded in <b>Past picks</b>.</p>`;
+}
+function renderGood(){ const panel=$('goodpanel'), body=$('goodbody'); if(!panel||!body) return;
+  if(PICKS===null){ panel.hidden=true; return; }
+  panel.hidden=false;
+  const g=upcomingPicks().filter(p=>(p.lists||'').includes('G') && p.price!=null);
+  if(!g.length){ body.innerHTML='<p class="mktnote">Good odds ranks picks where even the <b>low end</b> of the model’s range beats the price you’d pay. It needs live prices, so it lights up automatically once <b>Polymarket lists NHL markets</b> — none are posted yet.</p>'; return; }
+  g.sort((a,b)=>(b.prob||0)-(a.prob||0));
+  body.innerHTML=g.slice(0,25).map(pickRow).join('');
+}
+function generateDigest(){ const panel=$('digestpanel'), body=$('digestbody'), cap=$('digestcap'); if(!panel||!body) return;
+  if(PICKS===null){ panel.hidden=true; return; }
+  const up=upcomingPicks().filter(p=>p.prob!=null);
+  if(!up.length){ panel.hidden=true; return; }
+  const best=up.slice().sort((a,b)=>b.prob-a.prob);
+  const near=best.filter(p=>p.prob>=0.85);
+  const desc=p=>`<b>${esc(p.player)}</b> ${esc(p.side)} ${p.line} ${esc(statLabel(p.stat))} (${pct(p.prob)})`;
+  let s=`<p><b>Cleanest looks:</b> `+best.slice(0,3).map(desc).join(', ')+`.</p>`;
+  if(near.length) s+=`<p><b>Near-locks:</b> ${near.length} pick${near.length===1?'':'s'} above 85% on the slate.</p>`;
+  body.innerHTML=s; if(cap) cap.textContent='auto-generated from the model'; panel.hidden=false;
 }
 function pickRow(x){ const cls=x.prob>=0.7?'hi':x.prob>=0.6?'mid':'lo';
   const val=(x.lists||'').includes('V');
@@ -1089,13 +1105,13 @@ function pickRow(x){ const cls=x.prob>=0.7?'hi':x.prob>=0.6?'mid':'lo';
     `<div class="bpick">${esc(statLabel(x.stat))} ${esc(x.side)} ${esc(x.line)}</div></div>`+
     `<div style="text-align:right">${mid.join('<br>')}</div><div class="bprob ${cls}">${x.prob!=null?pct(x.prob):'—'}</div></div>`;
 }
-function renderValue(){ const panel=$('valuepanel'), body=$('valuebody'); if(!panel) return;
+function renderValue(){ const panel=$('valuepanel'), body=$('valuebody'); if(!panel||!body) return;
   if(PICKS===null){ panel.hidden=true; return; }
-  const v=PICKS.filter(p=>(p.lists||'').includes('V') && p.res==null && (p.date||'')>=TODAY_ISO && p.price!=null);
-  if(!v.length){ panel.hidden=true; return; }
   panel.hidden=false;
+  const v=upcomingPicks().filter(p=>(p.lists||'').includes('V') && p.price!=null);
+  if(!v.length){ body.innerHTML='<p class="mktnote">Value spots compare the model’s chance to the <b>live market price</b> (35¢+ ask, model 25+ points higher). They light up automatically once <b>Polymarket lists NHL markets</b> — none are posted yet, so this is empty for now.</p>'; return; }
   v.sort((a,b)=>((b.prob/b.price)-(a.prob/a.price)));
-  body.innerHTML=v.slice(0,25).map(x=>pickRow(x)).join('');
+  body.innerHTML=v.slice(0,25).map(pickRow).join('');
 }
 
 // ---- Hit streak leaderboard ----
@@ -1115,10 +1131,10 @@ function buildLeaderboard(){
 // ---- Picks store (drives both Upcoming and Past) ----
 let PICKS=null;
 function loadPicks(){
-  fetch('./nba_picks.json',{cache:'no-store'}).then(r=>r.ok?r.json():null).then(d=>{
+  fetch('./nhl_picks.json',{cache:'no-store'}).then(r=>r.ok?r.json():null).then(d=>{
     if(!d||!d.picks){ PICKS=[]; } else { const cols=d.cols; PICKS=d.picks.map(row=>Object.fromEntries(cols.map((c,i)=>[c,row[i]]))); }
-    renderValue(); renderUpcoming(); renderPast(); renderApTeams();
-  }).catch(()=>{ PICKS=[]; renderValue(); renderUpcoming(); renderPast(); renderApTeams(); });
+    renderEdges(); renderValue(); renderGood(); generateDigest(); renderPast(); renderApTeams();
+  }).catch(()=>{ PICKS=[]; renderEdges(); renderValue(); renderGood(); generateDigest(); renderPast(); renderApTeams(); });
 }
 function initPicks(){ renderPast(); }   // Past tab opened
 function renderPast(){ const body=$('pkbody'); if(!body) return;
@@ -1135,9 +1151,9 @@ function renderPast(){ const body=$('pkbody'); if(!body) return;
 }
 
 // ---- Tools: watchlist, compare, parlay ----
-let WATCH=[]; try{ WATCH=JSON.parse(localStorage.getItem('psl_nba_watch')||'[]'); if(!Array.isArray(WATCH)) WATCH=[]; }catch(e){ WATCH=[]; }
-let CMP=[];   try{ CMP=JSON.parse(localStorage.getItem('psl_nba_cmp')||'[]'); if(!Array.isArray(CMP)) CMP=[]; }catch(e){ CMP=[]; }
-function saveTools(){ try{ localStorage.setItem('psl_nba_watch',JSON.stringify(WATCH)); localStorage.setItem('psl_nba_cmp',JSON.stringify(CMP)); }catch(e){} }
+let WATCH=[]; try{ WATCH=JSON.parse(localStorage.getItem('psl_nhl_watch')||'[]'); if(!Array.isArray(WATCH)) WATCH=[]; }catch(e){ WATCH=[]; }
+let CMP=[];   try{ CMP=JSON.parse(localStorage.getItem('psl_nhl_cmp')||'[]'); if(!Array.isArray(CMP)) CMP=[]; }catch(e){ CMP=[]; }
+function saveTools(){ try{ localStorage.setItem('psl_nhl_watch',JSON.stringify(WATCH)); localStorage.setItem('psl_nhl_cmp',JSON.stringify(CMP)); }catch(e){} }
 function updatePlayerBtns(){ const box=$('playerbtns'), p=state.player; if(!box) return;
   if(!p){ box.hidden=true; return; } box.hidden=false;
   const w=WATCH.includes(p.id), c=CMP.includes(p.id);
@@ -1302,13 +1318,13 @@ async function scanSlip(blob){
     for(const it of items){ if(it.type&&it.type.startsWith('image/')){ const f=it.getAsFile(); if(f){ scanSlip(f); e.preventDefault(); break; } } } }); })();
 
 // ---- boot ----
-renderUpcoming();     // shows "Loading…" until picks arrive
+renderEdges();        // shows "Loading…" until picks arrive
 loadPicks();
 buildLeaderboard();
 render();
 (function renderValueWeek(){
   const el=$('valueweekbar'); if(!el) return;
-  fetch('nba_weekly.json',{cache:'no-store'}).then(r=>r.ok?r.json():null).then(d=>{
+  fetch('nhl_weekly.json',{cache:'no-store'}).then(r=>r.ok?r.json():null).then(d=>{
     if(!d || !d.n){ el.hidden=true; return; }
     const up = d.units>=0, u=(up?'+':'')+(+d.units).toFixed(1);
     const roi = d.priced ? d.units/d.priced : null;
