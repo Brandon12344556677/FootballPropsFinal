@@ -30,8 +30,11 @@ UA = {"User-Agent": "prop-streak-lab/2.0 (+https://propstreaklab.com)"}
 # cdn "core" boxscore (full player stats by game id). The cdn scoreboard ignores
 # the date param, so it's only used for the current/upcoming slate.
 ESPN_CORE_EVENTS = "https://sports.core.api.espn.com/v2/sports/hockey/leagues/nhl/events?dates={date}&limit=100"
-ESPN_CDN_BOX = "https://cdn.espn.com/core/nhl/boxscore?xhr=1&gameId={gid}"
-ESPN_CDN_SB = "https://cdn.espn.com/core/nhl/scoreboard?xhr=1"
+# The cdn core boxscore that works for NBA 404s for NHL, so use the web summary
+# API (a different host than the Akamai-blocked site.api). Its boxscore/header sit
+# at the top level rather than under gamepackageJSON.
+ESPN_CDN_BOX = "https://site.web.api.espn.com/apis/site/v2/sports/hockey/nhl/summary?event={gid}"
+ESPN_CDN_SB = "https://site.web.api.espn.com/apis/site/v2/sports/hockey/nhl/scoreboard"
 
 # Polymarket NHL player-prop markets (auto-activates when the season posts them;
 # off-season it simply finds nothing and the board stays model-only). Mirrors the
@@ -509,7 +512,7 @@ def fetch_new_games(store):
                     print(f"    box {gid}: skipped ({e})")
                     complete_date = False
                     continue
-                gpj = bx.get("gamepackageJSON") or {}
+                gpj = bx.get("gamepackageJSON") or bx    # summary API puts these at top level
                 completed, home, away, date_g, stype = header_meta(gpj)
                 if not completed:
                     complete_date = False        # a game that day isn't final yet
