@@ -786,6 +786,16 @@ tr.hit td{background:var(--hit-soft)} tr.miss td{background:var(--miss-soft)}
     <div id="slipbody"></div>
   </div>
 
+</div>
+
+<div id="tab-picks" hidden>
+  <div class="panel">
+    <div class="mkthead"><h2>📒 Past picks</h2><span class="mktmuted" id="pkcap">every NHL pick the model has recorded, graded as games finish</span></div>
+    <div id="pkbody"></div>
+  </div>
+</div>
+
+  <!-- Outside the tabs (like the NFL page), so it shows at the bottom of every tab. -->
   <div class="panel" id="feedbackpanel">
     <div class="mkthead"><h2>💡 Suggest a feature</h2></div>
     <p class="mktnote">Got an idea for something we should add to the NHL side? Send it our way — it goes straight to the team.</p>
@@ -796,14 +806,6 @@ tr.hit td{background:var(--hit-soft)} tr.miss td{background:var(--miss-soft)}
     </label>
     <div class="fbrow"><button id="fbsend" class="btn" type="button">Send suggestion</button><span class="mktmuted" id="fbnote"></span></div>
   </div>
-</div>
-
-<div id="tab-picks" hidden>
-  <div class="panel">
-    <div class="mkthead"><h2>📒 Past picks</h2><span class="mktmuted" id="pkcap">every NHL pick the model has recorded, graded as games finish</span></div>
-    <div id="pkbody"></div>
-  </div>
-</div>
 
   <footer style="text-align:center;color:var(--muted);font-size:13px;margin-top:40px">
     Prop Streak Lab · model estimates for entertainment, not betting advice · <a href="./">NFL</a> · <a href="./nba.html">NBA</a> · 🏒 NHL<br>
@@ -1418,10 +1420,6 @@ async function scanSlip(blob){
     for(const it of items){ if(it.type&&it.type.startsWith('image/')){ const f=it.getAsFile(); if(f){ scanSlip(f); e.preventDefault(); break; } } } }); })();
 
 // ---- boot ----
-renderEdges();        // shows "Loading…" until picks arrive
-loadPicks();
-buildLeaderboard();
-render();
 // ▼▼▼ Polymarket referral banners + social follow links — same as the NFL page. Leave a url "" to hide it. ▼▼▼
 const REFERRAL = { url: "https://polymarket.us/join/propstreaklab", text: "🎁 Get $50 FREE with code PROPSTREAKLAB — sign up & trade on Polymarket →" };
 const REFERRAL2 = { url: "https://polymarket.us/squad/join/CDU9RMD97K7O1G95yAao?referrer=propstreaklab", text: "👥 Join our Polymarket group →" };
@@ -1434,6 +1432,10 @@ const SOCIAL = { instagram: "https://www.instagram.com/propstreaklab", tiktok: "
   if(SOCIAL.tiktok){ tt.href=SOCIAL.tiktok; tt.hidden=false; } else tt.hidden=true;
   if(xa){ if(SOCIAL.x){ xa.href=SOCIAL.x; xa.hidden=false; } else xa.hidden=true; }
   bar.hidden = !(SOCIAL.instagram||SOCIAL.tiktok||SOCIAL.x); })();
+renderEdges();        // shows "Loading…" until picks arrive
+loadPicks();
+buildLeaderboard();
+render();
 // Live record per list in the panel headers (T / V / G), like the NFL page.
 (function renderRecords(){ const R=DB.record||{};
   [['recT','T'],['recV','V'],['recG','G']].forEach(([id,k])=>{ const el=$(id); if(!el) return; const r=R[k];
