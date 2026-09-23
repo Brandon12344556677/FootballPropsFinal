@@ -683,6 +683,16 @@ PICK_COLS = ["src", "gid", "season", "date", "pid", "player", "pos", "team", "op
 BOARD_STATS = ["pts", "sog", "g"]
 TOP_N = 25
 VALUE_MIN_NEFF = 6.0
+# Value / Good odds rules mirror build.py (NFL) so every sport's lists mean the same.
+VALUE_N = 20            # Value: the 20 with the highest model chance that clear the bar
+GOOD_N = 25             # Good odds: top 25 by expected value
+VALUE_MIN_PRICE = 0.35  # the market has to give it at least 35%
+VALUE_MIN_EDGE = 0.25   # and the model has to be 25+ points higher
+
+
+def value_qualifies(prob, price):
+    """prob and price are fractions; price is what you'd pay for this side."""
+    return price is not None and price >= VALUE_MIN_PRICE and prob - price >= VALUE_MIN_EDGE
 
 
 def stat_get(row, sk):
@@ -843,22 +853,38 @@ def grade_picks(picks, by_pid):
 
 
 def assign_lists(picks):
-    """T = 25 highest model chances. V = up to 25 best-value priced picks where even
-    the low end of the model range beats the market price (empty until markets exist)."""
-    for p in picks:
-        p["lists"] = ""
+    """Mirrors build.py (NFL). T = the 25 highest model chances ('25 Guaranteed').
+    V = 'Value' — the market prices it at 35c or more and the model puts it 25+ points
+    higher, the 20 with the highest model chance. G = 'Good odds' — on the side the
+    model leans, even the low end of the 80% range beats the ask, 6+ effective games,
+    ranked by expected value, top 25, never also Value. Prices are fractions here.
+    Only pending picks are (re)tagged: a graded pick keeps the lists it was graded
+    under, so the live record by list builds up across runs."""
     pending = [p for p in picks if p.get("res") is None]
-    for p in sorted(pending, key=lambda p: (-p["prob"], -p["neff"]))[:TOP_N]:
+    for p in pending:
+        p["lists"] = ""
+    ranked = sorted((p for p in pending if p["prob"] >= 0.5), key=lambda p: (-p["prob"], -p["neff"]))
+    for p in ranked[:TOP_N]:
         p["lists"] += "T"
-    vals = []
+    vals = [p for p in pending if p.get("price") is not None and p["neff"] >= VALUE_MIN_NEFF
+            and value_qualifies(p["prob"], p["price"])]
+    vals.sort(key=lambda p: -p["prob"])
+    vals = vals[:VALUE_N]
+    for p in vals:
+        p["lists"] += "V"
+    v_markets = {(p["gid"], p["pid"], p["stat"], p["line"]) for p in vals}
+    goods = []
     for p in pending:
         pr = p.get("price")
-        if pr is None or p["neff"] < VALUE_MIN_NEFF:
+        if pr is None or p["neff"] < VALUE_MIN_NEFF or p["prob"] < 0.5:
+            continue
+        if (p["gid"], p["pid"], p["stat"], p["line"]) in v_markets:
             continue
         if p["lo"] > pr:
-            vals.append((p["prob"] / pr - 1.0, p))
-    for _, p in sorted(vals, key=lambda x: -x[0])[:TOP_N]:
-        p["lists"] += "V"
+            goods.append((p["prob"] / pr - 1.0, p))
+    goods.sort(key=lambda x: -x[0])
+    for _, p in goods[:GOOD_N]:
+        p["lists"] += "G"
 
 
 def fit_temperature(picks):

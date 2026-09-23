@@ -584,6 +584,31 @@ thead th{font-family:var(--dispers);text-transform:uppercase;letter-spacing:.5px
 tr.hit td{background:var(--hit-soft)} tr.miss td{background:var(--miss-soft)}
 .twocol{display:grid;grid-template-columns:1fr 1fr;gap:20px}
 @media(max-width:820px){.twocol{grid-template-columns:1fr}}
+/* `hidden` must win over display:flex rules (e.g. .vwbar/.refbanner), or empty bars show */
+[hidden]{display:none!important}
+/* NFL-style pick tables: Polymarket column, pulse dot, Value rules box, collapsible panels */
+@keyframes pmpulse{0%,100%{opacity:1}50%{opacity:.35}}
+.edgetbl td.livecell{white-space:nowrap}
+.pmpx{font-family:var(--display);font-size:17px;font-weight:600;color:#fff}
+.pmpx.pos{color:var(--hit)} .pmpx.neg{color:var(--miss)}
+.pmdim{color:#aeb9c8;font-size:12.5px}
+.livehead{display:inline-flex;align-items:center;gap:5px}
+.livedot{width:6px;height:6px;border-radius:50%;background:var(--accent);display:inline-block;animation:pmpulse 1.6s ease-in-out infinite}
+.valrules{background:rgba(0,200,5,.05);border:1px solid rgba(0,200,5,.28);border-radius:12px;padding:13px 16px;margin:2px 0 14px}
+.valrules .vrhead{font-family:var(--dispers);text-transform:uppercase;letter-spacing:.9px;font-weight:700;font-size:13.5px;color:var(--gold);margin-bottom:9px}
+.valrules .vrlist{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+.valrules .vrlist li{display:flex;gap:10px;align-items:flex-start;font-size:14px;color:#fff;line-height:1.5}
+.valrules .vrnum{flex:0 0 auto;width:21px;height:21px;border-radius:50%;background:var(--accent);color:#07130d;font-family:var(--dispers);font-weight:700;font-size:13px;display:flex;align-items:center;justify-content:center;margin-top:1px}
+.valrules .vrtxt{flex:1;min-width:0}
+.valrules .vrtxt b{color:#fff}
+.valrules .vrwhy{color:#cbd5e1;font-size:13px}
+.valrules .vreg{font-variant-numeric:tabular-nums;color:var(--gold);font-weight:600;white-space:nowrap}
+.valrules .vrfoot{margin-top:10px;padding-top:9px;border-top:1px solid rgba(255,255,255,.12);font-size:12.5px;color:#cbd5e1;line-height:1.6}
+.valrules .vrfoot b{color:#fff}
+.panel.collapsible .chev{display:inline-block;margin-left:8px;font-size:.72em;color:#fff;transition:transform .15s ease;vertical-align:middle}
+.panel.collapsed .chev{transform:rotate(-90deg)}
+.panel.collapsed > *:not(:first-child){display:none!important}
+.panel.collapsed{padding-bottom:14px}
 </style>
 
 <div class="wrap">
@@ -614,6 +639,14 @@ tr.hit td{background:var(--hit-soft)} tr.miss td{background:var(--miss-soft)}
   </div>
 
   <a id="refbanner" class="refbanner" href="#" target="_blank" rel="noopener" hidden></a>
+  <a id="refbanner2" class="refbanner group" href="#" target="_blank" rel="noopener" hidden></a>
+
+  <div id="socialbar" class="socialbar" hidden>
+    <span class="socialtag">Follow us</span>
+    <a id="social_ig" class="sociallink" href="#" target="_blank" rel="noopener" hidden>📸 Instagram</a>
+    <a id="social_tt" class="sociallink" href="#" target="_blank" rel="noopener" hidden>🎵 TikTok</a>
+    <a id="social_x" class="sociallink" href="#" target="_blank" rel="noopener" hidden>𝕏 Twitter</a>
+  </div>
 
 <div id="page-week">
   <div class="panel" id="digestpanel" hidden>
@@ -621,15 +654,28 @@ tr.hit td{background:var(--hit-soft)} tr.miss td{background:var(--miss-soft)}
     <div id="digestbody"></div>
   </div>
   <div class="panel" id="edgepanel">
-    <div class="mkthead"><h2>🔒 25 Guaranteed</h2><span class="mktmuted">the 25 highest model chances on the upcoming slate — the surest plays by the numbers</span></div>
+    <div class="mkthead">
+      <h2>🔒 25 Guaranteed</h2>
+      <button id="edgescan" class="btn" type="button">Scan the board</button>
+      <span id="edgestatus"></span>
+      <span class="mktmuted" id="recT"></span>
+    </div>
     <div id="edgebody"></div>
   </div>
   <div class="panel" id="valuepanel" hidden>
-    <div class="mkthead"><h2>⚡ Value spots</h2><span class="mktmuted">where the model's chance most beats the live market price</span></div>
+    <div class="mkthead"><h2>⚡ Value spots</h2><span class="mktmuted">market gives it 35%+, model is 25+ points better — top 20 by model chance</span><span class="mktmuted" id="recV"></span></div>
+    <div class="valrules">
+      <div class="vrhead">What counts as a value spot — both rules have to be true</div>
+      <ol class="vrlist">
+        <li><span class="vrnum">1</span><span class="vrtxt"><b>Polymarket gives it at least a 35% chance.</b> The price you'd pay has to be <b>35¢ or more</b>. <span class="vrwhy">This is the rule that keeps penny longshots off the list — a 6¢ ask against an 11% model chance looks like a huge edge in percentage terms and is still a bad bet.</span></span></li>
+        <li><span class="vrnum">2</span><span class="vrtxt"><b>Our model puts it at least 25 points higher.</b> <span class="vreg">35¢ ask → needs 60%</span> · <span class="vreg">50¢ → 75%</span> · <span class="vreg">70¢ → 95%</span>. <span class="vrwhy">The gap between the two, in percentage points, is the <b>edge</b> shown in the Polymarket column.</span></span></li>
+      </ol>
+      <div class="vrfoot">Both rules are tested against the <b>Polymarket price for the side the model takes</b> — the price you'd actually pay — and a prop also needs <b>6+ effective games</b> of history behind it. The <b>20 with the highest model chance</b> that clear both rules are listed, ranked by model chance. Prices come from Polymarket's NHL player-prop markets, so this list stays empty until those are posted.</div>
+    </div>
     <div id="valuebody"></div>
   </div>
   <div class="panel" id="goodpanel" hidden>
-    <div class="mkthead"><h2>🎯 Good odds</h2><span class="mktmuted">even the low end of the model's range beats the ask — ranked by edge</span></div>
+    <div class="mkthead"><h2>🎯 Good odds</h2><span class="mktmuted">even the low end of the model's range beats the ask — ranked by edge</span><span class="mktmuted" id="recG"></span></div>
     <div id="goodbody"></div>
   </div>
   <div class="panel" id="lbpanel">
@@ -1072,21 +1118,73 @@ function scheduleNote(what){
     `<div class="bmeta">picks post before puck drop</div></div>`).join('');
   return `<p class="mktnote">No upcoming games on the schedule yet — ${what} fills in automatically before puck drop once the season's games are posted. The <b>Player</b> tab works now on recent game logs.</p>`;
 }
+// ---- NFL-style pick tables: Player · Game · Prop · Line · Bet · Model · Polymarket · Load ----
+const SPORT_NAME='NHL', TIPOFF='puck drop';
+let edgeSort={key:'prob',dir:-1}, valueSort={key:'prob',dir:-1}, goodSort={key:'edge',dir:-1};
+function gameOf(p){ const m=/^\d{4}-\d{2}-\d{2}-([A-Z]+)-([A-Z]+)$/.exec(p.gid||'');
+  return m? {away:m[1], home:m[2]} : {away:p.team, home:p.opp}; }
+function normPick(p){ const px=p.price==null? null : p.price;
+  return {pid:p.pid, name:p.player, team:p.team, game:gameOf(p), sk:p.stat, statText:statLabel(p.stat),
+    line:p.line, side:p.side||'over', prob:p.prob, lo:p.lo, hi:p.hi, n:Math.round(p.neff||0),
+    price:px, edge:(px==null||p.prob==null)? null : p.prob-px}; }
+function listRows(tag){ return upcomingPicks().filter(p=>(p.lists||'').includes(tag) && p.prob!=null).map(normPick); }
+function sortRows(rows, key, dir){ return [...rows].sort((a,b)=>{
+  if(key==='matchup') return dir*((a.game.away+a.game.home).localeCompare(b.game.away+b.game.home));
+  if(['name','statText','side'].includes(key)) return dir*((''+a[key]).localeCompare(''+b[key]));
+  return dir*(((a[key]==null?-Infinity:a[key])-(b[key]==null?-Infinity:b[key]))); }); }
+function liveHead(sort){ return `<th data-k="edge" class="${sort&&sort.key==='edge'?'sorted'+(sort.dir>0?' asc':''):''}" title="Polymarket price for the side listed — what you'd pay, plus the model's edge over it"><span class="livehead"><span class="livedot"></span>Polymarket</span></th>`; }
+function priceCell(r){
+  if(r.price==null) return `<span class="pmdim" title="Polymarket hasn't listed ${SPORT_NAME} player props yet — the price appears here automatically once it does">no market yet</span>`;
+  const signed=v=>(v>=0?'+':'−')+Math.abs(Math.round(v*100));
+  const cls=r.edge==null? '' : r.edge>=0.04? 'pos' : r.edge<=-0.04? 'neg' : '';
+  return `<span class="pmpx ${cls}">${Math.round(r.price*100)}¢</span> <span class="rng">${r.edge==null?'':signed(r.edge)+' edge · '}${(1/r.price).toFixed(2)}×</span>`; }
+function pickTable(rows, sort){
+  const cols=[['name','Player'],['matchup','Game'],['statText','Prop'],['line','Line'],['side','Bet'],['prob','Model']];
+  const th=(k,l)=>`<th data-k="${k}" class="${sort&&sort.key===k?'sorted'+(sort.dir>0?' asc':''):''}">${l}</th>`;
+  let h=`<div class="chartwrap"><table class="edgetbl"><thead><tr>${cols.map(c=>th(c[0],c[1])).join('')}${liveHead(sort)}<th></th></tr></thead><tbody>`;
+  rows.forEach((r,idx)=>{
+    h+=`<tr><td>${esc(r.name)} <span class="mktmuted">${esc(r.team)}</span></td><td class="mktmuted">${esc(r.game.away)} @ ${esc(r.game.home)}</td><td>${esc(r.statText)}</td><td class="tnum">${r.line}</td>`+
+       `<td><span class="leantag ${esc(r.side)}">${esc(r.side)}</span></td>`+
+       `<td class="tnum"><span class="edgeval pos">${pct(r.prob)}</span> <span class="rng">${Math.round(r.lo*100)}–${Math.round(r.hi*100)} · ${r.n}g</span></td>`+
+       `<td class="livecell">${priceCell(r)}</td>`+
+       `<td><button class="edgeload" type="button" data-i="${idx}">Load</button></td></tr>`;
+  });
+  return h+`</tbody></table></div>`; }
+function wireTable(el, rows, sort, rerender){
+  el.querySelectorAll('.edgeload').forEach(b=>b.onclick=()=>loadPick(rows[+b.dataset.i]));
+  el.querySelectorAll('.edgetbl th').forEach(t=>t.onclick=()=>{ const k=t.dataset.k; if(!k) return;
+    if(sort.key===k) sort.dir*=-1; else { sort.key=k; sort.dir=['name','statText','side','matchup'].includes(k)?1:-1; }
+    rerender(); }); }
+function loadPick(r){ const p=byId[r.pid]; if(!p) return;
+  showTab('player');
+  state.player=p; const inpEl=$('player'); if(inpEl) inpEl.value=p.n;
+  const s=$('oppsel'); if(s) s.value='';
+  state.stat=r.sk; state.line=r.line; state.ou=r.side||'over'; $('line').value=r.line;
+  $('over').setAttribute('aria-pressed', String(state.ou==='over')); $('under').setAttribute('aria-pressed', String(state.ou==='under'));
+  syncChips(); render();
+  const hl=$('headline'); if(hl) hl.scrollIntoView({behavior:'smooth',block:'start'}); }
+function updateBoardStatus(){ const st=$('edgestatus'); if(!st) return;
+  const up=upcomingPicks().filter(p=>p.prob!=null); if(!up.length){ st.textContent=''; return; }
+  const v=up.filter(p=>(p.lists||'').includes('V')), vU=v.filter(p=>p.side==='under').length;
+  const games=new Set(up.map(p=>p.gid)).size;
+  st.textContent=`${up.length} props modeled · ${v.length} value (${v.length-vU} over / ${vU} under) · ${games} game${games===1?'':'s'}`; }
 function renderEdges(){ const body=$('edgebody'); if(!body) return;
   if(PICKS===null){ body.innerHTML='<p class="mktnote">Loading…</p>'; return; }
-  const t=upcomingPicks().filter(p=>(p.lists||'').includes('T'));
-  if(!t.length){ body.innerHTML=scheduleNote('the 25 Guaranteed board'); return; }
-  const rows=t.slice().sort((a,b)=>(b.prob||0)-(a.prob||0)).slice(0,25);
-  body.innerHTML=rows.map(pickRow).join('')+`<p class="mktnote" style="margin-top:8px">The <b>${rows.length}</b> highest model chances on the upcoming slate, regardless of payout — the surest plays by the numbers. Recorded before puck drop and graded in <b>Past picks</b>.</p>`;
-}
+  updateBoardStatus();
+  const all=listRows('T');
+  if(!all.length){ body.innerHTML=scheduleNote('the 25 Guaranteed board'); return; }
+  const rows=sortRows(all, edgeSort.key, edgeSort.dir).slice(0,25);
+  body.innerHTML=pickTable(rows, edgeSort)+
+    `<p class="mktnote" style="margin-top:8px">The 25 props with the highest <b>model chance</b> on the upcoming ${SPORT_NAME} slate, regardless of payout — best if you're holding <b>credits you can't withdraw without trading</b>, since these are the props most likely to win and let you cash out. <b>Model</b> = the chance the Bet side hits, with its 80% range and the games it's based on. <b>Polymarket</b> is the price for that exact side, the model's edge over it, and the payout multiplier — it fills in once Polymarket lists ${SPORT_NAME} player props. Click a header to sort. These picks are recorded before ${TIPOFF} and graded in <b>Past picks</b>.</p>`;
+  wireTable(body, rows, edgeSort, renderEdges); }
 function renderGood(){ const panel=$('goodpanel'), body=$('goodbody'); if(!panel||!body) return;
   if(PICKS===null){ panel.hidden=true; return; }
   panel.hidden=false;
-  const g=upcomingPicks().filter(p=>(p.lists||'').includes('G') && p.price!=null);
-  if(!g.length){ body.innerHTML='<p class="mktnote">Good odds ranks picks where even the <b>low end</b> of the model’s range beats the price you’d pay. It needs live prices, so it lights up automatically once <b>Polymarket lists NHL markets</b> — none are posted yet.</p>'; return; }
-  g.sort((a,b)=>(b.prob||0)-(a.prob||0));
-  body.innerHTML=g.slice(0,25).map(pickRow).join('');
-}
+  const all=listRows('G');
+  if(!all.length){ body.innerHTML=`<p class="mktnote">Good odds ranks picks where even the <b>low end</b> of the model’s 80% range beats the price you’d pay. It needs live prices, so it fills in automatically once <b>Polymarket lists ${SPORT_NAME} player props</b> — none are posted yet.</p>`; return; }
+  const rows=sortRows(all, goodSort.key, goodSort.dir).slice(0,25);
+  body.innerHTML=pickTable(rows, goodSort)+`<p class="mktnote" style="margin-top:8px">The top 25 bets where the model's chance most beats the market — only props whose <b>bottom of the 80% range</b> still clears the price you'd pay, ranked by that edge. Picks are recorded before ${TIPOFF} and graded in <b>Past picks</b>. Backward-looking; not advice.</p>`;
+  wireTable(body, rows, goodSort, renderGood); }
 function generateDigest(){ const panel=$('digestpanel'), body=$('digestbody'), cap=$('digestcap'); if(!panel||!body) return;
   if(PICKS===null){ panel.hidden=true; return; }
   const up=upcomingPicks().filter(p=>p.prob!=null);
@@ -1108,10 +1206,12 @@ function pickRow(x){ const cls=x.prob>=0.7?'hi':x.prob>=0.6?'mid':'lo';
 function renderValue(){ const panel=$('valuepanel'), body=$('valuebody'); if(!panel||!body) return;
   if(PICKS===null){ panel.hidden=true; return; }
   panel.hidden=false;
-  const v=upcomingPicks().filter(p=>(p.lists||'').includes('V') && p.price!=null);
-  if(!v.length){ body.innerHTML='<p class="mktnote">Value spots compare the model’s chance to the <b>live market price</b> (35¢+ ask, model 25+ points higher). They light up automatically once <b>Polymarket lists NHL markets</b> — none are posted yet, so this is empty for now.</p>'; return; }
-  v.sort((a,b)=>((b.prob/b.price)-(a.prob/a.price)));
-  body.innerHTML=v.slice(0,25).map(pickRow).join('');
+  const all=listRows('V');
+  if(!all.length){ body.innerHTML=`<p class="mktnote">No value spots right now — both rules above are tested against a Polymarket price, so this fills in automatically once <b>Polymarket lists ${SPORT_NAME} player props</b>. None are posted yet.</p>`; return; }
+  const rows=sortRows(all, valueSort.key, valueSort.dir).slice(0,20);
+  const unders=rows.filter(r=>r.side==='under').length, overs=rows.length-unders;
+  body.innerHTML=pickTable(rows, valueSort)+`<p class="mktnote" style="margin-top:8px"><b>${rows.length}</b> prop${rows.length===1?'':'s'} clear both rules at the recorded price — ${overs} over${overs===1?'':'s'} and ${unders} under${unders===1?'':'s'}. Picks are recorded before ${TIPOFF} and graded in <b>Past picks</b>. Backward-looking; not advice.</p>`;
+  wireTable(body, rows, valueSort, renderValue);
 }
 
 // ---- Hit streak leaderboard ----
@@ -1322,6 +1422,45 @@ renderEdges();        // shows "Loading…" until picks arrive
 loadPicks();
 buildLeaderboard();
 render();
+// ▼▼▼ Polymarket referral banners + social follow links — same as the NFL page. Leave a url "" to hide it. ▼▼▼
+const REFERRAL = { url: "https://polymarket.us/join/propstreaklab", text: "🎁 Get $50 FREE with code PROPSTREAKLAB — sign up & trade on Polymarket →" };
+const REFERRAL2 = { url: "https://polymarket.us/squad/join/CDU9RMD97K7O1G95yAao?referrer=propstreaklab", text: "👥 Join our Polymarket group →" };
+const SOCIAL = { instagram: "https://www.instagram.com/propstreaklab", tiktok: "https://www.tiktok.com/@propstreaklab", x: "https://x.com/propstreaklab" };
+(function renderRef(){ const b=$('refbanner'); if(!b) return;
+  if(REFERRAL.url){ b.href=REFERRAL.url; b.textContent=REFERRAL.text; b.hidden=false; } else b.hidden=true;
+  const b2=$('refbanner2'); if(b2){ if(REFERRAL2.url){ b2.href=REFERRAL2.url; b2.textContent=REFERRAL2.text; b2.hidden=false; } else b2.hidden=true; } })();
+(function renderSocial(){ const ig=$('social_ig'), tt=$('social_tt'), xa=$('social_x'), bar=$('socialbar'); if(!bar) return;
+  if(SOCIAL.instagram){ ig.href=SOCIAL.instagram; ig.hidden=false; } else ig.hidden=true;
+  if(SOCIAL.tiktok){ tt.href=SOCIAL.tiktok; tt.hidden=false; } else tt.hidden=true;
+  if(xa){ if(SOCIAL.x){ xa.href=SOCIAL.x; xa.hidden=false; } else xa.hidden=true; }
+  bar.hidden = !(SOCIAL.instagram||SOCIAL.tiktok||SOCIAL.x); })();
+// Live record per list in the panel headers (T / V / G), like the NFL page.
+(function renderRecords(){ const R=DB.record||{};
+  [['recT','T'],['recV','V'],['recG','G']].forEach(([id,k])=>{ const el=$(id); if(!el) return; const r=R[k];
+    if(!r||!r.n){ el.innerHTML='· live record: no graded picks yet — <a href="#past" onclick="showTab(\'past\');return false;">Past picks</a>'; return; }
+    el.innerHTML=`· <b>live record ${r.hit}/${r.n} (${Math.round(100*r.hit/r.n)}%)</b> — <a href="#past" onclick="showTab('past');return false;">details</a>`; }); })();
+// "Scan the board" re-pulls the latest recorded board and re-renders every table.
+(function(){ const b=$('edgescan'); if(!b) return;
+  b.onclick=()=>{ const st=$('edgestatus'); if(st) st.textContent='Scanning the board…'; loadPicks(); }; })();
+// Collapsible panels (the ▾ on each header), remembered per panel on this device.
+(function(){
+  ['page-week','page-player','page-tools'].forEach(pid=>{ const pg=$(pid); if(!pg) return;
+    pg.querySelectorAll('.panel').forEach(panel=>{
+      const head=panel.firstElementChild; if(!head) return;
+      const h2=head.matches('h2')?head:head.querySelector('h2'); if(!h2) return;
+      const label=panel.id||h2.textContent.trim().slice(0,24);
+      panel.classList.add('collapsible');
+      const chev=document.createElement('span'); chev.className='chev'; chev.textContent='▾'; chev.setAttribute('aria-hidden','true'); h2.appendChild(chev);
+      const key='psl_'+SPORT_NAME.toLowerCase()+'_open_'+label;
+      let open; try{ const s=localStorage.getItem(key); open = s!=null? s==='1' : true; }catch(e){ open=true; }
+      panel.classList.toggle('collapsed', !open);
+      head.setAttribute('role','button'); head.setAttribute('tabindex','0'); head.setAttribute('aria-expanded', String(open));
+      const set=v=>{ open=v; panel.classList.toggle('collapsed',!open); head.setAttribute('aria-expanded',String(open)); try{localStorage.setItem(key,open?'1':'0');}catch(e){} };
+      head.addEventListener('click',e=>{ if(e.target.closest('button,input,select,a,label')) return; set(!open); });
+      head.addEventListener('keydown',e=>{ if((e.key==='Enter'||e.key===' ')&&!e.target.closest('button,input,select,a,label')){ e.preventDefault(); set(!open); } });
+    });
+  });
+})();
 (function renderValueWeek(){
   const el=$('valueweekbar'); if(!el) return;
   fetch('nhl_weekly.json',{cache:'no-store'}).then(r=>r.ok?r.json():null).then(d=>{
