@@ -11,9 +11,27 @@
 <meta property="og:url" content="https://propstreaklab.com/">
 <meta property="og:title" content="Prop Streak Lab — Free player-prop analytics">
 <meta property="og:description" content="Real game logs, a calibrated chance for any line, priced against the market, and every pick graded in public. NFL · NBA · NHL. Free.">
+<meta property="og:site_name" content="Prop Streak Lab">
+<meta property="og:image" content="https://propstreaklab.com/icon-512.png">
+<meta property="og:image:width" content="512">
+<meta property="og:image:height" content="512">
+<meta property="og:image:alt" content="Prop Streak Lab logo">
 <meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://propstreaklab.com/icon-512.png">
+<meta name="application-name" content="Prop Streak Lab">
+<meta name="apple-mobile-web-app-title" content="Prop Streak Lab">
+<!-- Tells Google the site's name (shown next to the favicon in results) and its logo. -->
+<script type="application/ld+json">
+{"@context":"https://schema.org","@graph":[
+  {"@type":"WebSite","@id":"https://propstreaklab.com/#website","name":"Prop Streak Lab","alternateName":"PropStreakLab","url":"https://propstreaklab.com/","publisher":{"@id":"https://propstreaklab.com/#org"}},
+  {"@type":"Organization","@id":"https://propstreaklab.com/#org","name":"Prop Streak Lab","url":"https://propstreaklab.com/","logo":{"@type":"ImageObject","url":"https://propstreaklab.com/icon-512.png","width":512,"height":512}}
+]}
+</script>
 <meta name="theme-color" content="#0a1628">
-<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2064%2064'%3E%3Crect%20width='64'%20height='64'%20rx='14'%20fill='%230a1628'/%3E%3Cpath%20d='M32,6%20Q32,32%2054,32%20Q32,32%2032,58%20Q32,32%2010,32%20Q32,32%2032,6%20Z'%20fill='%2300c805'/%3E%3C/svg%3E">
+<link rel="icon" href="/favicon.ico" sizes="48x48">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="manifest" href="/site.webmanifest">
 <script data-goatcounter="https://propstreaklive.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
 <link rel="stylesheet" href="fonts.css">
 <style>
@@ -30,7 +48,7 @@
 *{box-sizing:border-box}
 [hidden]{display:none!important}
 html{scroll-behavior:smooth}
-body{margin:0;background:var(--bg);color:var(--text);font-family:var(--body);font-size:16px;line-height:1.6;
+body{margin:0;background:var(--bg);color:var(--text);font-family:var(--body);font-size:16px;line-height:1.6;font-variant-numeric:lining-nums;
   -webkit-font-smoothing:antialiased;overflow-x:hidden;
   background-image:
     linear-gradient(rgba(0,200,5,.035) 1px,transparent 1px),
@@ -235,6 +253,21 @@ h2 i{color:var(--green)}
   border-radius:999px;padding:11px 20px;font-family:var(--cond);font-weight:700;letter-spacing:.1em;text-transform:uppercase;font-size:15px;transition:all .15s ease}
 .social a:hover{border-color:var(--green);color:var(--green);transform:translateY(-2px)}
 
+/* "it's free" badge right under the headline */
+.freebadge{display:flex;align-items:center;gap:16px;margin:0 0 22px;padding:14px 20px 14px 14px;border-radius:20px;max-width:36em;
+  background:linear-gradient(90deg,rgba(0,200,5,.2),rgba(0,200,5,.04));border:1px solid rgba(0,200,5,.55);box-shadow:0 12px 34px rgba(0,200,5,.16)}
+.fb-price{flex:none;display:flex;align-items:center;justify-content:center;width:74px;height:74px;border-radius:50%;
+  background:var(--green);color:var(--green-ink);font-family:var(--cond);font-weight:700;font-size:42px;line-height:1;
+  box-shadow:0 0 0 6px rgba(0,200,5,.15)}
+.fb-price sup{font-size:.5em;line-height:1;align-self:flex-start;margin:17px 1px 0 0}
+.fb-text{font-size:17px;color:var(--soft);line-height:1.45}
+.fb-text b{display:block;font-family:var(--cond);text-transform:uppercase;letter-spacing:.08em;font-size:26px;color:#fff;margin-bottom:2px;line-height:1.1}
+@media (max-width:620px){
+  .freebadge{gap:13px;padding:12px 14px 12px 12px}
+  .fb-price{width:58px;height:58px;font-size:33px}.fb-price sup{margin-top:13px}
+  .fb-text{font-size:15px}.fb-text b{font-size:21px}
+}
+
 /* promo strip at the top of the page */
 .promo{padding:18px 0 0}
 .promo .ref{margin:0 auto}
@@ -350,9 +383,13 @@ footer .fine a{color:#8394ab}
   <section class="hero" aria-labelledby="hero-h">
     <div class="wrap">
       <div>
-        <span class="eyebrow rv"><span class="dot"></span>Free player-prop analytics · NFL · NBA · NHL</span>
+        <span class="eyebrow rv"><span class="dot"></span>100% free player-prop analytics · NFL · NBA · NHL</span>
         <h1 id="hero-h" class="rv d1">Know how often a player <i>actually</i> clears the line.</h1>
-        <p class="lede rv d2">Real game logs, a <b>calibrated probability</b> for any prop, <b>priced against the market</b> — and every pick we make is <b>graded in public</b>. No subscription. No signup. <b>Free.</b></p>
+        <div class="freebadge rv d1" role="note">
+          <span class="fb-price" aria-hidden="true"><sup>$</sup>0</span>
+          <span class="fb-text"><b>It's 100% free.</b> No subscription, no signup, no paywall — every sport and every tool, open to everyone.</span>
+        </div>
+        <p class="lede rv d2">Real game logs, a <b>calibrated probability</b> for any prop, <b>priced against the market</b> — and every pick we make is <b>graded in public</b>.</p>
         <div class="sports rv d3" aria-label="Choose a sport">
           <a class="sport" href="./nfl.html"><span class="ico" aria-hidden="true">🏈</span><span><b>NFL</b><small>Football props</small></span></a>
           <a class="sport" href="./nba.html"><span class="ico" aria-hidden="true">🏀</span><span><b>NBA</b><small>Basketball props</small></span></a>
