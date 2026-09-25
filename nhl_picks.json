@@ -1,1 +1,1 @@
-{"gen":"2026-09-24","model":{"halfLife":6.0,"maxGames":20,"priorK":0.5,"bwConst":0.9,"z":1.2816},"cols":["src","gid","season","date","pid","player","pos","team","opp","stat","line","side","prob","lo","hi","neff","price","lists","rec","actual","res","adj"],"picks":[]}
+{"gen":"2026-09-25","model":{"halfLife":6.0,"maxGames":20,"priorK":0.5,"bwConst":0.9,"z":1.2816},"cols":["src","gid","season","date","pid","player","pos","team","opp","stat","line","side","prob","lo","hi","neff","price","lists","rec","actual","res","adj"],"picks":[]}
