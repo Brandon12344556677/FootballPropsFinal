@@ -1083,19 +1083,18 @@ if(WEEK.week) $('dnweek').textContent = `${WEEK.season} · week ${WEEK.week} on 
   const b2=$('refbanner2'); if(REFERRAL2.url){ b2.href=REFERRAL2.url; b2.textContent=REFERRAL2.text; b2.hidden=false; } else b2.hidden=true; })();
 (function renderValueWeek(){
   const el=$('valueweekbar'); if(!el) return;
-  fetch('weekly.json',{cache:'no-store'}).then(r=>r.ok?r.json():null).then(d=>{
-    if(!d || !d.n){ el.hidden=true; return; }
-    const up = d.units>=0, u=(up?'+':'')+(+d.units).toFixed(1);
-    const roi = d.priced ? d.units/d.priced : null;
-    const roiStr = roi==null ? '' : ` · ${roi>=0?'+':''}${Math.round(roi*100)}% ROI`;
-    el.className='vwbar'+(up?'':' down');
-    el.innerHTML =
-      `<span class="lbl">⚡ Value spots · Week ${d.week}</span>`+
-      `<span class="big">${up?'▲':'▼'} ${u} units</span>`+
-      `<span class="lbl">${d.hit}/${d.n} hit${roiStr}</span>`+
-      `<span class="sub">Every Value pick recorded before kickoff and graded from the box score — tap for the full record.</span>`;
-    el.hidden=false;
-  }).catch(()=>{ el.hidden=true; });
+  const r=(typeof DB!=='undefined' && DB.record && DB.record.V) ? DB.record.V : null;
+  if(!r || !r.n || r.roi==null || !r.priced){ el.hidden=true; return; }
+  const units=r.roi*r.priced, up=units>=0, u=(up?'+':'')+units.toFixed(1);
+  const roiStr=` · ${r.roi>=0?'+':''}${Math.round(r.roi*100)}% ROI`;
+  const seas=(DB.season||'')+' season';
+  el.className='vwbar'+(up?'':' down');
+  el.innerHTML =
+    `<span class="lbl">⚡ Value spots · ${seas}</span>`+
+    `<span class="big">${up?'▲':'▼'} ${u} units</span>`+
+    `<span class="lbl">${r.hit}/${r.n} hit${roiStr}</span>`+
+    `<span class="sub">Every Value pick recorded before kickoff and graded from the box score — tap for the full record.</span>`;
+  el.hidden=false;
 })();
 (function renderSocial(){ const ig=$('social_ig'), tt=$('social_tt'), xa=$('social_x'), bar=$('socialbar'); if(!bar) return;
   const S=(typeof SOCIAL!=='undefined')?SOCIAL:{};

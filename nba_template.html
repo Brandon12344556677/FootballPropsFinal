@@ -667,20 +667,16 @@ tr.hit td{background:var(--hit-soft)} tr.miss td{background:var(--miss-soft)}
     <div id="edgebody"></div>
   </div>
   <div class="panel" id="valuepanel" hidden>
-    <div class="mkthead"><h2>⚡ Value spots</h2><span class="mktmuted">market gives it 35%+, model is 25+ points better — top 20 by model chance</span><span class="mktmuted" id="recV"></span></div>
+    <div class="mkthead"><h2>⚡ Value spots</h2><span class="mktmuted">market gives it 30%+, model is 15+ points better — overs and unders both</span><span class="mktmuted" id="recV"></span></div>
     <div class="valrules">
       <div class="vrhead">What counts as a value spot — both rules have to be true</div>
       <ol class="vrlist">
-        <li><span class="vrnum">1</span><span class="vrtxt"><b>Polymarket gives it at least a 35% chance.</b> The price you'd pay has to be <b>35¢ or more</b>. <span class="vrwhy">This is the rule that keeps penny longshots off the list — a 6¢ ask against an 11% model chance looks like a huge edge in percentage terms and is still a bad bet.</span></span></li>
-        <li><span class="vrnum">2</span><span class="vrtxt"><b>Our model puts it at least 25 points higher.</b> <span class="vreg">35¢ ask → needs 60%</span> · <span class="vreg">50¢ → 75%</span> · <span class="vreg">70¢ → 95%</span>. <span class="vrwhy">The gap between the two, in percentage points, is the <b>edge</b> shown in the Polymarket column.</span></span></li>
+        <li><span class="vrnum">1</span><span class="vrtxt"><b>Polymarket gives it at least a 30% chance.</b> The price you'd pay has to be <b>30¢ or more</b>. <span class="vrwhy">This is the rule that keeps penny longshots off the list — a 6¢ ask against an 11% model chance looks like a huge edge in percentage terms and is still a bad bet.</span></span></li>
+        <li><span class="vrnum">2</span><span class="vrtxt"><b>Our model puts it at least 15 points higher.</b> <span class="vreg">30¢ ask → needs 45%</span> · <span class="vreg">50¢ → 65%</span> · <span class="vreg">70¢ → 85%</span>. <span class="vrwhy">The gap between the two, in percentage points, is the <b>edge</b> shown in the Polymarket column.</span></span></li>
       </ol>
-      <div class="vrfoot">Both rules are tested against the <b>Polymarket price for the side the model takes</b> — the price you'd actually pay — and a prop also needs <b>6+ effective games</b> of history behind it. The <b>20 with the highest model chance</b> that clear both rules are listed, ranked by model chance. Prices come from Polymarket's NBA player-prop markets, so this list stays empty until those are posted.</div>
+      <div class="vrfoot">Both rules are tested against the <b>Polymarket price for the side the model takes</b> — the price you'd actually pay — and a prop also needs <b>6+ effective games</b> of history behind it. Everything clearing both rules is listed, ranked by that edge. Prices come from Polymarket's NBA player-prop markets, so this list stays empty until those are posted.</div>
     </div>
     <div id="valuebody"></div>
-  </div>
-  <div class="panel" id="goodpanel" hidden>
-    <div class="mkthead"><h2>🎯 Good odds</h2><span class="mktmuted">even the low end of the model's range beats the ask — ranked by edge</span><span class="mktmuted" id="recG"></span></div>
-    <div id="goodbody"></div>
   </div>
   <div class="panel" id="lbpanel">
     <div class="mkthead"><h2>🔥 Hit streak leaderboard</h2><span class="mktmuted">longest active over streaks — consecutive games clearing the site's realistic line</span></div>
@@ -1190,14 +1186,6 @@ function renderEdges(){ const body=$('edgebody'); if(!body) return;
   body.innerHTML=pickTable(rows, edgeSort)+
     `<p class="mktnote" style="margin-top:8px">The 25 props with the highest <b>model chance</b> on the upcoming ${SPORT_NAME} slate, regardless of payout — best if you're holding <b>credits you can't withdraw without trading</b>, since these are the props most likely to win and let you cash out. <b>Model</b> = the chance the Bet side hits, with its 80% range and the games it's based on. <b>Polymarket</b> is the price for that exact side, the model's edge over it, and the payout multiplier — it fills in once Polymarket lists ${SPORT_NAME} player props. Click a header to sort. These picks are recorded before ${TIPOFF} and graded in <b>Past picks</b>.</p>`;
   wireTable(body, rows, edgeSort, renderEdges); }
-function renderGood(){ const panel=$('goodpanel'), body=$('goodbody'); if(!panel||!body) return;
-  if(PICKS===null){ panel.hidden=true; return; }
-  panel.hidden=false;
-  const all=listRows('G');
-  if(!all.length){ body.innerHTML=`<p class="mktnote">Good odds ranks picks where even the <b>low end</b> of the model’s 80% range beats the price you’d pay. It needs live prices, so it fills in automatically once <b>Polymarket lists ${SPORT_NAME} player props</b> — none are posted yet.</p>`; return; }
-  const rows=sortRows(all, goodSort.key, goodSort.dir).slice(0,25);
-  body.innerHTML=pickTable(rows, goodSort)+`<p class="mktnote" style="margin-top:8px">The top 25 bets where the model's chance most beats the market — only props whose <b>bottom of the 80% range</b> still clears the price you'd pay, ranked by that edge. Picks are recorded before ${TIPOFF} and graded in <b>Past picks</b>. Backward-looking; not advice.</p>`;
-  wireTable(body, rows, goodSort, renderGood); }
 function generateDigest(){ const panel=$('digestpanel'), body=$('digestbody'), cap=$('digestcap'); if(!panel||!body) return;
   if(PICKS===null){ panel.hidden=true; return; }
   const up=upcomingPicks().filter(p=>p.prob!=null);
@@ -1221,7 +1209,7 @@ function renderValue(){ const panel=$('valuepanel'), body=$('valuebody'); if(!pa
   panel.hidden=false;
   const all=listRows('V');
   if(!all.length){ body.innerHTML=`<p class="mktnote">No value spots right now — both rules above are tested against a Polymarket price, so this fills in automatically once <b>Polymarket lists ${SPORT_NAME} player props</b>. None are posted yet.</p>`; return; }
-  const rows=sortRows(all, valueSort.key, valueSort.dir).slice(0,20);
+  const rows=sortRows(all, valueSort.key, valueSort.dir).slice(0,50);
   const unders=rows.filter(r=>r.side==='under').length, overs=rows.length-unders;
   body.innerHTML=pickTable(rows, valueSort)+`<p class="mktnote" style="margin-top:8px"><b>${rows.length}</b> prop${rows.length===1?'':'s'} clear both rules at the recorded price — ${overs} over${overs===1?'':'s'} and ${unders} under${unders===1?'':'s'}. Picks are recorded before ${TIPOFF} and graded in <b>Past picks</b>. Backward-looking; not advice.</p>`;
   wireTable(body, rows, valueSort, renderValue);
@@ -1246,8 +1234,8 @@ let PICKS=null;
 function loadPicks(){
   fetch('./nba_picks.json',{cache:'no-store'}).then(r=>r.ok?r.json():null).then(d=>{
     if(!d||!d.picks){ PICKS=[]; } else { const cols=d.cols; PICKS=d.picks.map(row=>Object.fromEntries(cols.map((c,i)=>[c,row[i]]))); }
-    renderEdges(); renderValue(); renderGood(); generateDigest(); renderPast(); renderApTeams();
-  }).catch(()=>{ PICKS=[]; renderEdges(); renderValue(); renderGood(); generateDigest(); renderPast(); renderApTeams(); });
+    renderEdges(); renderValue(); generateDigest(); renderPast(); renderApTeams();
+  }).catch(()=>{ PICKS=[]; renderEdges(); renderValue(); generateDigest(); renderPast(); renderApTeams(); });
 }
 function initPicks(){ renderPast(); }   // Past tab opened
 function renderPast(){ const body=$('pkbody'); if(!body) return;
