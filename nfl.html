@@ -1160,7 +1160,8 @@ function contextFor(p, sk, oppOverride, gameOverride){
   return Object.assign(contextScale(statFamily(sk,p.p), hist, gamePts, gameSpr, defRatio), {opp, gamePts, gameSpr, defRatio, on:true});
 }
 function currentOpp(){ return oppTouched? ($('oppsel').value||null) : null; }
-function modelFor(p, sk, line, ctx){ const st=STATMAP[sk]; if(!st) return null; const c=ctx||contextFor(p,sk,p===state.player?currentOpp():null); return calMp(modelProb(valuesOf(p,sk), line, st.kind, c.scale)); }
+function injMult(p, sk){ const b=p&&p.inj_boost; if(!b) return 1; const f=statFamily(sk,p.p); return (f==='rec'?b.rec:f==='rush'?b.rush:1)||1; }
+function modelFor(p, sk, line, ctx){ const st=STATMAP[sk]; if(!st) return null; const c=ctx||contextFor(p,sk,p===state.player?currentOpp():null); return calMp(modelProb(valuesOf(p,sk), line, st.kind, c.scale * injMult(p, sk))); }
 function probFor(p, sk, line, side, ctx){ const mp=modelFor(p,sk,line,ctx); if(!mp) return null;
   return side==='over'? {prob:mp.over, lo:mp.lo, hi:mp.hi, mp} : {prob:mp.under, lo:1-mp.hi, hi:1-mp.lo, mp}; }
 function reseedLine(){
@@ -1395,7 +1396,8 @@ function renderMeta(){
     const tp=topStr(p.t), to=topStr(opp);
     ws.innerHTML=`<span><span class="lab">Week ${WEEK.week}</span> <b>${home?'vs':'@'} ${esc(opp)}</b></span>`+
       `<span>${esc(kickoff(wg))}</span>`+(vegas(wg)?`<span><span class="lab">Vegas</span> ${esc(vegas(wg))}</span>`:'')+
-      (tp?`<span title="average offensive time of possession per game this season, from ESPN box scores"><span class="lab">Poss/gm</span> <b>${esc(p.t)} ${tp}</b>${to?` · ${esc(opp)} ${to}`:''}</span>`:'')+score;
+      (tp?`<span title="average offensive time of possession per game this season, from ESPN box scores"><span class="lab">Poss/gm</span> <b>${esc(p.t)} ${tp}</b>${to?` · ${esc(opp)} ${to}`:''}</span>`:'')+
+      (p.inj_boost?`<span title="teammates ruled out this week free up targets/carries — the model bumps this player's projected volume accordingly"><span class="lab">Volume ▲</span> <b>+${Math.round((Math.max(p.inj_boost.rec||1,p.inj_boost.rush||1)-1)*100)}%</b> · ${esc(p.inj_boost.why||'teammate out')}</span>`:'')+score;
     ws.hidden=false;
   } else if(WEEK.week){
     ws.innerHTML=`<span><span class="lab">Week ${WEEK.week}</span> ${esc(p.t)} has no game on the schedule this week${p.t?'':' (team unknown)'}.</span>`; ws.hidden=false;

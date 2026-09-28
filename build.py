@@ -611,6 +611,76 @@ def build_players(all_rows, roster, injuries, sched):
 
 
 # ---------------------------------------------------------------------------
+# Injury target/carry redistribution ("next man up")
+# When a pass-catcher or back is ruled OUT/DOUBTFUL, the target share (receiving)
+# and carry share (rushing) they'd normally command is redistributed to their
+# remaining teammates, boosting those players' projected volume for the week.
+# Stored per player as {"rec":mult,"rush":mult,"why":"..."} and applied to the
+# projection scale in both build.py and the front-end (outside the MODEL block).
+# ---------------------------------------------------------------------------
+INJ_TS_IDX, INJ_CAR_IDX = 17, 9      # game-row indices: target_share, carries
+INJ_CAP = 1.5                         # a remaining player's volume can rise at most 50%
+INJ_CATCH = ("WR", "TE", "RB", "FB")
+INJ_RUSH = ("RB", "FB")
+
+
+def _inj_out(entry):
+    inj = entry.get("inj")
+    return bool(inj and re.search(r"out|doubtful", (inj[0] or ""), re.I))
+
+
+def _recent_avg(entry, idx, n=6):
+    gs = [g for g in (entry.get("g") or []) if len(g) > idx]
+    vals = [g[idx] for g in gs[-n:]]
+    return sum(vals) / len(vals) if vals else 0.0
+
+
+def compute_injury_boosts(players):
+    """Add entry['inj_boost'] to remaining teammates of OUT/DOUBTFUL players. In place."""
+    teams = {}
+    for e in players:
+        if e.get("t"):
+            teams.setdefault(e["t"], []).append(e)
+    for roster in teams.values():
+        outs = [e for e in roster if _inj_out(e)]
+        if not outs:
+            continue
+        vac_rec = min(0.45, sum(_recent_avg(e, INJ_TS_IDX) for e in outs if e["p"] in INJ_CATCH))
+        car = {e["id"]: _recent_avg(e, INJ_CAR_IDX) for e in roster if e["p"] in INJ_RUSH}
+        team_car = sum(car.values())
+        vac_rush = min(0.6, sum(car.get(e["id"], 0.0) for e in outs if e["p"] in INJ_RUSH) / team_car) if team_car else 0.0
+        rec_mult = min(INJ_CAP, 1.0 / (1.0 - vac_rec)) if vac_rec > 0.03 else 1.0
+        rush_mult = min(INJ_CAP, 1.0 / (1.0 - vac_rush)) if vac_rush > 0.05 else 1.0
+        if rec_mult <= 1.0 and rush_mult <= 1.0:
+            continue
+        why = ", ".join(f"{e['n']} ({(e['inj'][0] or 'OUT').upper()})" for e in outs if e["p"] in INJ_CATCH)[:90]
+        for e in roster:
+            if _inj_out(e):
+                continue
+            b = {}
+            if rec_mult > 1.0 and e["p"] in INJ_CATCH:
+                b["rec"] = round(rec_mult, 3)
+            if rush_mult > 1.0 and e["p"] in INJ_RUSH:
+                b["rush"] = round(rush_mult, 3)
+            if b:
+                b["why"] = why
+                e["inj_boost"] = b
+
+
+def inj_mult(pl, sk):
+    """The injury volume multiplier for this player + stat, or 1.0."""
+    b = pl.get("inj_boost")
+    if not b:
+        return 1.0
+    fam = stat_family(sk, pl["p"])
+    if fam == "rec":
+        return b.get("rec", 1.0)
+    if fam == "rush":
+        return b.get("rush", 1.0)
+    return 1.0
+
+
+# ---------------------------------------------------------------------------
 # Defense-vs-position: per-game allowed, blended across this season and last.
 # Early in a season last year's numbers dominate; by mid-season this year's do.
 # ---------------------------------------------------------------------------
@@ -1120,7 +1190,7 @@ def build_live_picks(picks, slate_games, sched, by_key, snap, pmus=None):
             ctx = context_scale(stat_family(sk, pl["p"]), hist_context(pl["g"]), game_pts, game_spr,
                                 def_ratio(snap, opp if home is not None else None, pl["p"], sk))
             vals = [stat_value(sk, r) for r in pl["g"]]
-            mp = model_prob(vals, pm["line"], stat_kind(sk), ctx["scale"])
+            mp = model_prob(vals, pm["line"], stat_kind(sk), ctx["scale"] * inj_mult(pl, sk))
             if not mp:
                 continue
             fav = "over" if mp["over"] >= 0.5 else "under"
@@ -1383,6 +1453,10 @@ def main():
         print(f"  ESPN: skipped ({e}) — using nflverse only")
 
     players = build_players(all_rows, roster, injuries, sched)
+    try:
+        compute_injury_boosts(players)
+    except Exception as e:  # noqa: BLE001
+        print(f"  injury boosts: skipped ({e})")
     with_games = [p for p in players if p["g"]]
     latest = (0, 0, "REG")
     for p in with_games:
