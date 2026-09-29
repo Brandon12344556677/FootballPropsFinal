@@ -74,7 +74,11 @@ NHL_TEAMS = {
     "mapleleafs": "TOR", "leafs": "TOR", "toronto": "TOR", "utah": "UTAH", "mammoth": "UTAH", "hockeyclub": "UTAH",
     "canucks": "VAN", "vancouver": "VAN", "goldenknights": "VGK", "knights": "VGK", "vegas": "VGK", "lasvegas": "VGK",
     "capitals": "WSH", "caps": "WSH", "washington": "WSH", "jets": "WPG", "winnipeg": "WPG",
+    # Polymarket's own slug codes that differ from ESPN's (seen 2026-09-28)
+    "cal": "CGY", "lak": "LA", "las": "VGK", "mon": "MTL",
 }
+# ESPN abbreviation -> Polymarket slug code (lowercase ESPN code unless listed).
+POLY_CODE = {"CGY": "cal", "LA": "lak", "VGK": "las", "MTL": "mon"}
 
 
 def poly_team(tok):
@@ -335,16 +339,32 @@ def parse_market(m):
             "tradeable": tradeable}
 
 
-def fetch_markets():
-    """Polymarket NBA player-prop events in a [-1,+10] day window, with markets.
-    Non-fatal; returns [] off-season or if the API/format doesn't match."""
+def fetch_markets(slate=None):
+    """Polymarket NHL player-prop events in a [-1,+10] day window, with markets.
+    Also probes each ESPN slate game's slug directly (the listing is capped and
+    sorted newest-first, so near-term games can fall off it). Non-fatal."""
     try:
         events = json.loads(http_get(POLY_SLATE))
     except Exception as e:  # noqa: BLE001
-        print(f"  polymarket: skipped ({e})")
-        return []
+        print(f"  polymarket: listing skipped ({e})")
+        events = []
+    if not isinstance(events, list):
+        events = []
+    listed = {ev.get("slug", "") for ev in events if isinstance(ev, dict)}
+    for g in slate or []:
+        a = POLY_CODE.get(g["away"], g["away"].lower())
+        h = POLY_CODE.get(g["home"], g["home"].lower())
+        slug = f"nhl-{a}-{h}-{g['date']}-player-props"
+        if slug in listed:
+            continue
+        try:
+            ev = json.loads(http_get(POLY_EVENT.format(slug=slug), tries=1))
+            if isinstance(ev, dict) and ev.get("slug") == slug:
+                events.append(ev)
+        except Exception:  # noqa: BLE001 — 404 until Polymarket posts that game's props
+            pass
     games = []
-    for ev in events if isinstance(events, list) else []:
+    for ev in events:
         slug = ev.get("slug", "")
         m = POLY_SLUG.match(slug)
         if not m:
@@ -379,7 +399,7 @@ def season_year(d):
 # ---------------------------------------------------------------------------
 def scan_dates(season):
     """Every date (newest first) in the NBA window for a season (the tip-off year)."""
-    start = datetime.date(season, 10, 1)
+    start = datetime.date(season, 9, 15)   # 2026-27 opened Sep 29; preseason games are skipped
     end = min(TODAY, datetime.date(season + 1, 7, 15))
     out = []
     d = end
@@ -410,7 +430,8 @@ def header_meta(gpj):
     home = team_code(next((c.get("team", {}).get("abbreviation") for c in cs if c.get("homeAway") == "home"), None))
     away = team_code(next((c.get("team", {}).get("abbreviation") for c in cs if c.get("homeAway") == "away"), None))
     date_g = (comp.get("date") or "")[:10]
-    stype = "PST" if (header.get("season") or {}).get("type") == 3 else "REG"
+    st = (header.get("season") or {}).get("type")
+    stype = "PST" if st == 3 else ("PRE" if st == 1 else "REG")
     return completed, home, away, date_g, stype
 
 
@@ -517,7 +538,7 @@ def fetch_new_games(store):
                 if not completed:
                     complete_date = False        # a game that day isn't final yet
                     continue
-                if not home or not away:
+                if not home or not away or stype == "PRE":   # preseason = backups; skip
                     continue
                 if not re.match(r"\d{4}-\d{2}-\d{2}", date_g or ""):
                     date_g = date_iso
@@ -553,7 +574,8 @@ def fetch_slate():
     except Exception as e:  # noqa: BLE001
         print(f"    slate: skipped ({e})")
         return games
-    events = ((sb.get("content") or {}).get("sbData") or {}).get("events", []) or []
+    # site.web.api returns events at the top level; the cdn format wrapped them in content.sbData
+    events = sb.get("events") or ((sb.get("content") or {}).get("sbData") or {}).get("events", []) or []
     for ev in events:
         comp = (ev.get("competitions") or [{}])[0]
         status = ((comp.get("status") or {}).get("type") or {})
@@ -1057,7 +1079,7 @@ def main():
 
     # Polymarket NBA markets (auto-activates in-season; no-op off-season).
     try:
-        poly_games = fetch_markets()
+        poly_games = fetch_markets(slate)
     except Exception as e:  # noqa: BLE001
         print(f"  polymarket: skipped ({e})")
         poly_games = []
