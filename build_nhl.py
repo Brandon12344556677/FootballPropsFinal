@@ -23,6 +23,7 @@ ESPN response degrades to "no new data" instead of failing the build.
 import json, math, os, re, sys, time, datetime, unicodedata, urllib.request
 
 TODAY = datetime.date.today()
+ET_TODAY = (datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(hours=4)).date().isoformat()
 UA = {"User-Agent": "prop-streak-lab/2.0 (+https://propstreaklab.com)"}
 
 # ESPN blocks site.api.espn.com from data-center IPs (Akamai 403), but two hosts
@@ -653,8 +654,13 @@ def fetch_new_games(store):
 
 
 # ---------------------------------------------------------------------------
-# Tonight's / upcoming slate (for the board) — completed games are ignored here.
+# Tonight's / upcoming slate (for the board) — started and completed games are left out.
 # ---------------------------------------------------------------------------
+# Matchups (frozenset of the two team codes) that ESPN shows as under way or over.
+# No new pick is recorded for these, so none is ever made at an in-game price.
+STARTED = set()
+
+
 def fetch_slate():
     """The current/upcoming board (the cdn scoreboard returns today's games; it
     ignores a date param, which is fine — the NBA page shows tonight's slate)."""
@@ -669,12 +675,13 @@ def fetch_slate():
     for ev in events:
         comp = (ev.get("competitions") or [{}])[0]
         status = ((comp.get("status") or {}).get("type") or {})
-        if status.get("completed"):
-            continue
         cs = comp.get("competitors") or []
         home = team_code(next((c.get("team", {}).get("abbreviation") for c in cs if c.get("homeAway") == "home"), None))
         away = team_code(next((c.get("team", {}).get("abbreviation") for c in cs if c.get("homeAway") == "away"), None))
         if not home or not away:
+            continue
+        if status.get("completed") or status.get("state", "pre") != "pre":
+            STARTED.add(frozenset((away, home)))
             continue
         total = spread = None
         odds = comp.get("odds") or []
@@ -857,6 +864,10 @@ def build_market_picks(picks, poly_games, players_by_key, espn_slate, defense, d
     added = 0
     for g in poly_games:
         eg = next((x for x in espn_slate if {x["away"], x["home"]} == {g["away"], g["home"]}), None)
+        if frozenset((g["away"], g["home"])) in STARTED:
+            continue            # already started or over: its price is in-game, not pre-game
+        if eg is None and g["date"] < ET_TODAY:
+            continue            # an earlier day's game (off today's scoreboard) — long started
         # grade against ESPN's (UTC) date — slugs use the ET date, which differs for late games
         date = eg["date"] if eg else g["date"]
         gid = f"{date}-{g['away']}-{g['home']}"
