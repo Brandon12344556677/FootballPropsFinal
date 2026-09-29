@@ -626,7 +626,7 @@ tr.hit td{background:var(--hit-soft)} tr.miss td{background:var(--miss-soft)}
     </div>
   </div>
 
-  <a id="valueweekbar" class="vwbar" href="#" onclick="showTab('past');return false;" hidden></a>
+  <a id="valueweekbar" class="vwbar" href="#" hidden></a>
 
   <div class="sportbar">
     <a class="sportbtn" href="./">🏠 Home</a>
@@ -1227,8 +1227,8 @@ let PICKS=null;
 function loadPicks(){
   fetch('./nhl_picks.json',{cache:'no-store'}).then(r=>r.ok?r.json():null).then(d=>{
     if(!d||!d.picks){ PICKS=[]; } else { const cols=d.cols; PICKS=d.picks.map(row=>Object.fromEntries(cols.map((c,i)=>[c,row[i]]))); }
-    renderEdges(); renderValue(); generateDigest(); renderPast(); renderApTeams();
-  }).catch(()=>{ PICKS=[]; renderEdges(); renderValue(); generateDigest(); renderPast(); renderApTeams(); });
+    renderEdges(); renderValue(); renderValueWeek(); generateDigest(); renderPast(); renderApTeams();
+  }).catch(()=>{ PICKS=[]; renderEdges(); renderValue(); renderValueWeek(); generateDigest(); renderPast(); renderApTeams(); });
 }
 function initPicks(){ renderPast(); }   // Past tab opened
 function renderPast(){ const body=$('pkbody'); if(!body) return;
@@ -1455,21 +1455,32 @@ render();
     });
   });
 })();
-(function renderValueWeek(){
+// Value spots banner: the season's units record once Value picks are graded;
+// before that, a count of the Value spots live on the board; hidden if neither.
+function renderValueWeek(){
   const el=$('valueweekbar'); if(!el) return;
-  fetch('nhl_weekly.json',{cache:'no-store'}).then(r=>r.ok?r.json():null).then(d=>{
-    if(!d || !d.n){ el.hidden=true; return; }
-    const up = d.units>=0, u=(up?'+':'')+(+d.units).toFixed(1);
-    const roi = d.priced ? d.units/d.priced : null;
-    const roiStr = roi==null ? '' : ` · ${roi>=0?'+':''}${Math.round(roi*100)}% ROI`;
+  const r=(DB.record||{}).V;
+  if(r && r.n && r.priced){
+    const units=+r.units||0, up=units>=0, u=(up?'+':'')+units.toFixed(1), roi=units/r.priced;
     el.className='vwbar'+(up?'':' down');
     el.innerHTML =
-      `<span class="lbl">⚡ Value spots · Week ${d.week}</span>`+
+      `<span class="lbl">⚡ Value spots · this season</span>`+
       `<span class="big">${up?'▲':'▼'} ${u} units</span>`+
-      `<span class="lbl">${d.hit}/${d.n} hit${roiStr}</span>`+
-      `<span class="sub">Every Value pick recorded before tip-off and graded from the box score — tap for the full record.</span>`;
-    el.hidden=false;
-  }).catch(()=>{ el.hidden=true; });
-})();
+      `<span class="lbl">${r.hit}/${r.n} hit · ${roi>=0?'+':''}${Math.round(roi*100)}% ROI</span>`+
+      `<span class="sub">Every Value pick recorded before ${TIPOFF} and graded from the box score — tap for the full record.</span>`;
+    el.onclick=()=>{ showTab('past'); return false; };
+    el.hidden=false; return;
+  }
+  const live=PICKS ? listRows('V').length : 0;
+  if(!live){ el.hidden=true; return; }
+  el.className='vwbar';
+  el.innerHTML =
+    `<span class="lbl">⚡ Value spots</span>`+
+    `<span class="big">${live} live now</span>`+
+    `<span class="sub">Props where the model's chance clearly beats the Polymarket price — tap to see them.</span>`;
+  el.onclick=()=>{ showTab('week'); const p=$('valuepanel'); if(p) p.scrollIntoView({behavior:'smooth'}); return false; };
+  el.hidden=false;
+}
+renderValueWeek();
 (function(){ const h=(location.hash||'').replace('#',''); if(h) showTab(h); })();
 </script>
