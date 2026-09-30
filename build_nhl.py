@@ -913,11 +913,61 @@ def refresh_price(p, pm):
         p["price"] = round(px, 3) if px is not None else None
 
 
+GID_RE = re.compile(r"^(\d{4}-\d{2}-\d{2})-([A-Z]+)-([A-Z]+)$")
+
+
+def same_game_index(picks):
+    """{(pid, stat, line, away, home): [(date, pick), ...]} for finding a pick already
+    recorded for the same game. The date in a gid can be Polymarket's ET date (recorded
+    before ESPN listed the game) or ESPN's UTC date (after), a day apart for a late game,
+    so matching allows a day either way."""
+    out = {}
+    for p in picks:
+        m = GID_RE.match(str(p.get("gid") or ""))
+        if not m:
+            continue
+        try:
+            d = datetime.date.fromisoformat(m.group(1))
+        except ValueError:
+            continue
+        out.setdefault((p["pid"], p["stat"], p["line"], m.group(2), m.group(3)), []).append((d, p))
+    return out
+
+
+def find_same_game(index, pid, sk, line, away, home, date_iso):
+    d = datetime.date.fromisoformat(date_iso)
+    return next((p for dd, p in index.get((pid, sk, line, away, home), []) if abs((dd - d).days) <= 1), None)
+
+
+def drop_same_game_duplicates(picks):
+    """Remove pending picks recorded twice for one game (once under each date), keeping the
+    one whose gid date is the game's UTC date (ESPN's, as the store uses), else the newest.
+    Graded picks are never touched. Returns how many were dropped."""
+    drop = set()
+    for group in same_game_index(p for p in picks if p.get("src") == "live" and p.get("res") is None).values():
+        group.sort(key=lambda x: x[0])
+        i = 0
+        while i < len(group):
+            j = i
+            while j + 1 < len(group) and (group[j + 1][0] - group[i][0]).days <= 1:
+                j += 1
+            if j > i:
+                run = [p for _, p in group[i:j + 1]]
+                t = parse_utc(run[0].get("start"))
+                utc = t.date().isoformat() if t else None
+                keep = next((p for p in run if utc and p["gid"].startswith(utc)), run[-1])
+                drop.update(id(p) for p in run if p is not keep)
+            i = j + 1
+    if drop:
+        picks[:] = [p for p in picks if id(p) not in drop]
+    return len(drop)
+
+
 def build_market_picks(picks, poly_games, players_by_key, espn_slate, defense, defavg):
     """Priced picks from Polymarket NBA markets, matched to players by name. Each
     is modeled at the market's line so Value spots can compare model vs price.
     Returns count added; no-op when there are no NBA markets (off-season)."""
-    have = {(p["pid"], p["date"], p["stat"], p["line"]): p for p in picks}
+    have = same_game_index(picks)
     added = 0
     for g in poly_games:
         eg = next((x for x in espn_slate if {x["away"], x["home"]} == {g["away"], g["home"]}), None)
@@ -942,9 +992,9 @@ def build_market_picks(picks, poly_games, players_by_key, espn_slate, defense, d
             opp = g["home"] if team == g["away"] else (g["away"] if team == g["home"] else None)
             if opp is None:
                 continue
-            key = (pl["id"], date, sk, pm["line"])
-            if key in have:
-                refresh_price(have[key], pm)
+            ex = find_same_game(have, pl["id"], sk, pm["line"], g["away"], g["home"], date)
+            if ex is not None:
+                refresh_price(ex, pm)
                 continue
             rows = pl["g"]
             hp = hist_context(rows)
@@ -967,7 +1017,8 @@ def build_market_picks(picks, poly_games, players_by_key, espn_slate, defense, d
                           "neff": round(mp["neff"], 1), "price": round(price, 3) if price is not None else None,
                           "lists": "", "rec": f"{sk} {side} {pm['line']}", "actual": None, "res": None,
                           "adj": round(scale, 3)})
-            have[key] = picks[-1]
+            have.setdefault((pl["id"], sk, pm["line"], g["away"], g["home"]), []).append(
+                (datetime.date.fromisoformat(date), picks[-1]))
             added += 1
     return added
 
@@ -1280,6 +1331,9 @@ def main():
         print(f"  polymarket US: skipped ({e})")
 
     picks = load_picks()
+    dup = drop_same_game_duplicates(picks)
+    if dup:
+        print(f"  picks: dropped {dup} duplicate pick(s) recorded twice for one game")
     graded, dnp = grade_picks(picks, by_pid, box_games(store["rows"]))
     try:
         mkt_added = build_market_picks(picks, poly_games, players_by_key, slate, defense, defavg)
