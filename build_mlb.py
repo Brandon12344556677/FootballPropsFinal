@@ -76,7 +76,16 @@ PITCH_STATS = {"k", "outs", "ha", "er", "pbb"}
 # is a count on its own scale, so the smoothing floor is per-stat.
 # ---------------------------------------------------------------------------
 MODEL = {"halfLife": 6.0, "maxGames": 20, "priorK": 0.5, "bwConst": 0.9, "z": 1.2816}
-BW_FLOOR = {"h": 0.5, "tb": 0.8, "hrr": 0.8, "r": 0.5, "rbi": 0.5, "hr": 0.35, "sb": 0.35,
+# Hitting stats use a longer memory. Walk-forward backtest on the stored box scores (15,906
+# lineup starts per stat, each predicted from earlier games only, scored on odd and on even
+# days separately): 82 games at half-life 40 beat 20 at half-life 6 for every hitting stat
+# on both halves. Pitchers keep MODEL: for outs the long memory was worse (+0.003 log loss;
+# a starter's leash is a recent thing), for strikeouts only slightly better.
+MODEL_BAT = {"halfLife": 40.0, "maxGames": 82}
+MODEL_V = 2   # recorded on every pick ("mv"); calibration fits only this version's picks
+# Floors: RBIs 0.5 -> 0.3 and homers 0.35 -> 0.2 (the old ones leaked chance across a
+# 0.5 line: homers read 19% for a 11% event). Steals/walks/strikeouts weren't refitted.
+BW_FLOOR = {"h": 0.5, "tb": 0.8, "hrr": 0.8, "r": 0.5, "rbi": 0.3, "hr": 0.2, "sb": 0.35,
             "bb": 0.5, "so": 0.5, "k": 1.0, "outs": 2.0, "ha": 1.0, "er": 0.8, "pbb": 0.6}
 # Opponent adjustment: the player's distribution is scaled by
 # (opponent's per-game number / league average)^gamma, clamped. For hitting stats
@@ -84,7 +93,14 @@ BW_FLOOR = {"h": 0.5, "tb": 0.8, "hrr": 0.8, "r": 0.5, "rbi": 0.5, "hr": 0.35, "
 # lineup does (strikes out, gets hits, walks, scores). In a postseason game pitching
 # stats are also scaled by pstPitch: starters get pulled earlier in October than the
 # regular-season starts the model learns from, so every per-start count runs lower.
-CTX = {"gamma": 0.45, "clampLo": 0.6, "clampHi": 1.6, "pstPitch": 0.9}
+# Opposing starter: hitting stats in SP_STATS also scale by spq ** sp, spq being how many
+# hits + walks the probable starter allows per out against all starters' rate (see
+# starter_quality). Better on both halves for every one: log loss -0.0002 (homers) to
+# -0.0011 (H+R+RBI). Also tested and not used: batting-order spot (no gain even knowing
+# the real one) and home field.
+CTX = {"gamma": 0.45, "clampLo": 0.6, "clampHi": 1.6, "pstPitch": 0.9, "sp": 0.5}
+SP_STATS = {"h", "tb", "hrr", "rbi", "r", "hr"}
+SP_PRIOR_OUTS = 45.0   # ~8 starts of league-average prior
 
 
 def _erf(x):
@@ -99,14 +115,21 @@ def ncdf(x):
     return 0.5 * (1.0 + _erf(x / math.sqrt(2.0)))
 
 
-def model_prob(values, line, floor, scale=1.0):
+def mem_for(sk):
+    """The memory (halfLife, maxGames) a stat is modeled with."""
+    return MODEL if sk in PITCH_STATS else MODEL_BAT
+
+
+def model_prob(values, line, floor, scale=1.0, mem=None):
     """values oldest -> newest; floor is the per-stat bandwidth floor; scale
-    multiplies every value (opponent adjustment). Mirror of the JS version."""
-    v = [x * scale for x in values[-MODEL["maxGames"]:]]
+    multiplies every value (opponent adjustment); mem is mem_for(stat) (None = MODEL).
+    Mirror of the JS version."""
+    mem = mem or MODEL
+    v = [x * scale for x in values[-mem["maxGames"]:]]
     n = len(v)
     if n == 0:
         return None
-    hl = MODEL["halfLife"]
+    hl = mem["halfLife"]
     w = [0.5 ** ((n - 1 - i) / hl) for i in range(n)]
     W = sum(w)
     W2 = sum(x * x for x in w)
@@ -724,11 +747,36 @@ def def_ratio(defense, defavg, opp, sk):
     return (a / L) if (a is not None and L) else None
 
 
-def context_scale(def_r, sk, pst):
+def context_scale(def_r, sk, pst, spq=None):
+    """spq: the opposing probable starter's ratio from starter_quality (hitting stats)."""
     dfs = def_r ** CTX["gamma"] if (def_r and def_r > 0) else 1.0
     if pst and sk in PITCH_STATS:
         dfs *= CTX["pstPitch"]
-    return min(CTX["clampHi"], max(CTX["clampLo"], dfs))
+    scale = min(CTX["clampHi"], max(CTX["clampLo"], dfs))
+    if spq and sk in SP_STATS:
+        scale = min(CTX["clampHi"], max(CTX["clampLo"], scale * spq ** CTX["sp"]))
+    return scale
+
+
+def starter_quality(slate, by_pid, rows):
+    """Sets g["spq"] = {team: ratio} on each slate game: the hits + walks that team's
+    probable starter has allowed per out in his starts in the store, shrunk toward all
+    starters' rate with SP_PRIOR_OUTS of prior, over that rate (1.2 = allows 20% more).
+    A starter with no stored starts gets no entry. Hitters facing him scale by it."""
+    outs = sum(r.get("outs") or 0 for r in rows if r.get("pit") == 2)
+    if not outs:
+        return
+    lg = sum((r.get("ha") or 0) + (r.get("pbb") or 0) for r in rows if r.get("pit") == 2) / outs
+    for g in slate:
+        q = {}
+        for team, pid in (g.get("probables") or {}).items():
+            st = [r for r in (by_pid.get(pid) or {}).get("g", []) if r[20] == 2]
+            if not st:
+                continue
+            o = sum(stat_get(r, "outs") for r in st)
+            hb = sum(stat_get(r, "ha") + stat_get(r, "pbb") for r in st)
+            q[team] = round((hb + SP_PRIOR_OUTS * lg) / (o + SP_PRIOR_OUTS) / lg, 4)
+        g["spq"] = q
 
 
 # ---------------------------------------------------------------------------
@@ -736,7 +784,8 @@ def context_scale(def_r, sk, pst):
 # ---------------------------------------------------------------------------
 PICK_COLS = ["src", "gid", "season", "date", "pid", "player", "pos", "team", "opp",
              "stat", "line", "side", "prob", "lo", "hi", "neff", "price", "lists", "rec", "actual", "res", "adj", "start",
-             "px0", "pxc"]   # px0/pxc: first and last pre-game price (closing line value)
+             "px0", "pxc",   # px0/pxc: first and last pre-game price (closing line value)
+             "mv"]           # model version the chance came from (MODEL_V)
 BAT_BOARD = ["h", "tb", "hrr"]
 PIT_BOARD = ["k", "outs"]
 TOP_N = 25
@@ -781,7 +830,7 @@ def make_pick(pl, gid, date, team, opp, sk, line, mp, scale, start, prices=None)
             "prob": round(prob, 3), "lo": round(lo, 3), "hi": round(hi, 3),
             "neff": round(mp["neff"], 1), "price": round(price, 3) if price is not None else None,
             "lists": "", "rec": f"{sk} {side} {line}", "actual": None, "res": None,
-            "adj": round(scale, 3), "start": start or None}
+            "adj": round(scale, 3), "start": start or None, "mv": MODEL_V}
 
 
 def refresh_price(p, pm):
@@ -847,8 +896,8 @@ def build_market_picks(picks, poly_games, players_by_key, espn_slate, defense, d
             vals = stat_values(pl["g"], sk)
             if len(vals) < 3:
                 continue
-            scale = context_scale(def_ratio(defense, defavg, opp, sk), sk, pst)
-            mp = model_prob(vals, pm["line"], BW_FLOOR.get(sk, 1.0), scale)
+            scale = context_scale(def_ratio(defense, defavg, opp, sk), sk, pst, ((eg or {}).get("spq") or {}).get(opp))
+            mp = model_prob(vals, pm["line"], BW_FLOOR.get(sk, 1.0), scale, mem_for(sk))
             if not mp:
                 continue
             picks.append(make_pick(pl, gid, date, team, opp, sk, pm["line"], mp, scale, start, pm))
@@ -882,8 +931,8 @@ def build_board_picks(picks, slate, players_by_team, by_pid, defense, defavg):
                     continue
                 vals = stat_values(pl["g"], sk)
                 line = seed_line(vals)
-                scale = context_scale(def_ratio(defense, defavg, opp, sk), sk, g.get("pst"))
-                mp = model_prob(vals, line, BW_FLOOR.get(sk, 1.0), scale)
+                scale = context_scale(def_ratio(defense, defavg, opp, sk), sk, g.get("pst"), (g.get("spq") or {}).get(opp))
+                mp = model_prob(vals, line, BW_FLOOR.get(sk, 1.0), scale, mem_for(sk))
                 if not mp or mp["neff"] < VALUE_MIN_NEFF:
                     continue
                 picks.append(make_pick(pl, gid, g["date"], team, opp, sk, line, mp, scale, g.get("start")))
@@ -977,8 +1026,8 @@ def assign_lists(picks):
 
 def fit_temperature(picks):
     data = []
-    for p in picks:
-        if p.get("res") in ("hit", "miss") and p.get("prob") is not None:
+    for p in picks:      # only picks made by this model version: older ones had other errors
+        if p.get("res") in ("hit", "miss") and p.get("prob") is not None and p.get("mv") == MODEL_V:
             pr = min(0.999, max(0.001, float(p["prob"])))
             data.append((math.log(pr / (1 - pr)), 1.0 if p["res"] == "hit" else 0.0))
     if len(data) < 400:
@@ -1083,6 +1132,7 @@ def main():
 
     players = build_players(store["rows"])
     by_pid = {p["id"]: p for p in players}
+    starter_quality(slate, by_pid, store["rows"])
     players_by_team = {}
     players_by_key = {}
     for p in players:

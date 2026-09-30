@@ -866,16 +866,19 @@ function cents(p){ return p==null? '' : Math.round(p*100)+'¢'; }
 
 // ==== MODEL (mirrored in build_mlb.py — keep identical) ====
 const MODEL = {halfLife:6, maxGames:20, priorK:0.5, bwConst:0.9, z:1.2816};
-const BW_FLOOR = {h:0.5, tb:0.8, hrr:0.8, r:0.5, rbi:0.5, hr:0.35, sb:0.35, bb:0.5, so:0.5,
+const MODEL_BAT = {halfLife:40, maxGames:82};   // hitting stats: a longer memory (pitchers keep MODEL)
+const BW_FLOOR = {h:0.5, tb:0.8, hrr:0.8, r:0.5, rbi:0.3, hr:0.2, sb:0.35, bb:0.5, so:0.5,
   k:1.0, outs:2.0, ha:1.0, er:0.8, pbb:0.6};
-const CTX = {gamma:0.45, clampLo:0.6, clampHi:1.6, pstPitch:0.9};
+const CTX = {gamma:0.45, clampLo:0.6, clampHi:1.6, pstPitch:0.9, sp:0.5};
+const SP_STATS = new Set(['h','tb','hrr','rbi','r','hr']);   // scaled by the opposing starter
 function erf(x){ const s=x>=0?1:-1; x=Math.abs(x); const t=1/(1+0.3275911*x);
   const y=1-(((((1.061405429*t-1.453152027)*t)+1.421413741)*t-0.284496736)*t+0.254829592)*t*Math.exp(-x*x); return s*y; }
 function ncdf(x){ return 0.5*(1+erf(x/Math.sqrt(2))); }
-function modelProb(values, line, floor, scale){
-  if(scale==null) scale=1;
-  const v=values.slice(-MODEL.maxGames).map(x=>x*scale), n=v.length; if(!n) return null;
-  const w=v.map((_,i)=>Math.pow(0.5,(n-1-i)/MODEL.halfLife));
+function memFor(sk){ return PITCH_STATS.has(sk)? MODEL : MODEL_BAT; }
+function modelProb(values, line, floor, scale, mem){
+  if(scale==null) scale=1; mem=mem||MODEL;
+  const v=values.slice(-mem.maxGames).map(x=>x*scale), n=v.length; if(!n) return null;
+  const w=v.map((_,i)=>Math.pow(0.5,(n-1-i)/mem.halfLife));
   let W=0, W2=0; for(const x of w){ W+=x; W2+=x*x; }
   const neff=W*W/W2;
   let mean=0; for(let i=0;i<n;i++) mean+=w[i]*v[i]; mean/=W;
@@ -897,10 +900,14 @@ function seedLine(values){ const last=values.slice(-10); if(!last.length) return
 function gradeResult(actual, line, side){ if(actual===line) return 'push'; if(side==='over') return actual>line?'hit':'miss'; return actual<line?'hit':'miss'; }
 function sideProb(mp){ if(mp.over>=0.5) return {side:'over', prob:mp.over, lo:mp.lo, hi:mp.hi}; return {side:'under', prob:mp.under, lo:1-mp.hi, hi:1-mp.lo}; }
 // A postseason game also scales pitching stats by pstPitch (starters are pulled earlier in October).
-function contextScale(defR, sk, pst){
+// spq: the opposing probable starter's hits + walks allowed per out vs all starters (the
+// builder puts it on each game as g.spq[team]); hitting stats in SP_STATS scale by spq^sp.
+function contextScale(defR, sk, pst, spq){
   let dfs=1; if(defR&&defR>0) dfs=Math.pow(defR, CTX.gamma);
   const env=(pst && PITCH_STATS.has(sk))? CTX.pstPitch : 1;
-  return {scale:Math.min(CTX.clampHi, Math.max(CTX.clampLo, env*dfs)), env, def:dfs};
+  let scale=Math.min(CTX.clampHi, Math.max(CTX.clampLo, env*dfs)), sp=1;
+  if(spq && SP_STATS.has(sk)){ sp=Math.pow(spq, CTX.sp); scale=Math.min(CTX.clampHi, Math.max(CTX.clampLo, scale*sp)); }
+  return {scale, env, def:dfs, sp};
 }
 // Pitching stats read from starts (any outing while an arm has fewer than 3), hitting
 // stats from lineup starts (any game at the plate while a hitter has fewer than 5).
@@ -971,8 +978,9 @@ function contextFor(p, sk, oppOverride, gameOverride){
   const opp = oppOverride || (g? (g.away===p.t? g.home : g.away) : null);
   if(!opp) return off;
   const dr=defRatioFor(opp, sk);
-  const cs=contextScale(dr, sk, !!(g && g.pst));
-  return {scale:cs.scale, env:cs.env, def:cs.def, opp, gamePts:null, defRatio:dr, on:true};
+  const spq=(g && !oppOverride && g.spq)? g.spq[opp] : null;   // the starter he faces, when he's known
+  const cs=contextScale(dr, sk, !!(g && g.pst), spq);
+  return {scale:cs.scale, env:cs.env, def:cs.def, sp:cs.sp, spName:spq&&g.pnames? g.pnames[opp] : null, opp, gamePts:null, defRatio:dr, on:true};
 }
 
 // ---- tabs ----
@@ -1098,8 +1106,8 @@ function render(){
   } else ws.hidden=true;
   const ctx=contextFor(p, sk), oppNow=ctx.opp;
   const line=state.line;
-  const rawMp=modelProb(vals, line, floorFor(sk), 1);
-  const adjMp=ctx.on? modelProb(vals, line, floorFor(sk), ctx.scale) : rawMp;
+  const rawMp=modelProb(vals, line, floorFor(sk), 1, memFor(sk));
+  const adjMp=ctx.on? modelProb(vals, line, floorFor(sk), ctx.scale, memFor(sk)) : rawMp;
   const mp=calMp(adjMp);
   const hitCount=vals.filter(v=> state.ou==='over'? v>line : v<line).length;
   const l10=vals.slice(-10), l10hit=l10.filter(v=> state.ou==='over'? v>line : v<line).length;
@@ -1119,11 +1127,12 @@ function render(){
   $('tiles').innerHTML=tiles.join('');
   VERDICT= mSide!=null? {prob:mSide, lo:side==='over'?mp.lo:1-mp.hi, hi:side==='over'?mp.hi:1-mp.lo, neff:mp.neff} : null; paintVerdict();
   // context note
-  if(ctx.on && (ctx.def!==1 || ctx.env!==1)){
+  if(ctx.on && (ctx.def!==1 || ctx.env!==1 || (ctx.sp||1)!==1)){
     const vs=PITCH_STATS.has(sk)? `${oppNow}'s lineup` : `${oppNow}'s pitching`;
     const parts=[]; if(ctx.defRatio) parts.push(`vs ${vs} ×${fmt(ctx.def)}`); if(ctx.env!==1) parts.push(`postseason workload ×${fmt(ctx.env)}`);
-    $('disthint').textContent=`Adjusted for the matchup: ${parts.join(', ')} → overall ×${fmt(ctx.scale)} vs the player's usual.`;
-  } else $('disthint').textContent=`Weighted toward recent ${PITCH_STATS.has(sk)?'starts':'games'} (half-life 6). Smoothed to a distribution, then read off the line.`;
+    if((ctx.sp||1)!==1) parts.push(`vs ${ctx.spName||'the starter'} ×${ctx.sp.toFixed(2)}`);
+    $('disthint').textContent=`Adjusted for the matchup: ${parts.join(', ')} → overall ×${ctx.scale.toFixed(2)} vs the player's usual.`;
+  } else { const m=memFor(sk); $('disthint').textContent=`Up to the last ${m.maxGames} ${PITCH_STATS.has(sk)?'starts':'games'}, newer ones weighted more (half-life ${m.halfLife}). Smoothed to a distribution, then read off the line.`; }
   drawDist(vals, line, sk);
   drawChart(vals, line, sk, gs);
   renderTable(gs, sk);
@@ -1420,7 +1429,7 @@ function updatePlayerBtns(){ const box=$('playerbtns'), p=state.player; if(!box)
   $('cmpadd').textContent = c? '⚖ In compare' : '⚖ Compare';
 }
 function playerModel(p, sk, line){ const vals=valuesOf(p, sk); if(vals.length<3) return null;
-  const ctx=contextFor(p, sk); return calMp(modelProb(vals, line, floorFor(sk), ctx.scale)); }
+  const ctx=contextFor(p, sk); return calMp(modelProb(vals, line, floorFor(sk), ctx.scale, memFor(sk))); }
 function renderWatch(){ const body=$('watchbody'); if(!body) return;
   const items=WATCH.map(id=>byId[id]).filter(p=>p&&p.g&&p.g.length);
   if(!items.length){ body.innerHTML='<p class="mktnote">No players starred yet. Open a player in the <b>Player</b> tab and tap <b>☆ Watch</b>.</p>'; return; }
@@ -1537,7 +1546,7 @@ function parseBetSlip(text){
   return legs;
 }
 function probForSlip(p, sk, line, side){ const vals=valuesOf(p,sk); if(vals.length<3) return null;
-  const mp=calMp(modelProb(vals, line, floorFor(sk), contextFor(p,sk).scale)); if(!mp) return null;
+  const mp=calMp(modelProb(vals, line, floorFor(sk), contextFor(p,sk).scale, memFor(sk))); if(!mp) return null;
   return side==='over'? {prob:mp.over,lo:mp.lo,hi:mp.hi} : {prob:mp.under,lo:1-mp.hi,hi:1-mp.lo}; }
 function renderSlip(legs, raw){
   const body=$('slipbody');
