@@ -866,10 +866,10 @@ function pct(p){ return Math.round(p*100)+'%'; }
 function cents(p){ return p==null? '' : Math.round(p*100)+'¢'; }
 
 // ==== MODEL (mirrored in build_nba.py — keep identical) ====
-const MODEL = {halfLife:6, maxGames:20, priorK:0.5, bwConst:0.9, z:1.2816};
-const BW_FLOOR = {pts:3.0, reb:1.2, ast:1.0, tpm:0.7, stl:0.5, blk:0.5, to:0.7, min:3.0,
-  fgm:1.4, fga:2.0, ftm:1.2, fta:1.4, pra:4.0, pr:3.4, pa:3.4, ra:1.6};
-const CTX = {betaPts:0.30, gamma:0.45, minutes:0.5, clampLo:0.6, clampHi:1.6};
+const MODEL = {halfLife:10, maxGames:82, priorK:0.5, bwConst:0.9, z:1.2816};
+const BW_FLOOR = {pts:4.0, reb:0.8, ast:0.75, tpm:0.17, stl:0.5, blk:0.35, to:0.7, min:3.0,
+  fgm:1.4, fga:2.0, ftm:1.2, fta:1.4, pra:3.0, pr:3.4, pa:3.4, ra:1.6};
+const CTX = {betaPts:0.30, gamma:0.65, minutes:0.5, clampLo:0.6, clampHi:1.6};
 function erf(x){ const s=x>=0?1:-1; x=Math.abs(x); const t=1/(1+0.3275911*x);
   const y=1-(((((1.061405429*t-1.453152027)*t)+1.421413741)*t-0.284496736)*t+0.254829592)*t*Math.exp(-x*x); return s*y; }
 function ncdf(x){ return 0.5*(1+erf(x/Math.sqrt(2))); }
@@ -1125,7 +1125,7 @@ function render(){
   if(ctx.on && (ctx.env!==1 || ctx.def!==1)){
     const parts=[]; if(ctx.gamePts) parts.push(`pace/total ×${fmt(ctx.env)}`); if(ctx.defRatio) parts.push(`vs ${esc(oppNow)} defense ×${fmt(ctx.def)}`);
     $('disthint').textContent=`Adjusted for tonight: ${parts.join(', ')} → overall ×${fmt(ctx.scale)} vs the player's usual.`;
-  } else $('disthint').textContent='Weighted toward recent games (half-life 6). Smoothed to a distribution, then read off the line.';
+  } else $('disthint').textContent=`Up to the last ${MODEL.maxGames} games, newer ones weighted more (half-life ${MODEL.halfLife} games). Smoothed to a distribution, then read off the line.`;
   drawDist(vals, line, sk);
   drawChart(vals, line, sk, gs);
   renderTable(gs, sk);

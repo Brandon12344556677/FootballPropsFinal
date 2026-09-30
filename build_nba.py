@@ -115,15 +115,25 @@ STAT_ORDER = ["pts", "reb", "ast", "tpm", "stl", "blk", "to", "min", "fgm", "fga
 # stat is a count on its own scale, so the smoothing floor is per-stat rather
 # than one number for "yards" vs "count".
 # ---------------------------------------------------------------------------
-MODEL = {"halfLife": 6.0, "maxGames": 20, "priorK": 0.5, "bwConst": 0.9, "z": 1.2816}
-# Minimum smoothing bandwidth per stat (roughly a third of a typical game-to-game swing).
-BW_FLOOR = {"pts": 3.0, "reb": 1.2, "ast": 1.0, "tpm": 0.7, "stl": 0.5, "blk": 0.5,
+# Walk-forward backtest on the 2025-26 box scores (27,564 player games per stat, each
+# predicted from earlier games only, scored on odd and on even days separately): 82 games
+# at half-life 10 beat 20 at half-life 6 on every stat and both halves, and the floors
+# below (threes 0.7 -> 0.17: the old one put 58% on overs that hit 54%). Log loss, old ->
+# new: threes 0.5688 -> 0.5445, blocks 0.5741 -> 0.5586, rebounds 0.6053 -> 0.6002,
+# assists 0.5986 -> 0.5956, points 0.6716 -> 0.6694, PRA 0.6672 -> 0.6653.
+MODEL = {"halfLife": 10.0, "maxGames": 82, "priorK": 0.5, "bwConst": 0.9, "z": 1.2816}
+MODEL_V = 2   # recorded on every pick ("mv"); calibration fits only this version's picks
+# Minimum smoothing bandwidth per stat. FG/FT and minutes weren't refitted.
+BW_FLOOR = {"pts": 4.0, "reb": 0.8, "ast": 0.75, "tpm": 0.17, "stl": 0.5, "blk": 0.35,
             "to": 0.7, "min": 3.0, "fgm": 1.4, "fga": 2.0, "ftm": 1.2, "fta": 1.4,
-            "pra": 4.0, "pr": 3.4, "pa": 3.4, "ra": 1.6}
+            "pra": 3.0, "pr": 3.4, "pa": 3.4, "ra": 1.6}
 # Game-context adjustment (one family for the NBA): the player's distribution is
 # scaled by (this game's implied team points / their usual implied points)^betaPts
 # times (opponent's allowed-per-game / league average)^gamma. Clamped.
-CTX = {"betaPts": 0.30, "gamma": 0.45, "minutes": 0.5, "clampLo": 0.6, "clampHi": 1.6}
+# gamma 0.65 (was 0.45) won on every stat and both halves, by 0.0002-0.0005. Also tested
+# and not used: rest / back-to-backs, the opponent on a back-to-back, opponent pace and
+# home court (none beat the model without them on both halves).
+CTX = {"betaPts": 0.30, "gamma": 0.65, "minutes": 0.5, "clampLo": 0.6, "clampHi": 1.6}
 # Minutes: recent minutes / usual minutes (see minutes_ratio), to the power CTX["minutes"].
 # On last season's stored games, fitting on one half of the dates and scoring the other
 # (odd/even days, first/second half, each both ways) chose 0.5 every time and improved
@@ -735,7 +745,8 @@ def def_ratio(defense, defavg, opp, sk):
 PICK_COLS = ["src", "gid", "season", "date", "pid", "player", "pos", "team", "opp",
              "stat", "line", "side", "prob", "lo", "hi", "neff", "price", "lists", "rec", "actual", "res", "adj", "start",
              "sh",    # sh: chance with the minutes strength at MIN_TEST, for comparison
-             "px0", "pxc"]   # px0/pxc: first and last pre-game price (closing line value)
+             "px0", "pxc",   # px0/pxc: first and last pre-game price (closing line value)
+             "mv"]           # model version the chance came from (MODEL_V)
 BOARD_STATS = ["pts", "reb", "ast", "tpm", "pra"]
 TOP_N = 25
 VALUE_MIN_NEFF = 6.0
@@ -902,7 +913,7 @@ def build_market_picks(picks, poly_games, players_by_key, espn_slate, defense, d
                           "prob": round(prob, 3), "lo": round(lo, 3), "hi": round(hi, 3),
                           "neff": round(mp["neff"], 1), "price": round(price, 3) if price is not None else None,
                           "lists": "", "rec": f"{sk} {side} {pm['line']}", "actual": None, "res": None,
-                          "adj": round(scale, 3), "sh": sh})
+                          "adj": round(scale, 3), "sh": sh, "mv": MODEL_V})
             have[key] = picks[-1]
             added += 1
     return added
@@ -945,7 +956,7 @@ def build_board_picks(picks, slate, players_by_team, defense, defavg):
                                   "prob": round(prob, 3), "lo": round(lo, 3), "hi": round(hi, 3),
                                   "neff": round(mp["neff"], 1), "price": None, "lists": "",
                                   "rec": f"{sk} {side} {line}", "actual": None, "res": None,
-                                  "adj": round(scale, 3), "sh": sh})
+                                  "adj": round(scale, 3), "sh": sh, "mv": MODEL_V})
                     have.add((pl["id"], g["date"], sk))
                     now_added += 1
     return now_added
@@ -1028,8 +1039,8 @@ def assign_lists(picks):
 
 def fit_temperature(picks):
     data = []
-    for p in picks:
-        if p.get("res") in ("hit", "miss") and p.get("prob") is not None:
+    for p in picks:      # only picks made by this model version: older ones had other errors
+        if p.get("res") in ("hit", "miss") and p.get("prob") is not None and p.get("mv") == MODEL_V:
             pr = min(0.999, max(0.001, float(p["prob"])))
             data.append((math.log(pr / (1 - pr)), 1.0 if p["res"] == "hit" else 0.0))
     if len(data) < 400:
