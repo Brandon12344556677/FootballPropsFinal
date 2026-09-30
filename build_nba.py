@@ -921,7 +921,7 @@ def grade_picks(picks, by_pid, games):
 
 
 def assign_lists(picks):
-    """Mirrors build.py (NFL). T = the 25 highest model chances ('25 Guaranteed').
+    """Mirrors build.py (NFL). T = the 25 highest model chances ('Top 25 Surest').
     V = 'Value' — the market prices it at 30c or more and the model puts it 15+ points
     higher, ranked by that edge. Prices are fractions here. Only picks whose game hasn't
     started are (re)tagged: once it starts they keep the lists they had at tip-off until

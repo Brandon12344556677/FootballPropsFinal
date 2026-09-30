@@ -12,8 +12,8 @@
   color-scheme:dark;
   --ink:#22354f; --bg:#0a1628; --surface:#0f2038; --surface-2:#142743; --line:#22354f;
   --text:#ffffff; --muted:#e6eaf0;
-  --accent:#00c805; --blaze:#d98a3e; --gold:#00c805;
-  --hit:#4fb583; --hit-soft:#12352a; --miss:#d76a7a; --miss-soft:#3a1c22; --push:#8393a8;
+  --accent:#22d07f; --blaze:#d98a3e; --gold:#22d07f;
+  --hit:#4fb583; --hit-soft:#12352a; --miss:#eb6f7d; --miss-soft:#3a1c22; --push:#8393a8;
   --shadow:0 20px 50px rgba(0,0,0,.45);
   --hard:0 18px 44px rgba(0,0,0,.45); --hard-sm:0 10px 26px rgba(0,0,0,.4);
   --display:"Cormorant Garamond",Georgia,"Times New Roman",serif;
@@ -24,9 +24,9 @@
 body{background:var(--bg);color:var(--text);font-family:var(--body);line-height:1.5;margin:0;
   -webkit-font-smoothing:antialiased;font-size:15px;overflow-x:hidden;
   background-image:
-    linear-gradient(rgba(0,200,5,.035) 1px,transparent 1px),
-    linear-gradient(90deg,rgba(0,200,5,.035) 1px,transparent 1px),
-    radial-gradient(1000px 640px at 15% -8%,rgba(0,200,5,.06),transparent 60%),
+    linear-gradient(rgba(34,208,127,.035) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(34,208,127,.035) 1px,transparent 1px),
+    radial-gradient(1000px 640px at 15% -8%,rgba(34,208,127,.06),transparent 60%),
     linear-gradient(180deg,#0b1a32,#0a1628 55%,#081120);
   background-size:58px 58px,58px 58px,100% 100%,100% 100%;
   background-attachment:fixed}
@@ -353,11 +353,11 @@ a{color:var(--gold)}
 @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 
 /* hero */
-.hero{position:relative;overflow:hidden;border:1px solid rgba(0,200,5,.22);border-radius:14px;padding:40px 34px;margin-bottom:22px;
-  background:radial-gradient(1100px 540px at 12% -12%,rgba(0,200,5,.10),transparent 55%),linear-gradient(160deg,#112846,#0c1c34 55%,#0a1628);
+.hero{position:relative;overflow:hidden;border:1px solid rgba(34,208,127,.22);border-radius:14px;padding:40px 34px;margin-bottom:22px;
+  background:radial-gradient(1100px 540px at 12% -12%,rgba(34,208,127,.10),transparent 55%),linear-gradient(160deg,#112846,#0c1c34 55%,#0a1628);
   box-shadow:0 26px 64px rgba(0,0,0,.5)}
 .hero::before{content:"";position:absolute;inset:0;pointer-events:none;z-index:0;
-  background-image:linear-gradient(rgba(0,200,5,.055) 1px,transparent 1px),linear-gradient(90deg,rgba(0,200,5,.055) 1px,transparent 1px);
+  background-image:linear-gradient(rgba(34,208,127,.055) 1px,transparent 1px),linear-gradient(90deg,rgba(34,208,127,.055) 1px,transparent 1px);
   background-size:54px 54px;opacity:.55;-webkit-mask-image:linear-gradient(180deg,#000,transparent 85%);mask-image:linear-gradient(180deg,#000,transparent 85%)}
 .hero::after{display:none}
 .hero-in{position:relative;z-index:1}
@@ -371,28 +371,28 @@ a{color:var(--gold)}
 .hero-meta .wk{color:#e7ecf3}
 
 /* tabs — refined nav */
-.tab{background:transparent;border:1px solid rgba(0,200,5,.30);color:var(--muted);border-radius:8px;box-shadow:none;
+.tab{background:transparent;border:1px solid rgba(34,208,127,.30);color:var(--muted);border-radius:8px;box-shadow:none;
   letter-spacing:1.6px;font-size:19px;padding:13px 32px}
-.tab:hover{color:var(--text);border-color:rgba(0,200,5,.6);transform:none}
+.tab:hover{color:var(--text);border-color:rgba(34,208,127,.6);transform:none}
 .tab[aria-selected=true]{background:var(--gold);color:#0a1628;border-color:var(--gold)}
 
 /* referral banners */
 .refbanner{border-radius:8px;border:1px solid var(--gold);color:#0a1628;background:var(--gold);
-  box-shadow:0 16px 40px rgba(0,200,5,.20);letter-spacing:1px;text-shadow:none}
-.refbanner:hover{transform:translateY(-2px);box-shadow:0 20px 50px rgba(0,200,5,.32)}
+  box-shadow:0 10px 24px rgba(34,208,127,0.1);letter-spacing:1px;text-shadow:none}
+.refbanner:hover{transform:translateY(-2px);box-shadow:0 12px 30px rgba(34,208,127,0.16)}
 .refbanner:active{transform:translateY(0)}
-.refbanner.group{background:transparent;color:var(--gold);border:1px solid rgba(0,200,5,.6);box-shadow:none}
-.refbanner.group:hover{background:rgba(0,200,5,.08)}
+.refbanner.group{background:transparent;color:var(--gold);border:1px solid rgba(34,208,127,.6);box-shadow:none}
+.refbanner.group:hover{background:rgba(34,208,127,.08)}
 .socialbar{display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:16px;margin:26px auto 6px;max-width:860px;
-  padding:22px 18px;border:1px solid rgba(0,200,5,.35);border-radius:16px;background:rgba(0,200,5,.06)}
+  padding:22px 18px;border:1px solid rgba(34,208,127,.35);border-radius:16px;background:rgba(34,208,127,.06)}
 .socialtag{width:100%;text-align:center;font-family:var(--display);font-size:26px;letter-spacing:.5px;color:var(--gold);margin-bottom:4px}
 .sociallink{display:inline-flex;align-items:center;gap:10px;padding:15px 34px;border-radius:999px;border:2px solid var(--gold);
   color:#0a1628;background:var(--gold);text-decoration:none;font-family:var(--dispers);text-transform:uppercase;letter-spacing:1.5px;font-size:20px;font-weight:700;
-  box-shadow:0 12px 32px rgba(0,200,5,.28);transition:transform .15s,box-shadow .15s}
-.sociallink:hover{transform:translateY(-3px);box-shadow:0 18px 44px rgba(0,200,5,.45)}
+  box-shadow:0 7px 19px rgba(34,208,127,0.14);transition:transform .15s,box-shadow .15s}
+.sociallink:hover{transform:translateY(-3px);box-shadow:0 11px 26px rgba(34,208,127,0.23)}
 .hero-title .tm{font-size:.30em;vertical-align:super;font-style:normal;font-weight:600;opacity:.72;font-family:var(--body);margin-left:2px}
 .brandmark{color:var(--gold);margin:0 0 10px;line-height:0}
-.brandlogo{display:block;width:130px;min-width:0;height:auto;filter:drop-shadow(0 6px 18px rgba(0,200,5,.22))}
+.brandlogo{display:block;width:130px;min-width:0;height:auto;filter:drop-shadow(0 6px 18px rgba(34,208,127,.22))}
 @media(max-width:640px){.brandlogo{width:104px}}
 
 /* how-it-works steps */
@@ -408,7 +408,7 @@ a{color:var(--gold)}
 .panel .hint{color:var(--muted)}
 
 /* controls */
-.controls{background:var(--surface);border:1px solid rgba(0,200,5,.16);border-radius:12px;box-shadow:0 20px 50px rgba(0,0,0,.4)}
+.controls{background:var(--surface);border:1px solid rgba(34,208,127,.16);border-radius:12px;box-shadow:0 20px 50px rgba(0,0,0,.4)}
 .controls::before{color:var(--gold);letter-spacing:2px}
 .field label,.calcrow label,.oppwrap label{color:var(--muted)}
 
@@ -416,10 +416,10 @@ a{color:var(--gold)}
 input[type=text],input[type=number],input[type=search],select,.stepper input,.calcrow input,.legodds,.fbtext,
 .pkfilters select,.pkfilters input{background:var(--surface-2);color:var(--text);border:1px solid rgba(255,255,255,.10)}
 input::placeholder{color:#6f7f93}
-input:focus,select:focus,textarea:focus,.stepper input:focus{outline:0;border-color:var(--gold);box-shadow:0 0 0 3px rgba(0,200,5,.22)}
+input:focus,select:focus,textarea:focus,.stepper input:focus{outline:0;border-color:var(--gold);box-shadow:0 0 0 3px rgba(34,208,127,.22)}
 .acbox{background:var(--surface-2);border:1px solid rgba(255,255,255,.12);box-shadow:0 22px 50px rgba(0,0,0,.55)}
 .acitem+.acitem{border-top:1px solid rgba(255,255,255,.06)}
-.acitem:hover,.acitem.on{background:rgba(0,200,5,.14);color:var(--text)}
+.acitem:hover,.acitem.on{background:rgba(34,208,127,.14);color:var(--text)}
 .acitem:hover .acpos,.acitem.on .acpos{color:var(--gold)}
 .pmeta{color:var(--muted)} .pmeta b{color:var(--text)}
 
@@ -428,15 +428,15 @@ input:focus,select:focus,textarea:focus,.stepper input:focus{outline:0;border-co
 .badge.bad{background:var(--miss);color:#1c0d10;border-color:transparent}
 .badge.warn{background:var(--gold);color:#0a1628;border-color:transparent}
 .badge.good{background:var(--hit);color:#07130d;border-color:transparent}
-.badge.info{background:transparent;color:var(--gold);border-color:rgba(0,200,5,.5)}
+.badge.info{background:transparent;color:var(--gold);border-color:rgba(34,208,127,.5)}
 
 /* this-week strip */
-.weekstrip{background:var(--surface-2);border:1px solid rgba(0,200,5,.16);color:#cdd7e2}
+.weekstrip{background:var(--surface-2);border:1px solid rgba(34,208,127,.16);color:#cdd7e2}
 .weekstrip b{color:var(--gold)} .weekstrip .lab{color:var(--muted)}
 
 /* stat chips */
 .chip{border:1px solid rgba(255,255,255,.12);background:transparent;color:var(--muted)}
-.chip:hover{color:var(--text);border-color:rgba(0,200,5,.5);background:transparent}
+.chip:hover{color:var(--text);border-color:rgba(34,208,127,.5);background:transparent}
 .chip[aria-pressed=true]{background:var(--gold);color:#0a1628;border-color:var(--gold)}
 .grplab{color:var(--muted)}
 
@@ -463,8 +463,8 @@ input:focus,select:focus,textarea:focus,.stepper input:focus{outline:0;border-co
 .tile .cap,.tile .frac,.tile .avg{color:var(--muted)} .tile .frac b{color:var(--text)}
 .tile .pct{font-weight:600}
 .tile.hi .pct{color:var(--hit)} .tile.mid .pct{color:var(--gold)} .tile.lo .pct{color:var(--miss)}
-.tile.model{background:linear-gradient(180deg,#12294a,#0d1d34);border:1px solid rgba(0,200,5,.40);
-  box-shadow:0 0 0 1px rgba(0,200,5,.12) inset,0 18px 44px rgba(0,0,0,.45)}
+.tile.model{background:linear-gradient(180deg,#12294a,#0d1d34);border:1px solid rgba(34,208,127,.40);
+  box-shadow:0 0 0 1px rgba(34,208,127,.12) inset,0 18px 44px rgba(0,0,0,.45)}
 .tile.model .cap,.tile.model .frac,.tile.model .avg{color:#9fb0c4} .tile.model .frac b{color:#fff}
 .tile.model .pct{color:var(--gold)}
 .tile.model.hi .pct{color:var(--hit)} .tile.model.lo .pct{color:var(--miss)} .tile.model.mid .pct{color:var(--gold)}
@@ -479,9 +479,9 @@ input:focus,select:focus,textarea:focus,.stepper input:focus{outline:0;border-co
 .legend{color:var(--muted)}
 
 /* tables */
-thead th,.edgetbl th{color:var(--muted);border-bottom:1px solid rgba(0,200,5,.22)}
+thead th,.edgetbl th{color:var(--muted);border-bottom:1px solid rgba(34,208,127,.22)}
 tbody td,.edgetbl td{border-bottom:1px solid rgba(255,255,255,.06)}
-tbody tr:hover,.edgetbl tr:hover td{background:rgba(0,200,5,.07)}
+tbody tr:hover,.edgetbl tr:hover td{background:rgba(34,208,127,.07)}
 .edgeval{font-family:var(--display);font-weight:600}
 .edgeval.pos{color:var(--hit)} .edgeval.neg{color:var(--miss)} .rng{color:var(--muted)}
 .res{border:1px solid rgba(255,255,255,.12)}
@@ -491,21 +491,21 @@ tbody tr:hover,.edgetbl tr:hover td{background:rgba(0,200,5,.07)}
 .leantag.over{background:var(--hit);color:#07130d;border-color:transparent} .leantag.under{background:var(--miss);color:#fff;border-color:transparent}
 .listchip{border:1px solid rgba(255,255,255,.14)}
 .listchip.T{background:var(--gold);color:#0a1628;border-color:transparent}
-.listchip.V{background:transparent;color:var(--gold);border-color:rgba(0,200,5,.6)}
+.listchip.V{background:transparent;color:var(--gold);border-color:rgba(34,208,127,.6)}
 
 /* action buttons */
-.btn{background:var(--gold);color:#0a1628;border:1px solid var(--gold);border-radius:6px;box-shadow:0 12px 30px rgba(0,200,5,.22);letter-spacing:1px}
-.btn:hover{transform:translateY(-2px);box-shadow:0 16px 38px rgba(0,200,5,.34)}
+.btn{background:var(--gold);color:#0a1628;border:1px solid var(--gold);border-radius:6px;box-shadow:0 7px 18px rgba(34,208,127,0.11);letter-spacing:1px}
+.btn:hover{transform:translateY(-2px);box-shadow:0 10px 23px rgba(34,208,127,0.17)}
 .btn:active{transform:translateY(0)}
-.btn.ghost{background:transparent;color:var(--gold);border:1px solid rgba(0,200,5,.55);box-shadow:none}
-.btn.ghost:hover{background:rgba(0,200,5,.08)}
-.edgeload,.mktuse{background:transparent;border:1px solid rgba(0,200,5,.45);color:var(--gold)}
+.btn.ghost{background:transparent;color:var(--gold);border:1px solid rgba(34,208,127,.55);box-shadow:none}
+.btn.ghost:hover{background:rgba(34,208,127,.08)}
+.edgeload,.mktuse{background:transparent;border:1px solid rgba(34,208,127,.45);color:var(--gold)}
 .edgeload:hover,.mktuse:hover{background:var(--gold);color:#0a1628;border-color:var(--gold)}
 #edgestatus,#pkstatus{color:var(--muted)}
 
 /* watch / compare */
-.watchstar{background:transparent;border:1px solid rgba(0,200,5,.45);color:var(--gold)}
-.watchstar:hover{background:rgba(0,200,5,.10);transform:none;box-shadow:none}
+.watchstar{background:transparent;border:1px solid rgba(34,208,127,.45);color:var(--gold)}
+.watchstar:hover{background:rgba(34,208,127,.10);transform:none;box-shadow:none}
 .watchstar.on{background:var(--gold);color:#0a1628;border-color:var(--gold);box-shadow:none}
 .cmpbtn.on{background:var(--gold)!important;color:#0a1628!important}
 .watchchip{background:var(--surface-2);border:1px solid rgba(255,255,255,.10)} .watchchip .wpos{color:var(--muted)}
@@ -519,7 +519,7 @@ tbody tr:hover,.edgetbl tr:hover td{background:rgba(0,200,5,.07)}
 .legrm{background:var(--surface-2);border:1px solid rgba(255,255,255,.12);color:var(--miss)}
 .legrm:hover{background:var(--miss);color:#fff;border-color:transparent}
 .calcrow input{box-shadow:none;font-family:var(--display)}
-.warnbox{background:rgba(0,200,5,.10);border:1px solid rgba(0,200,5,.4);color:var(--text)}
+.warnbox{background:rgba(34,208,127,.10);border:1px solid rgba(34,208,127,.4);color:var(--text)}
 .matchrow{background:var(--surface-2);border:1px solid rgba(255,255,255,.07)}
 .matchrow .tag{border:1px solid rgba(255,255,255,.12)}
 .tag.soft{background:var(--hit);color:#07130d;border-color:transparent} .tag.tough{background:var(--miss);color:#fff;border-color:transparent}
@@ -530,13 +530,13 @@ tbody tr:hover,.edgetbl tr:hover td{background:rgba(0,200,5,.07)}
 #trapalert{background:var(--surface-2);border:1px solid rgba(217,138,62,.5);box-shadow:none}
 .traphead{color:var(--blaze);font-family:var(--dispers);text-shadow:none}
 .digesttrap,.corrwarn{background:var(--surface-2);border-left:3px solid var(--gold)}
-.slipdrop{background:var(--surface-2);border:1.5px dashed rgba(0,200,5,.35)}
+.slipdrop{background:var(--surface-2);border:1.5px dashed rgba(34,208,127,.35)}
 .slipdrop.drag{border-color:var(--gold)}
 .sliplink{color:var(--gold)} .sliptext{background:var(--surface-2);color:var(--text)}
 .beta{background:var(--blaze);color:#1a0e04}
 .chev{color:var(--gold)}
 #digestbody p{color:#c3cddb} .mktnote,.mktmuted{color:var(--muted)}
-footer{color:var(--muted);border-top:1px solid rgba(0,200,5,.2)} footer b{color:var(--text)}
+footer{color:var(--muted);border-top:1px solid rgba(34,208,127,.2)} footer b{color:var(--text)}
 /* brighter text for readability */
 .hero-tag,.hero-meta,.hero-meta .wk,.weekstrip,#digestbody p,.step p,.mktnote,.mktmuted,.pmeta,.rng{color:#ffffff}
 .tile.model .cap,.tile.model .frac,.tile.model .avg{color:#dbe2ea}
@@ -597,7 +597,7 @@ tr.hit td{background:var(--hit-soft)} tr.miss td{background:var(--miss-soft)}
 .pmdim{color:#aeb9c8;font-size:12.5px}
 .livehead{display:inline-flex;align-items:center;gap:5px}
 .livedot{width:6px;height:6px;border-radius:50%;background:var(--accent);display:inline-block;animation:pmpulse 1.6s ease-in-out infinite}
-.valrules{background:rgba(0,200,5,.05);border:1px solid rgba(0,200,5,.28);border-radius:12px;padding:13px 16px;margin:2px 0 14px}
+.valrules{background:rgba(34,208,127,.05);border:1px solid rgba(34,208,127,.28);border-radius:12px;padding:13px 16px;margin:2px 0 14px}
 .valrules .vrhead{font-family:var(--dispers);text-transform:uppercase;letter-spacing:.9px;font-weight:700;font-size:13.5px;color:var(--gold);margin-bottom:9px}
 .valrules .vrlist{list-style:none;margin:0;padding:0;display:grid;gap:8px}
 .valrules .vrlist li{display:flex;gap:10px;align-items:flex-start;font-size:14px;color:#fff;line-height:1.5}
@@ -613,12 +613,12 @@ tr.hit td{background:var(--hit-soft)} tr.miss td{background:var(--miss-soft)}
 .panel.collapsed > *:not(:first-child){display:none!important}
 .panel.collapsed{padding-bottom:14px}
 </style>
-<link rel="stylesheet" href="app.css?v=20260930e">
-<script src="app.js?v=20260930e"></script>
+<link rel="stylesheet" href="app.css?v=20260930i">
+<script src="app.js?v=20260930i"></script>
 
 <header class="apptop">
   <div class="apptop-in">
-    <a class="brand" href="./" aria-label="Prop Streak Lab home"><svg width="30" height="30" viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" rx="14" fill="#0f2038"/><path d="M32,6 Q32,32 54,32 Q32,32 32,58 Q32,32 10,32 Q32,32 32,6 Z" fill="#00c805"/></svg><b>Prop <i>Streak</i> Lab</b></a>
+    <a class="brand" href="./" aria-label="Prop Streak Lab home"><svg width="30" height="30" viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" rx="14" fill="#0f2038"/><path d="M32,6 Q32,32 54,32 Q32,32 32,58 Q32,32 10,32 Q32,32 32,6 Z" fill="#22d07f"/></svg><b>Prop <i>Streak</i> Lab</b></a>
     <nav class="sportnav" aria-label="Sports">
       <a href="./nfl.html">🏈 NFL</a>
       <a href="./nba.html">🏀 NBA</a>
@@ -640,6 +640,7 @@ tr.hit td{background:var(--hit-soft)} tr.miss td{background:var(--miss-soft)}
       <div><b id="dncount">—</b><span>Players tracked</span></div>
       <div><b id="dnthru">—</b><span>Data through</span></div>
     </div>
+      <div id="pstrust" class="pstrust" hidden></div>
   </section>
 
   <div class="promo">
@@ -675,7 +676,7 @@ tr.hit td{background:var(--hit-soft)} tr.miss td{background:var(--miss-soft)}
   </div>
   <div class="panel" id="edgepanel">
     <div class="mkthead">
-      <h2>🔒 25 Guaranteed<button type="button" class="qhelp hq" data-help="guaranteed" aria-expanded="false" aria-label="What is 25 Guaranteed?"><span class="qi" aria-hidden="true">?</span></button></h2>
+      <h2>🔒 Top 25 Surest<button type="button" class="qhelp hq" data-help="surest" aria-expanded="false" aria-label="What is Top 25 Surest?"><span class="qi" aria-hidden="true">?</span></button></h2>
       <button id="edgescan" class="btn" type="button">Scan the board</button>
       <span id="edgestatus"></span>
       <span class="mktmuted" id="recT"></span>
@@ -822,7 +823,7 @@ tr.hit td{background:var(--hit-soft)} tr.miss td{background:var(--miss-soft)}
 
   <footer style="text-align:center;color:var(--muted);font-size:13px;margin-top:40px">
     Prop Streak Lab · model estimates for entertainment, not betting advice · <a href="./">Home</a> · <a href="./nfl.html">NFL</a> · <a href="./nba.html">NBA</a> · <a href="./nhl.html">NHL</a> · ⚾ MLB<br>
-    <span style="display:inline-block;margin-top:10px"><a href="privacy.html">Privacy Policy</a> · <a href="terms.html">Terms &amp; Conditions</a> · <a href="cookies.html">Cookies Policy</a> · <a href="mailto:info@propstreaklab.com">Contact</a></span><br>
+    <span style="display:inline-block;margin-top:10px"><a href="methodology.html">How the model works</a> · <a href="privacy.html">Privacy Policy</a> · <a href="terms.html">Terms &amp; Conditions</a> · <a href="cookies.html">Cookies Policy</a> · <a href="mailto:info@propstreaklab.com">Contact</a></span><br>
     <span style="display:inline-block;margin-top:6px">Informational and entertainment use only. Some links to Polymarket are affiliate links. © 2026 Prop Streak Lab.</span><br>
     <span style="display:inline-block;margin-top:6px;font-size:11px;opacity:.8">Data accuracy: stats, lines, injury reports and prices come from third-party sources (ESPN, Polymarket) and may be delayed, incomplete, or occasionally wrong. Model outputs are estimates, not guarantees — verify independently before relying on anything here.</span><br>
     <span style="display:inline-block;margin-top:6px;font-size:11px;opacity:.8">For adults, 18+. If gambling stops being fun, stop — call 1-800-522-4700 (US, National Problem Gambling Helpline) or visit <a href="https://www.ncpgambling.org" rel="noopener" target="_blank">ncpgambling.org</a>. Prop Streak Lab does not accept bets or facilitate wagering.</span>
@@ -833,8 +834,8 @@ tr.hit td{background:var(--hit-soft)} tr.miss td{background:var(--miss-soft)}
 .pslcookie{position:fixed;left:12px;right:12px;bottom:12px;z-index:9999;background:#0f2038;border:1px solid #2a3f5f;border-radius:12px;box-shadow:0 18px 44px rgba(0,0,0,.5);max-width:720px;margin:0 auto}
 .pslcookie-in{display:flex;gap:14px;align-items:center;justify-content:space-between;flex-wrap:wrap;padding:12px 16px}
 .pslcookie p{margin:0;font-size:13px;color:#dfe6ef;line-height:1.5;flex:1;min-width:230px;text-align:left}
-.pslcookie a{color:#35c46b}
-.pslcookie button{background:#00c805;color:#06210b;border:0;border-radius:8px;font-weight:700;padding:9px 18px;cursor:pointer;font-family:inherit;font-size:14px}
+.pslcookie a{color:#22d07f}
+.pslcookie button{background:#22d07f;color:#06210b;border:0;border-radius:8px;font-weight:700;padding:9px 18px;cursor:pointer;font-family:inherit;font-size:14px}
 .pslcookie button:hover{filter:brightness(1.08)}
 </style>
 <div id="pslcookie" class="pslcookie" role="region" aria-label="Privacy notice" hidden>
@@ -1203,7 +1204,7 @@ function priceCell(r){
   return `<span class="pmpx ${cls}">${Math.round(r.price*100)}¢</span> <span class="rng">${r.edge==null?'':signed(r.edge)+' edge · '}${(1/r.price).toFixed(2)}×</span>`; }
 // Avatar initials for a pick card: "Fernando Tatis Jr." -> "FT".
 const initials=n=>{ const w=String(n||"").replace(/\s+(Jr|Sr|II|III|IV)\.?$/i,"").trim().split(/\s+/); return ((w[0]||"")[0]||"")+(w.length>1? (w[w.length-1][0]||"") : ""); };
-// Pick cards (25 Guaranteed, Value spots): one card per prop — who, the bet in words, the
+// Pick cards (Top 25 Surest, Value spots): one card per prop — who, the bet in words, the
 // model's chance, the Polymarket price — sorted by the pill row above the grid.
 const SORTS=[['prob','Chance'],['edge','Edge'],['price','Price'],['matchup','Game'],['name','Player']];
 function pickTable(rows, sort){
@@ -1216,12 +1217,22 @@ function pickTable(rows, sort){
         `<div class="pc-who"><b>${esc(r.name)}</b><span><span class="tbadge">${esc(r.team)}</span>${r.team===r.game.home? "vs "+esc(r.game.away) : r.team===r.game.away? "@ "+esc(r.game.home) : esc(r.game.away)+" @ "+esc(r.game.home)}</span></div>`+
         `<div class="pc-prob"><div class="ring" style="--p:${pv}"><b>${pv}<small>%</small></b></div><span>${Math.round(r.lo*100)}–${Math.round(r.hi*100)} · ${r.n}g</span></div></div>`+
       `<div class="pc-bet"><span class="leantag ${esc(r.side)}">${esc(r.side)}</span><b>${r.line}</b><span>${esc(r.statText)}</span>${byId[r.pid]? PS.spark(valuesOf(byId[r.pid], r.sk), r.line, r.side) : ''}</div>`+
-      `<div class="pc-foot"><span class="pc-price livecell">${priceCell(r)}</span><button class="edgeload" type="button" data-i="${idx}">Load</button></div>`+
+      `<div class="pc-foot"><span class="pc-price livecell">${priceCell(r)}</span><button class="edgeload" type="button" data-i="${idx}">Details</button></div>`+
     `</article>`;
   });
   return h+`</div>`; }
+// Tapping a pick card opens its details — the verdict and the last 10 games — in a sheet;
+// "Full breakdown" there loads it on the Player tab, as the old Load button did.
+function openPickSheet(r){ const p=byId[r.pid]; if(!p){ loadPick(r); return; }
+  const g=r.game||{}, vs=r.team===g.home? 'vs '+g.away : r.team===g.away? '@ '+g.home : '';
+  PS.pickSheet({name:r.name, team:r.team, sport:SPORT_KEY, vs, prob:r.prob, lo:r.lo, hi:r.hi, neff:r.n, side:r.side, line:r.line, statText:r.statText,
+    price:r.price, live:false, vals:valuesOf(p, r.sk), onOpen:()=>loadPick(r),
+    onShare:()=>PS.sharePick({player:p, stat:r.sk, line:r.line, ou:r.side}, r.statText)}); }
 function wireTable(el, rows, sort, rerender){
-  el.querySelectorAll('.edgeload').forEach(b=>b.onclick=()=>loadPick(rows[+b.dataset.i]));
+  el.querySelectorAll('.edgeload').forEach(b=>b.onclick=()=>openPickSheet(rows[+b.dataset.i]));
+  // The whole card opens its details too (not just the button).
+  el.querySelectorAll('.pickcard').forEach(c=>{ const b=c.querySelector('.edgeload'); if(!b) return; c.classList.add('tappable');
+    c.onclick=e=>{ if(e.target.closest('button,a')) return; b.click(); }; });
   el.querySelectorAll('.sortpill').forEach(t=>t.onclick=()=>{ const k=t.dataset.k;
     if(sort.key===k) sort.dir*=-1; else { sort.key=k; sort.dir=['name','matchup'].includes(k)?1:-1; }
     rerender(); }); }
@@ -1244,7 +1255,7 @@ function renderEdges(){ const body=$('edgebody'); if(!body) return;
   const all=listRows('T');
   if(!all.length){ body.innerHTML = upcomingPicks().length
       ? `<p class="mktnote">Nothing makes the list right now. A prop needs a <b>90%+ model chance</b> <i>and</i> a <b>live Polymarket price</b>, and nothing on the upcoming ${SPORT_NAME} slate clears both. It refills as markets post and prices update (every hour) — some days it stays short or empty on purpose.</p>`
-      : scheduleNote('the 25 Guaranteed board'); return; }
+      : scheduleNote('the Top 25 Surest board'); return; }
   const rows=sortRows(all, edgeSort.key, edgeSort.dir).slice(0,25);
   body.innerHTML=pickTable(rows, edgeSort)+
     `<p class="mktnote" style="margin-top:8px">Up to 25 props where the model gives the Bet side a <b>90%+ chance</b> and Polymarket has a <b>live market</b> for it, ranked by model chance with one line per player-prop — so a thin slate shows fewer than 25${rows.length<25?` (${rows.length} right now)`:''}. Best if you're holding <b>credits you can't withdraw without trading</b>, since these are the props most likely to win and let you cash out. <b>Model</b> = the chance the Bet side hits, with its 80% range and the games it's based on. <b>Polymarket</b> is the price for that exact side, the model's edge over it, and the payout multiplier. Click a header to sort. These picks are recorded before ${TIPOFF} and graded in <b>Past picks</b>.</p>`;
@@ -1328,7 +1339,7 @@ function tickerItems(){
     if(v.length) it.push({ic:'⚡', html:`<b>${v.length} value spot${v.length===1?'':'s'} live</b> — top: ${esc(v[0].name)} ${esc(v[0].side)} ${esc(v[0].line)} ${esc(v[0].statText)}, ${pct(v[0].prob)} vs ${Math.round(v[0].price*100)}¢`});
   }
   const R=DB.record||{};
-  if(R.T&&R.T.n) it.push({ic:'🔒', html:`25 Guaranteed record <b>${R.T.hit}/${R.T.n} (${Math.round(100*R.T.hit/R.T.n)}%)</b>`});
+  if(R.T&&R.T.n) it.push({ic:'🔒', html:`Top 25 Surest record <b>${R.T.hit}/${R.T.n} (${Math.round(100*R.T.hit/R.T.n)}%)</b>`});
   if(TOP_STREAK) it.push({ic:'🔥', html:`<b>${esc(TOP_STREAK.p.n)}</b> — ${TOP_STREAK.s} straight over ${TOP_STREAK.line} ${esc(statLabel(TOP_STREAK.sk))}`});
   return it;
 }

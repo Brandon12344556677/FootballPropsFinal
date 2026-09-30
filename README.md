@@ -53,7 +53,7 @@ the site.
   a thin sample was shrunk toward 50/50, and the calibration temperature — each
   step with the running probability. "Show the math" prints the whole chain on one
   line.
-- **25 Guaranteed** — the 25 player props on this week's Polymarket board with the
+- **Top 25 Surest** — the 25 player props on this week's Polymarket board with the
   highest model chance, regardless of payout, each with the **live Polymarket US
   price** for that side and the model's edge over it.
 - **Value spots** — two rules, both stated on the panel itself so readers know what
@@ -85,7 +85,7 @@ different bet is meaningless.
 
 ### Past picks tab
 - **Live picks** — everything the auto-updater recorded before kickoff (all modeled
-  props, tagged 25 Guaranteed / Value where they qualified), graded from the
+  props, tagged Top 25 Surest / Value where they qualified), graded from the
   box score: hit, miss, push, or DNP.
 - **Backtest** — what the model would have said before every past game using
   only earlier games, at the site's auto-seeded line, graded. This is what makes
@@ -118,6 +118,10 @@ Put your referral link in `url`. Leave it `""` to hide the banner.
 | `build_today.py` | Runs after the four builders and writes `today.json` from their picks and season records. Standard library only; never fails the deploy. |
 | `today.json` | The home page's cross-sport **Today** feed (the best upcoming value spots, at most 3 per sport up top, each linking to its prop) and the season records its ticker leads with. |
 | `post_daily.py` | Once a day, posts yesterday's Value results and today's best value (with links) to Discord and/or Telegram. Needs the secrets below; does nothing without them. |
+| `methodology.html` | "How the model works" — the public write-up of the model, the matchup adjustments, calibration, the list rules and how picks are graded. Linked from every footer and the trust line under each hero. |
+| `app.js` / `app.css` | Shared look and behavior for every page: fonts (Archivo headlines, Inter body and numbers), colors, icons (Lucide, swapped in for emoji at runtime), the verdict card, pick-details sheet, one-time 18+ check, explainers, share links, ticker and trust line. |
+| `fonts/` | Self-hosted fonts (Barlow Condensed for labels, Archivo, Inter), with their SIL Open Font License files. |
+| `LICENSE-lucide-icons.txt` | License notice for the Lucide icon shapes bundled in `app.js`. |
 | `.github/workflows/update.yml` | The scheduled job: tests, build, commit. |
 | `tests/` | Unit tests for the model, market parsing, grading, and a check that the JavaScript model matches the Python one. |
 | `tools/tune_context.py` | Re-fits the game-context adjustment strengths on the backtest. Run it when a season of new data has accumulated. |
@@ -133,7 +137,7 @@ Put your referral link in `url`. Leave it `""` to hide the banner.
    in the stats file.
 4. It fetches this week's Polymarket board, prices every prop off **Polymarket US**
    where that exchange lists the same prop at the same line (one request per game;
-   the global book is the fallback), models them, assigns the 25 Guaranteed / Value
+   the global book is the fallback), models them, assigns the Top 25 Surest / Value
    tags, and upserts them into `picks.json` (a pick is refreshed on every run until
    kickoff, then frozen and graded). Picks are keyed by side, so the opposite side of
    a market is recorded too when it is a value candidate. The slate dates Sunday- and

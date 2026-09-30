@@ -1,0 +1,190 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>How the Model Works — Prop Streak Lab</title>
+<meta name="description" content="How Prop Streak Lab turns a player's game log into a calibrated chance for any line, how it is adjusted for the matchup, how picks are priced against Polymarket, and how every pick is graded in public.">
+<link rel="canonical" href="https://propstreaklab.com/methodology.html">
+<link rel="icon" href="/favicon.ico" sizes="48x48">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="manifest" href="/site.webmanifest">
+<meta name="theme-color" content="#0a1628">
+<link rel="stylesheet" href="fonts.css">
+<style>
+:root{color-scheme:dark;--green:#22d07f;--gold:#e8b54a;--line:#22354f;--muted:#9fb0c6}
+*{box-sizing:border-box}
+body{margin:0;background:#0a1628;color:#dfe6ef;font-family:"Inter",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;line-height:1.7;font-size:16px}
+a{color:var(--green)}
+.wrap{max-width:1080px;margin:0 auto;padding:20px 20px 80px}
+.top{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 0 18px;border-bottom:1px solid #1c2c46;margin-bottom:28px}
+.brand{display:flex;align-items:center;gap:10px;font-family:"Archivo","Inter",sans-serif;font-weight:800;letter-spacing:-.01em;color:#fff;text-decoration:none;font-size:19px}
+.back{color:var(--muted);text-decoration:none;font-size:14px}
+.back:hover{color:#dfe6ef}
+.layout{display:grid;grid-template-columns:230px minmax(0,1fr);gap:48px;align-items:start}
+nav.toc{position:sticky;top:20px;font-size:14px}
+nav.toc b{display:block;font-family:"Barlow Condensed",sans-serif;text-transform:uppercase;letter-spacing:.14em;font-size:12px;color:var(--muted);margin:0 0 10px}
+nav.toc a{display:block;color:#c9d4e2;text-decoration:none;padding:5px 0 5px 12px;border-left:2px solid var(--line)}
+nav.toc a:hover{color:#fff;border-left-color:var(--green)}
+.kicker{font-family:"Barlow Condensed",sans-serif;text-transform:uppercase;letter-spacing:.16em;font-size:13px;font-weight:700;color:var(--green);margin:0 0 8px}
+h1{font-family:"Archivo","Inter",sans-serif;font-weight:800;letter-spacing:-.03em;font-size:44px;line-height:1.05;color:#fff;margin:0 0 12px}
+.lead{font-size:18px;color:#eef2f7;margin:0 0 18px}
+.meta{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 30px}
+.meta span{display:inline-flex;align-items:center;gap:7px;padding:6px 12px;border-radius:999px;border:1px solid var(--line);font-size:13px;color:#c9d4e2}
+.meta .gold{border-color:rgba(232,181,74,.5);color:var(--gold)}
+h2{font-family:"Archivo","Inter",sans-serif;font-weight:800;letter-spacing:-.02em;font-size:26px;color:#fff;margin:2.2em 0 .5em;scroll-margin-top:20px}
+h3{font-family:"Archivo","Inter",sans-serif;font-weight:700;font-size:18px;color:#fff;margin:1.6em 0 .3em}
+p{margin:.6em 0}
+ul,ol{padding-left:22px;margin:.6em 0}
+li{margin:.35em 0}
+strong,b{color:#fff}
+.card{background:#0f2038;border:1px solid var(--line);border-radius:16px;padding:16px 20px;margin:1em 0}
+.card.rule{border-color:rgba(34,208,127,.45)}
+.steps{counter-reset:s;list-style:none;padding:0}
+.steps li{counter-increment:s;position:relative;padding:0 0 0 44px;margin:1em 0}
+.steps li::before{content:counter(s);position:absolute;left:0;top:1px;width:30px;height:30px;border-radius:50%;display:grid;place-items:center;
+  background:var(--green);color:#06210b;font-weight:800;font-size:14px;font-family:"Inter",sans-serif}
+code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.9em;background:#0f2038;border:1px solid var(--line);border-radius:6px;padding:1px 6px;color:#eef2f7}
+table{width:100%;border-collapse:collapse;font-size:14.5px;margin:.8em 0}
+th,td{text-align:left;padding:9px 10px;border-bottom:1px solid #1c2c46;vertical-align:top}
+th{font-family:"Barlow Condensed",sans-serif;text-transform:uppercase;letter-spacing:.1em;font-size:12.5px;color:var(--muted)}
+.note{color:var(--muted);font-size:14px}
+footer{margin-top:52px;padding-top:18px;border-top:1px solid #1c2c46;color:var(--muted);font-size:14px;display:flex;gap:16px;flex-wrap:wrap}
+footer a{color:var(--muted)}
+footer a:hover{color:#dfe6ef}
+@media(max-width:860px){.layout{grid-template-columns:1fr;gap:0}nav.toc{position:static;margin:0 0 24px;padding:14px 16px;border:1px solid var(--line);border-radius:14px}
+  h1{font-size:34px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <a class="brand" href="./">
+      <svg width="26" height="26" viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" rx="14" fill="#0f2038"></rect><path d="M32,6 Q32,32 54,32 Q32,32 32,58 Q32,32 10,32 Q32,32 32,6 Z" fill="#22d07f"></path></svg>
+      Prop Streak Lab
+    </a>
+    <a class="back" href="./">← Back to site</a>
+  </div>
+
+  <div class="layout">
+    <nav class="toc" aria-label="On this page">
+      <b>On this page</b>
+      <a href="#overview">Overview</a>
+      <a href="#data">Where the data comes from</a>
+      <a href="#model">The model, step by step</a>
+      <a href="#context">Adjusting for the matchup</a>
+      <a href="#calibration">Calibration</a>
+      <a href="#prices">Prices and edge</a>
+      <a href="#lists">Value spots and Top 25 Surest</a>
+      <a href="#grading">How picks are recorded and graded</a>
+      <a href="#limits">Honest limits</a>
+    </nav>
+
+    <main>
+      <p class="kicker">Methodology</p>
+      <h1>How the model works</h1>
+      <p class="lead">Prop Streak Lab turns a player's recent games into a <b>calibrated chance</b> of clearing any line, compares it with what the market charges, and records every pick before the game so the results can be checked in public.</p>
+      <div class="meta">
+        <span>NFL · NBA · NHL · MLB</span>
+        <span>Rebuilt every hour</span>
+        <span class="gold">Every pick graded from the box score</span>
+      </div>
+
+      <h2 id="overview">Overview</h2>
+      <p>Every number on the site comes from one small, published model — the same code runs in your browser and in the hourly job that records picks. There is no hidden tuning per pick and no human override. The model is backward-looking: it knows a player's game log, the opponent, and (for the NFL) the Vegas line and the injury report. It does not know about weather, a coaching change, or who else is out.</p>
+
+      <h2 id="data">Where the data comes from</h2>
+      <table>
+        <thead><tr><th>Sport</th><th>Game logs</th><th>Schedule &amp; context</th></tr></thead>
+        <tbody>
+          <tr><td><b>NFL</b></td><td>nflverse weekly player stats (regular season and playoffs), with ESPN box scores for games nflverse hasn't posted yet</td><td>nflverse schedule with Vegas spread and total; official injury reports; rosters</td></tr>
+          <tr><td><b>NBA</b></td><td>ESPN public box scores</td><td>ESPN schedule with game totals and spreads; opponent defense</td></tr>
+          <tr><td><b>NHL</b></td><td>ESPN public box scores (skaters and goalies)</td><td>ESPN schedule with game totals and spreads; opponent defense</td></tr>
+          <tr><td><b>MLB</b></td><td>ESPN public box scores and play-by-play</td><td>ESPN schedule; opposing pitching staff or lineup; postseason flag</td></tr>
+        </tbody>
+      </table>
+      <p><b>Prices</b> come from <b>Polymarket US</b>, the exchange the site's referral links point to. Polymarket's global book is used only where Polymarket US has no market for that prop at that line.</p>
+
+      <h2 id="model">The model, step by step</h2>
+      <ol class="steps">
+        <li><b>Take the last 20 games</b> for that stat (fewer if the player has fewer). For MLB, hitting props use lineup starts and pitching props use starts, so a pinch-hit appearance doesn't drag a starter's numbers down.</li>
+        <li><b>Weight recent games more.</b> Each game's weight halves every 6 games back, so last week counts about twice as much as six weeks ago.</li>
+        <li><b>Smooth the values into a distribution</b> instead of counting hits. "Cleared 7 of 10" is noisy; a smoothed distribution uses how far over or under each game was, which is steadier.</li>
+        <li><b>Read off the chance of clearing the line</b> — the share of the distribution above it (for an over) or below it (for an under).</li>
+        <li><b>Shrink thin samples toward 50/50.</b> A player with four games can't be 95%; the fewer the effective games, the more the chance is pulled toward a coin flip.</li>
+        <li><b>Give a range.</b> Every chance comes with an 80% range — where the true chance most likely sits. A wide range means less to go on.</li>
+      </ol>
+      <p>On the Player tab, <b>"Why this number"</b> shows each of these steps with the running probability, and "Show the math" prints the full chain.</p>
+
+      <h2 id="context">Adjusting for the matchup</h2>
+      <p>Before reading off the chance, the player's distribution is scaled for this game:</p>
+      <ul>
+        <li><b>NFL:</b> the Vegas implied team points (from the total and the spread) against the player's usual, and how much the opponent allows to that position against the league average. The strengths were fitted on the backtest and checked on held-out weeks — they're deliberately small: implied points to the 0.25 power; defense to the 0.75 power for passing, 0.5 for receiving, 0.25 for rushing.</li>
+        <li><b>NBA:</b> the team's implied points from the game total and spread, against the player's usual, and the opponent's defense against that stat.</li>
+        <li><b>NHL:</b> the team's implied goals from the game total and spread, and the opponent's defense against that stat.</li>
+        <li><b>MLB:</b> the opposing pitching staff (for hitters) or lineup (for pitchers). In the postseason, pitching props are also scaled down 10%, because starters get pulled earlier in October.</li>
+      </ul>
+      <p>The multiplier is shown on the Player tab, and a checkbox turns the adjustment off so you can see the raw history.</p>
+
+      <h2 id="calibration">Calibration</h2>
+      <p>A model can be right about order and wrong about size — saying 90% for things that happen 80% of the time. So the raw chance goes through one last step: a <b>calibration temperature</b> learned from the site's own graded record, which pulls over-confident chances back toward what actually happened.</p>
+      <p>You can check the result yourself: the <b>Past picks</b> tab on every board has a calibration chart — "when the model said 80%, how often did it hit?" — built from every graded pick.</p>
+
+      <h2 id="prices">Prices and edge</h2>
+      <p>On Polymarket a share pays <b>$1</b> if the bet wins, so a price of <b>43¢</b> is also the market's chance: 43%.</p>
+      <ul>
+        <li><b>Edge</b> = the model's chance minus the market's, in points. Model 71% against a 43¢ price is <b>+28</b>.</li>
+        <li><b>Payout</b> = $1 ÷ price. At 43¢, that's <b>2.33×</b> your stake back if it wins.</li>
+        <li>A price is only ever compared with the <b>same line</b>. Where Polymarket lists a prop at a different number, the site says so and shows no edge — an edge against a different bet is meaningless.</li>
+      </ul>
+
+      <h2 id="lists">Value spots and Top 25 Surest</h2>
+      <div class="card rule">
+        <h3 style="margin-top:0">Value spots — both rules have to be true</h3>
+        <ol>
+          <li><b>Polymarket gives it at least a 30% chance</b> (a price of 30¢ or more). This keeps penny longshots off the list: a 6¢ price against an 11% model chance is a big percentage edge and still a bad bet.</li>
+          <li><b>The model puts it at least 15 points higher.</b> A 30¢ price needs 45%, 50¢ needs 65%, 70¢ needs 85%.</li>
+        </ol>
+        <p style="margin-bottom:0">Both sides of every market are tested, so unders qualify as often as overs. A prop also needs <b>6+ effective games</b> of history. Everything that clears both rules is listed, ranked by edge.</p>
+      </div>
+      <div class="card">
+        <h3 style="margin-top:0">Top 25 Surest</h3>
+        <p style="margin-bottom:0">The props with the highest model chance on the board, whatever they pay — on the NFL and NBA boards, the 25 highest; on the NHL and MLB boards, up to 25 that the model gives 90% or more <i>and</i> that have a live Polymarket price. <b>Likely isn't certain:</b> these still lose sometimes, and at 85–97¢ a single loss wipes out several wins.</p>
+      </div>
+      <p>On the Player tab, the verdict card applies the same rules: <b>Value</b> when both value rules pass, <b>Skip</b> when the price is above the model's chance, <b>Fair</b> in between.</p>
+
+      <h2 id="grading">How picks are recorded and graded</h2>
+      <ul>
+        <li>An automated job runs <b>every hour</b>. It records every modeled prop on the Polymarket board — with the model's chance and the price at that moment — <b>before the game starts</b>, and refreshes it until kickoff, tip-off, puck drop or first pitch. After that it is frozen.</li>
+        <li>Once the game is final and the box score is in, each pick is graded <b>hit, miss or push</b>. A player who doesn't play is marked <b>DNP</b> and left out of the record.</li>
+        <li>Profit is counted at the <b>recorded price</b>: 1 unit on every pick, a win at 43¢ returns +1.33 units, a loss is −1.</li>
+        <li>The <b>backtest</b> (NFL 2025) shows what the model would have said before each past game using only earlier games. It has no market prices, and it's never mixed into the live record.</li>
+      </ul>
+      <p>Everything — wins and losses — is on the <b>Past picks</b> tab of each board, with filters, the calibration chart and the running profit.</p>
+
+      <h2 id="limits">Honest limits</h2>
+      <ul>
+        <li><b>Backward-looking.</b> The model can't know about weather, a coaching change, or a teammate's injury unless it's in the data.</li>
+        <li><b>Markets are hard to beat.</b> The market already prices the line and the matchup, so real edges are smaller than they look against the site's own seeded lines.</li>
+        <li><b>New players</b> appear in search right away but have no chance until their first box score.</li>
+        <li><b>Prices move.</b> Board prices refresh about once a minute on the NFL board and hourly elsewhere. Always check the price before you trade.</li>
+        <li><b>Calibration is measured, not promised.</b> Look at the Past picks tab before trusting a number.</li>
+      </ul>
+      <p class="note">Research and entertainment, not betting advice. For adults 18+. If gambling stops being fun, call 1-800-522-4700 or visit <a href="https://www.ncpgambling.org" rel="noopener">ncpgambling.org</a>.</p>
+
+      <footer>
+        <a href="./">Home</a>
+        <a href="nfl.html">NFL</a>
+        <a href="nba.html">NBA</a>
+        <a href="nhl.html">NHL</a>
+        <a href="mlb.html">MLB</a>
+        <a href="privacy.html">Privacy</a>
+        <a href="terms.html">Terms</a>
+        <a href="mailto:info@propstreaklab.com">Contact</a>
+      </footer>
+    </main>
+  </div>
+</div>
+</body>
+</html>

@@ -5,7 +5,8 @@ Runs after the four sport builders. Reads what they already wrote (each sport's
 picks file, its dataset's season record, and the stat labels from its template)
 and writes a small file the home page can fetch in one request:
 
-  today.json   {"gen", "record": {sport: {"T", "V"}}, "picks": [...], "valueLive": [[sport, start], ...]}
+  today.json   {"gen", "record": {sport: {"T", "V"}}, "picks": [...], "valueLive": [[sport, start], ...],
+                "tracked": {"graded": live picks graded so far, "since": first live pick date}}
                (each pick carries "l10": its last ten game values, for the mini chart)
 
 "picks" holds the best upcoming bets across all four sports at the last recorded
@@ -157,6 +158,22 @@ def upcoming(sport, db, picks_doc, labels, getters, now):
     return out
 
 
+def graded(picks_doc):
+    """(live picks graded, first live pick date) — the "graded in public" badge counts only
+    picks recorded before their game, never the backtest."""
+    cols = picks_doc["cols"]
+    n, first = 0, None
+    for row in picks_doc["picks"]:
+        p = dict(zip(cols, row))
+        if p.get("src") != "live":
+            continue
+        if p.get("date") and (first is None or p["date"] < first):
+            first = p["date"]
+        if p.get("res") in ("hit", "miss", "push"):
+            n += 1
+    return n, first
+
+
 def best(cands):
     """Every value spot (by edge) before any safe-but-paying pick (by chance); one per
     player. Within each kind, no more than PER_SPORT from one sport until the others
@@ -185,7 +202,7 @@ def best(cands):
 
 def main():
     now = datetime.datetime.now(datetime.timezone.utc)
-    rec, cands = {}, []
+    rec, cands, n_graded, since = {}, [], 0, None
     for sport, data_file, picks_file, template in SPORTS:
         if not all(os.path.exists(f) for f in (data_file, picks_file, template)):
             print(f"  {sport}: files missing — skipped")
@@ -193,7 +210,12 @@ def main():
         try:
             db = load(data_file)
             rec[sport] = record(db)
-            got = upcoming(sport, db, load(picks_file), stat_labels(template), stat_getters(template), now)
+            picks_doc = load(picks_file)
+            got = upcoming(sport, db, picks_doc, stat_labels(template), stat_getters(template), now)
+            g, first = graded(picks_doc)
+            n_graded += g
+            if first and (since is None or first < since):
+                since = first
             cands += got
             print(f"  {sport}: {len(got)} upcoming priced pick(s), record {rec[sport]}")
         except Exception as e:     # one bad sport never blanks the others
@@ -201,7 +223,8 @@ def main():
     picks = best(cands)
     # [sport, start] of every upcoming value spot, so the ticker can count what's still live.
     value_live = sorted([c["sport"], c["start"]] for c in cands if c["value"])
-    doc = {"gen": now.strftime("%Y-%m-%dT%H:%M:%SZ"), "record": rec, "picks": picks, "valueLive": value_live}
+    doc = {"gen": now.strftime("%Y-%m-%dT%H:%M:%SZ"), "record": rec, "picks": picks, "valueLive": value_live,
+           "tracked": {"graded": n_graded, "since": since}}
     with open(OUT, "w", encoding="utf-8") as f:
         json.dump(doc, f, separators=(",", ":"), ensure_ascii=False)
     kinds = sum(1 for p in picks if p["kind"] == "value")

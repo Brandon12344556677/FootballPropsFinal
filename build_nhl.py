@@ -847,7 +847,7 @@ PICK_COLS = ["src", "gid", "season", "date", "pid", "player", "pos", "team", "op
              "stat", "line", "side", "prob", "lo", "hi", "neff", "price", "lists", "rec", "actual", "res", "adj", "start"]
 BOARD_STATS = ["pts", "sog", "g"]
 TOP_N = 25
-T_MIN_PROB = 0.90      # 25 Guaranteed: the model has to give it 90%+ (and it needs a live price)
+T_MIN_PROB = 0.90      # Top 25 Surest: the model has to give it 90%+ (and it needs a live price)
 VALUE_MIN_NEFF = 6.0
 # Value rules mirror build.py (NFL) so every sport's lists mean the same.
 VALUE_N = 50            # a safety cap; the bar below keeps the real list far shorter
@@ -906,7 +906,7 @@ def side_prob(mp):
 def refresh_price(p, pm):
     """A pending pick whose game hasn't started keeps the market's current price for its
     side (None once that market stops being tradeable), like NFL's pre-kickoff refresh —
-    so "has a live market" for 25 Guaranteed means now, not when the pick was recorded."""
+    so "has a live market" for Top 25 Surest means now, not when the pick was recorded."""
     if p.get("res") is None and not pick_started(p):
         px = (pm["over"] if p["side"] == "over" else pm["under"]) if pm.get("tradeable") else None
         p["price"] = round(px, 3) if px is not None else None
@@ -1071,7 +1071,7 @@ def grade_picks(picks, by_pid, games):
 
 
 def assign_lists(picks):
-    """T = '25 Guaranteed': up to 25 props the model gives 90%+ that have a live
+    """T = 'Top 25 Surest': up to 25 props the model gives 90%+ that have a live
     Polymarket price, best line per player-prop, ranked by model chance (so a thin slate
     shows fewer, or none). V = 'Value' — the market prices it at 30c or more and the
     model puts it 15+ points higher, ranked by that edge. Prices are fractions here. Only

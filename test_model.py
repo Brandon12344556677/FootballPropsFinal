@@ -259,7 +259,7 @@ class ListTests(unittest.TestCase):
 
     def test_value_list_takes_unders_too(self):
         """A pick whose side is 'under' reaches V on its own ask, and a sub-50%
-        row can never take a 25 Guaranteed slot."""
+        row can never take a Top 25 Surest slot."""
         over = self._pick(0.62, 0.55, 70)
         under = dict(self._pick(0.61, 0.54, 45), side="under")
         slim_under = dict(self._pick(0.48, 0.40, 32), side="under")
@@ -267,7 +267,7 @@ class ListTests(unittest.TestCase):
         self.assertIn("V", under["lists"])           # 45c ask, model 16 points above
         self.assertIn("V", slim_under["lists"])      # 32c ask, 16 points up, still under 50%
         self.assertNotIn("V", over["lists"])         # model is below the 70c ask
-        self.assertNotIn("T", slim_under["lists"])   # 25 Guaranteed is model-favored sides only
+        self.assertNotIn("T", slim_under["lists"])   # Top 25 Surest is model-favored sides only
 
     def test_make_pick_can_record_the_other_side(self):
         mp = {"over": 0.62, "under": 0.38, "lo": 0.5, "hi": 0.74, "neff": 12.0, "scale": 1.0}

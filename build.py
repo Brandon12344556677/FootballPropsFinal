@@ -1106,7 +1106,7 @@ def make_pick(src, gid, season, week, date, pl, opp, sk, line, mp, price, rec, s
 
 
 def assign_lists(picks):
-    """T = the 25 highest model chances ('25 Guaranteed'). V = every prop the market
+    """T = the 25 highest model chances ('Top 25 Surest'). V = every prop the market
     prices at 30c or more that the model puts 15+ points higher, ranked by that edge.
     V is side-agnostic: an under qualifies whenever its own ask is the cheap one.
     Operates in place."""
@@ -1540,7 +1540,7 @@ def main():
     # SEO: sitemap (with a fresh lastmod each build) and robots.txt.
     site = "https://propstreaklab.com"
     pages = [("/", "daily", "1.0"), ("/nfl.html", "daily", "0.9"), ("/nba.html", "daily", "0.9"),
-             ("/nhl.html", "daily", "0.9"), ("/mlb.html", "daily", "0.9"), ("/privacy.html", "monthly", "0.3"),
+             ("/nhl.html", "daily", "0.9"), ("/mlb.html", "daily", "0.9"), ("/methodology.html", "monthly", "0.6"), ("/privacy.html", "monthly", "0.3"),
              ("/terms.html", "monthly", "0.3"), ("/cookies.html", "monthly", "0.3")]
     with open("sitemap.xml", "w", encoding="utf-8") as f:
         f.write('<?xml version="1.0" encoding="UTF-8"?>\n'
