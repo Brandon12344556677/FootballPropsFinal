@@ -146,6 +146,7 @@ footer a:hover{color:#dfe6ef}
         <li><b>The market has predicted better than the model.</b> On the Brier score (squared error; lower is better) the Polymarket price scored <b>0.196</b> and the model <b>0.212</b>. Prices react to injuries, role changes and news that a game log can't see.</li>
         <li><b>The value rule is roughly break-even so far.</b> Picks clearing both value rules returned +8% over 118 bets — but the margin of error at that sample size is about ±9 points, so that's not evidence of an edge in either direction.</li>
         <li><b>The model's own percentages are close to honest.</b> Recalibrating it on live results didn't improve its accuracy on picks it hadn't seen, so we didn't ship one.</li>
+        <li><b>Overs have done worse than unders.</b> On priced NFL picks, overs hit <b>47%</b> against a model average of 61% and a price of 53¢; unders hit about what the model said. Most of that gap came in week 1, when a player's history is mostly last season. A stricter bar for overs, tested one week at a time on weeks it wasn't fitted to, would have lost more than it saved, so the rules are unchanged — but it's worth knowing before you take an over early in a season.</li>
       </ul>
       <div class="card">
         <h3 style="margin-top:0">The fair chance</h3>
@@ -159,7 +160,7 @@ footer a:hover{color:#dfe6ef}
           <li><b>Polymarket gives it at least a 30% chance</b> (a price of 30¢ or more). This keeps penny longshots off the list: a 6¢ price against an 11% model chance is a big percentage edge and still a bad bet.</li>
           <li><b>The model puts it at least 15 points higher.</b> A 30¢ price needs 45%, 50¢ needs 65%, 70¢ needs 85%.</li>
         </ol>
-        <p style="margin-bottom:0">Both sides of every market are tested, so unders qualify as often as overs. A prop also needs <b>6+ effective games</b> of history. Everything that clears both rules is listed, ranked by edge. These are the model's biggest disagreements with the market — <b>leads to research, not sure things</b> (see above).</p>
+        <p style="margin-bottom:0">Both sides of every market are tested, so unders qualify as often as overs. A prop also needs <b>6+ effective games</b> of history. Everything that clears both rules is listed, ranked by edge. (Until September 30, 2026 each hourly scan recorded at most 50, which left 27 qualifying NFL picks out of the week 3 record; every one is recorded now, and earlier results stay exactly as they were recorded.) These are the model's biggest disagreements with the market — <b>leads to research, not sure things</b> (see above).</p>
       </div>
       <div class="card">
         <h3 style="margin-top:0">Top 25 Surest</h3>

@@ -1113,7 +1113,8 @@ PICK_COLS = ["src", "gid", "season", "week", "date", "pid", "player", "pos", "te
              "stat", "line", "side", "prob", "lo", "hi", "neff", "price", "lists", "rec", "actual", "res", "adj"]
 VALUE_MIN_NEFF = 6.0
 TOP_N = 25
-VALUE_N = 50            # a safety cap; the bar below keeps the real list far shorter
+VALUE_N = 200           # a safety cap only. At 50 it bound in busy weeks (NFL week 3: 27 picks that
+                        # cleared the rule went unrecorded), so the record now holds every pick that clears it
 # The Value bar, applied to each side of a market separately: the market itself has
 # to give the prop at least a 30% chance (an ask of 30c or more) AND the model has to
 # be at least 15 points above that -- so a 30c ask needs a 45% model chance, a 50c ask

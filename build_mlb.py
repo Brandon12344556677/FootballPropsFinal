@@ -742,7 +742,8 @@ TOP_N = 25
 T_MIN_PROB = 0.90      # Top 25 Surest: the model has to give it 90%+ (and it needs a live price)
 VALUE_MIN_NEFF = 6.0
 # Value rules mirror build.py (NFL) so every sport's lists mean the same.
-VALUE_N = 50            # a safety cap; the bar below keeps the real list far shorter
+VALUE_N = 200           # a safety cap only. At 50 it bound in busy weeks (NFL week 3: 27 picks that
+                        # cleared the rule went unrecorded), so the record now holds every pick that clears it
 VALUE_MIN_PRICE = 0.30  # the market has to give it at least 30%
 VALUE_MIN_EDGE = 0.15   # and the model has to be 15+ points higher
 
