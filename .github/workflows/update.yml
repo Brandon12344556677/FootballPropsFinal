@@ -57,6 +57,10 @@ jobs:
         timeout-minutes: 7
         run: python build_mlb.py || echo "MLB build failed — skipping MLB files this run"
 
+      - name: Build the home page's Today feed (non-fatal)
+        continue-on-error: true
+        run: python build_today.py || echo "today.json not rebuilt this run"
+
       - name: Commit and push if anything changed
         run: |
           git config user.name "github-actions[bot]"
@@ -64,7 +68,7 @@ jobs:
           git add nfl.html data.json slate.json picks.json weekly.json sitemap.xml robots.txt
           for f in nba.html nba.json nba_stats.json nba_picks.json \
                    nhl.html nhl.json nhl_stats.json nhl_picks.json \
-                   mlb.html mlb.json mlb_stats.json mlb_picks.json; do
+                   mlb.html mlb.json mlb_stats.json mlb_picks.json today.json; do
             git add "$f" 2>/dev/null || true
           done
           if git diff --cached --quiet; then

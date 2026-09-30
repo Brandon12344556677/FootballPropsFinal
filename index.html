@@ -34,8 +34,8 @@
 <link rel="manifest" href="/site.webmanifest">
 <script data-goatcounter="https://propstreaklive.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
 <link rel="stylesheet" href="fonts.css">
-<link rel="stylesheet" href="app.css">
-<script src="app.js"></script>
+<link rel="stylesheet" href="app.css?v=20260930b">
+<script src="app.js?v=20260930b"></script>
 <style>
 :root{
   color-scheme:dark;
@@ -161,6 +161,19 @@ h2{font-family:var(--display);font-weight:600;font-size:clamp(36px,4.4vw,56px);l
 h2 i{color:var(--green)}
 .sub{color:var(--soft);font-size:18px;max-width:40em;margin:0}
 .center{text-align:center}.center .sub{margin:0 auto}
+
+/* today feed: pick cards from app.css, as links */
+#today{padding:64px 0 8px}
+.todayfeed{margin-top:28px}
+.todayfeed .pickcard{color:inherit;text-decoration:none}
+.todayfeed .pickcard:focus-visible{outline:2px solid var(--green);outline-offset:2px}
+.todayfeed .pc-who .cd{display:inline;color:var(--soft)}
+.todayfeed .pc-kind{font-family:var(--cond);font-weight:700;text-transform:uppercase;letter-spacing:.1em;font-size:12.5px;color:var(--green);white-space:nowrap}
+.todayfeed .pc-kind.safe{color:#9be7b2}
+.todayfeed .pc-go{font-family:var(--cond);font-weight:700;text-transform:uppercase;letter-spacing:.1em;font-size:12.5px;color:var(--soft);white-space:nowrap}
+.todayfeed .pickcard:hover .pc-go{color:var(--green)}
+.todaynote{color:var(--muted);font-size:13.5px;margin:14px 0 0}
+@media(max-width:760px){#today{padding:44px 0 0}.todayfeed{margin-top:20px}}
 
 /* sport tabs */
 .tabs{display:inline-flex;gap:6px;padding:6px;border-radius:999px;background:var(--surface);border:1px solid var(--line);margin:34px 0 22px}
@@ -439,6 +452,17 @@ footer .fine a{color:#8394ab}
     </div>
   </div>
 
+  <!-- TODAY: the best bets across all four sports, from today.json (rebuilt hourly) -->
+  <section id="today" aria-labelledby="today-h" hidden>
+    <div class="wrap">
+      <p class="kicker">Right now · all four sports</p>
+      <h2 id="today-h">Today's best <i>value</i>.</h2>
+      <p class="sub">Where the model's chance beats the Polymarket price by the most — NFL, NBA, NHL and MLB in one feed. Tap a pick for the game log, the live price and the full breakdown.</p>
+      <div class="app todayfeed"><div class="pickgrid" id="todaygrid"></div></div>
+      <p class="todaynote" id="todaynote"></p>
+    </div>
+  </section>
+
   <!-- SPORT TABS -->
   <section id="sports" class="center" aria-labelledby="sports-h">
     <div class="wrap">
@@ -710,18 +734,70 @@ function countUp(el){ const to=+el.dataset.count; if(!to||el.dataset.done) retur
     t.addEventListener('keydown',e=>{ let j=null; if(e.key==='ArrowRight') j=(i+1)%tabs.length; if(e.key==='ArrowLeft') j=(i-1+tabs.length)%tabs.length;
       if(j!=null){ e.preventDefault(); tabs[j].focus(); select(tabs[j]); } }); }); })();
 
-// Receipts: the latest graded week of Value spots (auto-updated by the nightly build).
-// Live ticker under the header: the four boards, the latest NFL Value receipts, the referral code (app.js).
+// Live ticker under the header (app.js) and the Today feed, from today.json and weekly.json
+// (both rebuilt hourly). The ticker leads with each sport's season record, then what's live
+// now, then the latest NFL week's Value receipts — wins and losses — and the evergreen lines.
 (function(){ if(!window.PS) return;
+  const esc=PS.esc, SPORT={nfl:'🏈 NFL', nba:'🏀 NBA', nhl:'🏒 NHL', mlb:'⚾ MLB'};
   const base=[
     {ic:'🏟️', html:'<b>4 boards</b> — NFL · NBA · NHL · MLB, rebuilt every hour'},
     {ic:'📒', html:'<b>Every pick graded in public</b> — the wins and the losses'},
     {ic:'💯', html:'<b>100% free</b> — no signup, no paywall'},
     {ic:'🎁', html:'<b>$50 free</b> on Polymarket with code PROPSTREAKLAB'}];
   PS.ticker(base);
-  fetch('weekly.json',{cache:'no-store'}).then(r=>r.ok?r.json():null).then(d=>{ if(!d||!d.n) return;
-    const roi=d.priced? d.units/d.priced : null;
-    PS.ticker([{ic:'✅', cls:'up', html:`<b>NFL Value spots, week ${PS.esc(d.week)}: ${PS.esc(d.hit)}/${PS.esc(d.n)} hit</b>${roi==null?'':` · ${roi>=0?'+':''}${Math.round(roi*100)}% ROI`}`}].concat(base)); }).catch(()=>{}); })();
+  const get=u=>fetch(u,{cache:'no-store'}).then(r=>r.ok?r.json():null).catch(()=>null);
+  const ahead=p=>Date.parse(p.start)>Date.now();
+  const initials=n=>{ const w=String(n||'').replace(/\s+(Jr|Sr|II|III|IV)\.?$/i,'').trim().split(/\s+/); return ((w[0]||'')[0]||'')+(w.length>1? (w[w.length-1][0]||'') : ''); };
+
+  function tickerItems(t, w){
+    const R=(t&&t.record)||{}, it=[];
+    Object.keys(R).filter(s=>R[s].T&&R[s].T.n).sort((a,b)=>R[b].T.n-R[a].T.n).forEach(s=>{ const r=R[s].T;
+      it.push({ic:'🔒', cls:'up', html:`<b>${SPORT[s]} 25 Guaranteed: ${r.hit}/${r.n} hit (${Math.round(100*r.hit/r.n)}%)</b> this season`}); });
+    const live=((t&&t.valueLive)||[]).filter(v=>Date.parse(v[1])>Date.now());
+    if(live.length){ const sp=[...new Set(live.map(v=>v[0]))].map(s=>SPORT[s]).join(' · ');
+      it.push({ic:'⚡', cls:'up', html:`<b>${live.length} value spot${live.length===1?'':'s'} live now</b> — ${sp}`}); }
+    Object.keys(R).filter(s=>R[s].V&&R[s].V.n&&R[s].V.units!=null).sort((a,b)=>R[b].V.units-R[a].V.units).forEach(s=>{ const r=R[s].V, u=r.units;
+      it.push({ic:'⚡', cls:u>=0?'up':'', html:`${SPORT[s]} Value spots: <b>${r.hit}/${r.n} hit · ${u>=0?'+':'−'}${Math.abs(u).toFixed(1)}u</b> this season`}); });
+    if(w&&w.n){ const roi=w.priced? w.units/w.priced : null;
+      it.push({ic:'📊', html:`NFL Value spots, week ${esc(w.week)}: <b>${esc(w.hit)}/${esc(w.n)} hit</b>${roi==null?'':` · ${roi>=0?'+':''}${Math.round(roi*100)}% ROI`}`}); }
+    return it.concat(base);
+  }
+
+  function card(p){
+    const pv=Math.round(p.prob*100), tier=p.prob>=0.9?'hi':p.prob>=0.7?'mid':'lo';
+    const href=`./${p.sport}.html#${PS.hashFor(p.pid, p.stat, p.line, p.side, p.player)}`;
+    const kind=p.kind==='value'? `<span class="pc-kind">⚡ Value · +${Math.round(p.edge*100)} edge</span>`
+                               : `<span class="pc-kind safe">🎯 Safe bet that pays</span>`;
+    return `<a class="pickcard ${tier}" href="${esc(href)}" style="${PS.teamVars(p.sport, p.team)}">`+
+      `<div class="pc-top"><span class="av">${esc(initials(p.player))}</span>`+
+        `<div class="pc-who"><b>${esc(p.player)}</b><span><span class="tbadge">${esc(p.team)}</span>vs ${esc(p.opp)}</span><span>${SPORT[p.sport]||''} · <span class="cd" data-cd="${esc(p.start)}">${PS.until(Date.parse(p.start))}</span></span></div>`+
+        `<div class="pc-prob"><div class="ring" style="--p:${pv}"><b>${pv}<small>%</small></b></div><span>model</span></div></div>`+
+      `<div class="pc-bet"><span class="leantag ${esc(p.side)}">${esc(p.side)}</span><b>${esc(p.line)}</b><span>${esc(p.statText)}</span></div>`+
+      `<div class="pc-foot"><span class="pc-price"><span class="pmpx">${Math.round(p.price*100)}¢</span> <span class="rng">${(1/p.price).toFixed(2)}× payout</span></span>${kind}</div>`+
+    `</a>`;
+  }
+  function renderToday(t){
+    const sec=document.getElementById('today'), grid=document.getElementById('todaygrid'); if(!sec||!grid) return;
+    const picks=((t&&t.picks)||[]).filter(ahead).slice(0,6);
+    const sig=picks.map(p=>[p.sport,p.pid,p.stat,p.line,p.side].join('|')).join(',');
+    if(grid.dataset.sig===sig) return;       // unchanged: don't restart the ring animations
+    grid.dataset.sig=sig;
+    if(!picks.length){ sec.hidden=true; return; }
+    const anyValue=picks.some(p=>p.kind==='value');
+    document.getElementById('today-h').innerHTML= anyValue? 'Today\'s best <i>value</i>.' : 'Today\'s <i>surest</i> bets that pay.';
+    grid.innerHTML=picks.map(card).join('');
+    const at=new Date(t.gen); const when=isFinite(at)? at.toLocaleTimeString([], {hour:'numeric', minute:'2-digit'}) : 'the last update';
+    document.getElementById('todaynote').textContent=`Prices as of ${when} — tap a pick for the live Polymarket price. Picks leave this list when their game starts. Research, not betting advice.`;
+    sec.hidden=false;
+  }
+
+  Promise.all([get('today.json'), get('weekly.json')]).then(([t,w])=>{
+    PS.ticker(tickerItems(t, w));
+    if(!t) return;
+    renderToday(t);
+    setInterval(()=>{ if(!document.hidden){ renderToday(t); PS.ticker(tickerItems(t, w)); } }, 60000);
+  });
+})();
 (function(){ fetch('weekly.json',{cache:'no-store'}).then(r=>r.ok?r.json():null).then(d=>{
   if(!d||!d.n) return; const el=document.getElementById('receipt'); if(!el) return;
   const up=d.units>=0, roi=d.priced? d.units/d.priced : null;

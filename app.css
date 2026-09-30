@@ -297,3 +297,34 @@ body{margin:0;background:var(--ps-bg);color:var(--ps-text);font-family:var(--ps-
 .sportbg-nfl{background-size:min(1400px,160vw) auto;background-position:center bottom -2vh;
   background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1400 700' fill='none' stroke='white' stroke-width='3'%3E%3Crect x='20' y='60' width='1360' height='580'/%3E%3Cpath d='M130 60V640M1270 60V640' stroke-width='6'/%3E%3Cpath d='M187 60V640' stroke-width='3'/%3E%3Cpath d='M244 60V640' stroke-width='5'/%3E%3Cpath d='M301 60V640' stroke-width='3'/%3E%3Cpath d='M358 60V640' stroke-width='5'/%3E%3Cpath d='M415 60V640' stroke-width='3'/%3E%3Cpath d='M472 60V640' stroke-width='5'/%3E%3Cpath d='M529 60V640' stroke-width='3'/%3E%3Cpath d='M586 60V640' stroke-width='5'/%3E%3Cpath d='M643 60V640' stroke-width='3'/%3E%3Cpath d='M700 60V640' stroke-width='5'/%3E%3Cpath d='M757 60V640' stroke-width='3'/%3E%3Cpath d='M814 60V640' stroke-width='5'/%3E%3Cpath d='M871 60V640' stroke-width='3'/%3E%3Cpath d='M928 60V640' stroke-width='5'/%3E%3Cpath d='M985 60V640' stroke-width='3'/%3E%3Cpath d='M1042 60V640' stroke-width='5'/%3E%3Cpath d='M1099 60V640' stroke-width='3'/%3E%3Cpath d='M1156 60V640' stroke-width='5'/%3E%3Cpath d='M1213 60V640' stroke-width='3'/%3E%3Cg fill='white' stroke='none' font-family='Arial,sans-serif' font-size='44' font-weight='700' text-anchor='middle'%3E%3Ctext x='244' y='600'%3E10%3C/text%3E%3Ctext x='358' y='600'%3E20%3C/text%3E%3Ctext x='472' y='600'%3E30%3C/text%3E%3Ctext x='586' y='600'%3E40%3C/text%3E%3Ctext x='700' y='600'%3E50%3C/text%3E%3Ctext x='814' y='600'%3E40%3C/text%3E%3Ctext x='928' y='600'%3E30%3C/text%3E%3Ctext x='1042' y='600'%3E20%3C/text%3E%3Ctext x='1156' y='600'%3E10%3C/text%3E%3C/g%3E%3C/svg%3E")}
 @media(max-width:760px){.sportbg{opacity:.06}.sportbg-mlb,.sportbg-nba{background-position:center bottom -4vh}}
+
+/* ================= phones: get to the picks on the first screen ================= */
+/* The hero, promo row and value banner used to fill the whole first screen on a phone, so
+   no pick showed until a long scroll. Here they shrink to a headline and one row each. */
+@media(max-width:760px){
+  .app .apphero{padding:14px 2px 0}
+  .app .eyebrow{font-size:11px;letter-spacing:.12em;padding:5px 11px;gap:8px}
+  .app .apphero h1{font-size:31px;margin:10px 0 10px}
+  .app .apphero .lede{display:none}
+  .app .herostats{flex-wrap:nowrap;gap:6px}
+  .app .herostats>div{flex:1 1 0;min-width:0;padding:7px 10px 8px;border-radius:12px}
+  .app .herostats b{font-size:19px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .app .herostats span{display:block;font-size:10px;letter-spacing:.08em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .app .herostats>div:nth-child(2):has(~ div:not([hidden])){display:none}   /* three don't fit: "on deck" beats "data through" */
+  .app .promo{margin:10px 0 0;gap:6px}
+  .app .refbanner{display:block;width:100%;padding:8px 14px;font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:center}
+  .app .vwbar{margin:10px 0 0;padding:9px 14px;gap:2px 10px}
+  .app .vwbar .lbl{font-size:12px}
+  .app .vwbar .big{font-size:24px}
+  .app .vwbar .sub{display:none}
+  .app .tabs{margin:12px 0 14px}
+  /* Value spots: the picks first, the two-rule explainer under them. */
+  .app #valuepanel:not([hidden]){display:flex;flex-direction:column}
+  .app #valuepanel .valrules{order:2;margin:14px 0 0}
+}
+
+/* "Link copied" toast for the share button */
+.pstoast{position:fixed;left:50%;bottom:24px;z-index:200;transform:translate(-50%,16px);opacity:0;pointer-events:none;
+  padding:10px 18px;border-radius:999px;background:#00c805;color:#06210b;font-family:"Barlow",system-ui,sans-serif;font-weight:700;font-size:14px;
+  box-shadow:0 14px 34px rgba(0,0,0,.4);transition:opacity .2s ease,transform .2s ease}
+.pstoast.on{opacity:1;transform:translate(-50%,0)}

@@ -613,8 +613,8 @@ tr.hit td{background:var(--hit-soft)} tr.miss td{background:var(--miss-soft)}
 .panel.collapsed > *:not(:first-child){display:none!important}
 .panel.collapsed{padding-bottom:14px}
 </style>
-<link rel="stylesheet" href="app.css">
-<script src="app.js"></script>
+<link rel="stylesheet" href="app.css?v=20260930b">
+<script src="app.js?v=20260930b"></script>
 
 <header class="apptop">
   <div class="apptop-in">
@@ -661,15 +661,6 @@ tr.hit td{background:var(--hit-soft)} tr.miss td{background:var(--miss-soft)}
     <div class="mkthead"><h2>📰 This week</h2><span class="mktmuted" id="digestcap"></span></div>
     <div id="digestbody"></div>
   </div>
-  <div class="panel" id="edgepanel">
-    <div class="mkthead">
-      <h2>🔒 25 Guaranteed</h2>
-      <button id="edgescan" class="btn" type="button">Scan the board</button>
-      <span id="edgestatus"></span>
-      <span class="mktmuted" id="recT"></span>
-    </div>
-    <div id="edgebody"></div>
-  </div>
   <div class="panel" id="valuepanel" hidden>
     <div class="mkthead"><h2>⚡ Value spots</h2><span class="mktmuted">market gives it 30%+, model is 15+ points better — overs and unders both</span><span class="mktmuted" id="recV"></span></div>
     <div class="valrules">
@@ -681,6 +672,15 @@ tr.hit td{background:var(--hit-soft)} tr.miss td{background:var(--miss-soft)}
       <div class="vrfoot">Both rules are tested against the <b>Polymarket price for the side the model takes</b> — the price you'd actually pay — and a prop also needs <b>6+ effective games</b> of history behind it. Everything clearing both rules is listed, ranked by that edge. Prices come from Polymarket's MLB player-prop markets, so this list stays empty until those are posted.</div>
     </div>
     <div id="valuebody"></div>
+  </div>
+  <div class="panel" id="edgepanel">
+    <div class="mkthead">
+      <h2>🔒 25 Guaranteed</h2>
+      <button id="edgescan" class="btn" type="button">Scan the board</button>
+      <span id="edgestatus"></span>
+      <span class="mktmuted" id="recT"></span>
+    </div>
+    <div id="edgebody"></div>
   </div>
   <div class="panel" id="lbpanel">
     <div class="mkthead"><h2>🔥 Hit streak leaderboard</h2><span class="mktmuted">longest active over streaks — consecutive games clearing the site's realistic line</span></div>
@@ -699,6 +699,7 @@ tr.hit td{background:var(--hit-soft)} tr.miss td{background:var(--miss-soft)}
     <div id="playerbtns" style="margin:8px 0" hidden>
       <button id="watchstar" class="btn ghost" type="button">☆ Watch</button>
       <button id="cmpadd" class="btn ghost" type="button">⚖ Compare</button>
+      <button id="sharepick" class="btn ghost" type="button" title="Copy a link that opens this exact prop">🔗 Share</button>
     </div>
 
     <div class="ctrlrow">
@@ -972,12 +973,13 @@ function contextFor(p, sk, oppOverride, gameOverride){
 const PAGE_IDS={week:'page-week', player:'page-player', tools:'page-tools', past:'tab-picks'};
 function showTab(name){
   if(name==='picks') name='past';
+  if(/^player\//.test(name)) name='player';   // a shared pick link
   if(!PAGE_IDS[name]) name='week';
   document.querySelectorAll('.tab').forEach(t=>t.setAttribute('aria-selected', String(t.dataset.tab===name)));
   for(const k in PAGE_IDS){ const el=$(PAGE_IDS[k]); if(el) el.hidden = k!==name; }
   if(name==='past') initPicks();
   if(name==='tools'){ renderWatch(); renderCompare(); renderApTeams(); }
-  try{ history.replaceState(null,'', '#'+name); }catch(e){}
+  try{ history.replaceState(null,'', '#'+(name==='player'? PS.pickHash(state) : name)); }catch(e){}
   window.scrollTo({top:0});
 }
 document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>showTab(t.dataset.tab));
@@ -1036,6 +1038,7 @@ $('adjctx').onchange=()=>{ state.adj=$('adjctx').checked; render(); };
 function tileClass(p){ return p>=0.6?'hi':p>=0.45?'mid':'lo'; }
 function render(){
   const p=state.player;
+  PS.syncHash(state);
   updatePlayerBtns();
   if(!p){ $('headline').innerHTML='<span class="q">Search a player above to see their prop chances.</span>';
     $('tiles').innerHTML=''; $('pmeta').textContent=''; drawDist([],0,'pts'); drawChart([],0,'pts'); $('tbl').innerHTML=''; $('splitbody').innerHTML=''; return; }
@@ -1234,12 +1237,22 @@ function generateDigest(){ const panel=$('digestpanel'), body=$('digestbody'), c
   if(PICKS===null){ panel.hidden=true; return; }
   const up=upcomingPicks().filter(p=>p.prob!=null);
   if(!up.length){ panel.hidden=true; return; }
-  const best=up.slice().sort((a,b)=>b.prob-a.prob);
-  const near=best.filter(p=>p.prob>=0.85);
-  const desc=p=>`<b>${esc(p.player)}</b> ${esc(p.side)} ${p.line} ${esc(statLabel(p.stat))} (${pct(p.prob)})`;
-  let s=`<p><b>Cleanest looks:</b> `+best.slice(0,3).map(desc).join(', ')+`.</p>`;
-  if(near.length) s+=`<p><b>Near-locks:</b> ${near.length} pick${near.length===1?'':'s'} above 85% on the slate.</p>`;
-  body.innerHTML=s; if(cap) cap.textContent='auto-generated from the model'; panel.hidden=false;
+  // Lead with bets that actually pay. The highest raw chances are near-certain unders
+  // (under 2.5 goals at 98%) that cost ~97¢ — true, but not worth betting or bragging about.
+  const key=r=>r.pid+'|'+r.sk+'|'+r.line+'|'+r.side, cents=r=>Math.round(r.price*100)+'¢';
+  const value=listRows('V').filter(r=>r.edge!=null).sort((a,b)=>b.edge-a.edge).slice(0,3), used=new Set(value.map(key));
+  const safe=up.map(normPick).filter(r=>r.price!=null && r.price<=0.85 && r.edge>0 && !used.has(key(r))).sort((a,b)=>b.prob-a.prob).slice(0,3);
+  const near=up.filter(p=>p.prob>=0.85);
+  const desc=r=>`<b>${esc(r.name)}</b> ${esc(r.side)} ${r.line} ${esc(r.statText)}`;
+  let s='';
+  if(value.length) s+=`<p><b>⚡ Best value:</b> `+value.map(r=>`${desc(r)} — ${pct(r.prob)} vs ${cents(r)} (+${Math.round(r.edge*100)})`).join(', ')+`.</p>`;
+  if(safe.length) s+=`<p><b>🎯 Safest that still pay:</b> `+safe.map(r=>`${desc(r)} — ${pct(r.prob)} at ${cents(r)} (${(1/r.price).toFixed(2)}×)`).join(', ')+`.</p>`;
+  if(!s){   // no Polymarket prices posted yet: the model's best overs, not the trivial unders
+    const pool=up.filter(p=>p.side!=='under'), best=(pool.length? pool : up).slice().sort((a,b)=>b.prob-a.prob).slice(0,3).map(normPick);
+    s=`<p><b>Top model looks:</b> `+best.map(r=>`${desc(r)} (${pct(r.prob)})`).join(', ')+`. <span class="mktmuted">No Polymarket prices posted yet — value picks show here once they are.</span></p>`;
+  }
+  if(near.length) s+=`<p><b>Near-locks:</b> ${near.length} pick${near.length===1?'':'s'} above 85% — likely, but they pay little.</p>`;
+  body.innerHTML=s; if(cap) cap.textContent='auto-generated from the model'+(value.length||safe.length? ' · priced on Polymarket' : ''); panel.hidden=false;
 }
 function pickRow(x){ const cls=x.prob>=0.7?'hi':x.prob>=0.6?'mid':'lo';
   const val=(x.lists||'').includes('V');
@@ -1291,8 +1304,9 @@ function tickerItems(){
       if(listed.length>=5) day=listed;      // the picks the site actually showed, when there are enough
       const hits=day.filter(p=>p.res==='hit');
       it.push({ic:'📊', cls:'up', html:`<b>${esc(dlabel(last))}: ${hits.length}/${day.length} picks hit (${Math.round(100*hits.length/day.length)}%)</b>`});
-      hits.sort((a,b)=>b.prob-a.prob).slice(0,5).forEach(p=>
-        it.push({ic:'✅', cls:'up', html:`<b>${esc(p.player)}</b> ${esc(p.side)} ${esc(p.line)} ${esc(statLabel(p.stat))} — hit (${esc(p.actual)})`}));
+      // The hits that paid the most first (cheapest price), not the 98% unders that paid pennies.
+      hits.sort((a,b)=>(a.price??1)-(b.price??1) || b.prob-a.prob).slice(0,5).forEach(p=>
+        it.push({ic:'✅', cls:'up', html:`<b>${esc(p.player)}</b> ${esc(p.side)} ${esc(p.line)} ${esc(statLabel(p.stat))} — hit (${esc(p.actual)})${p.price!=null? ` at ${Math.round(p.price*100)}¢` : ''}`}));
     }
     const v=listRows('V').sort((a,b)=>(b.edge||0)-(a.edge||0));
     if(v.length) it.push({ic:'⚡', html:`<b>${v.length} value spot${v.length===1?'':'s'} live</b> — top: ${esc(v[0].name)} ${esc(v[0].side)} ${esc(v[0].line)} ${esc(v[0].statText)}, ${pct(v[0].prob)} vs ${Math.round(v[0].price*100)}¢`});
@@ -1383,6 +1397,7 @@ function toggleCmp(id){ const i=CMP.indexOf(id); if(i<0){ if(CMP.length<6) CMP.p
 function openPlayer(id){ showTab('player'); pick(id); }
 $('watchstar').onclick=()=>{ if(state.player) toggleWatch(state.player.id); };
 $('cmpadd').onclick=()=>{ if(state.player) toggleCmp(state.player.id); };
+$('sharepick').onclick=()=>PS.sharePick(state, statLabel(state.stat));
 function apTeamList(){ return [...new Set(upcomingPicks().filter(p=>p.prob!=null).map(p=>p.team))].filter(Boolean).sort(); }
 function renderApTeams(){ const wrap=$('apTeams'); if(!wrap) return;
   const teams=apTeamList();
@@ -1582,5 +1597,9 @@ function renderValueWeek(){
   el.hidden=false;
 }
 renderValueWeek();
-(function(){ const h=(location.hash||'').replace('#',''); if(h) showTab(h); })();
+// A shared pick link (#player/<id>/<stat>/<line>/<side>) opens straight onto that prop;
+// any other hash just picks the tab.
+(function(){ const h=(location.hash||'').replace('#',''), pk=PS.parsePickHash(h);
+  if(pk && byId[pk.id] && STATMAP[pk.stat]){ loadPick({pid:pk.id, sk:pk.stat, line:pk.line, side:pk.ou}); return; }
+  if(h) showTab(h); })();
 </script>

@@ -91,5 +91,40 @@ window.PS = (function(){
     const r=c.getBoundingClientRect(); c.style.setProperty('--mx', (e.clientX-r.left)+'px'); c.style.setProperty('--my', (e.clientY-r.top)+'px');
   }, {passive:true});
 
-  return {teamVars, ticker, until, skeleton, esc};
+  // ---- shareable pick links: #player/<id>/<stat>/<line>/<side>/<name-slug> ----
+  // The slug is only there so a pasted link reads as a name; parsing ignores it.
+  const slug = s => String(s||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');
+  const hashFor = (id, stat, line, side, name) => `player/${encodeURIComponent(id)}/${stat}/${line}/${side}/${slug(name)}`;
+  function pickHash(st){
+    if(!st || !st.player) return 'player';
+    return hashFor(st.player.id, st.stat, st.line, st.ou, st.player.n);
+  }
+  function parsePickHash(h){
+    const m=/^#?player\/([^/]+)\/([a-z0-9_]+)\/(\d+(?:\.\d+)?)\/(over|under)\b/i.exec(h||'');
+    return m? {id:decodeURIComponent(m[1]), stat:m[2], line:parseFloat(m[3]), ou:m[4].toLowerCase()} : null;
+  }
+  // Keep the address bar on the prop being researched, so copying the URL shares it too.
+  function syncHash(st){
+    const pg=document.getElementById('page-player'); if(!pg || pg.hidden) return;
+    const h='#'+pickHash(st); if(location.hash===h) return;
+    try{ history.replaceState(null,'',h); }catch(e){}
+  }
+  function toast(msg){
+    let t=document.getElementById('pstoast');
+    if(!t){ t=document.createElement('div'); t.id='pstoast'; t.className='pstoast'; t.setAttribute('role','status'); document.body.appendChild(t); }
+    t.textContent=msg; t.classList.add('on'); clearTimeout(t._h); t._h=setTimeout(()=>t.classList.remove('on'), 2200);
+  }
+  // Phones get the native share sheet; everywhere else the link is copied.
+  function sharePick(st, statText){
+    if(!st || !st.player) return;
+    const url=location.origin+location.pathname+'#'+pickHash(st);
+    const text=`${st.player.n} ${st.ou} ${st.line} ${statText||st.stat} — the model's chance, the game log and the live price`;
+    const touch=window.matchMedia && matchMedia('(pointer:coarse)').matches;
+    if(touch && navigator.share){ navigator.share({title:'Prop Streak Lab', text, url}).catch(()=>{}); return; }
+    const done=()=>toast('🔗 Link copied — paste it anywhere');
+    if(navigator.clipboard && window.isSecureContext) navigator.clipboard.writeText(url).then(done, ()=>window.prompt('Copy this link:', url));
+    else window.prompt('Copy this link:', url);
+  }
+
+  return {teamVars, ticker, until, skeleton, esc, hashFor, pickHash, parsePickHash, syncHash, sharePick, toast};
 })();

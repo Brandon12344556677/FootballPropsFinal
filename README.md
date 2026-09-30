@@ -35,6 +35,10 @@ the site.
   offseason team changes ("now with X, log from Y"), rookies, small samples.
 - **Trend & usage** — last-5 vs last-20 average, current streak against your line,
   target share (or carries / pass attempts) trend.
+- **Share** — every prop has its own link (`nfl.html#player/<id>/<stat>/<line>/<side>/<name>`,
+  same on every sport page). The address bar follows what you're researching, and the
+  🔗 Share button copies it (or opens the phone's share sheet). Opening one loads that
+  exact player, prop, line and side.
 - **Bet calculator** — type your Polymarket price to get the multiplier, edge,
   expected value and a quarter-Kelly stake.
 - **Parlay builder** — combined model chance, real payout at your prices, and a
@@ -111,6 +115,8 @@ Put your referral link in `url`. Leave it `""` to hide the banner.
 | `data.json` | The dataset (player game logs, this week's schedule, injuries, defense ranks). |
 | `slate.json` | This week's Polymarket player-prop events, used by the board scan. |
 | `picks.json` | Every recorded pick, live and backtest, with grades. Read by the Past picks tab. |
+| `build_today.py` | Runs after the four builders and writes `today.json` from their picks and season records. Standard library only; never fails the deploy. |
+| `today.json` | The home page's cross-sport **Today** feed (the best upcoming value spots, at most 3 per sport up top, each linking to its prop) and the season records its ticker leads with. |
 | `.github/workflows/update.yml` | The scheduled job: tests, build, commit. |
 | `tests/` | Unit tests for the model, market parsing, grading, and a check that the JavaScript model matches the Python one. |
 | `tools/tune_context.py` | Re-fits the game-context adjustment strengths on the backtest. Run it when a season of new data has accumulated. |

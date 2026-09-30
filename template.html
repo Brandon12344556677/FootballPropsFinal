@@ -607,8 +607,8 @@ table td,table th,thead th,tbody td,.edgetbl td,.edgetbl th,.caltbl td,.caltbl t
 .valrules .vrfoot b{color:#fff}
 </style>
 
-<link rel="stylesheet" href="app.css">
-<script src="app.js"></script>
+<link rel="stylesheet" href="app.css?v=20260930b">
+<script src="app.js?v=20260930b"></script>
 
 <header class="apptop">
   <div class="apptop-in">
@@ -657,21 +657,6 @@ table td,table th,thead th,tbody td,.edgetbl td,.edgetbl th,.caltbl td,.caltbl t
     <div id="digestbody"></div>
   </div>
 
-  <div class="panel" id="sharepanel" hidden>
-    <div class="mkthead"><h2>📸 Shareable card</h2><button id="sharemake" class="btn" type="button">Make this week's image</button><span class="mktmuted" id="sharecap"></span></div>
-    <div id="sharebox"><p class="mktnote">Generate a branded image of this week's top model picks — sized for Instagram, TikTok, or X. One tap, then download and post.</p></div>
-  </div>
-
-  <div class="panel" id="edgepanel">
-    <div class="mkthead">
-      <h2>🔒 25 Guaranteed</h2>
-      <button id="edgescan" class="btn">Scan the board</button>
-      <span id="edgestatus"></span>
-      <span class="mktmuted" id="recT"></span>
-    </div>
-    <div id="edgebody"><p class="mktnote">Scans every player prop on this week's Polymarket board and shows the <b>25 highest model chances</b>, each next to its <b>live Polymarket US price</b> — the surest plays by the numbers, regardless of payout. Especially handy if you're holding <b>credits you can't withdraw without trading</b>: these are the props most likely to resolve as wins, so clearing that requirement lets you cash out your balance. Each pick is recorded before kickoff and graded in the <b>Past picks</b> tab. <span class="mktmuted">Needs the hosted website (the Polymarket API can't be reached from a local file).</span></p></div>
-  </div>
-
   <div class="panel" id="valuepanel">
     <div class="mkthead"><h2>⚡ Value spots</h2><span class="mktmuted">market gives it 30%+, model is 15+ points better — overs and unders both</span><span class="mktmuted" id="recV"></span></div>
     <div class="valrules">
@@ -685,9 +670,23 @@ table td,table th,thead th,tbody td,.edgetbl td,.edgetbl th,.caltbl td,.caltbl t
     <div id="valuebody"><p class="mktnote">The board scan fills this in. <span class="mktmuted">Needs the hosted website (the Polymarket API can't be reached from a local file).</span></p></div>
   </div>
 
+  <div class="panel" id="edgepanel">
+    <div class="mkthead">
+      <h2>🔒 25 Guaranteed</h2>
+      <button id="edgescan" class="btn">Scan the board</button>
+      <span id="edgestatus"></span>
+      <span class="mktmuted" id="recT"></span>
+    </div>
+    <div id="edgebody"><p class="mktnote">Scans every player prop on this week's Polymarket board and shows the <b>25 highest model chances</b>, each next to its <b>live Polymarket US price</b> — the surest plays by the numbers, regardless of payout. Especially handy if you're holding <b>credits you can't withdraw without trading</b>: these are the props most likely to resolve as wins, so clearing that requirement lets you cash out your balance. Each pick is recorded before kickoff and graded in the <b>Past picks</b> tab. <span class="mktmuted">Needs the hosted website (the Polymarket API can't be reached from a local file).</span></p></div>
+  </div>
+
   <div class="panel" id="lbpanel">
     <div class="mkthead"><h2>🔥 Hit streak leaderboard</h2><span class="mktmuted">longest active over streaks — with the model's chance and the live Polymarket price</span></div>
     <div id="lbbody"></div>
+  </div>
+  <div class="panel" id="sharepanel" hidden>
+    <div class="mkthead"><h2>📸 Shareable card</h2><button id="sharemake" class="btn" type="button">Make this week's image</button><span class="mktmuted" id="sharecap"></span></div>
+    <div id="sharebox"><p class="mktnote">Generate a branded image of this week's top model picks — sized for Instagram, TikTok, or X. One tap, then download and post.</p></div>
   </div>
 </div><!-- /page-week -->
 
@@ -709,6 +708,7 @@ table td,table th,thead th,tbody td,.edgetbl td,.edgetbl th,.caltbl td,.caltbl t
         <div class="cardbtns">
           <button id="watchstar" class="watchstar" type="button" hidden></button>
           <button id="cmpadd" class="watchstar cmpbtn" type="button" hidden></button>
+          <button id="sharepick" class="watchstar" type="button" hidden title="Copy a link that opens this exact prop">🔗 Share</button>
         </div>
       </div>
       <div class="field">
@@ -1132,13 +1132,14 @@ const PAGE_IDS={week:'page-week', player:'page-player', tools:'page-tools', past
 function showTab(name, opts){
   if(name==='picks') name='past';
   if(name==='research') name='week';
+  if(/^player\//.test(name)) name='player';   // a shared pick link
   if(!PAGE_IDS[name]) name='week';
   const _prev=document.querySelector('.tab[aria-selected="true"]');
   const _changed=!_prev || _prev.dataset.tab!==name;
   document.querySelectorAll('.tab').forEach(t=>t.setAttribute('aria-selected', String(t.dataset.tab===name)));
   for(const k in PAGE_IDS){ const el=$(PAGE_IDS[k]); if(el) el.hidden = k!==name; }
   if(name==='past') initPicks();
-  try{ history.replaceState(null,'', '#'+name); }catch(e){}
+  try{ history.replaceState(null,'', '#'+(name==='player'? PS.pickHash(state) : name)); }catch(e){}
   if(opts && opts.scroll && _changed) window.scrollTo({top:0});
 }
 document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>showTab(t.dataset.tab,{scroll:true}));
@@ -1187,6 +1188,7 @@ function renderEmpty(){
   renderSplits(); renderCalc(); renderCompare();
 }
 function render(){
+  PS.syncHash(state);
   if(!state.player){ renderEmpty(); return; }
   const st=STATMAP[state.stat], p=state.player, g=games();
   renderMeta();
@@ -1908,6 +1910,7 @@ async function scanBoard(force){
   const body=$('edgebody'), status=$('edgestatus');
   status.textContent='Loading slate…';
   if(!edgeRows.length) body.innerHTML=PS.skeleton(6);
+  if(!valueRows.length) $('valuebody').innerHTML=PS.skeleton(3);   // every outcome below replaces it
   try{
     const slate=await getSlate(); const gamesL=slate.games||[]; let done=0;
     const events=await mapLimit(gamesL, 4, async g=>{ let ev=null; try{ ev=await getEvent(g.slug, force); }catch(e){}
@@ -2023,7 +2026,7 @@ function renderEdges(){
   trackLive('T', rows);
 }
 function renderValue(){
-  PS.ticker(tickerItems());
+  PS.ticker(tickerItems()); digestValue();
   const body=$('valuebody');
   if(!valueRows.length){ body.innerHTML=`<p class="mktnote">No value spots right now — nothing on the board, over <i>or</i> under, clears <b>both</b> rules above. That's normal when markets are thin or efficient; the list fills back in as prices move.</p>`; liveWant.delete('V'); return; }
   const rows=sortRows(valueRows,'vedge',-1);
@@ -2223,6 +2226,7 @@ $('playoffs').onchange=e=>{ state.playoffs=e.target.checked; reseedLine(); rende
 $('adjctx').onchange=e=>{ state.adj=e.target.checked; render(); renderParlay(); save(); };
 $('edgescan').onclick=()=>{ SLATE=null; scanBoard(true); };
 $('addleg').onclick=addLeg;
+$('sharepick').onclick=()=>PS.sharePick(state, statLabel(state.stat));
 
 function save(){ try{ localStorage.setItem('psl_state', JSON.stringify({
   pid:state.player?state.player.id:null, stat:state.stat, line:state.line, ou:state.ou, playoffs:state.playoffs, adj:state.adj })); }catch(e){} }
@@ -2245,6 +2249,7 @@ function saveWatch(){ try{ localStorage.setItem('psl_watch', JSON.stringify(WATC
 function isWatched(id){ return WATCH.includes(id); }
 function toggleWatch(id){ if(!id) return; const i=WATCH.indexOf(id); if(i>=0) WATCH.splice(i,1); else WATCH.push(id); saveWatch(); renderWatch(); updateWatchStar(); }
 function updateWatchStar(){ const b=$('watchstar'); if(!b) return; const p=state.player;
+  const sh=$('sharepick'); if(sh) sh.hidden=!p;
   if(!p){ b.hidden=true; return; }
   b.hidden=false; const on=isWatched(p.id); b.classList.toggle('on',on); b.textContent = on? '⭐ Watching' : '☆ Watch'; }
 function renderWatch(){ const wrap=$('watchlist'), panel=$('watchpanel'); if(!wrap) return;
@@ -2437,7 +2442,7 @@ function generateDigest(){
   const streakPool=(typeof LB!=='undefined'&&LB.length)? LB : computeStreaks();
   const streak=streakPool.find(s=>{ const g=teamGame(s.p.t); return g && !gameHappened(g); });
   const link=(c,label)=>`<button class="wload" type="button" data-id="${esc(c.p.id)}" data-sk="${esc(c.sk)}" data-line="${c.line}">${esc(label!=null?label:(c.p.n+' over '+fmt(c.line)+' '+STATMAP[c.sk].label))}</button>`;
-  let s='';
+  let s=`<p id="digestvalue" hidden></p>`;   // filled by digestValue() once the board scan has prices
   if(best.length) s+=`<p><b>Cleanest looks:</b> `+best.slice(0,3).map(c=>`${link(c)} (${pct(c.prob)})`).join(', ')+`.</p>`;
   const mid=[];
   if(nearLocks.length) mid.push(`<b>Near-locks:</b> ${nearLocks.length} prop${nearLocks.length===1?'':'s'} above 85%`);
@@ -2450,6 +2455,17 @@ function generateDigest(){
   cap.textContent='auto-generated from the model · at the site’s realistic lines';
   body.querySelectorAll('.wload').forEach(b=>b.onclick=()=>{ const p=byId[b.dataset.id]; if(p) loadStreak({p, sk:b.dataset.sk, line:+b.dataset.line}); });
   panel.hidden=false;
+  digestValue();
+}
+// Top line of the digest: the best value spots at live Polymarket prices — bets that pay,
+// ahead of the model's cleanest looks. Re-run whenever the value list changes.
+function digestValue(){
+  const el=$('digestvalue'); if(!el) return;
+  const top=valueRows.slice().sort((a,b)=>b.vedge-a.vedge).slice(0,3);
+  if(!top.length){ el.hidden=true; return; }
+  el.innerHTML=`<b>⚡ Best value:</b> `+top.map(v=>`<b>${esc(v.name)}</b> ${esc(v.side)} ${esc(v.line)} ${esc(v.statText)} — ${pct(v.prob)} vs ${Math.round(v.vprice*100)}¢ (+${Math.round(v.vedge*100)})`).join(', ')+
+    `. <a href="#" onclick="document.getElementById('valuepanel').scrollIntoView({behavior:'smooth'});return false;">All value spots ↓</a>`;
+  el.hidden=false;
 }
 
 // ---- shareable weekly card ----
@@ -2814,6 +2830,12 @@ if(/[?&]card\b/i.test(location.search)){ const _sp=$('sharepanel'); if(_sp){ _sp
     });
   });
 })();
+// A shared pick link (#player/<id>/<stat>/<line>/<side>) opens straight onto that prop.
+(function(){ const h=PS.parsePickHash(location.hash), p=h&&byId[h.id]; if(!p||!STATMAP[h.stat]) return;
+  setPlayer(p,{keepStat:true,keepLine:true});
+  state.stat=h.stat; state.line=h.line; state.ou=h.ou; $('line').value=h.line;
+  $('over').setAttribute('aria-pressed', String(h.ou==='over')); $('under').setAttribute('aria-pressed', String(h.ou==='under'));
+  syncChips(); render(); save(); })();
 showTab((location.hash||'').replace('#','') || 'week');
 if(/^https?:$/.test(location.protocol)){
   scanBoard(false);
