@@ -46,10 +46,13 @@ POLY_SLATE = ("https://gamma-api.polymarket.com/events"
 POLY_EVENT = "https://gamma-api.polymarket.com/events/slug/{slug}"
 POLY_SLUG = re.compile(r"^nhl-([a-z0-9]+)-([a-z0-9]+)-(\d{4}-\d{2}-\d{2})-player-props$")
 Q_RE = re.compile(r"^(.*?):\s*(.+?)\s+O/U\s+([\d.]+)", re.I)
-# Market question text -> our stat key. Order matters (combos first).
+# Market question text -> our stat key. Order matters: "blocked shots" must be
+# checked before the bare \bshots?\b in the shots-on-goal pattern, and power-play
+# props map to None (skipped) so they aren't modeled as total points.
 MKT_STAT_NHL = [
-    (re.compile(r"shots?\s*on\s*goal|\bsog\b|\bshots?\b", re.I), "sog"),
+    (re.compile(r"power\s*play", re.I), None),
     (re.compile(r"blocked\s*shots?|\bblocks?\b", re.I), "blk"),
+    (re.compile(r"shots?\s*on\s*goal|\bsog\b|\bshots?\b", re.I), "sog"),
     (re.compile(r"\bhits?\b", re.I), "hit"),
     (re.compile(r"\bsaves?\b", re.I), "sv"),
     (re.compile(r"\bassists?\b", re.I), "a"),

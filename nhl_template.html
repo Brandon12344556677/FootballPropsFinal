@@ -893,8 +893,8 @@ function calP(p){ const T=_calT(); if(T===1||!(p>0)||!(p<1)) return p; return 1/
 function calMp(mp){ if(!mp) return mp; const T=_calT(); if(T===1) return mp; const o=calP(mp.over);
   return Object.assign({}, mp, {over:o, under:1-o, lo:calP(mp.lo), hi:calP(mp.hi)}); }
 
-// Row indices: 0 season 1 date 2 opp 3 type 4 pts 5 reb 6 ast 7 tpm 8 stl 9 blk 10 to 11 min
-//              12 fgm 13 fga 14 ftm 15 fta 16 home 17 started 18 total 19 spread
+// Row indices (build_nhl.py): 0 season 1 date 2 opp 3 type 4 pts 5 g 6 a 7 sog 8 blk 9 hit
+//   10 sv 11 toi(minutes) 12 home 13 started 14 total 15 spread
 const STATS = [
   {key:'pts', label:'Points',        grp:'Scoring',      get:g=>g[4]},
   {key:'g',   label:'Goals',         grp:'Scoring',      get:g=>g[5]},
@@ -906,10 +906,14 @@ const STATS = [
   {key:'toi', label:'Time on Ice',   grp:'Goalie',       get:g=>g[11]},
 ];
 const STATMAP = Object.fromEntries(STATS.map(s=>[s.key,s]));
-const GRPORDER = ['Scoring','Boards & Dimes','Defense','Combos'];
+const GRPORDER = ['Scoring','Shots & Hits','Goalie'];
 const statLabel = k => STATMAP[k]? STATMAP[k].label : k;
-const DEF_FOR = {pts:'pts', tpm:'tpm', fgm:'pts', ftm:'pts', reb:'reb', ast:'ast', stl:'stl', blk:'blk',
-  to:null, min:null, pra:'pts', pr:'pts', pa:'pts', ra:'reb'};
+// Opponent-allowed proxy per prop — mirrors DEF_FOR in build_nhl.py (keep identical).
+const DEF_FOR = {pts:'pts', g:'g', a:'pts', sog:'sog', ppp:'pts',
+  blk:null, hit:null, sv:null, toi:null};
+// Goalies default to Saves and get goalie game-log columns.
+const isGoalie = p => !!p && p.p==='G';
+const GOALIE_STATS = new Set(['sv']);
 const floorFor = k => BW_FLOOR[k] || 1.0;
 
 const byId = {}, byKey = {};
@@ -1000,6 +1004,7 @@ inp.addEventListener('focus', ()=>{ if(inp.value) renderAC(search(inp.value)); }
 document.addEventListener('click', e=>{ if(!ac.contains(e.target)&&e.target!==inp) ac.hidden=true; });
 function pick(id){ const p=byId[id]; if(!p) return; state.player=p; inp.value=p.n; ac.hidden=true;
   const s=$('oppsel'); if(s) s.value='';   // default the matchup to this player's own next opponent
+  if(isGoalie(p)!==GOALIE_STATS.has(state.stat) && state.stat!=='toi'){ state.stat=isGoalie(p)? 'sv' : 'pts'; syncChips(); }
   reseedLine(); render(); }
 
 // ---- line + ou controls ----
@@ -1025,7 +1030,7 @@ function render(){
   if(wg){ const opp=wg.away===p.t? wg.home : wg.away, home=wg.home===p.t;
     ws.innerHTML=`<span><span class="lab">Tonight</span> <b>${home?'vs':'@'} ${esc(opp)}</b></span>`+
       (wg.total!=null?`<span><span class="lab">O/U</span> <b>${wg.total}</b></span>`:'')+
-      (wg.time?`<span><span class="lab">Tip</span> <b>${esc(wg.time)} ET</b></span>`:''); ws.hidden=false;
+      (wg.time?`<span><span class="lab">Puck drop</span> <b>${esc(wg.time)} ET</b></span>`:''); ws.hidden=false;
   } else ws.hidden=true;
   const ctx=contextFor(p, sk), oppNow=ctx.opp;
   const line=state.line;
@@ -1089,9 +1094,12 @@ function drawChart(vals, line, sk, gs){ const svg=$('chart'); if(!vals.length){ 
   $('charthint').textContent=`${statLabel(sk)} by game, oldest → newest. Bar color vs the ${line} line.`;
 }
 function renderTable(gs, sk){ const st=STATMAP[sk]; const last=gs.slice(-15).reverse();
-  let h='<thead><tr><th>Game</th><th>Opp</th><th>MIN</th><th>PTS</th><th>REB</th><th>AST</th><th>3PM</th><th>'+esc(st.label)+'</th></tr></thead><tbody>';
+  const goalie=GOALIE_STATS.has(sk) || (sk==='toi' && isGoalie(state.player));
+  const cols=goalie? [['TOI',g=>g[11]],['SV',g=>g[10]]]
+                   : [['TOI',g=>g[11]],['G',g=>g[5]],['A',g=>g[6]],['PTS',g=>g[4]],['SOG',g=>g[7]]];
+  let h='<thead><tr><th>Game</th><th>Opp</th>'+cols.map(c=>`<th>${c[0]}</th>`).join('')+'<th>'+esc(st.label)+'</th></tr></thead><tbody>';
   last.forEach(g=>{ const v=st.get(g); const cls= v>state.line?'hit':v<state.line?'miss':'';
-    h+=`<tr class="${cls}"><td>${esc(gameLabel(g))}</td><td>${g[16]?'vs':'@'} ${esc(g[2])}</td><td>${g[11]}</td><td>${g[4]}</td><td>${g[5]}</td><td>${g[6]}</td><td>${g[7]}</td><td><b>${v}</b></td></tr>`; });
+    h+=`<tr class="${cls}"><td>${esc(gameLabel(g))}</td><td>${g[12]?'vs':'@'} ${esc(g[2])}</td>`+cols.map(c=>`<td>${c[1](g)}</td>`).join('')+`<td><b>${v}</b></td></tr>`; });
   $('tbl').innerHTML=h+'</tbody>';
 }
 function renderMatchup(p, sk){ const sel=$('oppsel'); const teams=Object.keys(DB.defense||{}).sort();
@@ -1105,7 +1113,7 @@ function renderMatchup(p, sk){ const sel=$('oppsel'); const teams=Object.keys(DB
   if(!opp||!ds||!DB.defense[opp]||!DB.defense[opp]['NHL']||!DB.defense[opp]['NHL'][ds]){ $('splitbody').innerHTML='<p class="mktnote">No defensive matchup data for this stat/opponent yet.</p>'; return; }
   const d=DB.defense[opp]['NHL'][ds], L=DB.defAvg['NHL'][ds], ratio=d.a/L;
   const rank=d.r, n=d.n, softness= rank<=Math.ceil(n/3)?'a soft spot':rank>=Math.ceil(2*n/3)?'a tough matchup':'middle of the pack';
-  $('splitbody').innerHTML=`<p>Vs <b>${esc(opp)}</b>, opponents average <b>${d.a}</b> ${esc(ds)} — league avg ${L} (×${fmt(ratio)}). `+
+  $('splitbody').innerHTML=`<p>Vs <b>${esc(opp)}</b>, opponents average <b>${d.a}</b> ${esc(statLabel(ds).toLowerCase())} — league avg ${L} (×${fmt(ratio)}). `+
     `That's <b>${esc(softness)}</b> (ranked ${rank}/${n}, 1 = allows the most).</p>`;
 }
 
@@ -1252,7 +1260,7 @@ function renderPast(){ const body=$('pkbody'); if(!body) return;
   const wait=PICKS.filter(p=>awaitingGrade(p) && !boxIn.has(p.gid)), wg=new Set(wait.map(p=>p.gid)).size;
   const lock=wait.length? `<p class="mktnote">⏳ <b>${wait.length} pick${wait.length===1?'':'s'}</b> from ${wg} game${wg===1?'':'s'} that ${wg===1?'has':'have'} started ${wait.length===1?'is':'are'} locked in as recorded before ${TIPOFF}. ${wait.length===1?'It shows':'They show'} up here once the final box score is in.</p>` : '';
   const graded=PICKS.filter(p=>p.res==='hit'||p.res==='miss'||p.res==='push'), dnp=PICKS.filter(p=>p.res==='dnp');
-  if(!graded.length && !dnp.length){ body.innerHTML=lock+'<p class="mktnote">No graded NHL picks yet. Every upcoming pick is recorded before tip-off and shows here once the box score is final — this fills in as games are played.</p>'; return; }
+  if(!graded.length && !dnp.length){ body.innerHTML=lock+'<p class="mktnote">No graded NHL picks yet. Every upcoming pick is recorded before puck drop and shows here once the box score is final — this fills in as games are played.</p>'; return; }
   const hm=graded.filter(p=>p.res!=='push'); const hit=hm.filter(p=>p.res==='hit').length;
   const dnpNote=dnp.length? ` <span class="mktmuted">${dnp.length} pick${dnp.length===1?'':'s'} on players who didn't play ${dnp.length===1?'is':'are'} voided, not counted.</span>` : '';
   let h = lock + (hm.length? `<p><b>Record: ${hit}/${hm.length} (${Math.round(100*hit/hm.length)}%)</b> on graded picks.${dnpNote}</p>` : dnpNote? `<p>${dnpNote}</p>` : '');
@@ -1284,12 +1292,12 @@ function playerModel(p, sk, line){ const vals=valuesOf(p, sk); if(vals.length<3)
 function renderWatch(){ const body=$('watchbody'); if(!body) return;
   const items=WATCH.map(id=>byId[id]).filter(p=>p&&p.g&&p.g.length);
   if(!items.length){ body.innerHTML='<p class="mktnote">No players starred yet. Open a player in the <b>Player</b> tab and tap <b>☆ Watch</b>.</p>'; return; }
-  body.innerHTML=items.map(p=>{ const sk='pts', vals=valuesOf(p,sk), line=seedLine(vals), mp=playerModel(p,sk,line);
+  body.innerHTML=items.map(p=>{ const sk=isGoalie(p)?'sv':'pts', vals=valuesOf(p,sk), line=seedLine(vals), mp=playerModel(p,sk,line);
     const g=teamGame(p.t), opp=g?(g.away===p.t?g.home:g.away):null;
     const prob=mp? (mp.over>=0.5?mp.over:mp.under):null, side=mp?(mp.over>=0.5?'over':'under'):'';
     const cls=prob==null?'':prob>=0.7?'hi':prob>=0.6?'mid':'lo';
     return `<div class="boardrow"><div><div class="bp">${esc(p.n)} <span class="bmeta">${esc(p.t)}${opp?' '+(g.home===p.t?'vs':'@')+' '+esc(opp):''}</span></div>`+
-      `<div class="bpick">Points ${side} ${line}</div></div>`+
+      `<div class="bpick">${esc(statLabel(sk))} ${side} ${line}</div></div>`+
       `<div><button class="btn ghost" type="button" onclick="openPlayer('${esc(p.id)}')">Open</button> <button class="btn ghost" type="button" onclick="toggleWatch('${esc(p.id)}')">✕</button></div>`+
       `<div class="bprob ${cls}">${prob!=null?pct(prob):'—'}</div></div>`; }).join('');
 }
@@ -1357,18 +1365,17 @@ const FEEDBACK_EMAIL = "info@propstreaklab.com";
 })();
 
 // ---- Bet-slip scanner (OCR -> match to model -> grade) ----
+// Order matters: blocked shots before shots on goal, power-play props skipped (not modeled).
 const SLIP_STAT_RX=[
-  [/pts?\s*\+\s*reb\w*\s*\+\s*ast|points?\s*\+\s*rebounds?\s*\+\s*assists?|\bpra\b/i,'pra'],
-  [/pts?\s*\+\s*reb|points?\s*\+\s*rebounds?/i,'pr'],
-  [/pts?\s*\+\s*ast|points?\s*\+\s*assists?/i,'pa'],
-  [/reb\w*\s*\+\s*ast|rebounds?\s*\+\s*assists?/i,'ra'],
-  [/three|3-?point|3pm|treys|\b3s\b/i,'tpm'],
-  [/rebounds?|\breb\b/i,'reb'],
-  [/assists?|\bast\b/i,'ast'],
-  [/steals?|\bstl\b/i,'stl'],
-  [/blocks?|\bblk\b/i,'blk'],
-  [/turnovers?|\bto\b/i,'to'],
-  [/points?|\bpts?\b/i,'pts'],
+  [/power\s*play|\bppp?\b/i,null],
+  [/blocked\s*shots?|\bblocks?\b|\bblk\b/i,'blk'],
+  [/shots?\s*on\s*goal|\bsog\b|\bshots?\b/i,'sog'],
+  [/time\s*on\s*ice|\btoi\b/i,'toi'],
+  [/\bsaves?\b|\bsv\b/i,'sv'],
+  [/\bhits?\b/i,'hit'],
+  [/\bassists?\b|\bast\b/i,'a'],
+  [/\bgoals?\b/i,'g'],
+  [/\bpoints?\b|\bpts?\b/i,'pts'],
 ];
 function slipStatKey(t){ for(const r of SLIP_STAT_RX) if(r[0].test(t)) return r[1]; return null; }
 function slipMatchPlayer(win){ const w=' '+pkey(win)+' '; let best=null;
