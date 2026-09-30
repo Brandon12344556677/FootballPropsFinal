@@ -1254,7 +1254,8 @@ setInterval(()=>{ if(PICKS!==null && !document.hidden && upcomingPicks().length!
 function initPicks(){ renderPast(); }   // Past tab opened
 function renderPast(){ const body=$('pkbody'); if(!body) return;
   if(PICKS===null){ body.innerHTML='<p class="mktnote">Loading…</p>'; return; }
-  const wait=PICKS.filter(awaitingGrade), wg=new Set(wait.map(p=>p.gid)).size;
+  const boxIn=new Set(PICKS.filter(p=>p.res!=null).map(p=>p.gid));   // a graded pick means that game's box score is in
+  const wait=PICKS.filter(p=>awaitingGrade(p) && !boxIn.has(p.gid)), wg=new Set(wait.map(p=>p.gid)).size;
   const lock=wait.length? `<p class="mktnote">⏳ <b>${wait.length} pick${wait.length===1?'':'s'}</b> from ${wg} game${wg===1?'':'s'} that ${wg===1?'has':'have'} started ${wait.length===1?'is':'are'} locked in as recorded before ${TIPOFF}. ${wait.length===1?'It shows':'They show'} up here once the final box score is in.</p>` : '';
   const graded=PICKS.filter(p=>p.res==='hit'||p.res==='miss'||p.res==='push');
   if(!graded.length){ body.innerHTML=lock+'<p class="mktnote">No graded NBA picks yet. Every upcoming pick is recorded before tip-off and shows here once the box score is final — this fills in as games are played.</p>'; return; }
