@@ -423,6 +423,19 @@ window.PS = (function(){
   }
   if(document.readyState!=='loading') trust(); else document.addEventListener('DOMContentLoaded', trust);
 
+  // ---- opening vs current price: has the market moved toward a pick since it was recorded? ----
+  // open/now are fractions for the side taken. Up = the price rose since the site first
+  // recorded the pick, i.e. the market moved toward it (closing line value). closed=true
+  // is the Past picks form: the price at recording -> the last one before the game.
+  function pxMove(open, now, closed){
+    if(open==null || now==null) return '';
+    const o=Math.round(open*100), n=Math.round(now*100), d=n-o;
+    const cls=d>=1?'up':d<=-1?'dn':'flat', arrow=d>=1?'\u25b2'+d:d<=-1?'\u25bc'+(-d):'\u00b10';
+    const say=d>=1? `the market moved ${d}\u00a2 toward this pick` : d<=-1? `the market moved ${-d}\u00a2 away from this pick` : 'no real move';
+    const title=`Polymarket price when the site first recorded this pick: ${o}\u00a2. ${closed?'Last price before the game':'Now'}: ${n}\u00a2 \u2014 ${say}.`;
+    return `<span class="pxmove ${cls}${closed?' inl':''}" title="${esc(title)}">${closed? `${o}\u00a2 \u2192 ${n}\u00a2` : `opened ${o}\u00a2`} <b>${arrow}</b></span>`;
+  }
+
   return {teamVars, ticker, until, skeleton, esc, hashFor, pickHash, parsePickHash, syncHash, sharePick, toast, helpBtn, spark, verdict, icon, sheet, closeSheet, pickSheet,
-          isTracked, toggleBet, renderBets, fairOf, setFair};
+          isTracked, toggleBet, renderBets, fairOf, setFair, pxMove};
 })();

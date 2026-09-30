@@ -1854,7 +1854,8 @@ function liveCell(d){
   const off = '';   // an off-line market never reaches here
   const sub = edge==null? (1/px).toFixed(2)+'\u00d7' : signed(edge)+' edge \u00b7 '+(1/px).toFixed(2)+'\u00d7';
   const gap = (d.ask!=null && Math.abs(d.ask-px)>=0.03)? boardBare : '';
-  return '<span class="pmpx '+cls+'">'+Math.round(px*100)+'\u00a2</span>'+off+' <span class="rng">'+sub+'</span>'+gap;
+  const open = (DB.open||{})[d.mk+'|'+d.side];   // cents, the price the pick was first recorded at
+  return '<span class="pmpx '+cls+'">'+Math.round(px*100)+'\u00a2</span>'+off+' <span class="rng">'+sub+'</span>'+gap+(open!=null? PS.pxMove(open/100, px) : '');
 }
 function liveTd(r){
   const d={mk:mkOf(r), side:r.side||'over', line:r.line, prob:r.prob==null?null:r.prob, ask:r.price==null?null:r.price};
@@ -2836,7 +2837,7 @@ function renderPickTable(rows){
     if(typeof va==='string'||typeof vb==='string') return d*String(va??'').localeCompare(String(vb??''));
     return d*((va==null?-Infinity:va)-(vb==null?-Infinity:vb)); });
   const shown=sorted.slice(0,pkShown);
-  const cols=[['date','Week'],['player','Player'],['team','Team'],['opp','Opp'],['stat','Prop'],['line','Line'],['side','Bet'],['prob','Model'],['actual','Actual'],['res','Result'],['lists','Lists'],['season','Season']];
+  const cols=[['date','Week'],['player','Player'],['team','Team'],['opp','Opp'],['stat','Prop'],['line','Line'],['side','Bet'],['prob','Model'],['px0','Price'],['actual','Actual'],['res','Result'],['lists','Lists'],['season','Season']];
   const th=(kk,l)=>`<th data-k="${kk}" class="${pkSort.key===kk?'sorted'+(pkSort.dir>0?' asc':''):''}">${l}</th>`;
   const resTag=p=> p.res==='hit'?'<span class="res h">Hit</span>': p.res==='miss'?'<span class="res m">Miss</span>': p.res==='push'?'<span class="res p">Push</span>': p.res==='dnp'?'<span class="res d">DNP</span>':'<span class="res w">Pending</span>';
   let h=`<thead><tr>${cols.map(c=>th(c[0],c[1])).join('')}</tr></thead><tbody>`;
@@ -2844,6 +2845,7 @@ function renderPickTable(rows){
     const wk = p.week>18? 'PO' : 'W'+p.week;
     h+=`<tr><td class="tnum">${p.season} ${wk} <span class="mktmuted">${esc((p.date||'').slice(5))}</span></td><td>${esc(p.player)} <span class="mktmuted">${esc(p.pos)}</span></td><td>${esc(p.team)}</td><td>${esc(p.opp)}</td><td>${esc(statLabel(p.stat))}</td><td class="tnum">${p.line}</td>`+
       `<td><span class="leantag ${p.side}">${p.side}</span></td><td class="tnum">${Math.round(p.prob*100)}% <span class="rng">${Math.round(p.lo*100)}–${Math.round(p.hi*100)}</span></td>`+
+      `<td class="tnum">${p.px0!=null&&p.pxc!=null? PS.pxMove(p.px0/100, p.pxc/100, true) : p.price? p.price+'¢' : '—'}</td>`+
       `<td class="tnum">${p.actual!=null? p.actual : '—'}</td><td>${resTag(p)}</td>`+
       `<td>${(p.lists||'').split('').filter(c=>LIST_NAME[c]).map(c=>`<span class="listchip ${c}" title="${LIST_NAME[c]}">${c}</span>`).join('')}</td><td class="mktmuted">${p.season}</td></tr>`;
   });

@@ -1409,6 +1409,12 @@ def live_record(picks):
     return out
 
 
+def js_num(x):
+    """A number as JavaScript prints it (4.0 -> "4"), for keys the page builds from its own numbers."""
+    x = float(x)
+    return str(int(x)) if x.is_integer() else repr(x)
+
+
 def note_price(p):
     """Closing line value: px0 keeps the first price a pick was recorded at and pxc the last
     one seen before kickoff (price itself goes None whenever a market stops trading)."""
@@ -1625,6 +1631,10 @@ def main():
         "calT": cal_t,
         "top": team_top,
         "record": live_record(picks),
+        # first recorded price (cents) of every pending pick, so the board can show how far the
+        # live price has moved since: "pid|stat|line|side" -> px0
+        "open": {f"{p['pid']}|{p['stat']}|{js_num(p['line'])}|{p['side']}": p["px0"] for p in picks
+                 if p["src"] == "live" and p["res"] is None and p.get("px0") is not None},
         "players": players,
     }
     sanity_check(db)
