@@ -65,6 +65,11 @@ jobs:
         continue-on-error: true
         run: python build_today.py || echo "today.json not rebuilt this run"
 
+      # One page per most-bet player, for search engines: rebuilt once a day, sitemap every run.
+      - name: Build player pages (non-fatal)
+        continue-on-error: true
+        run: python build_players.py || echo "player pages not rebuilt this run"
+
       # Once a day (first run after 11 AM ET): yesterday's Value results + today's best
       # value, to whichever of these secrets are set. With none set, it does nothing.
       - name: Daily post to Discord / Telegram (non-fatal)
@@ -81,6 +86,7 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add nfl.html data.json slate.json picks.json weekly.json sitemap.xml robots.txt
+          git add -A players 2>/dev/null || true
           for f in nba.html nba.json nba_stats.json nba_picks.json \
                    nhl.html nhl.json nhl_stats.json nhl_picks.json \
                    mlb.html mlb.json mlb_stats.json mlb_picks.json today.json posted.json; do

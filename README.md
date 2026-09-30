@@ -123,6 +123,7 @@ Put your referral link in `url`. Leave it `""` to hide the banner.
 | `today.json` | The home page's cross-sport **Today** feed (the best upcoming value spots, at most 3 per sport up top, each linking to its prop) and the season records its ticker leads with. |
 | `post_daily.py` | Once a day, posts yesterday's Value results and today's best value (with links) to Discord and/or Telegram. Needs the secrets below; does nothing without them. |
 | `methodology.html` | "How the model works" — the public write-up of the model, the matchup adjustments, calibration, the list rules and how picks are graded. Linked from every footer and the trust line under each hero. |
+| `build_players.py` → `players/` | One static page per most-bet player (up to 60 per sport): title, description and share preview, this week's props with model chance, price, edge and call, the last 10 games, and a link into the full model; plus `players/index.html`. Rebuilt once a day (`--force` rebuilds now); the pages are re-added to `sitemap.xml` every run, since `build.py` rewrites it. |
 | `app.js` / `app.css` | Shared look and behavior for every page: fonts (Archivo headlines, Inter body and numbers), colors, icons (Lucide, swapped in for emoji at runtime), the verdict card, pick-details sheet, one-time 18+ check, explainers, share links, ticker and trust line. |
 | `fonts/` | Self-hosted fonts (Barlow Condensed for labels, Archivo, Inter), with their SIL Open Font License files. |
 | `LICENSE-lucide-icons.txt` | License notice for the Lucide icon shapes bundled in `app.js`. |
