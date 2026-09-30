@@ -869,7 +869,7 @@ function cents(p){ return p==null? '' : Math.round(p*100)+'¢'; }
 const MODEL = {halfLife:6, maxGames:20, priorK:0.5, bwConst:0.9, z:1.2816};
 const BW_FLOOR = {pts:3.0, reb:1.2, ast:1.0, tpm:0.7, stl:0.5, blk:0.5, to:0.7, min:3.0,
   fgm:1.4, fga:2.0, ftm:1.2, fta:1.4, pra:4.0, pr:3.4, pa:3.4, ra:1.6};
-const CTX = {betaPts:0.30, gamma:0.45, clampLo:0.6, clampHi:1.6};
+const CTX = {betaPts:0.30, gamma:0.45, minutes:0, clampLo:0.6, clampHi:1.6};   // minutes: off (test mode, see build_nba.py)
 function erf(x){ const s=x>=0?1:-1; x=Math.abs(x); const t=1/(1+0.3275911*x);
   const y=1-(((((1.061405429*t-1.453152027)*t)+1.421413741)*t-0.284496736)*t+0.254829592)*t*Math.exp(-x*x); return s*y; }
 function ncdf(x){ return 0.5*(1+erf(x/Math.sqrt(2))); }
@@ -901,11 +901,18 @@ function histPts(rows){ const r=rows.slice(-MODEL.maxGames), n=r.length; let sp=
   r.forEach((g,i)=>{ const tot=g[18], spr=g[19]; if(tot==null||spr==null) return;
     const w=Math.pow(0.5,(n-1-i)/MODEL.halfLife); sp+=w*(tot/2+spr/2); wp+=w; });
   return wp? sp/wp : null; }
-function contextScale(hp, gamePts, defR){
+// Recent minutes (last 3) over the usual (weighted, last 10) — minutes_ratio() in build_nba.py.
+function minutesRatio(rows){ const m=rows.slice(-10).map(g=>g[11]).filter(x=>x!=null); if(m.length<5) return null;
+  let sw=0, s=0; m.forEach((x,k)=>{ const w=Math.pow(0.5,(m.length-1-k)/6); s+=w*x; sw+=w; });
+  const usual=s/sw; if(usual<5) return null;
+  return Math.max(0.5, Math.min(1.6, (m.slice(-3).reduce((a,b)=>a+b,0)/3)/usual)); }
+function contextScale(hp, gamePts, defR, minutes){
   let env=1;
   if(hp&&gamePts&&hp>0&&gamePts>0) env*=Math.pow(gamePts/hp, CTX.betaPts);
   let dfs=1; if(defR&&defR>0) dfs=Math.pow(defR, CTX.gamma);
-  return {scale:Math.min(CTX.clampHi, Math.max(CTX.clampLo, env*dfs)), env, def:dfs};
+  let scale=Math.min(CTX.clampHi, Math.max(CTX.clampLo, env*dfs));
+  if(minutes&&CTX.minutes) scale=Math.min(CTX.clampHi, Math.max(CTX.clampLo, scale*Math.pow(minutes, CTX.minutes)));
+  return {scale, env, def:dfs};
 }
 // ==== END MODEL ====
 function _calT(){ return (DB && DB.calT) ? DB.calT : 1; }
@@ -970,7 +977,7 @@ function contextFor(p, sk, oppOverride, gameOverride){
   let gamePts=null;
   if(g && g.total!=null){ const sp = (g.home===p.t? g.spread : (g.spread!=null? -g.spread : null)); gamePts = g.total/2 + (sp!=null? sp/2 : 0); }
   const dr=defRatioFor(opp, sk);
-  const cs=contextScale(hp, gamePts, dr);
+  const cs=contextScale(hp, gamePts, dr, minutesRatio(gamesOf(p)));
   return {scale:cs.scale, env:cs.env, def:cs.def, opp, gamePts, defRatio:dr, on:true};
 }
 

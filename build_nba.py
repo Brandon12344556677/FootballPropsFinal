@@ -123,7 +123,13 @@ BW_FLOOR = {"pts": 3.0, "reb": 1.2, "ast": 1.0, "tpm": 0.7, "stl": 0.5, "blk": 0
 # Game-context adjustment (one family for the NBA): the player's distribution is
 # scaled by (this game's implied team points / their usual implied points)^betaPts
 # times (opponent's allowed-per-game / league average)^gamma. Clamped.
-CTX = {"betaPts": 0.30, "gamma": 0.45, "clampLo": 0.6, "clampHi": 1.6}
+CTX = {"betaPts": 0.30, "gamma": 0.45, "minutes": 0.0, "clampLo": 0.6, "clampHi": 1.6}
+# Minutes (TEST MODE): recent minutes / usual minutes (see minutes_ratio), to the power
+# CTX["minutes"]. Live picks run with it off (0.0). Every pick also records "sh", its
+# chance with the strength at MIN_TEST, and each build logs how the two compare on
+# graded picks. On last season's games 0.5 won on both halves of the dates it wasn't
+# fitted to. To switch it on, set CTX["minutes"] = MIN_TEST here and in nba_template.html.
+MIN_TEST = 0.5
 
 
 def _erf(x):
@@ -698,7 +704,8 @@ def def_ratio(defense, defavg, opp, sk):
 # Picks (board + grading + calibration)
 # ---------------------------------------------------------------------------
 PICK_COLS = ["src", "gid", "season", "date", "pid", "player", "pos", "team", "opp",
-             "stat", "line", "side", "prob", "lo", "hi", "neff", "price", "lists", "rec", "actual", "res", "adj", "start"]
+             "stat", "line", "side", "prob", "lo", "hi", "neff", "price", "lists", "rec", "actual", "res", "adj", "start",
+             "sh"]   # sh: chance with the minutes adjustment (test mode, see MIN_TEST)
 BOARD_STATS = ["pts", "reb", "ast", "tpm", "pra"]
 TOP_N = 25
 VALUE_MIN_NEFF = 6.0
@@ -744,12 +751,56 @@ def hist_context(rows):
     return sp / wp if wp else None
 
 
-def context_scale(hist_pts, game_pts, def_r):
+def context_scale(hist_pts, game_pts, def_r, minutes=None, strength=None):
+    """minutes is minutes_ratio(rows) or None; strength overrides CTX["minutes"] (the test)."""
     env = 1.0
     if hist_pts and game_pts and hist_pts > 0 and game_pts > 0:
         env *= (game_pts / hist_pts) ** CTX["betaPts"]
     dfs = def_r ** CTX["gamma"] if (def_r and def_r > 0) else 1.0
-    return min(CTX["clampHi"], max(CTX["clampLo"], env * dfs))
+    scale = min(CTX["clampHi"], max(CTX["clampLo"], env * dfs))
+    k = CTX["minutes"] if strength is None else strength
+    if minutes and k:
+        scale = min(CTX["clampHi"], max(CTX["clampLo"], scale * minutes ** k))
+    return scale
+
+
+def minutes_ratio(rows):
+    """Mean minutes of the last 3 games over the usual (recency-weighted, half-life 6,
+    last 10), clamped to [0.5, 1.6]; None with fewer than 5 games or under 5 usual
+    minutes. A player who just moved into (or out of) the rotation shows it here before
+    the box-score averages catch up. Mirrored in nba_template.html."""
+    m = [g[11] for g in rows[-10:] if g[11] is not None]
+    if len(m) < 5:
+        return None
+    w = [0.5 ** ((len(m) - 1 - k) / 6.0) for k in range(len(m))]
+    usual = sum(a * b for a, b in zip(m, w)) / sum(w)
+    if usual < 5:
+        return None
+    return max(0.5, min(1.6, (sum(m[-3:]) / 3.0) / usual))
+
+
+def test_prob(vals, line, sk, side, hp, gpts, dr, rows):
+    """The recorded side's chance with the minutes adjustment at MIN_TEST (the "sh" column)."""
+    u = minutes_ratio(rows)
+    if not u:
+        return None
+    mp = model_prob(vals, line, BW_FLOOR.get(sk, 1.0), context_scale(hp, gpts, dr, u, MIN_TEST))
+    return round(mp[side], 3) if mp else None
+
+
+def minutes_test_report(picks):
+    """How the live model and the minutes version compare on graded picks so far."""
+    rows = [(p["prob"], p["sh"], 1 if p["res"] == "hit" else 0) for p in picks
+            if p.get("src") == "live" and p.get("res") in ("hit", "miss") and p.get("sh") is not None]
+    if not rows:
+        return "no graded picks with a minutes-test chance yet"
+    def ll(i):
+        tot = 0.0
+        for r in rows:
+            q = min(0.999, max(0.001, r[i]))
+            tot -= math.log(q) if r[2] else math.log(1 - q)
+        return tot / len(rows)
+    return f"{len(rows)} graded: log loss live {ll(0):.4f} vs with minutes {ll(1):.4f} (lower is better)"
 
 
 def load_picks():
@@ -805,12 +856,13 @@ def build_market_picks(picks, poly_games, players_by_key, espn_slate, defense, d
                 sp = eg.get("spread") if team == eg["home"] else (-(eg["spread"]) if eg.get("spread") is not None else None)
                 gpts = eg["total"] / 2 + (sp / 2 if sp is not None else 0)
             dr = def_ratio(defense, defavg, opp, sk)
-            scale = context_scale(hp, gpts, dr)
+            scale = context_scale(hp, gpts, dr, minutes_ratio(rows))
             vals = [stat_get(r, sk) for r in rows]
             mp = model_prob(vals, pm["line"], BW_FLOOR.get(sk, 1.0), scale)
             if not mp:
                 continue
             side, prob, lo, hi = side_prob(mp)
+            sh = test_prob(vals, pm["line"], sk, side, hp, gpts, dr, rows)
             price = (pm["over"] if side == "over" else pm["under"]) if pm.get("tradeable") else None
             picks.append({"src": "live", "gid": gid, "season": rows[-1][0], "date": g["date"],
                           "pid": pl["id"], "player": pl["n"], "pos": pl["p"], "team": team, "opp": opp,
@@ -818,7 +870,7 @@ def build_market_picks(picks, poly_games, players_by_key, espn_slate, defense, d
                           "prob": round(prob, 3), "lo": round(lo, 3), "hi": round(hi, 3),
                           "neff": round(mp["neff"], 1), "price": round(price, 3) if price is not None else None,
                           "lists": "", "rec": f"{sk} {side} {pm['line']}", "actual": None, "res": None,
-                          "adj": round(scale, 3)})
+                          "adj": round(scale, 3), "sh": sh})
             have.add(key)
             added += 1
     return added
@@ -849,18 +901,19 @@ def build_board_picks(picks, slate, players_by_team, defense, defavg):
                     vals = [stat_get(r, sk) for r in rows]
                     line = seed_line(vals)
                     dr = def_ratio(defense, defavg, opp, sk)
-                    scale = context_scale(hp, gpts, dr)
+                    scale = context_scale(hp, gpts, dr, minutes_ratio(rows))
                     mp = model_prob(vals, line, BW_FLOOR.get(sk, 1.0), scale)
                     if not mp or mp["neff"] < VALUE_MIN_NEFF:
                         continue
                     side, prob, lo, hi = side_prob(mp)
+                    sh = test_prob(vals, line, sk, side, hp, gpts, dr, rows)
                     picks.append({"src": "live", "gid": gid, "season": rows[-1][0], "date": g["date"],
                                   "pid": pl["id"], "player": pl["n"], "pos": pl["p"], "team": team, "opp": opp,
                                   "stat": sk, "line": line, "side": side,
                                   "prob": round(prob, 3), "lo": round(lo, 3), "hi": round(hi, 3),
                                   "neff": round(mp["neff"], 1), "price": None, "lists": "",
                                   "rec": f"{sk} {side} {line}", "actual": None, "res": None,
-                                  "adj": round(scale, 3)})
+                                  "adj": round(scale, 3), "sh": sh})
                     have.add((pl["id"], g["date"], sk))
                     now_added += 1
     return now_added
@@ -1129,6 +1182,10 @@ def main():
     if mkt_added:
         print(f"  market picks: +{mkt_added} priced (Polymarket)")
     print(f"  picks: graded {graded}, {dnp} DNP, added {added_picks} board pick(s)")
+    try:
+        print(f"  minutes test: {minutes_test_report(picks)}")
+    except Exception as e:  # noqa: BLE001
+        print(f"  minutes test: report skipped ({e})")
     try:
         cal_t = fit_temperature(picks)
     except Exception as e:  # noqa: BLE001
