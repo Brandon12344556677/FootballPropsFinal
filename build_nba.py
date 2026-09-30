@@ -22,6 +22,8 @@ ESPN response degrades to "no new data" instead of failing the build.
 """
 import json, math, os, re, sys, time, datetime, unicodedata, urllib.request
 
+import news   # pre-game news feeds, test mode
+
 TODAY = datetime.date.today()
 ET_TODAY = (datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(hours=4)).date().isoformat()
 UA = {"User-Agent": "prop-streak-lab/2.0 (+https://propstreaklab.com)"}
@@ -646,6 +648,61 @@ def refresh_price(p, pm):
         p["price"] = round(px, 3) if px is not None else None
 
 
+def regular_minutes(rows):
+    """{team: {pid: average minutes}} for each team's regulars going into its next game:
+    players who played in 3+ of the team's last 5 games, averaging 20+ minutes in them
+    (the definition the injury backtest used, see news.py)."""
+    games = {}
+    for r in rows:
+        games.setdefault(r["team"], {}).setdefault(r["date"], {})[r["pid"]] = r.get("min") or 0
+    out = {}
+    for team, by in games.items():
+        cnt, tot = {}, {}
+        for d in sorted(by)[-5:]:
+            for pid, m in by[d].items():
+                if m > 0:
+                    cnt[pid] = cnt.get(pid, 0) + 1
+                    tot[pid] = tot.get(pid, 0) + m
+        out[team] = {pid: tot[pid] / cnt[pid] for pid in cnt if cnt[pid] >= 3 and tot[pid] / cnt[pid] >= 20}
+    return out
+
+
+def news_test(picks, by_pid, rows):
+    """TEST MODE (news.py): on every pending pick whose game hasn't started, record the
+    player's status on ESPN's injury report and "om", the usual minutes of his team's
+    regulars listed Out, plus p2: the chance with the backtest's boost for those minutes
+    (points, assists, threes, PRA). Nothing here changes a pick's chance or its lists."""
+    inj = news.espn_injuries("basketball/nba")
+    if inj is None:
+        return
+    by_name = {pkey(p["n"]): pid for pid, p in by_pid.items()}
+    status = {}
+    for x in inj:
+        pid = x["id"] if x["id"] in by_pid else by_name.get(pkey(x["name"]))
+        if pid:
+            status[pid] = x["status"]
+    usual = regular_minutes(rows)
+    n = boosted = 0
+    for p in picks:
+        if p.get("src") != "live" or p.get("res") is not None or pick_started(p):
+            continue
+        om = sum(m for q, m in usual.get(p["team"], {}).items() if q != p["pid"] and news.is_out(status.get(q)))
+        nw = {"st": status.get(p["pid"]), "om": round(om, 1)}
+        pl = by_pid.get(p["pid"])
+        # p2 only on picks this model version made, so it differs from prob by the news alone
+        if p["stat"] in news.NBA_OUT_STATS and pl and p.get("adj") is not None and p.get("mv") == MODEL_V:
+            scale = min(CTX["clampHi"], max(CTX["clampLo"], p["adj"] * (1 + news.NBA_OUT_BOOST * om / 48.0)))
+            mp = model_prob([stat_get(r, p["stat"]) for r in pl["g"]], p["line"], BW_FLOOR.get(p["stat"], 1.0),
+                            scale, CAL.get(p["stat"]))
+            if mp:
+                nw["p2"] = round(mp[p["side"]], 3)
+                boosted += om > 0
+        p["nw"] = nw
+        n += 1
+    print(f"  news test: recorded on {n} pending pick(s), {boosted} with regular teammates listed Out")
+    news.report(picks, "NBA injuries")
+
+
 def note_price(p):
     """Closing line value: px0 keeps the first price a pick was recorded at and pxc the last
     one seen before its game started (price itself goes None whenever a market stops trading)."""
@@ -761,7 +818,8 @@ PICK_COLS = ["src", "gid", "season", "date", "pid", "player", "pos", "team", "op
              "stat", "line", "side", "prob", "lo", "hi", "neff", "price", "lists", "rec", "actual", "res", "adj", "start",
              "sh",    # sh: chance with the minutes strength at MIN_TEST, for comparison
              "px0", "pxc",   # px0/pxc: first and last pre-game price (closing line value)
-             "mv"]           # model version the chance came from (MODEL_V)
+             "mv",           # model version the chance came from (MODEL_V)
+             "nw"]           # pre-game news, test mode (news.py): {"st", "om", "p2"}
 BOARD_STATS = ["pts", "reb", "ast", "tpm", "pra"]
 TOP_N = 25
 VALUE_MIN_NEFF = 6.0
@@ -1243,6 +1301,10 @@ def main():
     for p in picks:
         if p.get("res") is None and not pick_started(p):
             note_price(p)
+    try:
+        news_test(picks, by_pid, store["rows"])
+    except Exception as e:  # noqa: BLE001
+        print(f"  news test: step unavailable ({e})")
     if mkt_added:
         print(f"  market picks: +{mkt_added} priced (Polymarket)")
     print(f"  picks: graded {graded}, {dnp} DNP, added {added_picks} board pick(s)")

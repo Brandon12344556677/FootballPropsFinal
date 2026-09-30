@@ -20,6 +20,8 @@ marked "MODEL"). tests/test_model.py checks the two agree. Change both or neithe
 import csv, io, json, math, os, re, sys, time, datetime, unicodedata, urllib.parse, urllib.request
 from zoneinfo import ZoneInfo
 
+import news   # pre-game news feeds, test mode
+
 TODAY = datetime.date.today()
 
 
@@ -400,6 +402,7 @@ def load_schedule(seasons):
             "hs": num(r.get("home_score")) if final else None,
             "spread": fnum(r.get("spread_line")),   # positive = home favored
             "total": fnum(r.get("total_line")),
+            "roof": r.get("roof") or "", "stadium": r.get("stadium") or "",   # for the weather test
         }
     return games
 
@@ -1139,7 +1142,8 @@ def kickoff_utc(sg):
 PICK_COLS = ["src", "gid", "season", "week", "date", "pid", "player", "pos", "team", "opp",
              "stat", "line", "side", "prob", "lo", "hi", "neff", "price", "lists", "rec", "actual", "res", "adj",
              "px0", "pxc",   # px0/pxc: first and last pre-kickoff price, in cents (closing line value)
-             "mv"]           # model version the chance came from (MODEL_V)
+             "mv",           # model version the chance came from (MODEL_V)
+             "nw"]           # pre-game news, test mode (news.py): {"st", "wx", "roof", "p2"}
 VALUE_MIN_NEFF = 6.0
 TOP_N = 25
 VALUE_N = 200           # a safety cap only. At 50 it bound in busy weeks (NFL week 3: 27 picks that
@@ -1316,6 +1320,46 @@ def build_live_picks(picks, slate_games, sched, by_key, snap, pmus=None):
             note_price(ex)
             updated += 1
     return len(fresh), added, updated
+
+
+def news_test(picks, sched, by_pid):
+    """TEST MODE (news.py): on every pending live pick whose game hasn't kicked off, record
+    ESPN's injury status for the player and, at outdoor stadiums, the forecast for kickoff,
+    plus p2: the chance with the wind adjustment the backtest found, for the stats it moved.
+    Nothing here changes a pick's chance or its lists."""
+    inj = news.espn_injuries("football/nfl")
+    status = {pkey(x["name"]): x["status"] for x in (inj or []) if x.get("name")}
+    now = datetime.datetime.now(datetime.timezone.utc)
+    n = nwx = 0
+    for p in picks:
+        if p.get("src") != "live" or p.get("res") is not None:
+            continue
+        sg = sched.get(p["gid"])
+        ko = kickoff_utc(sg) if sg else None
+        if not sg or sg["final"] or (ko is not None and ko <= now):
+            continue
+        nw = {"st": status.get(pkey(p["player"]))} if inj is not None else {}
+        roof = sg.get("roof") or ""
+        nw["roof"] = roof or "unknown"
+        wind = 0.0 if roof in ("dome", "closed") else None
+        if roof in ("outdoors", "open") and sg.get("stadium") in news.NFL_STADIUMS and ko is not None:
+            wx = news.forecast(*news.NFL_STADIUMS[sg["stadium"]], ko.strftime("%Y-%m-%dT%H:%MZ"))
+            if wx:
+                nw["wx"] = wx
+                wind = wx[1]
+                nwx += 1
+        pl = by_pid.get(p["pid"])
+        # p2 only on picks this model version made, so it differs from prob by the news alone
+        if wind is not None and p["stat"] in news.WIND_STATS and pl and p.get("adj") is not None and p.get("mv") == MODEL_V:
+            scale = min(CTX["clampHi"], max(CTX["clampLo"], p["adj"] * news.wind_factor(wind)))
+            mp = model_prob([stat_value(p["stat"], r) for r in pl["g"]], p["line"], stat_kind(p["stat"]), scale,
+                            CAL.get(p["stat"]))
+            if mp:
+                nw["p2"] = round(mp[p["side"]], 3)
+        p["nw"] = nw
+        n += 1
+    print(f"  news test: recorded on {n} pending pick(s), {nwx} with a kickoff forecast")
+    news.report(picks, "NFL wind")
 
 
 def grade_picks(picks, sched, by_pid, stats_gids, espn_gids=frozenset()):
@@ -1628,6 +1672,11 @@ def main():
                  "players": names}
         with open("slate.json", "w", encoding="utf-8") as f:
             json.dump(slate, f, separators=(",", ":"), ensure_ascii=False)
+
+    try:
+        news_test(picks, sched, by_pid)
+    except Exception as e:  # noqa: BLE001
+        print(f"  news test: step unavailable ({e})")
 
     bt = build_backtest(with_games, seasons_used, sched, snapshot)
     summary = save_picks(picks + bt)

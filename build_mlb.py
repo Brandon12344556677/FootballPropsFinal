@@ -26,6 +26,8 @@ import json, math, os, re, sys, time, datetime, unicodedata, urllib.request
 from collections import Counter
 from concurrent.futures import ThreadPoolExecutor
 
+import news   # pre-game news feeds, test mode
+
 TODAY = datetime.date.today()
 ET_TODAY = (datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(hours=4)).date().isoformat()
 UA = {"User-Agent": "prop-streak-lab/2.0 (+https://propstreaklab.com)"}
@@ -800,7 +802,8 @@ def starter_quality(slate, by_pid, rows):
 PICK_COLS = ["src", "gid", "season", "date", "pid", "player", "pos", "team", "opp",
              "stat", "line", "side", "prob", "lo", "hi", "neff", "price", "lists", "rec", "actual", "res", "adj", "start",
              "px0", "pxc",   # px0/pxc: first and last pre-game price (closing line value)
-             "mv"]           # model version the chance came from (MODEL_V)
+             "mv",           # model version the chance came from (MODEL_V)
+             "nw"]           # pre-game news, test mode (news.py): {"lu", "roof", "wx"}
 BAT_BOARD = ["h", "tb", "hrr"]
 PIT_BOARD = ["k", "outs"]
 TOP_N = 25
@@ -855,6 +858,43 @@ def refresh_price(p, pm):
     if p.get("res") is None and not pick_started(p):
         px = (pm["over"] if p["side"] == "over" else pm["under"]) if pm.get("tradeable") else None
         p["price"] = round(px, 3) if px is not None else None
+
+
+def news_test(picks):
+    """TEST MODE (news.py): on every pending pick whose game hasn't started, record the
+    hitter's spot in MLB's posted lineup ("lu": 1-9, 0 = his team's lineup is posted and
+    he isn't in it) and, at open-air parks, the forecast for first pitch. Nothing here
+    changes a pick's chance or its lists."""
+    pend = [p for p in picks if p.get("src") == "live" and p.get("res") is None and not pick_started(p)]
+    if not pend:
+        print("  news test: no pending picks")
+        return
+    day = lambda d, k: (datetime.date.fromisoformat(d) - datetime.timedelta(days=k)).isoformat()
+    # the pick's date is ESPN's UTC one; MLB dates a game by its local day (a day earlier for a late game)
+    lineups = news.mlb_lineups([day(p["date"], k) for p in pend for k in (0, 1)], pkey)
+    n = nlu = nout = nwx = 0
+    for p in pend:
+        nw = {}
+        if lineups is not None and p["stat"] not in PITCH_STATS:
+            lu = (lineups.get(p["date"]) or {}).get(p["team"]) or (lineups.get(day(p["date"], 1)) or {}).get(p["team"])
+            if lu:
+                k = pkey(p["player"])
+                nw["lu"] = lu.index(k) + 1 if k in lu else 0
+                nlu += 1
+                nout += nw["lu"] == 0
+        m = re.match(r"^\d{4}-\d{2}-\d{2}-[A-Z]+-([A-Z]+)$", p.get("gid") or "")
+        park = news.MLB_PARKS.get(m.group(1)) if m else None
+        if park:
+            nw["roof"] = park[2]
+            if park[2] != "dome" and p.get("start"):
+                wx = news.forecast(park[0], park[1], p["start"])
+                if wx:
+                    nw["wx"] = wx
+                    nwx += 1
+        p["nw"] = nw
+        n += 1
+    print(f"  news test: recorded on {n} pending pick(s): {nlu} with a posted lineup ({nout} not in it), "
+          f"{nwx} with a first-pitch forecast")
 
 
 def note_price(p):
@@ -1174,6 +1214,10 @@ def main():
     for p in picks:
         if p.get("res") is None and not pick_started(p):
             note_price(p)
+    try:
+        news_test(picks)
+    except Exception as e:  # noqa: BLE001
+        print(f"  news test: step unavailable ({e})")
     print(f"  picks: graded {graded}, {dnp} DNP, +{mkt_added} priced (Polymarket), +{added_picks} board")
     try:
         cal_t = fit_temperature(picks)
