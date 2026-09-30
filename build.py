@@ -106,6 +106,13 @@ MODEL = {"halfLife": 8.0, "maxGames": 30, "priorK": 0.5, "bwConst": 0.9, "bwFloo
          "bwFloorTd": 0.25, "z": 1.2816}
 MODEL_V = 2   # recorded on every live pick ("mv"); calibration uses only this version's live picks
 
+# Per-stat calibration, fitted on the same walk-forward backtest: the chance's log-odds become
+# a + b * log-odds. It removes a bias the smoothing leaves (most props read overs a few points
+# high) and fixes over/under-confidence. Fitted at the seeded line and a line either side on
+# one half of the data and scored on the other, both ways; only stats where that improved
+# both halves are listed (the rest are left as they were).
+CAL = {"rec_yds": (-0.243, 1.014), "rec": (-0.142, 0.98), "rec_td": (-0.481, 0.906), "tgt": (-0.121, 1.002), "scrim_td": (-0.434, 0.914), "rush_yds": (-0.147, 1.15), "rush_att": (-0.116, 0.954), "rush_td": (-0.474, 0.884)}
+
 # Game-context adjustment. The player's distribution is scaled by
 #   (this game's implied team points / their usual implied points) ^ betaPts
 #   * exp(betaSpr * (spread swing in TDs))          (favorites run more, underdogs pass more)
@@ -135,7 +142,13 @@ def ncdf(x):
     return 0.5 * (1.0 + _erf(x / math.sqrt(2.0)))
 
 
-def model_prob(values, line, kind, scale=1.0):
+def calibrate(p, cal):
+    """A chance through a per-stat (a, b) from CAL: log-odds -> a + b * log-odds."""
+    q = min(1 - 1e-4, max(1e-4, p))
+    return 1.0 / (1.0 + math.exp(-(cal[0] + cal[1] * math.log(q / (1 - q)))))
+
+
+def model_prob(values, line, kind, scale=1.0, cal=None):
     """values oldest -> newest; scale multiplies every value (game-context adjustment).
     Returns dict with over/under/push probabilities, an 80% interval on P(over),
     the effective sample size and moments, or None."""
@@ -166,6 +179,8 @@ def model_prob(values, line, kind, scale=1.0):
     pc = over_raw / tot if tot > 0 else 0.5
     k = MODEL["priorK"]
     p = (neff * pc + k * 0.5) / (neff + k)
+    if cal:
+        p = calibrate(p, cal)
     nq = neff + k
     z = MODEL["z"]
     z2 = z * z
@@ -1248,7 +1263,7 @@ def build_live_picks(picks, slate_games, sched, by_key, snap, pmus=None):
                                 def_ratio(snap, opp if home is not None else None, pl["p"], sk),
                                 None if inj_mult(pl, sk) != 1.0 else usage_of(pl.get("u")))
             vals = [stat_value(sk, r) for r in pl["g"]]
-            mp = model_prob(vals, pm["line"], stat_kind(sk), ctx["scale"] * inj_mult(pl, sk))
+            mp = model_prob(vals, pm["line"], stat_kind(sk), ctx["scale"] * inj_mult(pl, sk), CAL.get(sk))
             if not mp:
                 continue
             fav = "over" if mp["over"] >= 0.5 else "under"
@@ -1363,7 +1378,7 @@ def build_backtest(players, seasons_used, sched, snapshot):
                     continue
                 line = seed_line(vals)
                 ctx = context_scale(stat_family(sk, pl["p"]), hist, game_pts, game_spr, def_ratio(snap, row[2], pl["p"], sk), usage)
-                mp = model_prob(vals, line, stat_kind(sk), ctx["scale"])
+                mp = model_prob(vals, line, stat_kind(sk), ctx["scale"], CAL.get(sk))
                 if not mp:
                     continue
                 pk = make_pick("bt", gid, row[0], row[1], date, dict(pl, t=team or pl["t"]), row[2], sk, line, mp, None, None)

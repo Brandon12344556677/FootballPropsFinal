@@ -873,7 +873,11 @@ const CTX = {betaPts:0.30, gamma:0.65, minutes:0.5, clampLo:0.6, clampHi:1.6};
 function erf(x){ const s=x>=0?1:-1; x=Math.abs(x); const t=1/(1+0.3275911*x);
   const y=1-(((((1.061405429*t-1.453152027)*t)+1.421413741)*t-0.284496736)*t+0.254829592)*t*Math.exp(-x*x); return s*y; }
 function ncdf(x){ return 0.5*(1+erf(x/Math.sqrt(2))); }
-function modelProb(values, line, floor, scale){
+// Per-stat calibration (mirrored in the builder's CAL): log-odds -> a + b * log-odds, fitted on
+// the walk-forward backtest; only stats where it improved both held-out halves are listed.
+const CAL = {pts:[-0.034, 1.135], reb:[-0.028, 1.09], ast:[-0.076, 1.088], tpm:[-0.055, 0.962], blk:[-0.252, 0.969], stl:[-0.193, 0.965], ra:[-0.016, 1.114], to:[-0.147, 1.097]};
+function calibrate(p, cal){ const q=Math.min(1-1e-4, Math.max(1e-4, p)); return 1/(1+Math.exp(-(cal[0]+cal[1]*Math.log(q/(1-q))))); }
+function modelProb(values, line, floor, scale, cal){
   if(scale==null) scale=1;
   const v=values.slice(-MODEL.maxGames).map(x=>x*scale), n=v.length; if(!n) return null;
   const w=v.map((_,i)=>Math.pow(0.5,(n-1-i)/MODEL.halfLife));
@@ -888,7 +892,8 @@ function modelProb(values, line, floor, scale){
   const overRaw=1-F(loE), underRaw=F(hiE);
   const push=Math.max(0,1-overRaw-underRaw), tot=overRaw+underRaw;
   const pc=tot>0? overRaw/tot : 0.5, k=MODEL.priorK;
-  const p=(neff*pc+k*0.5)/(neff+k), nq=neff+k, z=MODEL.z, z2=z*z;
+  let p=(neff*pc+k*0.5)/(neff+k); if(cal) p=calibrate(p, cal);
+  const nq=neff+k, z=MODEL.z, z2=z*z;
   const c=(p+z2/(2*nq))/(1+z2/nq), hw=z*Math.sqrt(p*(1-p)/nq+z2/(4*nq*nq))/(1+z2/nq);
   return {over:p, under:1-p, push, lo:Math.max(0,c-hw), hi:Math.min(1,c+hw), neff, mean, sd, h, n, scale};
 }
@@ -1101,8 +1106,8 @@ function render(){
   } else ws.hidden=true;
   const ctx=contextFor(p, sk), oppNow=ctx.opp;
   const line=state.line;
-  const rawMp=modelProb(vals, line, floorFor(sk), 1);
-  const adjMp=ctx.on? modelProb(vals, line, floorFor(sk), ctx.scale) : rawMp;
+  const rawMp=modelProb(vals, line, floorFor(sk), 1, CAL[sk]);
+  const adjMp=ctx.on? modelProb(vals, line, floorFor(sk), ctx.scale, CAL[sk]) : rawMp;
   const mp=calMp(adjMp);
   const hitCount=vals.filter(v=> state.ou==='over'? v>line : v<line).length;
   const l10=vals.slice(-10), l10hit=l10.filter(v=> state.ou==='over'? v>line : v<line).length;
@@ -1410,7 +1415,7 @@ function updatePlayerBtns(){ const box=$('playerbtns'), p=state.player; if(!box)
   $('cmpadd').textContent = c? '⚖ In compare' : '⚖ Compare';
 }
 function playerModel(p, sk, line){ const vals=valuesOf(p, sk); if(vals.length<3) return null;
-  const ctx=contextFor(p, sk); return calMp(modelProb(vals, line, floorFor(sk), ctx.scale)); }
+  const ctx=contextFor(p, sk); return calMp(modelProb(vals, line, floorFor(sk), ctx.scale, CAL[sk])); }
 function renderWatch(){ const body=$('watchbody'); if(!body) return;
   const items=WATCH.map(id=>byId[id]).filter(p=>p&&p.g&&p.g.length);
   if(!items.length){ body.innerHTML='<p class="mktnote">No players starred yet. Open a player in the <b>Player</b> tab and tap <b>☆ Watch</b>.</p>'; return; }
@@ -1524,7 +1529,7 @@ function parseBetSlip(text){
   return legs;
 }
 function probForSlip(p, sk, line, side){ const vals=valuesOf(p,sk); if(vals.length<3) return null;
-  const mp=calMp(modelProb(vals, line, floorFor(sk), contextFor(p,sk).scale)); if(!mp) return null;
+  const mp=calMp(modelProb(vals, line, floorFor(sk), contextFor(p,sk).scale, CAL[sk])); if(!mp) return null;
   return side==='over'? {prob:mp.over,lo:mp.lo,hi:mp.hi} : {prob:mp.under,lo:1-mp.hi,hi:1-mp.lo}; }
 function renderSlip(legs, raw){
   const body=$('slipbody');

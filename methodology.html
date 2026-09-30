@@ -130,7 +130,11 @@ footer a:hover{color:#dfe6ef}
       <p>The multiplier is shown on the Player tab, and a checkbox turns the adjustment off so you can see the raw history.</p>
 
       <h2 id="calibration">Calibration</h2>
-      <p>A model can be right about order and wrong about size — saying 90% for things that happen 80% of the time. So the raw chance goes through one last step: a <b>calibration temperature</b> learned from the site's own graded record, which pulls over-confident chances back toward what actually happened. It's learned only from picks made by the current version of the model, so it starts fresh (no change) after a model update until enough new picks are graded.</p>
+      <p>A model can be right about order and wrong about size — saying 90% for things that happen 80% of the time. So the raw chance goes through two last steps.</p>
+      <ul>
+        <li><b>A correction per prop</b>, fitted on the backtest. Left alone, the smoothed distributions read most overs a few points high (MLB total bases said 49% when 44% happened; NHL assists 17% vs 14%), and some props were over- or under-confident. Each prop's chance is corrected by two numbers fitted on half the past games and checked on the other half. It's used only for the props where it helped on both halves; passing props in the NFL and PRA-type combos in the NBA are left as they were. On the 580 graded NFL picks that had a Polymarket price, this took the model's log loss from 0.6545 to 0.6475. The market's own price is still better at 0.6305.</li>
+        <li><b>A calibration temperature</b> learned from the site's own graded record, which pulls over-confident chances back toward what actually happened. It's learned only from picks made by the current version of the model, so it starts fresh (no change) after a model update until enough new picks are graded.</li>
+      </ul>
       <p>You can check the result yourself: the <b>Past picks</b> tab on every board has a calibration chart — "when the model said 80%, how often did it hit?" — built from every graded pick.</p>
 
       <h2 id="prices">Prices and edge</h2>

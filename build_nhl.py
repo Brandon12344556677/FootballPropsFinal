@@ -142,6 +142,13 @@ BW_FLOOR = {"pts": 0.3, "g": 0.25, "a": 0.3, "sog": 1.0, "blk": 0.7, "hit": 1.0,
 CTX = {"betaPts": 0.30, "gamma": 0.45, "toi": 0.5, "b2b": -0.05, "clampLo": 0.6, "clampHi": 1.6}
 USAGE_STATS = ("pts", "g", "a")
 
+# Per-stat calibration, fitted on the same walk-forward backtest: the chance's log-odds become
+# a + b * log-odds. It removes a bias the smoothing leaves (most props read overs a few points
+# high) and fixes over/under-confidence. Fitted at the seeded line and a line either side on
+# one half of the data and scored on the other, both ways; only stats where that improved
+# both halves are listed (the rest are left as they were).
+CAL = {"pts": (-0.226, 0.921), "g": (-0.37, 0.934), "a": (-0.321, 0.928), "sog": (-0.123, 1.24)}
+
 
 def _erf(x):
     s = 1.0 if x >= 0 else -1.0
@@ -155,7 +162,13 @@ def ncdf(x):
     return 0.5 * (1.0 + _erf(x / math.sqrt(2.0)))
 
 
-def model_prob(values, line, floor, scale=1.0):
+def calibrate(p, cal):
+    """A chance through a per-stat (a, b) from CAL: log-odds -> a + b * log-odds."""
+    q = min(1 - 1e-4, max(1e-4, p))
+    return 1.0 / (1.0 + math.exp(-(cal[0] + cal[1] * math.log(q / (1 - q)))))
+
+
+def model_prob(values, line, floor, scale=1.0, cal=None):
     """values oldest -> newest; floor is the per-stat bandwidth floor; scale
     multiplies every value (game-context adjustment). Mirror of the JS version."""
     v = [x * scale for x in values[-MODEL["maxGames"]:]]
@@ -184,6 +197,8 @@ def model_prob(values, line, floor, scale=1.0):
     pc = over_raw / tot if tot > 0 else 0.5
     k = MODEL["priorK"]
     p = (neff * pc + k * 0.5) / (neff + k)
+    if cal:
+        p = calibrate(p, cal)
     nq = neff + k
     z = MODEL["z"]
     z2 = z * z
@@ -1071,7 +1086,7 @@ def build_market_picks(picks, poly_games, players_by_key, espn_slate, defense, d
             dr = def_ratio(defense, defavg, opp, sk)
             scale = context_scale(hp, gpts, dr, *usage_args(rows, sk, date))
             vals = [stat_get(r, sk) for r in rows]
-            mp = model_prob(vals, pm["line"], BW_FLOOR.get(sk, 1.0), scale)
+            mp = model_prob(vals, pm["line"], BW_FLOOR.get(sk, 1.0), scale, CAL.get(sk))
             if not mp:
                 continue
             side, prob, lo, hi = side_prob(mp)
@@ -1117,7 +1132,7 @@ def build_board_picks(picks, slate, players_by_team, defense, defavg):
                     line = seed_line(vals)
                     dr = def_ratio(defense, defavg, opp, sk)
                     scale = context_scale(hp, gpts, dr, *usage_args(rows, sk, g["date"]))
-                    mp = model_prob(vals, line, BW_FLOOR.get(sk, 1.0), scale)
+                    mp = model_prob(vals, line, BW_FLOOR.get(sk, 1.0), scale, CAL.get(sk))
                     if not mp or mp["neff"] < VALUE_MIN_NEFF:
                         continue
                     side, prob, lo, hi = side_prob(mp)

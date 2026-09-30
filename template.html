@@ -977,7 +977,11 @@ const COUNT_STATS = new Set(['pass_td','pass_att','pass_cmp','pass_int','rush_at
 function erf(x){ const s=x>=0?1:-1; x=Math.abs(x); const t=1/(1+0.3275911*x);
   const y=1-(((((1.061405429*t-1.453152027)*t)+1.421413741)*t-0.284496736)*t+0.254829592)*t*Math.exp(-x*x); return s*y; }
 function ncdf(x){ return 0.5*(1+erf(x/Math.sqrt(2))); }
-function modelProb(values, line, kind, scale){
+// Per-stat calibration (mirrored in the builder's CAL): log-odds -> a + b * log-odds, fitted on
+// the walk-forward backtest; only stats where it improved both held-out halves are listed.
+const CAL = {rec_yds:[-0.243, 1.014], rec:[-0.142, 0.98], rec_td:[-0.481, 0.906], tgt:[-0.121, 1.002], scrim_td:[-0.434, 0.914], rush_yds:[-0.147, 1.15], rush_att:[-0.116, 0.954], rush_td:[-0.474, 0.884]};
+function calibrate(p, cal){ const q=Math.min(1-1e-4, Math.max(1e-4, p)); return 1/(1+Math.exp(-(cal[0]+cal[1]*Math.log(q/(1-q))))); }
+function modelProb(values, line, kind, scale, cal){
   if(scale==null) scale=1;
   const v=values.slice(-MODEL.maxGames).map(x=>x*scale), n=v.length; if(!n) return null;
   const w=v.map((_,i)=>Math.pow(0.5,(n-1-i)/MODEL.halfLife));
@@ -993,7 +997,8 @@ function modelProb(values, line, kind, scale){
   const overRaw=1-F(loE), underRaw=F(hiE);
   const push=Math.max(0,1-overRaw-underRaw), tot=overRaw+underRaw;
   const pc=tot>0? overRaw/tot : 0.5, k=MODEL.priorK;
-  const p=(neff*pc+k*0.5)/(neff+k), nq=neff+k, z=MODEL.z, z2=z*z;
+  let p=(neff*pc+k*0.5)/(neff+k); if(cal) p=calibrate(p, cal);
+  const nq=neff+k, z=MODEL.z, z2=z*z;
   const c=(p+z2/(2*nq))/(1+z2/nq), hw=z*Math.sqrt(p*(1-p)/nq+z2/(4*nq*nq))/(1+z2/nq);
   return {over:p, under:1-p, push, lo:Math.max(0,c-hw), hi:Math.min(1,c+hw), neff, mean, sd, h, n, scale};
 }
@@ -1176,7 +1181,7 @@ function contextFor(p, sk, oppOverride, gameOverride){
 }
 function currentOpp(){ return oppTouched? ($('oppsel').value||null) : null; }
 function injMult(p, sk){ const b=p&&p.inj_boost; if(!b) return 1; const f=statFamily(sk,p.p); return (f==='rec'?b.rec:f==='rush'?b.rush:1)||1; }
-function modelFor(p, sk, line, ctx){ const st=STATMAP[sk]; if(!st) return null; const c=ctx||contextFor(p,sk,p===state.player?currentOpp():null); return calMp(modelProb(valuesOf(p,sk), line, st.kind, c.scale * injMult(p, sk))); }
+function modelFor(p, sk, line, ctx){ const st=STATMAP[sk]; if(!st) return null; const c=ctx||contextFor(p,sk,p===state.player?currentOpp():null); return calMp(modelProb(valuesOf(p,sk), line, st.kind, c.scale * injMult(p, sk), CAL[sk])); }
 function probFor(p, sk, line, side, ctx){ const mp=modelFor(p,sk,line,ctx); if(!mp) return null;
   return side==='over'? {prob:mp.over, lo:mp.lo, hi:mp.hi, mp} : {prob:mp.under, lo:1-mp.hi, hi:1-mp.lo, mp}; }
 function reseedLine(){
@@ -1291,7 +1296,7 @@ function buildWhy(p, sk, line, side, mp, ctx){
   const k=MODEL.priorK, neff=adj.neff, used=Math.min(MODEL.maxGames, vals.length);
   const unshrink = o => (o*(neff+k)-k*0.5)/neff;           // undo the pull toward 50/50
   const pHist=S(unshrink(hist.over)), pAdj=S(unshrink(adj.over));
-  const pShrunk=S(adj.over), pFinal=S(mp.over);
+  const pShrunk=S(adj.over), pFinal=S(mp.over), pCal=CAL[sk]? S(calibrate(adj.over, CAL[sk])) : pShrunk;
   const w=[]; for(let i=0;i<used;i++) w.push(Math.pow(0.5,(used-1-i)/MODEL.halfLife));
   const W=w.reduce((a,b)=>a+b,0), w5=w.slice(-5).reduce((a,b)=>a+b,0)/W;
   const z = hist.sd>0? (line-hist.mean)/hist.sd : 0;
@@ -1342,10 +1347,15 @@ function buildWhy(p, sk, line, side, mp, ctx){
       ? `${neff<8?'That’s thin':'That’s a moderate sample'}, so the model pulls the number back toward a coin flip: <b>${pct(pAdj)} → ${pct(pShrunk)}</b>.`
       : `That’s enough history that the pull toward a coin flip barely registers (<b>${pct(pShrunk)}</b>).`)]);
 
+  if(CAL[sk] && !same(pShrunk, pCal)){
+    R.push(['📐','Correction for this prop',
+      `On the backtest, ${esc(st.label.toLowerCase())} props read a few points ${pCal<pShrunk===(side==='over')?'high on overs':'low on overs'}, so the chance is corrected `+
+      `with a fit from past games it wasn't tuned on: <b>${pct(pShrunk)} → ${pct(pCal)}</b>.`]);
+  }
   if(Math.abs(T-1)>0.005){
     R.push(['🎚️','Calibration from its own record',
       `The site’s graded picks say the model has been running <b>${T>1?'a little hot':'a little cold'}</b>, so every chance is `+
-      `${T>1?'softened':'sharpened'} by a temperature of <b>${T.toFixed(2)}</b>: <b>${pct(pShrunk)} → ${pct(pFinal)}</b>. `+
+      `${T>1?'softened':'sharpened'} by a temperature of <b>${T.toFixed(2)}</b>: <b>${pct(pCal)} → ${pct(pFinal)}</b>. `+
       `<a href="#picks" onclick="showTab('picks');return false;">See the calibration chart</a>.`]);
   }
 
@@ -2183,7 +2193,7 @@ function apCandidates(teamsSet){
       const vals=p.g.map(st.get), line=seedLine(vals);
       if(line < (sk==='pass_yds'?150 : st.kind==='yards'?30 : 3.5)) return;
       const cs=contextScale(statFamily(sk,p.p),hist,gamePts,gameSpr,defRatioFor(opp,p.p,sk),usageOf(p.u));
-      const mp=calMp(modelProb(vals,line,st.kind,cs.scale)); if(!mp||mp.neff<5) return;
+      const mp=calMp(modelProb(vals,line,st.kind,cs.scale,CAL[sk])); if(!mp||mp.neff<5) return;
       out.push({p, sk, line, side:'over', prob:mp.over, neff:mp.neff, gid:(wg.id||wg.away+'@'+wg.home)});
     });
   });
@@ -2483,7 +2493,7 @@ function generateDigest(){
       substantive=true;
       if(out) return;
       const cs=contextScale(statFamily(sk,p.p), hist, gamePts, gameSpr, defRatioFor(opp,p.p,sk), usageOf(p.u));
-      const mp=calMp(modelProb(vals, line, st.kind, cs.scale)); if(!mp) return;
+      const mp=calMp(modelProb(vals, line, st.kind, cs.scale, CAL[sk])); if(!mp) return;
       const tc=trapCheck(p, sk, line, 'over', mp, {on:true, scale:cs.scale, opp});
       cands.push({p, sk, line, prob:mp.over, neff:mp.neff, opp, trap:tc.trap, raw:tc.raw, reasons:tc.reasons});
     });
@@ -2544,7 +2554,7 @@ function weekTopPicks(n){
       const vals=p.g.map(st.get), line=seedLine(vals);
       if(line < (sk==='pass_yds'?150 : st.kind==='yards'?30 : 3.5)) return;
       const cs=contextScale(statFamily(sk,p.p),hist,gamePts,gameSpr,defRatioFor(opp,p.p,sk),usageOf(p.u));
-      const mp=calMp(modelProb(vals,line,st.kind,cs.scale)); if(!mp||mp.neff<6) return;
+      const mp=calMp(modelProb(vals,line,st.kind,cs.scale,CAL[sk])); if(!mp||mp.neff<6) return;
       if(!best||mp.over>best.prob) best={p, sk, line, prob:mp.over, label:STATMAP[sk].label, opp, home, date:wg.date};
     });
     if(best) out.push(best);

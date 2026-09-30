@@ -134,6 +134,13 @@ BW_FLOOR = {"pts": 4.0, "reb": 0.8, "ast": 0.75, "tpm": 0.17, "stl": 0.5, "blk":
 # and not used: rest / back-to-backs, the opponent on a back-to-back, opponent pace and
 # home court (none beat the model without them on both halves).
 CTX = {"betaPts": 0.30, "gamma": 0.65, "minutes": 0.5, "clampLo": 0.6, "clampHi": 1.6}
+
+# Per-stat calibration, fitted on the same walk-forward backtest: the chance's log-odds become
+# a + b * log-odds. It removes a bias the smoothing leaves (most props read overs a few points
+# high) and fixes over/under-confidence. Fitted at the seeded line and a line either side on
+# one half of the data and scored on the other, both ways; only stats where that improved
+# both halves are listed (the rest are left as they were).
+CAL = {"pts": (-0.034, 1.135), "reb": (-0.028, 1.09), "ast": (-0.076, 1.088), "tpm": (-0.055, 0.962), "blk": (-0.252, 0.969), "stl": (-0.193, 0.965), "ra": (-0.016, 1.114), "to": (-0.147, 1.097)}
 # Minutes: recent minutes / usual minutes (see minutes_ratio), to the power CTX["minutes"].
 # On last season's stored games, fitting on one half of the dates and scoring the other
 # (odd/even days, first/second half, each both ways) chose 0.5 every time and improved
@@ -155,7 +162,13 @@ def ncdf(x):
     return 0.5 * (1.0 + _erf(x / math.sqrt(2.0)))
 
 
-def model_prob(values, line, floor, scale=1.0):
+def calibrate(p, cal):
+    """A chance through a per-stat (a, b) from CAL: log-odds -> a + b * log-odds."""
+    q = min(1 - 1e-4, max(1e-4, p))
+    return 1.0 / (1.0 + math.exp(-(cal[0] + cal[1] * math.log(q / (1 - q)))))
+
+
+def model_prob(values, line, floor, scale=1.0, cal=None):
     """values oldest -> newest; floor is the per-stat bandwidth floor; scale
     multiplies every value (game-context adjustment). Mirror of the JS version."""
     v = [x * scale for x in values[-MODEL["maxGames"]:]]
@@ -184,6 +197,8 @@ def model_prob(values, line, floor, scale=1.0):
     pc = over_raw / tot if tot > 0 else 0.5
     k = MODEL["priorK"]
     p = (neff * pc + k * 0.5) / (neff + k)
+    if cal:
+        p = calibrate(p, cal)
     nq = neff + k
     z = MODEL["z"]
     z2 = z * z
@@ -825,7 +840,7 @@ def test_prob(vals, line, sk, side, hp, gpts, dr, rows):
     u = minutes_ratio(rows)
     if not u:
         return None
-    mp = model_prob(vals, line, BW_FLOOR.get(sk, 1.0), context_scale(hp, gpts, dr, u, MIN_TEST))
+    mp = model_prob(vals, line, BW_FLOOR.get(sk, 1.0), context_scale(hp, gpts, dr, u, MIN_TEST), CAL.get(sk))
     return round(mp[side], 3) if mp else None
 
 
@@ -901,7 +916,7 @@ def build_market_picks(picks, poly_games, players_by_key, espn_slate, defense, d
             dr = def_ratio(defense, defavg, opp, sk)
             scale = context_scale(hp, gpts, dr, minutes_ratio(rows))
             vals = [stat_get(r, sk) for r in rows]
-            mp = model_prob(vals, pm["line"], BW_FLOOR.get(sk, 1.0), scale)
+            mp = model_prob(vals, pm["line"], BW_FLOOR.get(sk, 1.0), scale, CAL.get(sk))
             if not mp:
                 continue
             side, prob, lo, hi = side_prob(mp)
@@ -945,7 +960,7 @@ def build_board_picks(picks, slate, players_by_team, defense, defavg):
                     line = seed_line(vals)
                     dr = def_ratio(defense, defavg, opp, sk)
                     scale = context_scale(hp, gpts, dr, minutes_ratio(rows))
-                    mp = model_prob(vals, line, BW_FLOOR.get(sk, 1.0), scale)
+                    mp = model_prob(vals, line, BW_FLOOR.get(sk, 1.0), scale, CAL.get(sk))
                     if not mp or mp["neff"] < VALUE_MIN_NEFF:
                         continue
                     side, prob, lo, hi = side_prob(mp)
