@@ -123,13 +123,14 @@ BW_FLOOR = {"pts": 3.0, "reb": 1.2, "ast": 1.0, "tpm": 0.7, "stl": 0.5, "blk": 0
 # Game-context adjustment (one family for the NBA): the player's distribution is
 # scaled by (this game's implied team points / their usual implied points)^betaPts
 # times (opponent's allowed-per-game / league average)^gamma. Clamped.
-CTX = {"betaPts": 0.30, "gamma": 0.45, "minutes": 0.0, "clampLo": 0.6, "clampHi": 1.6}
-# Minutes (TEST MODE): recent minutes / usual minutes (see minutes_ratio), to the power
-# CTX["minutes"]. Live picks run with it off (0.0). Every pick also records "sh", its
-# chance with the strength at MIN_TEST, and each build logs how the two compare on
-# graded picks. On last season's games 0.5 won on both halves of the dates it wasn't
-# fitted to. To switch it on, set CTX["minutes"] = MIN_TEST here and in nba_template.html.
-MIN_TEST = 0.5
+CTX = {"betaPts": 0.30, "gamma": 0.45, "minutes": 0.5, "clampLo": 0.6, "clampHi": 1.6}
+# Minutes: recent minutes / usual minutes (see minutes_ratio), to the power CTX["minutes"].
+# On last season's stored games, fitting on one half of the dates and scoring the other
+# (odd/even days, first/second half, each both ways) chose 0.5 every time and improved
+# every time, and every board stat improved: log loss 0.6238 -> 0.6222 over 122,805
+# props. Every pick also records "sh", its chance with the strength at MIN_TEST (0 =
+# without minutes), and each build logs how the two compare on graded picks.
+MIN_TEST = 0.0
 
 
 def _erf(x):
@@ -705,7 +706,7 @@ def def_ratio(defense, defavg, opp, sk):
 # ---------------------------------------------------------------------------
 PICK_COLS = ["src", "gid", "season", "date", "pid", "player", "pos", "team", "opp",
              "stat", "line", "side", "prob", "lo", "hi", "neff", "price", "lists", "rec", "actual", "res", "adj", "start",
-             "sh"]   # sh: chance with the minutes adjustment (test mode, see MIN_TEST)
+             "sh"]   # sh: chance with the minutes strength at MIN_TEST, for comparison
 BOARD_STATS = ["pts", "reb", "ast", "tpm", "pra"]
 TOP_N = 25
 VALUE_MIN_NEFF = 6.0
@@ -780,7 +781,7 @@ def minutes_ratio(rows):
 
 
 def test_prob(vals, line, sk, side, hp, gpts, dr, rows):
-    """The recorded side's chance with the minutes adjustment at MIN_TEST (the "sh" column)."""
+    """The recorded side's chance with the minutes strength at MIN_TEST (the "sh" column)."""
     u = minutes_ratio(rows)
     if not u:
         return None
@@ -789,7 +790,7 @@ def test_prob(vals, line, sk, side, hp, gpts, dr, rows):
 
 
 def minutes_test_report(picks):
-    """How the live model and the minutes version compare on graded picks so far."""
+    """How the live model and the MIN_TEST version compare on graded picks so far."""
     rows = [(p["prob"], p["sh"], 1 if p["res"] == "hit" else 0) for p in picks
             if p.get("src") == "live" and p.get("res") in ("hit", "miss") and p.get("sh") is not None]
     if not rows:
@@ -800,7 +801,8 @@ def minutes_test_report(picks):
             q = min(0.999, max(0.001, r[i]))
             tot -= math.log(q) if r[2] else math.log(1 - q)
         return tot / len(rows)
-    return f"{len(rows)} graded: log loss live {ll(0):.4f} vs with minutes {ll(1):.4f} (lower is better)"
+    alt = f"minutes at {MIN_TEST}" if MIN_TEST else "without minutes"
+    return f"{len(rows)} graded: log loss live {ll(0):.4f} vs {alt} {ll(1):.4f} (lower is better)"
 
 
 def load_picks():
