@@ -739,6 +739,7 @@ PICK_COLS = ["src", "gid", "season", "date", "pid", "player", "pos", "team", "op
 BAT_BOARD = ["h", "tb", "hrr"]
 PIT_BOARD = ["k", "outs"]
 TOP_N = 25
+T_MIN_PROB = 0.90      # 25 Guaranteed: the model has to give it 90%+ (and it needs a live price)
 VALUE_MIN_NEFF = 6.0
 # Value rules mirror build.py (NFL) so every sport's lists mean the same.
 VALUE_N = 50            # a safety cap; the bar below keeps the real list far shorter
@@ -781,10 +782,19 @@ def make_pick(pl, gid, date, team, opp, sk, line, mp, scale, start, prices=None)
             "adj": round(scale, 3), "start": start or None}
 
 
+def refresh_price(p, pm):
+    """A pending pick whose game hasn't started keeps the market's current price for its
+    side (None once that market stops being tradeable), like NFL's pre-kickoff refresh —
+    so "has a live market" for 25 Guaranteed means now, not when the pick was recorded."""
+    if p.get("res") is None and not pick_started(p):
+        px = (pm["over"] if p["side"] == "over" else pm["under"]) if pm.get("tradeable") else None
+        p["price"] = round(px, 3) if px is not None else None
+
+
 def build_market_picks(picks, poly_games, players_by_key, espn_slate, defense, defavg):
     """Priced picks from Polymarket US MLB markets, matched to players by name. Each
     is modeled at the market's line so Value spots can compare model vs price."""
-    have = {(p["pid"], p["date"], p["stat"], p["line"]) for p in picks}
+    have = {(p["pid"], p["date"], p["stat"], p["line"]): p for p in picks}
     added = 0
     for g in poly_games:
         eg = next((x for x in espn_slate if {x["away"], x["home"]} == {g["away"], g["home"]}), None)
@@ -811,6 +821,7 @@ def build_market_picks(picks, poly_games, players_by_key, espn_slate, defense, d
                 continue        # the player's last team isn't in this game (traded / wrong match)
             key = (pl["id"], date, sk, pm["line"])
             if key in have:
+                refresh_price(have[key], pm)
                 continue
             vals = stat_values(pl["g"], sk)
             if len(vals) < 3:
@@ -820,7 +831,7 @@ def build_market_picks(picks, poly_games, players_by_key, espn_slate, defense, d
             if not mp:
                 continue
             picks.append(make_pick(pl, gid, date, team, opp, sk, pm["line"], mp, scale, start, pm))
-            have.add(key)
+            have[key] = picks[-1]
             added += 1
     return added
 
@@ -909,9 +920,10 @@ def grade_picks(picks, by_pid, games):
 
 
 def assign_lists(picks):
-    """Mirrors build.py (NFL). T = the 25 highest model chances ('25 Guaranteed').
-    V = 'Value' — the market prices it at 30c or more and the model puts it 15+ points
-    higher, ranked by that edge. Prices are fractions here. Only picks whose game hasn't
+    """T = '25 Guaranteed': up to 25 props the model gives 90%+ that have a live
+    Polymarket price, ranked by model chance. V = 'Value' — the market prices it at 30c
+    or more and the model puts it 15+ points higher, ranked by that edge. Both keep one
+    line per player-prop. Prices are fractions here. Only picks whose game hasn't
     started are (re)tagged: once it starts they keep the lists they had at first pitch
     until graded, so the live record by list counts exactly what the page showed pre-game."""
     pending = [p for p in picks if p.get("res") is None and not pick_started(p)]
@@ -929,7 +941,10 @@ def assign_lists(picks):
                 out.append(p)
         return out
 
-    ranked = one_per_prop(sorted((p for p in pending if p["prob"] >= 0.5), key=lambda p: (-p["prob"], -p["neff"])))
+    # 25 Guaranteed: only props the model gives 90%+ that have a live Polymarket price,
+    # up to 25 — so a thin slate shows fewer, or none.
+    ranked = one_per_prop(sorted((p for p in pending if p["prob"] >= T_MIN_PROB and p.get("price") is not None),
+                                 key=lambda p: (-p["prob"], -p["neff"])))
     for p in ranked[:TOP_N]:
         p["lists"] += "T"
     vals = [p for p in pending

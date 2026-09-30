@@ -1193,10 +1193,12 @@ function renderEdges(){ const body=$('edgebody'); if(!body) return;
   if(PICKS===null){ body.innerHTML='<p class="mktnote">Loading…</p>'; return; }
   updateBoardStatus();
   const all=listRows('T');
-  if(!all.length){ body.innerHTML=scheduleNote('the 25 Guaranteed board'); return; }
+  if(!all.length){ body.innerHTML = upcomingPicks().length
+      ? `<p class="mktnote">Nothing makes the list right now. A prop needs a <b>90%+ model chance</b> <i>and</i> a <b>live Polymarket price</b>, and nothing on the upcoming ${SPORT_NAME} slate clears both. It refills as markets post and prices update (every hour) — some days it stays short or empty on purpose.</p>`
+      : scheduleNote('the 25 Guaranteed board'); return; }
   const rows=sortRows(all, edgeSort.key, edgeSort.dir).slice(0,25);
   body.innerHTML=pickTable(rows, edgeSort)+
-    `<p class="mktnote" style="margin-top:8px">The 25 props with the highest <b>model chance</b> on the upcoming ${SPORT_NAME} slate, regardless of payout — best if you're holding <b>credits you can't withdraw without trading</b>, since these are the props most likely to win and let you cash out. <b>Model</b> = the chance the Bet side hits, with its 80% range and the games it's based on. <b>Polymarket</b> is the price for that exact side, the model's edge over it, and the payout multiplier — it fills in once Polymarket lists ${SPORT_NAME} player props. Click a header to sort. These picks are recorded before ${TIPOFF} and graded in <b>Past picks</b>.</p>`;
+    `<p class="mktnote" style="margin-top:8px">Up to 25 props where the model gives the Bet side a <b>90%+ chance</b> and Polymarket has a <b>live market</b> for it, ranked by model chance with one line per player-prop — so a thin slate shows fewer than 25${rows.length<25?` (${rows.length} right now)`:''}. Best if you're holding <b>credits you can't withdraw without trading</b>, since these are the props most likely to win and let you cash out. <b>Model</b> = the chance the Bet side hits, with its 80% range and the games it's based on. <b>Polymarket</b> is the price for that exact side, the model's edge over it, and the payout multiplier. Click a header to sort. These picks are recorded before ${TIPOFF} and graded in <b>Past picks</b>.</p>`;
   wireTable(body, rows, edgeSort, renderEdges); }
 function generateDigest(){ const panel=$('digestpanel'), body=$('digestbody'), cap=$('digestcap'); if(!panel||!body) return;
   if(PICKS===null){ panel.hidden=true; return; }

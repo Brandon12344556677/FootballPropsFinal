@@ -847,6 +847,7 @@ PICK_COLS = ["src", "gid", "season", "date", "pid", "player", "pos", "team", "op
              "stat", "line", "side", "prob", "lo", "hi", "neff", "price", "lists", "rec", "actual", "res", "adj", "start"]
 BOARD_STATS = ["pts", "sog", "g"]
 TOP_N = 25
+T_MIN_PROB = 0.90      # 25 Guaranteed: the model has to give it 90%+ (and it needs a live price)
 VALUE_MIN_NEFF = 6.0
 # Value rules mirror build.py (NFL) so every sport's lists mean the same.
 VALUE_N = 50            # a safety cap; the bar below keeps the real list far shorter
@@ -902,11 +903,20 @@ def side_prob(mp):
     return "under", mp["under"], 1 - mp["hi"], 1 - mp["lo"]
 
 
+def refresh_price(p, pm):
+    """A pending pick whose game hasn't started keeps the market's current price for its
+    side (None once that market stops being tradeable), like NFL's pre-kickoff refresh —
+    so "has a live market" for 25 Guaranteed means now, not when the pick was recorded."""
+    if p.get("res") is None and not pick_started(p):
+        px = (pm["over"] if p["side"] == "over" else pm["under"]) if pm.get("tradeable") else None
+        p["price"] = round(px, 3) if px is not None else None
+
+
 def build_market_picks(picks, poly_games, players_by_key, espn_slate, defense, defavg):
     """Priced picks from Polymarket NBA markets, matched to players by name. Each
     is modeled at the market's line so Value spots can compare model vs price.
     Returns count added; no-op when there are no NBA markets (off-season)."""
-    have = {(p["pid"], p["date"], p["stat"], p["line"]) for p in picks}
+    have = {(p["pid"], p["date"], p["stat"], p["line"]): p for p in picks}
     added = 0
     for g in poly_games:
         eg = next((x for x in espn_slate if {x["away"], x["home"]} == {g["away"], g["home"]}), None)
@@ -933,6 +943,7 @@ def build_market_picks(picks, poly_games, players_by_key, espn_slate, defense, d
                 continue
             key = (pl["id"], date, sk, pm["line"])
             if key in have:
+                refresh_price(have[key], pm)
                 continue
             rows = pl["g"]
             hp = hist_context(rows)
@@ -955,7 +966,7 @@ def build_market_picks(picks, poly_games, players_by_key, espn_slate, defense, d
                           "neff": round(mp["neff"], 1), "price": round(price, 3) if price is not None else None,
                           "lists": "", "rec": f"{sk} {side} {pm['line']}", "actual": None, "res": None,
                           "adj": round(scale, 3)})
-            have.add(key)
+            have[key] = picks[-1]
             added += 1
     return added
 
@@ -1060,16 +1071,25 @@ def grade_picks(picks, by_pid, games):
 
 
 def assign_lists(picks):
-    """Mirrors build.py (NFL). T = the 25 highest model chances ('25 Guaranteed').
-    V = 'Value' — the market prices it at 30c or more and the model puts it 15+ points
-    higher, ranked by that edge. Prices are fractions here. Only picks whose game hasn't
-    started are (re)tagged: once it starts they keep the lists they had at puck drop until
-    graded, so the live record by list counts exactly what the page showed pre-game."""
+    """T = '25 Guaranteed': up to 25 props the model gives 90%+ that have a live
+    Polymarket price, best line per player-prop, ranked by model chance (so a thin slate
+    shows fewer, or none). V = 'Value' — the market prices it at 30c or more and the
+    model puts it 15+ points higher, ranked by that edge. Prices are fractions here. Only
+    picks whose game hasn't started are (re)tagged: once it starts they keep the lists
+    they had at puck drop until graded, so the live record by list counts exactly what
+    the page showed pre-game."""
     pending = [p for p in picks if p.get("res") is None and not pick_started(p)]
     for p in pending:
         p["lists"] = ""
-    ranked = sorted((p for p in pending if p["prob"] >= 0.5), key=lambda p: (-p["prob"], -p["neff"]))
-    for p in ranked[:TOP_N]:
+    ranked = sorted((p for p in pending if p["prob"] >= T_MIN_PROB and p.get("price") is not None),
+                    key=lambda p: (-p["prob"], -p["neff"]))
+    seen, top = set(), []     # Polymarket US lists 1+/2+/3+ ladders: keep one rung per player-prop
+    for p in ranked:
+        k = (p["pid"], p["stat"], p["gid"])
+        if k not in seen:
+            seen.add(k)
+            top.append(p)
+    for p in top[:TOP_N]:
         p["lists"] += "T"
     vals = [((p["prob"] - p["price"]), p) for p in pending
             if p.get("price") is not None and p["neff"] >= VALUE_MIN_NEFF
