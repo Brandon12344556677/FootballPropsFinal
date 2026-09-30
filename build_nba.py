@@ -865,22 +865,59 @@ def build_board_picks(picks, slate, players_by_team, defense, defavg):
     return now_added
 
 
-def grade_picks(picks, by_pid):
-    n = 0
+def box_games(rows):
+    """Every game whose box score is in the store, as (ESPN UTC date, away, home)."""
+    out = set()
+    for r in rows:
+        home, away = (r["team"], r["opp"]) if r.get("home") else (r["opp"], r["team"])
+        out.add((r["date"], away, home))
+    return out
+
+
+def pick_box_game(p, games):
+    """The pick's game as it sits in the store — (date, away, home) — or None until its
+    box score is in. Store dates are ESPN's UTC date, and so are most gids, but a market
+    pick recorded while its game wasn't on the ESPN scoreboard carries Polymarket's ET
+    date, a day early for a late game. So try the saved start time first, then the gid
+    date and the day either side of it."""
+    m = re.match(r"^(\d{4}-\d{2}-\d{2})-([A-Z]+)-([A-Z]+)$", p.get("gid") or "")
+    if not m:
+        return None
+    gd, away, home = m.groups()
+    try:
+        d = datetime.date.fromisoformat(gd)
+    except ValueError:
+        return None
+    one = datetime.timedelta(days=1)
+    t = parse_utc(p.get("start"))
+    dates = ([t.date().isoformat()] if t else []) + [gd, (d + one).isoformat(), (d - one).isoformat()]
+    return next(((x, away, home) for x in dates if (x, away, home) in games), None)
+
+
+def grade_picks(picks, by_pid, games):
+    """Grade pending picks once their game's box score is in the store. A player with no
+    row in that game didn't dress (scratched, hurt, or traded since last season — board
+    picks use the player's last-season team), so the pick is voided as 'dnp', like NFL,
+    rather than staying pending forever. Returns (graded, dnp)."""
+    n = dnp = 0
     for p in picks:
         if p.get("res") is not None:
             continue
+        g = pick_box_game(p, games)
+        if g is None:
+            continue       # not final yet (or not ingested)
+        date, away, home = g
         pl = by_pid.get(p["pid"])
-        if not pl:
-            continue
-        row = next((r for r in pl["g"] if r[1] == p["date"]), None)
+        row = next((r for r in pl["g"] if r[1] == date and r[2] in (away, home)), None) if pl else None
         if row is None:
+            p["res"], p["actual"] = "dnp", None
+            dnp += 1
             continue
         actual = stat_get(row, p["stat"])
         p["actual"] = actual
         p["res"] = grade_result(actual, p["line"], p["side"])
         n += 1
-    return n
+    return n, dnp
 
 
 def assign_lists(picks):
@@ -954,7 +991,8 @@ def save_picks(picks):
     with open(PICKS_FILE, "w", encoding="utf-8") as f:
         json.dump(doc, f, separators=(",", ":"), ensure_ascii=False)
     graded = sum(1 for p in keep if p.get("res") in ("hit", "miss", "push"))
-    return f"{len(keep)} pick(s), {graded} graded"
+    dnp = sum(1 for p in keep if p.get("res") == "dnp")
+    return f"{len(keep)} pick(s), {graded} graded, {dnp} DNP"
 
 
 # ---------------------------------------------------------------------------
@@ -1078,7 +1116,7 @@ def main():
         poly_games = []
 
     picks = load_picks()
-    graded = grade_picks(picks, by_pid)
+    graded, dnp = grade_picks(picks, by_pid, box_games(store["rows"]))
     try:
         mkt_added = build_market_picks(picks, poly_games, players_by_key, slate, defense, defavg)
     except Exception as e:  # noqa: BLE001
@@ -1089,7 +1127,7 @@ def main():
     assign_lists(picks)
     if mkt_added:
         print(f"  market picks: +{mkt_added} priced (Polymarket)")
-    print(f"  picks: graded {graded}, added {added_picks} board pick(s)")
+    print(f"  picks: graded {graded}, {dnp} DNP, added {added_picks} board pick(s)")
     try:
         cal_t = fit_temperature(picks)
     except Exception as e:  # noqa: BLE001

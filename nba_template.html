@@ -1252,20 +1252,28 @@ function renderPickViews(){ renderEdges(); renderValue(); renderValueWeek(); gen
 // Once a minute: when a game starts, its picks drop off the boards without a reload.
 setInterval(()=>{ if(PICKS!==null && !document.hidden && upcomingPicks().length!==upSig) renderPickViews(); }, 60000);
 function initPicks(){ renderPast(); }   // Past tab opened
+let pastRes='';   // Past picks Result filter: '' = graded (hit/miss/push)
 function renderPast(){ const body=$('pkbody'); if(!body) return;
   if(PICKS===null){ body.innerHTML='<p class="mktnote">Loading…</p>'; return; }
   const boxIn=new Set(PICKS.filter(p=>p.res!=null).map(p=>p.gid));   // a graded pick means that game's box score is in
   const wait=PICKS.filter(p=>awaitingGrade(p) && !boxIn.has(p.gid)), wg=new Set(wait.map(p=>p.gid)).size;
   const lock=wait.length? `<p class="mktnote">⏳ <b>${wait.length} pick${wait.length===1?'':'s'}</b> from ${wg} game${wg===1?'':'s'} that ${wg===1?'has':'have'} started ${wait.length===1?'is':'are'} locked in as recorded before ${TIPOFF}. ${wait.length===1?'It shows':'They show'} up here once the final box score is in.</p>` : '';
-  const graded=PICKS.filter(p=>p.res==='hit'||p.res==='miss'||p.res==='push');
-  if(!graded.length){ body.innerHTML=lock+'<p class="mktnote">No graded NBA picks yet. Every upcoming pick is recorded before tip-off and shows here once the box score is final — this fills in as games are played.</p>'; return; }
+  const graded=PICKS.filter(p=>p.res==='hit'||p.res==='miss'||p.res==='push'), dnp=PICKS.filter(p=>p.res==='dnp');
+  if(!graded.length && !dnp.length){ body.innerHTML=lock+'<p class="mktnote">No graded NBA picks yet. Every upcoming pick is recorded before tip-off and shows here once the box score is final — this fills in as games are played.</p>'; return; }
   const hm=graded.filter(p=>p.res!=='push'); const hit=hm.filter(p=>p.res==='hit').length;
-  let h = lock + (hm.length? `<p><b>Record: ${hit}/${hm.length} (${Math.round(100*hit/hm.length)}%)</b> on graded picks.</p>` : '');
-  const show=graded.slice().sort((a,b)=>(b.date||'').localeCompare(a.date||'')).slice(0,200);
-  h+='<div class="tblwrap"><table><thead><tr><th>Date</th><th>Player</th><th>Matchup</th><th>Pick</th><th>Chance</th><th>Actual</th><th>Result</th></tr></thead><tbody>';
-  show.forEach(p=>{ const cls=p.res==='hit'?'hit':p.res==='miss'?'miss':'';
-    h+=`<tr class="${cls}"><td>${esc(dlabel(p.date))}</td><td>${esc(p.player)}</td><td>${esc(p.team)} @ ${esc(p.opp)}</td><td>${esc(statLabel(p.stat))} ${esc(p.side)} ${esc(p.line)}</td><td>${p.prob!=null?pct(p.prob):'—'}</td><td>${p.actual!=null?p.actual:'—'}</td><td>${p.res?esc(p.res):'pending'}</td></tr>`; });
-  body.innerHTML=h+'</tbody></table></div>';
+  const dnpNote=dnp.length? ` <span class="mktmuted">${dnp.length} pick${dnp.length===1?'':'s'} on players who didn't play ${dnp.length===1?'is':'are'} voided, not counted.</span>` : '';
+  let h = lock + (hm.length? `<p><b>Record: ${hit}/${hm.length} (${Math.round(100*hit/hm.length)}%)</b> on graded picks.${dnpNote}</p>` : dnpNote? `<p>${dnpNote}</p>` : '');
+  const opts=[['','Graded'],['hit','Hit'],['miss','Miss'],['push','Push'],['dnp','Did not play'],['all','All (incl. DNP)']];
+  h+=`<div class="pkfilters"><div><label for="pk_res">Result</label><select id="pk_res">${opts.map(o=>`<option value="${o[0]}"${o[0]===pastRes?' selected':''}>${o[1]}</option>`).join('')}</select></div></div>`;
+  const rows= pastRes==='all'? graded.concat(dnp) : pastRes==='dnp'? dnp : pastRes? graded.filter(p=>p.res===pastRes) : graded;
+  const show=rows.slice().sort((a,b)=>(b.date||'').localeCompare(a.date||'')).slice(0,200);
+  if(!show.length) h+='<p class="mktnote">No picks match this filter yet.</p>';
+  else { h+='<div class="tblwrap"><table><thead><tr><th>Date</th><th>Player</th><th>Matchup</th><th>Pick</th><th>Chance</th><th>Actual</th><th>Result</th></tr></thead><tbody>';
+    show.forEach(p=>{ const cls=p.res==='hit'?'hit':p.res==='miss'?'miss':'';
+      h+=`<tr class="${cls}"><td>${esc(dlabel(p.date))}</td><td>${esc(p.player)}</td><td>${esc(p.team)} @ ${esc(p.opp)}</td><td>${esc(statLabel(p.stat))} ${esc(p.side)} ${esc(p.line)}</td><td>${p.prob!=null?pct(p.prob):'—'}</td><td>${p.actual!=null?p.actual:'—'}</td><td>${p.res==='dnp'?'DNP':esc(p.res)}</td></tr>`; });
+    h+='</tbody></table></div>'; }
+  body.innerHTML=h;
+  $('pk_res').onchange=e=>{ pastRes=e.target.value; renderPast(); };
 }
 
 // ---- Tools: watchlist, compare, parlay ----
