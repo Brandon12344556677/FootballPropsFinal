@@ -612,6 +612,34 @@ def pick_started(p):
     return (p.get("date") or "") < ET_TODAY
 
 
+def refresh_price(p, pm):
+    """A pending pick whose game hasn't started keeps the market's current price for its
+    side (None once that market stops being tradeable), like the other sports' pre-game
+    refresh — so the price shown, and the one closing line value ends on, is current."""
+    if p.get("res") is None and not pick_started(p):
+        px = (pm["over"] if p["side"] == "over" else pm["under"]) if pm.get("tradeable") else None
+        p["price"] = round(px, 3) if px is not None else None
+
+
+def note_price(p):
+    """Closing line value: px0 keeps the first price a pick was recorded at and pxc the last
+    one seen before its game started (price itself goes None whenever a market stops trading)."""
+    if p.get("price") is not None:
+        if p.get("px0") is None:
+            p["px0"] = p["price"]
+        p["pxc"] = p["price"]
+
+
+def clv_stats(ps, cents=100):
+    """How the price of the side taken moved from a pick's first recording (px0) to the last
+    price before its game (pxc), in cents. The market moving toward a pick (it got pricier)
+    is the usual sign of a real edge, and it shows up long before a win/loss record does."""
+    mv = [round((p["pxc"] - p["px0"]) * cents, 1) for p in ps
+          if p.get("px0") is not None and p.get("pxc") is not None]
+    return {"clvN": len(mv), "clvUp": sum(1 for m in mv if m >= 1), "clvDn": sum(1 for m in mv if m <= -1),
+            "clv": round(sum(mv) / len(mv), 1) if mv else None}
+
+
 # ---------------------------------------------------------------------------
 # Build players / defense from the accumulated store
 # ---------------------------------------------------------------------------
@@ -706,7 +734,8 @@ def def_ratio(defense, defavg, opp, sk):
 # ---------------------------------------------------------------------------
 PICK_COLS = ["src", "gid", "season", "date", "pid", "player", "pos", "team", "opp",
              "stat", "line", "side", "prob", "lo", "hi", "neff", "price", "lists", "rec", "actual", "res", "adj", "start",
-             "sh"]   # sh: chance with the minutes strength at MIN_TEST, for comparison
+             "sh",    # sh: chance with the minutes strength at MIN_TEST, for comparison
+             "px0", "pxc"]   # px0/pxc: first and last pre-game price (closing line value)
 BOARD_STATS = ["pts", "reb", "ast", "tpm", "pra"]
 TOP_N = 25
 VALUE_MIN_NEFF = 6.0
@@ -825,7 +854,7 @@ def build_market_picks(picks, poly_games, players_by_key, espn_slate, defense, d
     """Priced picks from Polymarket NBA markets, matched to players by name. Each
     is modeled at the market's line so Value spots can compare model vs price.
     Returns count added; no-op when there are no NBA markets (off-season)."""
-    have = {(p["pid"], p["date"], p["stat"], p["line"]) for p in picks}
+    have = {(p["pid"], p["date"], p["stat"], p["line"]): p for p in picks}
     added = 0
     for g in poly_games:
         eg = next((x for x in espn_slate if {x["away"], x["home"]} == {g["away"], g["home"]}), None)
@@ -850,6 +879,7 @@ def build_market_picks(picks, poly_games, players_by_key, espn_slate, defense, d
                 continue
             key = (pl["id"], g["date"], sk, pm["line"])
             if key in have:
+                refresh_price(have[key], pm)
                 continue
             rows = pl["g"]
             hp = hist_context(rows)
@@ -873,7 +903,7 @@ def build_market_picks(picks, poly_games, players_by_key, espn_slate, defense, d
                           "neff": round(mp["neff"], 1), "price": round(price, 3) if price is not None else None,
                           "lists": "", "rec": f"{sk} {side} {pm['line']}", "actual": None, "res": None,
                           "adj": round(scale, 3), "sh": sh})
-            have.add(key)
+            have[key] = picks[-1]
             added += 1
     return added
 
@@ -1035,8 +1065,11 @@ def live_record(picks):
             if p.get("price"):
                 r["priced"] += 1
                 r["units"] += (1.0 / p["price"] - 1) if p["res"] == "hit" else -1
-    for r in out.values():
+    graded = [p for p in picks if p.get("res") in ("hit", "miss")]
+    for tag, r in out.items():
         r["units"] = round(r["units"], 2)
+        r.update(clv_stats([p for p in graded if tag in (p.get("lists") or "")]))
+    out["clv"] = clv_stats(graded)      # every graded pick, listed or not
     return out
 
 
@@ -1181,6 +1214,9 @@ def main():
     added_picks = build_board_picks(picks, slate, players_by_team, defense, defavg)
     stamp_starts(picks)
     assign_lists(picks)
+    for p in picks:
+        if p.get("res") is None and not pick_started(p):
+            note_price(p)
     if mkt_added:
         print(f"  market picks: +{mkt_added} priced (Polymarket)")
     print(f"  picks: graded {graded}, {dnp} DNP, added {added_picks} board pick(s)")

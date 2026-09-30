@@ -10,9 +10,8 @@ Data comes from [nflverse](https://github.com/nflverse) public releases (weekly
 player stats, snap counts, schedules, injury reports, rosters). Prices come from Polymarket's
 public API.
 
-**It updates itself.** A GitHub Action pulls fresh data every morning at 5 AM ET
-during the season, grades finished games, records this week's picks, and redeploys
-the site.
+**It updates itself.** A GitHub Action pulls fresh data every 20 minutes, grades
+finished games, records the upcoming picks with their prices, and redeploys the site.
 
 ## What's on the page
 
@@ -128,7 +127,7 @@ Put your referral link in `url`. Leave it `""` to hide the banner.
 | `build_today.py` | Runs after the four builders and writes `today.json` from their picks and season records. Standard library only; never fails the deploy. |
 | `today.json` | The home page's cross-sport **Today** feed (the best upcoming value spots, at most 3 per sport up top, each linking to its prop) and the season records its ticker leads with. |
 | `post_daily.py` | Once a day, posts yesterday's Value results and today's best value (with links) to Discord and/or Telegram. Needs the secrets below; does nothing without them. |
-| `health.py` | Last in the hourly job: reads every step's log for a data source that failed (`skipped (…)`), a builder that crashed, a stale data file or picks stuck ungraded, and keeps `health.json`. A problem that lasts 3 runs in a row turns the run red, so GitHub emails you (then at most once a day while it lasts). The site still deploys either way. |
+| `health.py` | Last in every run (every 20 minutes): reads every step's log for a data source that failed (`skipped (…)`), a builder that crashed, a stale data file or picks stuck ungraded, and keeps `health.json`. A problem that lasts 9 runs in a row (~3 hours) turns the run red, so GitHub emails you (then at most once a day while it lasts). The site still deploys either way. |
 | `methodology.html` | "How the model works" — the public write-up of the model, the matchup adjustments, calibration, the list rules and how picks are graded. Linked from every footer and the trust line under each hero. |
 | `build_players.py` → `players/` | One static page per most-bet player (up to 60 per sport): title, description and share preview, this week's props with model chance, price, edge and call, the last 10 games, and a link into the full model; plus `players/index.html`. Rebuilt once a day (`--force` rebuilds now); the pages are re-added to `sitemap.xml` every run, since `build.py` rewrites it. |
 | `app.js` / `app.css` | Shared look and behavior for every page: fonts (Archivo headlines, Inter body and numbers), colors, icons (Lucide, swapped in for emoji at runtime), the verdict card, pick-details sheet, one-time 18+ check, explainers, share links, ticker and trust line. |
@@ -176,7 +175,7 @@ isn't, the build keeps the previous `slate.json` and skips recording new live
 picks but still updates stats, grades, and the backtest.
 
 ## Daily Discord / Telegram post (optional)
-The hourly job can post once a day, after 11 AM ET: yesterday's Value spots results
+The update job can post once a day, after 11 AM ET: yesterday's Value spots results
 (wins and losses) and today's best value, each linking straight to its prop, plus the
 referral code. Add either or both as **Settings → Secrets and variables → Actions →
 New repository secret**:

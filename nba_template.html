@@ -1589,7 +1589,7 @@ render();
 (function renderRecords(){ const R=DB.record||{};
   [['recT','T'],['recV','V'],['recG','G']].forEach(([id,k])=>{ const el=$(id); if(!el) return; const r=R[k];
     if(!r||!r.n){ el.innerHTML='· live record: no graded picks yet — <a href="#past" onclick="showTab(\'past\');return false;">Past picks</a>'; return; }
-    el.innerHTML=`· <b>live record ${r.hit}/${r.n} (${Math.round(100*r.hit/r.n)}%)</b> — <a href="#past" onclick="showTab('past');return false;">details</a>`; }); })();
+    el.innerHTML=`· <b>live record ${r.hit}/${r.n} (${Math.round(100*r.hit/r.n)}%)</b> — <a href="#past" onclick="showTab('past');return false;">details</a>`+(r.clvN? ` · price moved its way on <b>${r.clvUp} of ${r.clvN}</b> (avg ${r.clv>=0?'+':''}${r.clv}¢)<button type="button" class="qhelp hq" data-help="clv" aria-expanded="false" aria-label="What is closing line value?"><span class="qi" aria-hidden="true">?</span></button>` : ''); }); })();
 // "Scan the board" re-pulls the latest recorded board and re-renders every table.
 (function(){ const b=$('edgescan'); if(!b) return;
   b.onclick=()=>{ const st=$('edgestatus'); if(st) st.textContent='Scanning the board…'; loadPicks(); }; })();

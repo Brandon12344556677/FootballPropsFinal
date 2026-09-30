@@ -1110,7 +1110,8 @@ def kickoff_utc(sg):
 # and backtest (what the model would have picked each past week, graded).
 # ---------------------------------------------------------------------------
 PICK_COLS = ["src", "gid", "season", "week", "date", "pid", "player", "pos", "team", "opp",
-             "stat", "line", "side", "prob", "lo", "hi", "neff", "price", "lists", "rec", "actual", "res", "adj"]
+             "stat", "line", "side", "prob", "lo", "hi", "neff", "price", "lists", "rec", "actual", "res", "adj",
+             "px0", "pxc"]   # px0/pxc: first and last pre-kickoff price, in cents (closing line value)
 VALUE_MIN_NEFF = 6.0
 TOP_N = 25
 VALUE_N = 200           # a safety cap only. At 50 it bound in busy weeks (NFL week 3: 27 picks that
@@ -1279,10 +1280,12 @@ def build_live_picks(picks, slate_games, sched, by_key, snap, pmus=None):
         ex = existing.get(key)
         if ex is None:
             picks.append(f)
+            note_price(f)
             added += 1
         elif ex["res"] is None:      # still pending: refresh to the latest pre-kickoff snapshot
             for k in ("side", "prob", "lo", "hi", "neff", "price", "lists", "rec", "team", "opp", "adj"):
                 ex[k] = f[k]
+            note_price(ex)
             updated += 1
     return len(fresh), added, updated
 
@@ -1401,8 +1404,29 @@ def live_record(picks):
         hits = sum(1 for p in ps if p["res"] == "hit")
         priced = [p for p in ps if p.get("price")]
         roi = (sum((100.0 / p["price"] - 1) if p["res"] == "hit" else -1 for p in priced) / len(priced)) if priced else None
-        out[k] = {"n": len(ps), "hit": hits, "roi": round(roi, 3) if roi is not None else None, "priced": len(priced)}
+        out[k] = {"n": len(ps), "hit": hits, "roi": round(roi, 3) if roi is not None else None, "priced": len(priced),
+                  **clv_stats(ps)}
     return out
+
+
+def note_price(p):
+    """Closing line value: px0 keeps the first price a pick was recorded at and pxc the last
+    one seen before kickoff (price itself goes None whenever a market stops trading)."""
+    if p.get("price") is not None:
+        if p.get("px0") is None:
+            p["px0"] = p["price"]
+        p["pxc"] = p["price"]
+
+
+def clv_stats(ps, cents=1):
+    """How the price of the side taken moved from a pick's first recording (px0) to the last
+    price before kickoff (pxc), in cents (NFL prices already are). The market moving toward a
+    pick (it got pricier) is the usual sign of a real edge, and it shows up long before a
+    win/loss record does."""
+    mv = [round((p["pxc"] - p["px0"]) * cents, 1) for p in ps
+          if p.get("px0") is not None and p.get("pxc") is not None]
+    return {"clvN": len(mv), "clvUp": sum(1 for m in mv if m >= 1), "clvDn": sum(1 for m in mv if m <= -1),
+            "clv": round(sum(mv) / len(mv), 1) if mv else None}
 
 
 def save_picks(picks):

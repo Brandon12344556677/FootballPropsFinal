@@ -735,7 +735,8 @@ def context_scale(def_r, sk, pst):
 # Picks (board + market + grading + calibration)
 # ---------------------------------------------------------------------------
 PICK_COLS = ["src", "gid", "season", "date", "pid", "player", "pos", "team", "opp",
-             "stat", "line", "side", "prob", "lo", "hi", "neff", "price", "lists", "rec", "actual", "res", "adj", "start"]
+             "stat", "line", "side", "prob", "lo", "hi", "neff", "price", "lists", "rec", "actual", "res", "adj", "start",
+             "px0", "pxc"]   # px0/pxc: first and last pre-game price (closing line value)
 BAT_BOARD = ["h", "tb", "hrr"]
 PIT_BOARD = ["k", "outs"]
 TOP_N = 25
@@ -790,6 +791,25 @@ def refresh_price(p, pm):
     if p.get("res") is None and not pick_started(p):
         px = (pm["over"] if p["side"] == "over" else pm["under"]) if pm.get("tradeable") else None
         p["price"] = round(px, 3) if px is not None else None
+
+
+def note_price(p):
+    """Closing line value: px0 keeps the first price a pick was recorded at and pxc the last
+    one seen before its game started (price itself goes None whenever a market stops trading)."""
+    if p.get("price") is not None:
+        if p.get("px0") is None:
+            p["px0"] = p["price"]
+        p["pxc"] = p["price"]
+
+
+def clv_stats(ps, cents=100):
+    """How the price of the side taken moved from a pick's first recording (px0) to the last
+    price before its game (pxc), in cents. The market moving toward a pick (it got pricier)
+    is the usual sign of a real edge, and it shows up long before a win/loss record does."""
+    mv = [round((p["pxc"] - p["px0"]) * cents, 1) for p in ps
+          if p.get("px0") is not None and p.get("pxc") is not None]
+    return {"clvN": len(mv), "clvUp": sum(1 for m in mv if m >= 1), "clvDn": sum(1 for m in mv if m <= -1),
+            "clv": round(sum(mv) / len(mv), 1) if mv else None}
 
 
 def build_market_picks(picks, poly_games, players_by_key, espn_slate, defense, defavg):
@@ -994,8 +1014,11 @@ def live_record(picks):
             if p.get("price"):
                 r["priced"] += 1
                 r["units"] += (1.0 / p["price"] - 1) if p["res"] == "hit" else -1
-    for r in out.values():
+    graded = [p for p in picks if p.get("res") in ("hit", "miss")]
+    for tag, r in out.items():
         r["units"] = round(r["units"], 2)
+        r.update(clv_stats([p for p in graded if tag in (p.get("lists") or "")]))
+    out["clv"] = clv_stats(graded)      # every graded pick, listed or not
     return out
 
 
@@ -1083,6 +1106,9 @@ def main():
     added_picks = build_board_picks(picks, slate, players_by_team, by_pid, defense, defavg)
     stamp_starts(picks)
     assign_lists(picks)
+    for p in picks:
+        if p.get("res") is None and not pick_started(p):
+            note_price(p)
     print(f"  picks: graded {graded}, {dnp} DNP, +{mkt_added} priced (Polymarket), +{added_picks} board")
     try:
         cal_t = fit_temperature(picks)

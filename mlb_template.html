@@ -1282,7 +1282,7 @@ function renderEdges(){ const body=$('edgebody'); if(!body) return;
   updateBoardStatus();
   const all=listRows('T');
   if(!all.length){ body.innerHTML = upcomingPicks().length
-      ? `<p class="mktnote">Nothing makes the list right now. A prop needs a <b>90%+ model chance</b> <i>and</i> a <b>live Polymarket price</b>, and nothing on the upcoming ${SPORT_NAME} slate clears both. It refills as markets post and prices update (every hour) — some days it stays short or empty on purpose.</p>`
+      ? `<p class="mktnote">Nothing makes the list right now. A prop needs a <b>90%+ model chance</b> <i>and</i> a <b>live Polymarket price</b>, and nothing on the upcoming ${SPORT_NAME} slate clears both. It refills as markets post and prices update (every 20 minutes) — some days it stays short or empty on purpose.</p>`
       : scheduleNote('the Top 25 Surest board'); return; }
   const rows=sortRows(all, edgeSort.key, edgeSort.dir).slice(0,25);
   body.innerHTML=pickTable(rows, edgeSort)+
@@ -1602,7 +1602,7 @@ render();
 (function renderRecords(){ const R=DB.record||{};
   [['recT','T'],['recV','V'],['recG','G']].forEach(([id,k])=>{ const el=$(id); if(!el) return; const r=R[k];
     if(!r||!r.n){ el.innerHTML='· live record: no graded picks yet — <a href="#past" onclick="showTab(\'past\');return false;">Past picks</a>'; return; }
-    el.innerHTML=`· <b>live record ${r.hit}/${r.n} (${Math.round(100*r.hit/r.n)}%)</b> — <a href="#past" onclick="showTab('past');return false;">details</a>`; }); })();
+    el.innerHTML=`· <b>live record ${r.hit}/${r.n} (${Math.round(100*r.hit/r.n)}%)</b> — <a href="#past" onclick="showTab('past');return false;">details</a>`+(r.clvN? ` · price moved its way on <b>${r.clvUp} of ${r.clvN}</b> (avg ${r.clv>=0?'+':''}${r.clv}¢)<button type="button" class="qhelp hq" data-help="clv" aria-expanded="false" aria-label="What is closing line value?"><span class="qi" aria-hidden="true">?</span></button>` : ''); }); })();
 // "Scan the board" re-pulls the latest recorded board and re-renders every table.
 (function(){ const b=$('edgescan'); if(!b) return;
   b.onclick=()=>{ const st=$('edgestatus'); if(st) st.textContent='Scanning the board…'; loadPicks(); }; })();

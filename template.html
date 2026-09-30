@@ -1097,7 +1097,7 @@ if(WEEK.week){ $('dnweek').textContent = 'Week '+WEEK.week; $('dnweekbox').hidde
 (function renderRecords(){ const R=DB.record||{};
   ['T','V'].forEach(k=>{ const r=R[k], el=$('rec'+k); if(!el) return;
     if(!r||!r.n){ el.innerHTML='· live record: no graded picks yet — <a href="#picks" onclick="showTab(\'picks\');return false;">Past picks</a>'; return; }
-    el.innerHTML=`· <b>live record ${r.hit}/${r.n} (${Math.round(100*r.hit/r.n)}%)</b> — <a href="#picks" onclick="showTab(\'picks\');return false;">details</a>`; }); })();
+    el.innerHTML=`· <b>live record ${r.hit}/${r.n} (${Math.round(100*r.hit/r.n)}%)</b> — <a href="#picks" onclick="showTab(\'picks\');return false;">details</a>`+(r.clvN? ` · price moved its way on <b>${r.clvUp} of ${r.clvN}</b> (avg ${r.clv>=0?'+':''}${r.clv}¢)<button type="button" class="qhelp hq" data-help="clv" aria-expanded="false" aria-label="What is closing line value?"><span class="qi" aria-hidden="true">?</span></button>` : ''); }); })();
 (function renderRef(){ const b=$('refbanner');
   if(REFERRAL.url){ b.href=REFERRAL.url; b.textContent=REFERRAL.text; b.hidden=false; } else b.hidden=true;
   const b2=$('refbanner2'); if(REFERRAL2.url){ b2.href=REFERRAL2.url; b2.textContent=REFERRAL2.text; b2.hidden=false; } else b2.hidden=true; })();

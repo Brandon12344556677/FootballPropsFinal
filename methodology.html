@@ -88,7 +88,7 @@ footer a:hover{color:#dfe6ef}
       <p class="lead">Prop Streak Lab turns a player's recent games into a <b>calibrated chance</b> of clearing any line, compares it with what the market charges, and records every pick before the game so the results can be checked in public.</p>
       <div class="meta">
         <span>NFL · NBA · NHL · MLB</span>
-        <span>Rebuilt every hour</span>
+        <span>Rebuilt every 20 minutes</span>
         <span class="gold">Every pick graded from the box score</span>
       </div>
 
@@ -150,7 +150,7 @@ footer a:hover{color:#dfe6ef}
       </ul>
       <div class="card">
         <h3 style="margin-top:0">The fair chance</h3>
-        <p style="margin-bottom:0">Because of that, every card that shows a price also shows a <b>fair chance</b>: the model blended with the market, <code>w × model + (1 − w) × price</code>, where <i>w</i> is the mix that has predicted the graded picks best. It's refit every hour; right now it's about <b>10% model, 90% market</b>. It's the most realistic number on the card — and the gap between it and the price is the realistic edge, which is usually small.</p>
+        <p style="margin-bottom:0">Because of that, every card that shows a price also shows a <b>fair chance</b>: the model blended with the market, <code>w × model + (1 − w) × price</code>, where <i>w</i> is the mix that has predicted the graded picks best. It's refit on every run; right now it's about <b>10% model, 90% market</b>. It's the most realistic number on the card — and the gap between it and the price is the realistic edge, which is usually small.</p>
       </div>
 
       <h2 id="lists">Value spots and Top 25 Surest</h2>
@@ -170,7 +170,7 @@ footer a:hover{color:#dfe6ef}
 
       <h2 id="grading">How picks are recorded and graded</h2>
       <ul>
-        <li>An automated job runs <b>every hour</b>. It records every modeled prop on the Polymarket board — with the model's chance and the price at that moment — <b>before the game starts</b>, and refreshes it until kickoff, tip-off, puck drop or first pitch. After that it is frozen.</li>
+        <li>An automated job runs <b>every 20 minutes</b>. It records every modeled prop on the Polymarket board — with the model's chance and the price at that moment — <b>before the game starts</b>, and refreshes it until kickoff, tip-off, puck drop or first pitch. After that it is frozen.</li>
         <li>Once the game is final and the box score is in, each pick is graded <b>hit, miss or push</b>. A player who doesn't play is marked <b>DNP</b> and left out of the record.</li>
         <li>Profit is counted at the <b>recorded price</b>: 1 unit on every pick, a win at 43¢ returns +1.33 units, a loss is −1.</li>
         <li>The <b>backtest</b> (NFL 2025) shows what the model would have said before each past game using only earlier games. It has no market prices, and it's never mixed into the live record.</li>
@@ -182,7 +182,7 @@ footer a:hover{color:#dfe6ef}
         <li><b>Backward-looking.</b> The model can't know about weather, a coaching change, or a teammate's injury unless it's in the data.</li>
         <li><b>Markets are hard to beat.</b> The market already prices the line and the matchup, so real edges are smaller than they look against the site's own seeded lines.</li>
         <li><b>New players</b> appear in search right away but have no chance until their first box score.</li>
-        <li><b>Prices move.</b> Board prices refresh about once a minute on the NFL board and hourly elsewhere. Always check the price before you trade.</li>
+        <li><b>Prices move.</b> Board prices refresh about once a minute on the NFL board and every 20 minutes elsewhere. Always check the price before you trade.</li>
         <li><b>Calibration is measured, not promised.</b> Look at the Past picks tab before trusting a number.</li>
       </ul>
       <p class="note">Research and entertainment, not betting advice. For adults 18+. If gambling stops being fun, call 1-800-522-4700 or visit <a href="https://www.ncpgambling.org" rel="noopener">ncpgambling.org</a>.</p>
