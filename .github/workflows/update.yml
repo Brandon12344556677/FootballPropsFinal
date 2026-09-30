@@ -39,36 +39,50 @@ jobs:
         with:
           python-version: "3.12"
 
+      # Each step's output is also saved to $RUNNER_TEMP/<script>.log for the health
+      # check at the end; pipefail keeps each script's own exit code.
       - name: Build site data
-        run: python build.py
+        run: |
+          set -o pipefail
+          python build.py 2>&1 | tee "$RUNNER_TEMP/build.log"
 
       - name: Build NBA data (non-fatal)
         continue-on-error: true
         timeout-minutes: 6
         env:
           NBA_PROBE: ${{ github.event.inputs.probe }}
-        run: python build_nba.py || echo "NBA build failed — skipping NBA files this run"
+        run: |
+          set -o pipefail
+          python build_nba.py 2>&1 | tee "$RUNNER_TEMP/build_nba.log" || echo "NBA build failed — skipping NBA files this run"
 
       - name: Build NHL data (non-fatal)
         continue-on-error: true
         timeout-minutes: 6
         env:
           NHL_PROBE: ${{ github.event.inputs.probe }}
-        run: python build_nhl.py || echo "NHL build failed — skipping NHL files this run"
+        run: |
+          set -o pipefail
+          python build_nhl.py 2>&1 | tee "$RUNNER_TEMP/build_nhl.log" || echo "NHL build failed — skipping NHL files this run"
 
       - name: Build MLB data (non-fatal)
         continue-on-error: true
         timeout-minutes: 7
-        run: python build_mlb.py || echo "MLB build failed — skipping MLB files this run"
+        run: |
+          set -o pipefail
+          python build_mlb.py 2>&1 | tee "$RUNNER_TEMP/build_mlb.log" || echo "MLB build failed — skipping MLB files this run"
 
       - name: Build the home page's Today feed (non-fatal)
         continue-on-error: true
-        run: python build_today.py || echo "today.json not rebuilt this run"
+        run: |
+          set -o pipefail
+          python build_today.py 2>&1 | tee "$RUNNER_TEMP/build_today.log" || echo "today.json not rebuilt this run"
 
       # One page per most-bet player, for search engines: rebuilt once a day, sitemap every run.
       - name: Build player pages (non-fatal)
         continue-on-error: true
-        run: python build_players.py || echo "player pages not rebuilt this run"
+        run: |
+          set -o pipefail
+          python build_players.py 2>&1 | tee "$RUNNER_TEMP/build_players.log" || echo "player pages not rebuilt this run"
 
       # Once a day (first run after 11 AM ET): yesterday's Value results + today's best
       # value, to whichever of these secrets are set. With none set, it does nothing.
@@ -79,7 +93,16 @@ jobs:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           POST_NOW: ${{ github.event.inputs.post }}
-        run: python post_daily.py || echo "daily post skipped this run"
+        run: |
+          set -o pipefail
+          python post_daily.py 2>&1 | tee "$RUNNER_TEMP/post_daily.log" || echo "daily post skipped this run"
+
+      # Reads those logs: any data source that failed, a builder that crashed, a data
+      # file gone stale, picks stuck ungraded. Records it in health.json (committed below,
+      # so it remembers across runs) and flags every open problem on the run's page.
+      - name: Data health check (non-fatal)
+        continue-on-error: true
+        run: python health.py "$RUNNER_TEMP" || true
 
       - name: Commit and push if anything changed
         run: |
@@ -89,7 +112,7 @@ jobs:
           git add -A players 2>/dev/null || true
           for f in nba.html nba.json nba_stats.json nba_picks.json \
                    nhl.html nhl.json nhl_stats.json nhl_picks.json \
-                   mlb.html mlb.json mlb_stats.json mlb_picks.json today.json posted.json top_cache.json; do
+                   mlb.html mlb.json mlb_stats.json mlb_picks.json today.json posted.json top_cache.json health.json; do
             git add "$f" 2>/dev/null || true
           done
           if git diff --cached --quiet; then
@@ -107,3 +130,8 @@ jobs:
               sleep 3
             done
           fi
+
+      # Last, after the site is pushed: turns the run red (so GitHub emails you) when a
+      # problem has lasted 3 runs in a row, then at most once a day while it lasts.
+      - name: Alert if a data source keeps failing
+        run: python health.py --gate
