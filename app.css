@@ -348,3 +348,8 @@ body{margin:0;background:var(--ps-bg);color:var(--ps-text);font-family:var(--ps-
 .pshelp{position:absolute;z-index:300;padding:12px 14px;border-radius:14px;background:#0f2038;border:1px solid rgba(0,200,5,.5);
   box-shadow:0 18px 44px rgba(0,0,0,.5);color:#dfe6ef;font:14px/1.5 "Barlow",system-ui,sans-serif}
 .pshelp b{display:block;margin-bottom:3px;color:#00c805;font-family:"Barlow Condensed",Impact,sans-serif;text-transform:uppercase;letter-spacing:.1em;font-size:13px}
+
+/* Jumping to a pick (Load, a shared link, search) lands the headline below the sticky
+   top bar and tabs instead of underneath them. */
+#headline{scroll-margin-top:136px}
+@media(max-width:760px){#headline{scroll-margin-top:108px}}
