@@ -417,6 +417,10 @@ body{margin:0;background:var(--ps-bg);color:var(--ps-text);font-family:var(--ps-
   .app #chips::-webkit-scrollbar{display:none}
   .app #chips .chipgrp{display:flex;flex-wrap:nowrap;align-items:center;gap:6px;flex:none;margin:0}
   .app #chips .chip{flex:none;white-space:nowrap}
+  /* NFL's controls are grids, whose cells grow to fit a no-wrap row: let them shrink so
+     the row scrolls inside its box instead of widening the page */
+  .app .controls,.app .controls .row,.app .controls .field{min-width:0}
+  .app #chips{max-width:100%}
 }
 
 /* ================= type: Archivo headlines, Inter numbers (see :root) ================= */

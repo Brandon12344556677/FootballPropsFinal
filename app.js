@@ -173,7 +173,9 @@ window.PS = (function(){
     if(!root) return;
     if(root.nodeType===3){ iconifyText(root); return; }
     if(root.nodeType!==1 || root.closest(SKIP)) return;
-    const w=document.createTreeWalker(root, NodeFilter.SHOW_TEXT), hits=[];
+    // never scan <script>/<style> text: the sport pages carry 2–4 MB of data in one script
+    const w=document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {acceptNode:n=>{ const t=n.parentNode && n.parentNode.nodeName;
+      return t==='SCRIPT' || t==='STYLE' || t==='TEXTAREA'? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT; }}), hits=[];
     while(w.nextNode()){ EMOJI_RE.lastIndex=0; if(EMOJI_RE.test(w.currentNode.nodeValue)) hits.push(w.currentNode); }
     hits.forEach(iconifyText);
   }
@@ -181,7 +183,8 @@ window.PS = (function(){
 
   let queued=false, added=[];
   new MutationObserver(recs=>{
-    recs.forEach(r=>{ if(r.type==='characterData') added.push(r.target); else r.addedNodes.forEach(n=>added.push(n)); });
+    recs.forEach(r=>{ if(r.type==='characterData') added.push(r.target);
+      else r.addedNodes.forEach(n=>{ if(n.nodeName!=='SCRIPT' && n.nodeName!=='STYLE' && !(n.nodeType===3 && n.parentNode && n.parentNode.nodeName==='SCRIPT')) added.push(n); }); });
     if(queued) return; queued=true;
     setTimeout(()=>{ queued=false; const batch=added; added=[]; batch.forEach(n=>{ if(n.isConnected) iconify(n); });
       watchRings(); clampEdges(); placeLegend(); }, 60); })
