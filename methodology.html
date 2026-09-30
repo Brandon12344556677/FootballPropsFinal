@@ -76,6 +76,7 @@ footer a:hover{color:#dfe6ef}
       <a href="#context">Adjusting for the matchup</a>
       <a href="#calibration">Calibration</a>
       <a href="#prices">Prices and edge</a>
+      <a href="#vsmarket">Model vs. market</a>
       <a href="#lists">Value spots and Top 25 Surest</a>
       <a href="#grading">How picks are recorded and graded</a>
       <a href="#limits">Honest limits</a>
@@ -139,6 +140,18 @@ footer a:hover{color:#dfe6ef}
         <li>A price is only ever compared with the <b>same line</b>. Where Polymarket lists a prop at a different number, the site says so and shows no edge — an edge against a different bet is meaningless.</li>
       </ul>
 
+      <h2 id="vsmarket">Model vs. market — what the record says</h2>
+      <p>We test the model against the market on every graded pick that had a Polymarket price, and publish the result, including when it's unflattering. As of September 30, 2026 (910 priced, graded picks, NFL and NHL):</p>
+      <ul>
+        <li><b>The market has predicted better than the model.</b> On the Brier score (squared error; lower is better) the Polymarket price scored <b>0.196</b> and the model <b>0.212</b>. Prices react to injuries, role changes and news that a game log can't see.</li>
+        <li><b>The value rule is roughly break-even so far.</b> Picks clearing both value rules returned +8% over 118 bets — but the margin of error at that sample size is about ±9 points, so that's not evidence of an edge in either direction.</li>
+        <li><b>The model's own percentages are close to honest.</b> Recalibrating it on live results didn't improve its accuracy on picks it hadn't seen, so we didn't ship one.</li>
+      </ul>
+      <div class="card">
+        <h3 style="margin-top:0">The fair chance</h3>
+        <p style="margin-bottom:0">Because of that, every card that shows a price also shows a <b>fair chance</b>: the model blended with the market, <code>w × model + (1 − w) × price</code>, where <i>w</i> is the mix that has predicted the graded picks best. It's refit every hour; right now it's about <b>10% model, 90% market</b>. It's the most realistic number on the card — and the gap between it and the price is the realistic edge, which is usually small.</p>
+      </div>
+
       <h2 id="lists">Value spots and Top 25 Surest</h2>
       <div class="card rule">
         <h3 style="margin-top:0">Value spots — both rules have to be true</h3>
@@ -146,13 +159,13 @@ footer a:hover{color:#dfe6ef}
           <li><b>Polymarket gives it at least a 30% chance</b> (a price of 30¢ or more). This keeps penny longshots off the list: a 6¢ price against an 11% model chance is a big percentage edge and still a bad bet.</li>
           <li><b>The model puts it at least 15 points higher.</b> A 30¢ price needs 45%, 50¢ needs 65%, 70¢ needs 85%.</li>
         </ol>
-        <p style="margin-bottom:0">Both sides of every market are tested, so unders qualify as often as overs. A prop also needs <b>6+ effective games</b> of history. Everything that clears both rules is listed, ranked by edge.</p>
+        <p style="margin-bottom:0">Both sides of every market are tested, so unders qualify as often as overs. A prop also needs <b>6+ effective games</b> of history. Everything that clears both rules is listed, ranked by edge. These are the model's biggest disagreements with the market — <b>leads to research, not sure things</b> (see above).</p>
       </div>
       <div class="card">
         <h3 style="margin-top:0">Top 25 Surest</h3>
         <p style="margin-bottom:0">The props with the highest model chance on the board, whatever they pay — on the NFL and NBA boards, the 25 highest; on the NHL and MLB boards, up to 25 that the model gives 90% or more <i>and</i> that have a live Polymarket price. <b>Likely isn't certain:</b> these still lose sometimes, and at 85–97¢ a single loss wipes out several wins.</p>
       </div>
-      <p>On the Player tab, the verdict card applies the same rules: <b>Value</b> when both value rules pass, <b>Skip</b> when the price is above the model's chance, <b>Fair</b> in between.</p>
+      <p>On the Player tab, the verdict card applies the same rules — <b>Value</b> when both value rules pass, <b>Skip</b> when the price is above the model's chance, <b>Fair</b> in between — and shows the fair chance next to them, so you see the realistic edge as well as the model's.</p>
 
       <h2 id="grading">How picks are recorded and graded</h2>
       <ul>

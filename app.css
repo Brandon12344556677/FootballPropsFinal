@@ -525,3 +525,7 @@ html body .pslcookie button{padding:7px 14px;font-size:13px;border-radius:999px;
 .app .r-hit .br-res{color:var(--ps-green)} .app .r-miss .br-res{color:var(--ps-red)} .app .r-pend .br-res{color:var(--ps-gold)}
 .app .br-x{border:0;background:none;color:var(--ps-muted);cursor:pointer;font-size:14px;padding:4px 6px}
 .app .br-x:hover{color:#fff}
+.app .vd-fair b{color:#f3cd7a}
+.app .vd-fair>span{display:inline-flex;align-items:center;gap:4px}
+.app .vd-fair .qhelp.hq{margin-left:0}
+.app .vd-fair .qhelp.hq .qi{width:16px;height:16px;font-size:10px}

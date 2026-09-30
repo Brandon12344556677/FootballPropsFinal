@@ -34,8 +34,8 @@
 <link rel="manifest" href="/site.webmanifest">
 <script data-goatcounter="https://propstreaklive.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
 <link rel="stylesheet" href="fonts.css">
-<link rel="stylesheet" href="app.css?v=20260930k">
-<script src="app.js?v=20260930k"></script>
+<link rel="stylesheet" href="app.css?v=20260930l">
+<script src="app.js?v=20260930l"></script>
 <style>
 :root{
   color-scheme:dark;
@@ -441,7 +441,7 @@ footer .fine a{color:#8394ab}
               <div><b id="ds-range">61–80%</b><span>80% range</span></div>
               <div><b id="ds-last">9 / 12</b><span id="ds-lastlab">last 12 games</span></div>
               <div><b id="ds-price">55¢</b><span>market price</span></div>
-              <div class="pos"><b id="ds-edge">+16</b><span>model edge</span></div>
+              <div class="pos"><b id="ds-edge">+16</b><span id="ds-edgelab">model edge</span></div>
             </div>
           </div>
           <div class="bars" id="bars" aria-hidden="true"></div>
@@ -764,6 +764,7 @@ function countUp(el){ const to=+el.dataset.count; if(!to||el.dataset.done) retur
   PS.ticker(base);
   const get=u=>fetch(u,{cache:'no-store'}).then(r=>r.ok?r.json():null).catch(()=>null);
   const ahead=p=>Date.parse(p.start)>Date.now();
+  let FAIRW=0.1;   // the model's weight in the fair chance (today.json refits it hourly)
   const initials=n=>{ const w=String(n||'').replace(/\s+(Jr|Sr|II|III|IV)\.?$/i,'').trim().split(/\s+/); return ((w[0]||'')[0]||'')+(w.length>1? (w[w.length-1][0]||'') : ''); };
 
   function tickerItems(t, w){
@@ -783,7 +784,8 @@ function countUp(el){ const to=+el.dataset.count; if(!to||el.dataset.done) retur
   function card(p){
     const pv=Math.round(p.prob*100), tier=p.prob>=0.9?'hi':p.prob>=0.7?'mid':'lo';
     const href=`./${p.sport}.html#${PS.hashFor(p.pid, p.stat, p.line, p.side, p.player)}`;
-    const kind=p.kind==='value'? `<span class="pc-kind">⚡ Value · +${Math.round(p.edge*100)} edge</span>`
+    const fair=Math.round(100*(FAIRW*p.prob+(1-FAIRW)*p.price));
+    const kind=p.kind==='value'? `<span class="pc-kind">⚡ Value · fair ${fair}%</span>`
                                : `<span class="pc-kind safe">🎯 Safe bet that pays</span>`;
     return `<a class="pickcard ${tier}" href="${esc(href)}" style="${PS.teamVars(p.sport, p.team)}">`+
       `<div class="pc-top"><span class="av">${esc(initials(p.player))}</span>`+
@@ -819,7 +821,8 @@ function countUp(el){ const to=+el.dataset.count; if(!to||el.dataset.done) retur
     set('demoq', `${esc(p.player)} ${esc(p.side)} <b>${esc(p.line)}</b> ${esc(String(p.statText).toLowerCase())}?`);
     if(p.lo!=null && p.hi!=null) set('ds-range', `${Math.round(p.lo*100)}–${Math.round(p.hi*100)}%`);
     set('ds-last', `${hits} / ${v.length}`); set('ds-lastlab', `last ${v.length} games`);
-    set('ds-price', `${c}¢`); set('ds-edge', `${e>=0?'+':'−'}${Math.abs(e)}`);
+    set('ds-price', `${c}¢`);
+    set('ds-edge', `${Math.round(100*(FAIRW*p.prob+(1-FAIRW)*p.price))}%`); set('ds-edgelab', 'fair chance');
     const go=document.getElementById('demogo');
     if(go){ go.href=`./${p.sport}.html#${PS.hashFor(p.pid, p.stat, p.line, p.side, p.player)}`; go.hidden=false; }
     const st=document.getElementById('stage'); if(st) st.setAttribute('aria-label', `Today's top pick: ${p.player} ${p.side} ${p.line} ${p.statText}, model ${pv}%`);
@@ -830,6 +833,7 @@ function countUp(el){ const to=+el.dataset.count; if(!to||el.dataset.done) retur
   Promise.all([get('today.json'), get('weekly.json')]).then(([t,w])=>{
     PS.ticker(tickerItems(t, w));
     if(!t) return;
+    if(t.fair && t.fair.w>=0) FAIRW=t.fair.w;
     liveDemo(t);
     renderToday(t);
     setInterval(()=>{ if(!document.hidden){ renderToday(t); PS.ticker(tickerItems(t, w)); } }, 60000);

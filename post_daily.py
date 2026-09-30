@@ -74,8 +74,13 @@ def when(start, today):
     return clock if t.date() == today else t.strftime("%a ") + clock
 
 
+FAIR_W = 0.1   # the model's weight in the fair chance; read from today.json
+
+
 def todays_picks(now):
+    global FAIR_W
     doc = load("today.json", {}) or {}
+    FAIR_W = ((doc.get("fair") or {}).get("w")) or FAIR_W
     ahead = [p for p in doc.get("picks") or [] if (parse_utc(p.get("start")) or now) > now]
     value = [p for p in ahead if p.get("kind") == "value"]
     return (value or ahead)[:MAX_PICKS], bool(value)
@@ -123,9 +128,8 @@ def messages(picks, is_value, results, today):
     t.append(f"<b>{head} — Prop Streak Lab</b>")
     for p in picks:
         bet = f"{p['player']} {p['side']} {p['line']} {p['statText']}"
-        tail = f"model {round(p['prob'] * 100)}% vs {round(p['price'] * 100)}¢"
-        if p.get("kind") == "value":
-            tail += f" (+{round(p['edge'] * 100)} edge)"
+        fair = FAIR_W * p["prob"] + (1 - FAIR_W) * p["price"]
+        tail = f"model {round(p['prob'] * 100)}% · fair {round(fair * 100)}% · {round(p['price'] * 100)}¢"
         tail += f" · {when(p['start'], today)}"
         url = pick_link(p)
         d.append(f"{SPORT[p['sport']]} [**{bet}**](<{url}>) — {tail}")

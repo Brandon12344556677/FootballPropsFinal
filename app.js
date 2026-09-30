@@ -98,10 +98,11 @@ window.PS = (function(){
     model:['Model %', "Our estimate of how often this bet wins — from the player's recent games, adjusted for the matchup. 71% means about 7 times in 10."],
     price:['Price', 'What one share costs on Polymarket. A share pays $1 if the bet wins, so a 43¢ price also means the market sees it as a 43% chance.'],
     payout:['Payout', 'What you get back for each $1 if it wins, your stake included. 2.33× means a $10 bet returns $23.30.'],
-    edge:['Edge', "The model's chance minus the market's, in points. +28 means we rate it 28 points likelier than the price says. Bigger is better — but it's an estimate, not a promise."],
+    edge:['Edge', "The model's chance minus the market's, in points. On the graded record the market has predicted better than the model, so read it next to the fair chance — the realistic edge is much smaller."],
+    fair:['Fair chance', "The model's chance blended with the Polymarket price, weighted by how well each has predicted every graded pick so far. Right now that's mostly market: prices already reflect injuries and news the model can't see. It's the most realistic number on the card."],
     last10:['Last 10', "The player's last ten games at this line: green bars cleared it, red ones didn't, and the dashed mark is the line. \"7/10\" = cleared it 7 times."],
     range:['Range · games', 'The first numbers are where the true chance most likely sits (80% range); "12g" is how many games it\'s based on. Wide range or few games = less certain.'],
-    value:['Value spots', 'Bets where Polymarket gives at least a 30% chance and our model is 15+ points higher. The best bets for the price — not the surest ones.'],
+    value:['Value spots', "Bets where Polymarket gives at least a 30% chance and our model is 15+ points higher — the model's biggest disagreements with the market. On the graded record they're roughly break-even so far, so treat them as leads to research, not sure things."],
     surest:['Top 25 Surest', "The likeliest bets on the board, whatever they pay. Likely isn't certain: they still lose sometimes, and at 85–97¢ a single loss wipes out several wins."],
   };
   const helpBtn=(k,label)=>`<button type="button" class="qhelp" data-help="${k}" aria-expanded="false">${label}<span class="qi" aria-hidden="true">?</span></button>`;
@@ -245,34 +246,44 @@ window.PS = (function(){
       `<span class="sp-bars">${bars}<em style="bottom:${Math.round(100*line/top)}%"></em></span><span class="sp-n">${hits}/${v.length}</span></span>`;
   }
 
+  // ---- the fair chance: model and market blended, w = the model's weight (today.json refits it hourly) ----
+  let FAIR_W=0.1;
+  const fairOf=(prob, price)=> price==null? null : FAIR_W*prob+(1-FAIR_W)*price;
+  function setFair(w){ if(!(w>=0 && w<=1) || w===FAIR_W) return; FAIR_W=w;
+    document.querySelectorAll('.verdict').forEach(el=>{ if(el._o){ el.dataset.sig=''; verdict(el, el._o); } }); }
+
   // ---- the Player tab's verdict card: the model's chance against the price, in one call ----
   // VALUE uses the site's own two rules (price 30¢+, model 15+ points better); SKIP means
   // the price is above the model's chance; FAIR is everything between.
   function verdictOf(prob, price){
     const pv=Math.round(prob*100);
     if(price==null) return {k:'none', label:'No price', say:"No Polymarket price for this exact line right now — the model's chance stands on its own. Check the price before you bet."};
-    const c=Math.round(price*100), e=Math.round((prob-price)*100), sg=(e>=0?'+':'−')+Math.abs(e);
-    if(price>=0.30 && prob-price>=0.15) return {k:'value', label:'Value', say:`Polymarket prices it at ${c}% and the model says ${pv}% — ${e} points better, which clears both value rules.`};
+    const c=Math.round(price*100), e=Math.round((prob-price)*100), sg=v=>(v>=0?'+':'−')+Math.abs(v);
+    const fv=Math.round(100*fairOf(prob, price)), fe=fv-c;
+    if(price>=0.30 && prob-price>=0.15) return {k:'value', label:'Value', say:`Clears the value rules: the model says ${pv}% against a ${c}¢ price. The market usually knows more, though — blended, the fair chance is ${fv}%, an expected edge of ${sg(fe)}. A lead to check, not a lock.`};
     const an=/^(8|11|18)/.test(String(c))? 'an' : 'a';   // "an 80% chance", "a 60% chance"
-    if(prob-price<=-0.03) return {k:'skip', label:'Skip', say:`At ${c}¢ you'd be paying for ${an} ${c}% chance, and the model only gives it ${pv}%. Overpriced.`};
-    if(price<0.30 && prob-price>=0.15) return {k:'fair', label:'Fair', say:`Big edge on paper (${sg}), but at ${c}¢ it's a longshot — the value rules skip anything under 30¢.`};
-    if(e>=15) return {k:'fair', label:'Fair', say:`Right on the value bar (${sg}) but not clearly over it — the model's ${pv}% against ${c}¢.`};
-    return {k:'fair', label:'Fair', say:`Priced close to the model's ${pv}% — an edge of ${sg} points, short of the +15 it takes to call it value.`};
+    if(prob-price<=-0.03) return {k:'skip', label:'Skip', say:`At ${c}¢ you'd be paying for ${an} ${c}% chance; the model says ${pv}% and the fair chance is ${fv}%. Overpriced.`};
+    if(price<0.30 && prob-price>=0.15) return {k:'fair', label:'Fair', say:`A big gap on paper (${sg(e)}), but at ${c}¢ it's a longshot — the value rules skip anything under 30¢. Fair chance ${fv}%.`};
+    if(e>=15) return {k:'fair', label:'Fair', say:`Right on the value bar (${sg(e)}) but not clearly over it. Fair chance ${fv}% against ${c}¢.`};
+    return {k:'fair', label:'Fair', say:`Fair chance ${fv}% against a ${c}¢ price — about what it costs. The model alone says ${pv}%.`};
   }
   // o: {prob, lo, hi, neff, side, line, statText, price, live, marketLine, onShare} — or null to hide.
   function verdict(el, o){
     if(!el) return;
     if(!o || o.prob==null){ el.hidden=true; return; }       // keep the markup, so re-showing it doesn't replay the ring
+    el._o=o;                                                  // repainted when the fitted fair weight arrives
     const pv=Math.round(o.prob*100), v=verdictOf(o.prob, o.price);
     const c=o.price!=null? Math.round(o.price*100) : null, e=c!=null? Math.round((o.prob-o.price)*100) : null;
     const tier=o.prob>=0.9?'hi':o.prob>=0.7?'mid':'lo';
-    const sig=[pv,o.side,o.line,o.statText,c,v.k,o.live,o.marketLine].join('|');
+    const fv=c!=null? Math.round(100*fairOf(o.prob, o.price)) : null;
+    const sig=[pv,o.side,o.line,o.statText,c,v.k,o.live,o.marketLine,fv].join('|');
     if(el.dataset.sig!==sig){
       el.dataset.sig=sig;
       el.className=`verdict v-${v.k} t-${tier}`;
       const stats = c!=null
         ? `<div class="vd-stats"><span><b>${c}¢</b>${o.live? '<i class="vd-live">● live price</i>' : 'price · last update'}</span>`+
-          `<span><b>${(1/o.price).toFixed(2)}×</b>payout</span><span><b class="${e>=0?'pos':'neg'}">${e>=0?'+':'−'}${Math.abs(e)}</b>edge</span></div>`
+          `<span><b>${(1/o.price).toFixed(2)}×</b>payout</span><span><b class="${e>=0?'pos':'neg'}">${e>=0?'+':'−'}${Math.abs(e)}</b>model edge</span>`+
+          `<span class="vd-fair"><b>${fv}%</b><span>fair chance <button type="button" class="qhelp hq" data-help="fair" aria-expanded="false" aria-label="What is the fair chance?"><span class="qi" aria-hidden="true">?</span></button></span></span></div>`
         : (o.marketLine!=null? `<div class="vd-stats"><span class="vd-note">Polymarket lists this prop at <b>${esc(o.marketLine)}</b> — set the line to ${esc(o.marketLine)} to compare.</span></div>` : '');
       const range=o.lo!=null? `${Math.round(o.lo*100)}–${Math.round(o.hi*100)}% range` : '';
       const games=o.neff? `${Math.round(o.neff)} games` : '';
@@ -406,11 +417,11 @@ window.PS = (function(){
       el.hidden=false;
     };
     paint(null);
-    fetch('today.json',{cache:'no-store'}).then(r=>r.ok? r.json() : null).then(t=>{ if(t) paint(t); }).catch(()=>{});
+    fetch('today.json',{cache:'no-store'}).then(r=>r.ok? r.json() : null).then(t=>{ if(t){ paint(t); if(t.fair) setFair(t.fair.w); } }).catch(()=>{});
     setInterval(()=>el.querySelectorAll('[data-ago]').forEach(b=>{ b.textContent=ago(+b.dataset.ago); }), 60000);
   }
   if(document.readyState!=='loading') trust(); else document.addEventListener('DOMContentLoaded', trust);
 
   return {teamVars, ticker, until, skeleton, esc, hashFor, pickHash, parsePickHash, syncHash, sharePick, toast, helpBtn, spark, verdict, icon, sheet, closeSheet, pickSheet,
-          isTracked, toggleBet, renderBets};
+          isTracked, toggleBet, renderBets, fairOf, setFair};
 })();

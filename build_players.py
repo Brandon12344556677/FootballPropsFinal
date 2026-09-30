@@ -66,6 +66,13 @@ def pick_link(sport, p):
     return f"/{sport}.html#player/{quote(str(p['pid']), safe='')}/{p['stat']}/{p['line']}/{p['side']}/{slug(p['player'])}"
 
 
+FAIR_W = 0.1   # replaced in main() by the weight build_today fits on the graded record
+
+
+def fair(prob, price):
+    return None if price is None else FAIR_W * prob + (1 - FAIR_W) * price
+
+
 def verdict(prob, price):
     """The site's rules: Value = price 30c+ and model 15+ points better; Skip = overpriced."""
     if price is None:
@@ -237,14 +244,17 @@ def player_page(sport, p, props, getters, labels, built):
         for c in props:
             lab, cls = verdict(c["prob"], c["price"])
             px = f"{round(c['price']*100)}¢" if c["price"] is not None else "—"
-            ed = (f"{'+' if c['edge'] >= 0 else '−'}{abs(round(c['edge']*100))}" if c["edge"] is not None else "—")
+            fc = fair(c["prob"], c["price"])
+            ed = f"{round(fc*100)}%" if fc is not None else "—"
             trs.append(f'<tr><td><a href="{esc(pick_link(sport, c))}">{esc(c["statText"])}</a></td>'
                        f'<td><span class="side {esc(c["side"])}">{esc(c["side"])}</span> {esc(num(float(c["line"])))}</td>'
                        f'<td class="n">{round(c["prob"]*100)}%</td><td class="n">{px}</td><td class="n">{ed}</td>'
                        f'<td><span class="tag {cls}">{lab}</span></td></tr>')
         out.append('  <div class="card scroll"><table class="props"><thead><tr><th>Prop</th><th>Line</th><th class="n">Model</th><th class="n">Price</th>'
-                   '<th class="n">Edge</th><th>Call</th></tr></thead><tbody>' + "".join(trs) + "</tbody></table></div>\n")
-        out.append(f'  <p class="note">Prices from Polymarket US as of {esc(built)}. Tap a prop for the live price and the full breakdown.</p>\n')
+                   '<th class="n">Fair</th><th>Call</th></tr></thead><tbody>' + "".join(trs) + "</tbody></table></div>\n")
+        out.append(f'  <p class="note">Prices from Polymarket US as of {esc(built)}. <b>Fair</b> is the model blended with the price '
+                   f'({round(FAIR_W*100)}% model, {round((1-FAIR_W)*100)}% market — the mix that has predicted graded picks best); '
+                   'the market usually knows more than the game logs. Tap a prop for the live price and the full breakdown.</p>\n')
         cta = pick_link(sport, props[0])
     else:
         out.append('  <p class="note">No props posted for this player right now — they appear here once the market lists the next game.</p>\n')
@@ -305,6 +315,11 @@ def main():
     if update_sitemap_only:
         print("  player pages: " + ("already built today" if done_today else f"rebuild waits until {REBUILD_HOUR_ET}:00 ET"))
     built = now.astimezone(ET).strftime("%b %-d, %-I:%M %p ET")
+    global FAIR_W
+    try:
+        FAIR_W = T.fair_weight([(sp, T.load(pf)) for sp, _, pf, _ in T.SPORTS if os.path.exists(pf)])["w"]
+    except Exception as e:   # keep the default
+        print(f"  fair weight: default ({e})")
     entries, urls, written, keep = {}, [f"{SITE}/{OUT}/"], 0, set()
     for sport, data_file, picks_file, template in T.SPORTS:
         if not all(os.path.exists(f) for f in (data_file, picks_file, template)):

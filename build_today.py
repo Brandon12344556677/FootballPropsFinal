@@ -6,7 +6,8 @@ picks file, its dataset's season record, and the stat labels from its template)
 and writes a small file the home page can fetch in one request:
 
   today.json   {"gen", "record": {sport: {"T", "V"}}, "picks": [...], "valueLive": [[sport, start], ...],
-                "tracked": {"graded": live picks graded so far, "since": first live pick date}}
+                "tracked": {"graded": live picks graded so far, "since": first live pick date},
+                "fair": {"w": model weight in the fair chance, "n": priced picks it was fitted on}}
                (each pick carries "l10": its last ten game values, for the mini chart)
 
 "picks" holds the best upcoming bets across all four sports at the last recorded
@@ -174,6 +175,31 @@ def graded(picks_doc):
     return n, first
 
 
+def fair_weight(docs):
+    """How much to trust the model against the market: the weight w in
+        fair chance = w * model + (1 - w) * Polymarket price
+    that best predicted every graded live pick that had a price (lowest Brier score),
+    pooled across sports. On the record so far the market predicts better than the
+    model, so w is small; it's kept between 0.1 and 0.9 and falls back to 0.2 until
+    there are 200 priced graded picks."""
+    rows = []
+    for sport, doc in docs:
+        cols = doc["cols"]
+        for row in doc["picks"]:
+            p = dict(zip(cols, row))
+            if p.get("src") != "live" or p.get("res") not in ("hit", "miss") or not p.get("price") or p.get("prob") is None:
+                continue
+            price = p["price"] / 100.0 if sport == "nfl" else p["price"]
+            rows.append((float(p["prob"]), float(price), 1.0 if p["res"] == "hit" else 0.0))
+    if len(rows) < 200:
+        return {"w": 0.2, "n": len(rows)}
+    def brier(w):
+        return sum((w * m + (1 - w) * x - y) ** 2 for m, x, y in rows) / len(rows)
+    w = min((i / 20 for i in range(21)), key=brier)
+    return {"w": round(min(0.9, max(0.1, w)), 2), "n": len(rows),
+            "brierModel": round(brier(1.0), 4), "brierMarket": round(brier(0.0), 4)}
+
+
 def best(cands):
     """Every value spot (by edge) before any safe-but-paying pick (by chance); one per
     player. Within each kind, no more than PER_SPORT from one sport until the others
@@ -202,7 +228,7 @@ def best(cands):
 
 def main():
     now = datetime.datetime.now(datetime.timezone.utc)
-    rec, cands, n_graded, since = {}, [], 0, None
+    rec, cands, n_graded, since, docs = {}, [], 0, None, []
     for sport, data_file, picks_file, template in SPORTS:
         if not all(os.path.exists(f) for f in (data_file, picks_file, template)):
             print(f"  {sport}: files missing — skipped")
@@ -211,6 +237,7 @@ def main():
             db = load(data_file)
             rec[sport] = record(db)
             picks_doc = load(picks_file)
+            docs.append((sport, picks_doc))
             got = upcoming(sport, db, picks_doc, stat_labels(template), stat_getters(template), now)
             g, first = graded(picks_doc)
             n_graded += g
@@ -224,7 +251,7 @@ def main():
     # [sport, start] of every upcoming value spot, so the ticker can count what's still live.
     value_live = sorted([c["sport"], c["start"]] for c in cands if c["value"])
     doc = {"gen": now.strftime("%Y-%m-%dT%H:%M:%SZ"), "record": rec, "picks": picks, "valueLive": value_live,
-           "tracked": {"graded": n_graded, "since": since}}
+           "tracked": {"graded": n_graded, "since": since}, "fair": fair_weight(docs)}
     with open(OUT, "w", encoding="utf-8") as f:
         json.dump(doc, f, separators=(",", ":"), ensure_ascii=False)
     kinds = sum(1 for p in picks if p["kind"] == "value")
