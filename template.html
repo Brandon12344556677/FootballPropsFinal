@@ -970,7 +970,8 @@ function pct(p){ return Math.round(p*100)+'%'; }
 function cents(p){ return p==null? '—' : Math.round(p*100)+'¢'; }
 
 // ==== MODEL (mirrored in build.py — keep identical) ====
-const MODEL = {halfLife:6, maxGames:20, priorK:0.5, bwConst:0.9, bwFloorCount:0.35, bwFloorYards:1.0, z:1.2816};
+const MODEL = {halfLife:8, maxGames:30, priorK:0.5, bwConst:0.9, bwFloorCount:0.35, bwFloorYards:1.0, bwFloorTd:0.25, z:1.2816};
+const TD_STATS = new Set(['rec_td','rush_td','scrim_td']);   // "anytime"-style TD props: their own smoothing floor
 const CTX = {betaPts:{pass:0.25, rush:0.25, rec:0.25}, betaSpr:{pass:0, rush:0, rec:0}, gamma:{pass:0.75, rush:0.25, rec:0.5}, usage:0.5, clampLo:0.6, clampHi:1.6};
 const COUNT_STATS = new Set(['pass_td','pass_att','pass_cmp','pass_int','rush_att','rush_td','rec','tgt','rec_td','scrim_td']);
 function erf(x){ const s=x>=0?1:-1; x=Math.abs(x); const t=1/(1+0.3275911*x);
@@ -985,7 +986,7 @@ function modelProb(values, line, kind, scale){
   let mean=0; for(let i=0;i<n;i++) mean+=w[i]*v[i]; mean/=W;
   let vr=0; for(let i=0;i<n;i++) vr+=w[i]*(v[i]-mean)*(v[i]-mean); vr/=W;
   const sd=Math.sqrt(Math.max(vr,0));
-  const floor=kind==='count'?MODEL.bwFloorCount:MODEL.bwFloorYards;
+  const floor=kind==='td'?MODEL.bwFloorTd : kind==='count'?MODEL.bwFloorCount:MODEL.bwFloorYards;
   const h=Math.max(MODEL.bwConst*sd*Math.pow(neff,-0.2), floor);
   const F=t=>{ let s=0; for(let i=0;i<n;i++) s+=w[i]*ncdf((t-v[i])/h); return s/W; };
   const loE=Math.floor(line)+0.5, hiE=Math.ceil(line)-0.5;
@@ -1052,7 +1053,7 @@ const STATS = [
   {key:'scrim_td',   label:'Rush+Rec TDs',  grp:'Combo',     get:g=>g[11]+g[15]},
   {key:'fantasy',    label:'Fantasy (PPR)', grp:'Fantasy',   get:g=>0.04*g[4]+4*g[5]-2*g[8]+0.1*g[10]+6*g[11]+g[12]+0.1*g[14]+6*g[15]},
 ];
-STATS.forEach(s=>{ s.kind = COUNT_STATS.has(s.key)?'count':'yards'; });
+STATS.forEach(s=>{ s.kind = TD_STATS.has(s.key)?'td' : COUNT_STATS.has(s.key)?'count':'yards'; });
 const STATMAP = Object.fromEntries(STATS.map(s=>[s.key,s]));
 const GRPORDER = ['Passing','Rushing','Receiving','Combo','Fantasy'];
 const POS_DEFAULT = {QB:'pass_yds', RB:'rush_yds', FB:'rush_yds', WR:'rec_yds', TE:'rec_yds'};

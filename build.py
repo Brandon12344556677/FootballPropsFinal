@@ -29,7 +29,7 @@ def season_year(d):
 
 
 SEASON = season_year(TODAY)
-CANDIDATE_SEASONS = [SEASON - 2, SEASON - 1, SEASON]   # 3 seasons so "last 20" has depth
+CANDIDATE_SEASONS = [SEASON - 2, SEASON - 1, SEASON]   # 3 seasons so "last 30" has depth
 
 SKILL = {"QB", "RB", "WR", "TE", "FB"}
 BASE = "https://github.com/nflverse/nflverse-data/releases/download/"
@@ -76,8 +76,11 @@ def stat_value(key, row):
     return row[a] + row[b]
 
 
+TD_STATS = {"rec_td", "rush_td", "scrim_td"}   # "anytime"-style TD props: their own smoothing floor
+
+
 def stat_kind(key):
-    return "count" if key in COUNT_STATS else "yards"
+    return "td" if key in TD_STATS else "count" if key in COUNT_STATS else "yards"
 
 
 # ---------------------------------------------------------------------------
@@ -85,14 +88,23 @@ def stat_kind(key):
 #
 # Instead of a raw "hit 7 of last 10" frequency, the chance of clearing a line is
 # estimated from the *distribution* of the player's recent values:
-#   1. take up to the last 20 games, weight recent ones more (half-life 6 games);
+#   1. take up to the last 30 games, weight recent ones more (half-life 8 games);
 #   2. smooth the weighted values with a Gaussian kernel (Silverman bandwidth, with
 #      a floor so a run of identical values still has spread);
 #   3. read P(over) / P(under) / P(push) off that smoothed distribution;
 #   4. shrink toward 50/50 by half a pseudo-game, so tiny samples can't claim 100%;
 #   5. attach an 80% Wilson interval sized by the *effective* sample (weights).
 # ---------------------------------------------------------------------------
-MODEL = {"halfLife": 6.0, "maxGames": 20, "priorK": 0.5, "bwConst": 0.9, "bwFloorCount": 0.35, "bwFloorYards": 1.0, "z": 1.2816}
+# Walk-forward backtest (2025 + 2026 so far: 33,000 player games over 13 props, each from
+# earlier games only, scored on odd and on even weeks separately): 30 games at half-life 8
+# beat 20 at half-life 6 pooled on both halves, and receiving / rushing / scrimmage TDs got
+# their own floor, 0.25 (was the count floor, 0.35, which put 24-27% on TDs that happened
+# 18-20% of the time): log loss -0.004 to -0.010 on both halves. Passing TDs keep 0.35
+# (the lower floor was worse on one half). Re-scoring the 580 graded live picks with a
+# Polymarket price: log loss 0.6557 -> 0.6545 (the market's own price: 0.6305).
+MODEL = {"halfLife": 8.0, "maxGames": 30, "priorK": 0.5, "bwConst": 0.9, "bwFloorCount": 0.35, "bwFloorYards": 1.0,
+         "bwFloorTd": 0.25, "z": 1.2816}
+MODEL_V = 2   # recorded on every live pick ("mv"); calibration uses only this version's live picks
 
 # Game-context adjustment. The player's distribution is scaled by
 #   (this game's implied team points / their usual implied points) ^ betaPts
@@ -139,7 +151,7 @@ def model_prob(values, line, kind, scale=1.0):
     mean = sum(wi * x for wi, x in zip(w, v)) / W
     var = sum(wi * (x - mean) ** 2 for wi, x in zip(w, v)) / W
     sd = math.sqrt(max(var, 0.0))
-    floor = MODEL["bwFloorCount"] if kind == "count" else MODEL["bwFloorYards"]
+    floor = MODEL["bwFloorTd"] if kind == "td" else MODEL["bwFloorCount"] if kind == "count" else MODEL["bwFloorYards"]
     h = max(MODEL["bwConst"] * sd * neff ** (-0.2), floor)
 
     def F(t):
@@ -1111,7 +1123,8 @@ def kickoff_utc(sg):
 # ---------------------------------------------------------------------------
 PICK_COLS = ["src", "gid", "season", "week", "date", "pid", "player", "pos", "team", "opp",
              "stat", "line", "side", "prob", "lo", "hi", "neff", "price", "lists", "rec", "actual", "res", "adj",
-             "px0", "pxc"]   # px0/pxc: first and last pre-kickoff price, in cents (closing line value)
+             "px0", "pxc",   # px0/pxc: first and last pre-kickoff price, in cents (closing line value)
+             "mv"]           # model version the chance came from (MODEL_V)
 VALUE_MIN_NEFF = 6.0
 TOP_N = 25
 VALUE_N = 200           # a safety cap only. At 50 it bound in busy weeks (NFL week 3: 27 picks that
@@ -1167,7 +1180,7 @@ def make_pick(src, gid, season, week, date, pl, opp, sk, line, mp, price, rec, s
             "stat": sk, "line": line, "side": side,
             "prob": round(prob, 3), "lo": round(lo, 3), "hi": round(hi, 3), "neff": round(mp["neff"], 1),
             "price": price, "lists": "", "rec": rec, "actual": None, "res": None,
-            "adj": round(mp.get("scale", 1.0), 3)}
+            "adj": round(mp.get("scale", 1.0), 3), "mv": MODEL_V}
 
 
 def assign_lists(picks):
@@ -1373,7 +1386,9 @@ def fit_temperature(picks):
     graded history. Applied to the live/displayed chances so the site keeps tuning its
     confidence to its own tracked results each week."""
     data = []
-    for p in picks:
+    for p in picks:      # the backtest is rebuilt each run; live picks count only from this model version
+        if p.get("src") == "live" and p.get("mv") != MODEL_V:
+            continue
         if p.get("res") in ("hit", "miss") and p.get("prob") is not None:
             pr = min(0.999, max(0.001, float(p["prob"])))
             data.append((math.log(pr / (1 - pr)), 1.0 if p["res"] == "hit" else 0.0))
