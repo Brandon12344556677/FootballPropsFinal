@@ -113,14 +113,16 @@ def upcoming(sport, db, picks_doc, labels, now):
 
 
 def best(cands):
-    """Value spots by edge, then safe-but-paying picks by chance; one per player, and
-    no more than PER_SPORT from one sport until the others have had their turn —
-    otherwise a busy MLB playoff slate would crowd the NFL's value spots off the feed."""
+    """Every value spot (by edge) before any safe-but-paying pick (by chance); one per
+    player. Within each kind, no more than PER_SPORT from one sport until the others
+    have had their turn — otherwise a busy MLB playoff slate would crowd the NFL's value
+    spots off the feed — then the rest of that kind."""
     value = sorted((c for c in cands if c["value"]), key=lambda c: -c["edge"])
     safe = sorted((c for c in cands if not c["value"] and c["price"] <= SAFE_MAX_PRICE and c["edge"] > 0),
                   key=lambda c: -c["prob"])
-    out, seen, per, spill = [], set(), {}, []
+    out, seen = [], set()
     for kind, pool in (("value", value), ("safe", safe)):
+        first, spill, per = [], [], {}
         for c in pool:
             key = (c["sport"], c["pid"])
             if key in seen:
@@ -131,8 +133,9 @@ def best(cands):
                 spill.append(c)
                 continue
             per[c["sport"]] = per.get(c["sport"], 0) + 1
-            out.append(c)
-    return (out + spill)[:MAX_PICKS]
+            first.append(c)
+        out += first + spill
+    return out[:MAX_PICKS]
 
 
 def main():
