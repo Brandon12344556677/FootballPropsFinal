@@ -39,6 +39,10 @@ the site.
   same on every sport page). The address bar follows what you're researching, and the
   🔗 Share button copies it (or opens the phone's share sheet). Opening one loads that
   exact player, prop, line and side.
+- **My bets** — tap **+ Track this bet** on a pick's details or the Player tab's verdict card and it's
+  listed in the Tools tab, graded from the box score (the game is matched by its exact date — or NFL
+  season and week — and opponent), with your record and units at the price you tracked it at. Saved
+  on the device only.
 - **Bet calculator** — type your Polymarket price to get the multiplier, edge,
   expected value and a quarter-Kelly stake.
 - **Parlay builder** — combined model chance, real payout at your prices, and a

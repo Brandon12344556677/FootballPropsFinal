@@ -280,9 +280,13 @@ window.PS = (function(){
         `<div class="vd-main"><div class="vd-top"><span class="vd-chip">${v.label}</span><span class="vd-cap">Model chance${range?' · '+range:''}${games?' · '+games:''}</span></div>`+
           `<div class="vd-bet"><span class="leantag ${esc(o.side)}">${esc(o.side)}</span><b>${esc(o.line)}</b><span>${esc(o.statText)}</span></div>`+
           stats+`<p class="vd-say">${esc(v.say)}</p></div>`+
-        `<button type="button" class="btn ghost vd-share">🔗 Share</button>`;
+        `<div class="vd-btns"><button type="button" class="btn vd-track" hidden></button><button type="button" class="btn ghost vd-share">🔗 Share</button></div>`;
     }
     const sb=el.querySelector('.vd-share'); if(sb) sb.onclick=o.onShare||null;
+    const tb=el.querySelector('.vd-track');
+    if(tb){ const t=o.track, label=on=>{ tb.textContent= on? '✓ Tracked' : '+ Track this bet'; tb.classList.toggle('on', !!on); };
+      tb.hidden=!t; if(t){ label(t.on);
+        tb.onclick=()=>{ const on=t.toggle(); t.on=on; label(on); toast(on? 'Added to My bets — find it in the Tools tab' : 'Removed from My bets'); }; } }
     el.hidden=false;
   }
 
@@ -349,6 +353,43 @@ window.PS = (function(){
   }
   if(document.readyState!=='loading') ageGate(); else document.addEventListener('DOMContentLoaded', ageGate);
 
+  // ---- My bets: props you tracked, graded from the box score, saved on this device only ----
+  const BETS_KEY='psl_mybets';
+  function loadBets(){ try{ const a=JSON.parse(localStorage.getItem(BETS_KEY)||'[]'); return Array.isArray(a)? a : []; }catch(e){ return []; } }
+  function saveBets(a){ try{ localStorage.setItem(BETS_KEY, JSON.stringify(a.slice(-300))); }catch(e){} }
+  const betId=b=>[b.sport, b.pid, b.stat, b.line, b.side, b.game].join('|');
+  const isTracked=b=> !!b && loadBets().some(x=>x.id===betId(b));
+  // b: {sport, pid, name, team, opp, stat, statText, line, side, prob, price, game, when} — returns whether it's now tracked
+  function toggleBet(b){ const a=loadBets(), id=betId(b), i=a.findIndex(x=>x.id===id);
+    if(i>=0){ a.splice(i,1); saveBets(a); return false; }
+    a.push(Object.assign({id, at:new Date().toISOString()}, b)); saveBets(a); return true; }
+  // resultFor(b) -> {res:'hit'|'miss'|'push'|'void', actual} once graded, or null while pending
+  function renderBets(el, sport, resultFor){
+    if(!el) return;
+    const mine=loadBets().filter(b=>b.sport===sport).reverse();
+    if(!mine.length){ el.innerHTML=`<p class="mktnote">No bets tracked yet. Open a pick's details, or any prop on the Player tab, and tap <b>+ Track this bet</b> — it's graded here from the box score once the game is final. Saved on this device only.</p>`; return; }
+    const LBL={hit:'Hit', miss:'Miss', push:'Push', void:"Void · didn't play", pend:'Pending'};
+    let hit=0, miss=0, push=0, units=0, priced=0;
+    const rows=mine.map(b=>{
+      let r=null; try{ r=resultFor(b); }catch(e){}
+      const res=r? r.res : 'pend';
+      if(res==='hit'){ hit++; if(b.price){ priced++; units+=1/b.price-1; } }
+      else if(res==='miss'){ miss++; if(b.price){ priced++; units-=1; } }
+      else if(res==='push') push++;
+      const px=b.price!=null? `${Math.round(b.price*100)}¢` : 'no price';
+      return `<div class="betrow r-${res}"><div class="br-main"><b>${esc(b.name)}</b> <span class="leantag ${esc(b.side)}">${esc(b.side)}</span> <b>${esc(b.line)}</b> ${esc(b.statText)}`+
+        `<span class="br-sub">vs ${esc(b.opp)} · ${esc(b.when||b.game)} · model ${Math.round(b.prob*100)}% · ${px}</span></div>`+
+        `<span class="br-res">${LBL[res]}${r && r.actual!=null? ` · ${esc(num(r.actual))}` : ''}</span>`+
+        `<button type="button" class="br-x" data-id="${esc(b.id)}" aria-label="Remove this bet">✕</button></div>`;
+    });
+    const n=hit+miss;
+    el.innerHTML=`<div class="betsum"><span><b>${hit}–${miss}${push? '–'+push : ''}</b> record</span>`+
+      (n? `<span><b>${Math.round(100*hit/n)}%</b> hit</span>` : '')+
+      (priced? `<span><b class="${units>=0?'pos':'neg'}">${units>=0?'+':'−'}${Math.abs(units).toFixed(2)}u</b> at your tracked prices</span>` : '')+
+      `<span><b>${mine.length}</b> tracked</span></div>`+rows.join('');
+    el.querySelectorAll('.br-x').forEach(x=>x.onclick=()=>{ saveBets(loadBets().filter(b=>b.id!==x.dataset.id)); renderBets(el, sport, resultFor); });
+  }
+
   // ---- trust line under each hero: when the data last updated, and how many picks are graded in public ----
   // Both come from today.json, which the hourly job rewrites on every run.
   function ago(ms){ const m=Math.max(0, Math.round((Date.now()-ms)/60000));
@@ -370,5 +411,6 @@ window.PS = (function(){
   }
   if(document.readyState!=='loading') trust(); else document.addEventListener('DOMContentLoaded', trust);
 
-  return {teamVars, ticker, until, skeleton, esc, hashFor, pickHash, parsePickHash, syncHash, sharePick, toast, helpBtn, spark, verdict, icon, sheet, closeSheet, pickSheet};
+  return {teamVars, ticker, until, skeleton, esc, hashFor, pickHash, parsePickHash, syncHash, sharePick, toast, helpBtn, spark, verdict, icon, sheet, closeSheet, pickSheet,
+          isTracked, toggleBet, renderBets};
 })();

@@ -506,3 +506,22 @@ html body .pslcookie button{padding:7px 14px;font-size:13px;border-radius:999px;
 .pstrust .tr-how{color:#86e6b6;text-decoration:none;font-weight:600}
 .pstrust .tr-how:hover{text-decoration:underline}
 @media(max-width:760px){.pstrust{font-size:12px;gap:6px 12px;margin-top:10px}}
+
+/* ================= My bets ================= */
+.app .vd-btns{display:flex;flex-direction:column;gap:8px;align-self:center}
+.app .vd-track{white-space:nowrap}
+.app .vd-track.on{background:rgba(34,208,127,.14);color:var(--ps-green);border:1px solid rgba(34,208,127,.5);box-shadow:none}
+@media(max-width:760px){.app .vd-btns{grid-column:1/-1;flex-direction:row}.app .vd-btns .btn{flex:1;justify-content:center}}
+.pssheet .verdict .vd-btns{grid-column:1/-1;flex-direction:row;justify-self:start}
+.app .betsum{display:flex;flex-wrap:wrap;gap:6px 22px;margin:0 0 12px;padding:12px 16px;border-radius:14px;background:rgba(255,255,255,.03);border:1px solid var(--ps-line-soft);color:var(--ps-muted);font-size:13.5px}
+.app .betsum b{font-family:var(--ps-num);font-weight:700;font-size:19px;color:#fff;font-variant-numeric:tabular-nums;margin-right:4px}
+.app .betsum b.pos{color:var(--ps-green)} .app .betsum b.neg{color:var(--ps-red)}
+.app .betrow{display:flex;align-items:center;gap:12px;padding:11px 12px;border-bottom:1px solid var(--ps-line-soft);border-left:3px solid #9fb0c6}
+.app .betrow.r-hit{border-left-color:var(--ps-green)} .app .betrow.r-miss{border-left-color:var(--ps-red)} .app .betrow.r-pend{border-left-color:var(--ps-gold)}
+.app .br-main{flex:1;min-width:0;color:var(--ps-soft);font-size:14.5px}
+.app .br-main b{color:#fff}
+.app .br-sub{display:block;font-size:12.5px;color:var(--ps-muted);margin-top:2px}
+.app .br-res{font-family:var(--ps-cond);font-weight:700;text-transform:uppercase;letter-spacing:.08em;font-size:13px;white-space:nowrap;color:#dfe6ef}
+.app .r-hit .br-res{color:var(--ps-green)} .app .r-miss .br-res{color:var(--ps-red)} .app .r-pend .br-res{color:var(--ps-gold)}
+.app .br-x{border:0;background:none;color:var(--ps-muted);cursor:pointer;font-size:14px;padding:4px 6px}
+.app .br-x:hover{color:#fff}

@@ -614,8 +614,8 @@ tr.hit td{background:var(--hit-soft)} tr.miss td{background:var(--miss-soft)}
 .panel.collapsed{padding-bottom:14px}
 </style>
 
-<link rel="stylesheet" href="app.css?v=20260930j">
-<script src="app.js?v=20260930j"></script>
+<link rel="stylesheet" href="app.css?v=20260930k">
+<script src="app.js?v=20260930k"></script>
 
 <header class="apptop">
   <div class="apptop-in">
@@ -753,6 +753,10 @@ tr.hit td{background:var(--hit-soft)} tr.miss td{background:var(--miss-soft)}
 </div>
 
 <div id="page-tools" hidden>
+  <div class="panel" id="betspanel">
+    <div class="mkthead"><h2>📈 My bets</h2><span class="mktmuted">props you tracked — graded from the box score, saved on this device</span></div>
+    <div id="betsbody"></div>
+  </div>
   <div class="panel">
     <div class="mkthead"><h2>⭐ Watchlist</h2><span class="mktmuted">players you've starred — saved on this device</span></div>
     <div id="watchbody"></div>
@@ -1036,6 +1040,28 @@ $('adjctx').onchange=()=>{ state.adj=$('adjctx').checked; render(); };
 
 // ---- render player ----
 function tileClass(p){ return p>=0.6?'hi':p>=0.45?'mid':'lo'; }
+// ---- My bets: track a prop against the team's next game; graded from the player's box score ----
+function betFor(p, sk, line, side, prob, price, gid){
+  // a board pick names its own game ("2026-09-30-PIT-PHI"); from the Player tab it's the team's next game
+  const m=/^(\d{4}-\d{2}-\d{2})-([A-Z]+)-([A-Z]+)$/.exec(gid||''), g=m? null : teamGame(p.t);
+  if(!m && !g) return null;
+  // The box score is dated by the game's UTC day — the same date a game id carries (a late game in
+  // the East is dated the next day) — so that's the key, matched exactly: a series plays the same
+  // opponent on back-to-back days, and a looser match would grade tonight's bet on last night's game.
+  const day=m? m[1] : (g.start? String(g.start).slice(0,10) : g.date), opp=m? (p.t===m[2]? m[3] : m[2]) : (g.away===p.t? g.home : g.away);
+  const when=g && g.start? new Date(g.start).toLocaleDateString('en-US',{month:'short', day:'numeric', timeZone:'America/New_York'})
+                         : new Date(day+'T12:00:00Z').toLocaleDateString('en-US',{month:'short', day:'numeric'});
+  return {sport:SPORT_KEY, pid:String(p.id), name:p.n, team:p.t, opp, stat:sk, statText:statLabel(sk), line:+line, side,
+    prob, price:price==null? null : price, game:day, when}; }
+function betResult(b){
+  const p=byId[b.pid], st=STATMAP[b.stat]; if(!p || !st) return null;
+  const d0=Date.parse(b.game+'T12:00:00Z');
+  const row=(p.g||[]).find(r=>r[1]===b.game && r[2]===b.opp);
+  if(!row) return Date.now()-d0>3*864e5? {res:'void'} : null;   // no box score 3 days on: didn't play
+  const v=st.get(row);
+  return {res: v===b.line? 'push' : (b.side==='under'? v<b.line : v>b.line)? 'hit' : 'miss', actual:v}; }
+function renderMyBets(){ PS.renderBets($('betsbody'), SPORT_KEY, betResult); }
+function trackFor(bet){ return bet? {on:PS.isTracked(bet), toggle:()=>{ const on=PS.toggleBet(bet); renderMyBets(); return on; }} : null; }
 // The verdict card under the headline: the model's chance against the Polymarket price saved
 // with this exact pick at the last hourly update (these boards don't poll prices live).
 let VERDICT=null;   // {prob, lo, hi, neff} for the prop on screen, set by render()
@@ -1047,7 +1073,8 @@ function paintVerdict(){
   const near=same? null : (mine.find(x=>(x.side||'over')===state.ou) || mine[0]);
   PS.verdict($('verdict'), {prob:v.prob, lo:v.lo, hi:v.hi, neff:v.neff, side:state.ou, line:state.line, statText:statLabel(state.stat),
     price: same? same.price : null, live:false, marketLine:(near && +near.line!==+state.line)? near.line : null,
-    onShare:()=>PS.sharePick(state, statLabel(state.stat))});
+    onShare:()=>PS.sharePick(state, statLabel(state.stat)),
+    track:trackFor(betFor(p, state.stat, state.line, state.ou, v.prob, same? same.price : null))});
 }
 function render(){
   const p=state.player;
@@ -1176,7 +1203,7 @@ let edgeSort={key:'prob',dir:-1}, valueSort={key:'prob',dir:-1}, goodSort={key:'
 function gameOf(p){ const m=/^\d{4}-\d{2}-\d{2}-([A-Z]+)-([A-Z]+)$/.exec(p.gid||'');
   return m? {away:m[1], home:m[2]} : {away:p.team, home:p.opp}; }
 function normPick(p){ const px=p.price==null? null : p.price;
-  return {pid:p.pid, name:p.player, team:p.team, game:gameOf(p), sk:p.stat, statText:statLabel(p.stat),
+  return {pid:p.pid, gid:p.gid, name:p.player, team:p.team, game:gameOf(p), sk:p.stat, statText:statLabel(p.stat),
     line:p.line, side:p.side||'over', prob:p.prob, lo:p.lo, hi:p.hi, n:Math.round(p.neff||0),
     price:px, edge:(px==null||p.prob==null)? null : p.prob-px}; }
 function listRows(tag){ return upcomingPicks().filter(p=>(p.lists||'').includes(tag) && p.prob!=null).map(normPick); }
@@ -1215,6 +1242,7 @@ function openPickSheet(r){ const p=byId[r.pid]; if(!p){ loadPick(r); return; }
   const g=r.game||{}, vs=r.team===g.home? 'vs '+g.away : r.team===g.away? '@ '+g.home : '';
   PS.pickSheet({name:r.name, team:r.team, sport:SPORT_KEY, vs, prob:r.prob, lo:r.lo, hi:r.hi, neff:r.n, side:r.side, line:r.line, statText:r.statText,
     price:r.price, live:false, vals:valuesOf(p, r.sk), onOpen:()=>loadPick(r),
+    track:trackFor(betFor(p, r.sk, r.line, r.side, r.prob, r.price, r.gid)),
     onShare:()=>PS.sharePick({player:p, stat:r.sk, line:r.line, ou:r.side}, r.statText)}); }
 function wireTable(el, rows, sort, rerender){
   el.querySelectorAll('.edgeload').forEach(b=>b.onclick=()=>openPickSheet(rows[+b.dataset.i]));
@@ -1604,6 +1632,7 @@ function renderValueWeek(){
   el.hidden=false;
 }
 renderValueWeek();
+renderMyBets();
 // A shared pick link (#player/<id>/<stat>/<line>/<side>) opens straight onto that prop;
 // any other hash just picks the tab.
 (function(){ const h=(location.hash||'').replace('#',''), pk=PS.parsePickHash(h);

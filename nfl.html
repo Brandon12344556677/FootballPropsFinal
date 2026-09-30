@@ -607,8 +607,8 @@ table td,table th,thead th,tbody td,.edgetbl td,.edgetbl th,.caltbl td,.caltbl t
 .valrules .vrfoot b{color:#fff}
 </style>
 
-<link rel="stylesheet" href="app.css?v=20260930j">
-<script src="app.js?v=20260930j"></script>
+<link rel="stylesheet" href="app.css?v=20260930k">
+<script src="app.js?v=20260930k"></script>
 
 <header class="apptop">
   <div class="apptop-in">
@@ -796,6 +796,10 @@ table td,table th,thead th,tbody td,.edgetbl td,.edgetbl th,.caltbl td,.caltbl t
 </div><!-- /page-player -->
 
 <div id="page-tools" hidden>
+  <div class="panel" id="betspanel">
+    <div class="mkthead"><h2>📈 My bets</h2><span class="mktmuted">props you tracked — graded from the box score, saved on this device</span></div>
+    <div id="betsbody"></div>
+  </div>
   <div class="panel watchpanel" id="watchpanel" hidden>
     <div class="mkthead"><h2>⭐ Watchlist</h2><span class="mktmuted">Players you've starred — saved on this device</span></div>
     <div class="watchlist" id="watchlist"></div>
@@ -1190,6 +1194,21 @@ function renderEmpty(){
   hideMarketOdds();
   renderSplits(); renderCalc(); renderCompare();
 }
+// ---- My bets: track a prop against the team's game this week; graded from the player's box score ----
+function betFor(p, sk, line, side, prob, price){
+  const g=teamGame(p.t); if(!g) return null;
+  const opp=g.away===p.t? g.home : g.away;
+  return {sport:'nfl', pid:String(p.id), name:p.n, team:p.t, opp, stat:sk, statText:statLabel(sk), line:+line, side,
+    prob, price:price==null? null : price, game:`${g.season}-W${g.week}`, when:`Week ${g.week}`}; }
+function betResult(b){
+  const p=byId[b.pid], st=STATMAP[b.stat], m=/^(\d{4})-W(\d+)$/.exec(b.game||''); if(!p || !st || !m) return null;
+  const season=+m[1], week=+m[2];
+  const row=(p.g||[]).find(r=>r[0]===season && r[1]===week);
+  if(!row){ const now=DB.week||{}; return (now.season>season || (now.season===season && now.week>week+1))? {res:'void'} : null; }   // two weeks on, no box score: didn't play
+  const v=st.get(row);
+  return {res: v===b.line? 'push' : (b.side==='under'? v<b.line : v>b.line)? 'hit' : 'miss', actual:v}; }
+function renderMyBets(){ PS.renderBets($('betsbody'), 'nfl', betResult); }
+function trackFor(bet){ return bet? {on:PS.isTracked(bet), toggle:()=>{ const on=PS.toggleBet(bet); renderMyBets(); return on; }} : null; }
 // The verdict card under the headline: the model's chance against the live Polymarket US
 // price for this exact prop (render() sets the model side, pmDraw() the price side).
 let VERDICT=null;   // {prob, lo, hi, neff} for the prop on screen
@@ -1200,7 +1219,8 @@ function paintVerdict(){
   const px=(mine && q && q.open && PM.line===state.line)? (state.ou==='over'? q.over : q.under) : null;
   PS.verdict($('verdict'), {prob:v.prob, lo:v.lo, hi:v.hi, neff:v.neff, side:state.ou, line:fmt(state.line), statText:statLabel(state.stat),
     price:px, live:px!=null, marketLine:(mine && PM.line!==state.line)? fmt(PM.line) : null,
-    onShare:()=>PS.sharePick(state, statLabel(state.stat))});
+    onShare:()=>PS.sharePick(state, statLabel(state.stat)),
+    track:trackFor(betFor(p, state.stat, state.line, state.ou, v.prob, px))});
 }
 function render(){
   PS.syncHash(state);
@@ -2036,6 +2056,7 @@ function openPickSheet(r){ if(!r.pl){ loadEdge(r); return; }
   const live=livePriceFor(r), px= live!=null? live : (r.vprice!=null? r.vprice : null);
   PS.pickSheet({name:r.name, team:r.team, sport:'nfl', vs, prob:r.prob, lo:r.lo, hi:r.hi, neff:r.n, side:r.side, line:r.line, statText:r.statText,
     price:px, live:live!=null, vals:valuesOf(r.pl, r.sk), onOpen:()=>loadEdge(r),
+    track:trackFor(betFor(r.pl, r.sk, r.line, r.side, r.prob, px)),
     onShare:()=>PS.sharePick({player:r.pl, stat:r.sk, line:r.line, ou:r.side}, r.statText)}); }
 function wireLoad(el, rows){ el.querySelectorAll('.edgeload').forEach(b=>b.onclick=()=>openPickSheet(rows[+b.dataset.i]));
   // The whole card opens its details too (not just the button).
@@ -2836,6 +2857,7 @@ restore();
 renderParlay();
 initAutoParlay();
 renderWatch();
+renderMyBets();
 renderLeaderboard();
 generateDigest();
 // Private creator tool — the shareable card is hidden from the public; reveal it with ?card in the URL
