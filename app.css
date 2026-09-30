@@ -328,3 +328,23 @@ body{margin:0;background:var(--ps-bg);color:var(--ps-text);font-family:var(--ps-
   padding:10px 18px;border-radius:999px;background:#00c805;color:#06210b;font-family:"Barlow",system-ui,sans-serif;font-weight:700;font-size:14px;
   box-shadow:0 14px 34px rgba(0,0,0,.4);transition:opacity .2s ease,transform .2s ease}
 .pstoast.on{opacity:1;transform:translate(-50%,0)}
+
+/* phones: 25 Guaranteed shows 10 cards until "Show all" (app.js adds the button) */
+.app .showall{display:none}
+@media(max-width:760px){
+  .app #edgebody .pickgrid:not(.all)>.pickcard:nth-child(n+11){display:none}
+  .app .showall{display:block;width:100%;margin:12px 0 4px}
+}
+
+/* plain-English explainers: "How to read a card" legend, header "?" buttons, and the popover */
+.pslegend{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:0 0 12px}
+.pslegend .lg-lab{font-family:"Barlow Condensed",Impact,sans-serif;text-transform:uppercase;letter-spacing:.12em;font-size:12px;color:#9fb0c6;margin-right:4px}
+.qhelp{display:inline-flex;align-items:center;gap:6px;padding:5px 8px 5px 11px;border-radius:999px;cursor:pointer;
+  border:1px dashed rgba(0,200,5,.45);background:rgba(0,200,5,.06);color:#dfe6ef;font:600 13px/1.2 "Barlow",system-ui,sans-serif}
+.qhelp:hover,.qhelp[aria-expanded="true"]{border-style:solid;border-color:#00c805;color:#fff}
+.qhelp .qi{display:inline-grid;place-items:center;width:17px;height:17px;border-radius:50%;background:rgba(0,200,5,.18);color:#00c805;font-size:11px;font-weight:700}
+.qhelp.hq{padding:0;border:0;background:none;vertical-align:middle;margin-left:6px}   /* the lone "?" next to a heading */
+.qhelp.hq .qi{width:20px;height:20px;font-size:12px}
+.pshelp{position:absolute;z-index:300;padding:12px 14px;border-radius:14px;background:#0f2038;border:1px solid rgba(0,200,5,.5);
+  box-shadow:0 18px 44px rgba(0,0,0,.5);color:#dfe6ef;font:14px/1.5 "Barlow",system-ui,sans-serif}
+.pshelp b{display:block;margin-bottom:3px;color:#00c805;font-family:"Barlow Condensed",Impact,sans-serif;text-transform:uppercase;letter-spacing:.1em;font-size:13px}

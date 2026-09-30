@@ -613,8 +613,8 @@ tr.hit td{background:var(--hit-soft)} tr.miss td{background:var(--miss-soft)}
 .panel.collapsed > *:not(:first-child){display:none!important}
 .panel.collapsed{padding-bottom:14px}
 </style>
-<link rel="stylesheet" href="app.css?v=20260930b">
-<script src="app.js?v=20260930b"></script>
+<link rel="stylesheet" href="app.css?v=20260930c">
+<script src="app.js?v=20260930c"></script>
 
 <header class="apptop">
   <div class="apptop-in">
@@ -662,7 +662,7 @@ tr.hit td{background:var(--hit-soft)} tr.miss td{background:var(--miss-soft)}
     <div id="digestbody"></div>
   </div>
   <div class="panel" id="valuepanel" hidden>
-    <div class="mkthead"><h2>⚡ Value spots</h2><span class="mktmuted">market gives it 30%+, model is 15+ points better — overs and unders both</span><span class="mktmuted" id="recV"></span></div>
+    <div class="mkthead"><h2>⚡ Value spots<button type="button" class="qhelp hq" data-help="value" aria-expanded="false" aria-label="What are Value spots?"><span class="qi" aria-hidden="true">?</span></button></h2><span class="mktmuted">market gives it 30%+, model is 15+ points better — overs and unders both</span><span class="mktmuted" id="recV"></span></div>
     <div class="valrules">
       <div class="vrhead">What counts as a value spot — both rules have to be true</div>
       <ol class="vrlist">
@@ -675,7 +675,7 @@ tr.hit td{background:var(--hit-soft)} tr.miss td{background:var(--miss-soft)}
   </div>
   <div class="panel" id="edgepanel">
     <div class="mkthead">
-      <h2>🔒 25 Guaranteed</h2>
+      <h2>🔒 25 Guaranteed<button type="button" class="qhelp hq" data-help="guaranteed" aria-expanded="false" aria-label="What is 25 Guaranteed?"><span class="qi" aria-hidden="true">?</span></button></h2>
       <button id="edgescan" class="btn" type="button">Scan the board</button>
       <span id="edgestatus"></span>
       <span class="mktmuted" id="recT"></span>

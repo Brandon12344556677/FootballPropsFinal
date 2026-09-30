@@ -117,6 +117,7 @@ Put your referral link in `url`. Leave it `""` to hide the banner.
 | `picks.json` | Every recorded pick, live and backtest, with grades. Read by the Past picks tab. |
 | `build_today.py` | Runs after the four builders and writes `today.json` from their picks and season records. Standard library only; never fails the deploy. |
 | `today.json` | The home page's cross-sport **Today** feed (the best upcoming value spots, at most 3 per sport up top, each linking to its prop) and the season records its ticker leads with. |
+| `post_daily.py` | Once a day, posts yesterday's Value results and today's best value (with links) to Discord and/or Telegram. Needs the secrets below; does nothing without them. |
 | `.github/workflows/update.yml` | The scheduled job: tests, build, commit. |
 | `tests/` | Unit tests for the model, market parsing, grading, and a check that the JavaScript model matches the Python one. |
 | `tools/tune_context.py` | Re-fits the game-context adjustment strengths on the backtest. Run it when a season of new data has accumulated. |
@@ -157,6 +158,20 @@ the site through a web server (or the hosted URL) rather than as a file. The
 Polymarket API also has to be reachable from where you run the build; if it
 isn't, the build keeps the previous `slate.json` and skips recording new live
 picks but still updates stats, grades, and the backtest.
+
+## Daily Discord / Telegram post (optional)
+The hourly job can post once a day, after 11 AM ET: yesterday's Value spots results
+(wins and losses) and today's best value, each linking straight to its prop, plus the
+referral code. Add either or both as **Settings → Secrets and variables → Actions →
+New repository secret**:
+- **Discord:** in your server, *Server settings → Integrations → Webhooks → New
+  webhook*, pick the channel, *Copy Webhook URL*, save it as `DISCORD_WEBHOOK_URL`.
+- **Telegram:** message @BotFather, send `/newbot`, save the token as
+  `TELEGRAM_BOT_TOKEN`. Add the bot to your channel as an admin, and save the
+  channel's `@username` (or its numeric id) as `TELEGRAM_CHAT_ID`.
+
+To test right away: **Actions → Update NFL data → Run workflow**, set *post* to `1`.
+`python post_daily.py --dry-run` prints the message without sending it.
 
 ## One-time GitHub setup
 1. Create a **public** repository and upload everything in this folder, including

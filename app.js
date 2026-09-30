@@ -81,8 +81,68 @@ window.PS = (function(){
     if(fresh.length) setTimeout(()=>fresh.forEach(r=>{ if(r.classList.contains('on')) return;
       const b=r.getBoundingClientRect(); if(b.bottom>0 && b.top<innerHeight){ r.classList.add('on'); if(io) io.unobserve(r); } }), 1200);
   }
+  // ---- phones: 25 Guaranteed shows 10 cards and a "Show all" button (app.css hides the rest) ----
+  let edgesOpen=false;      // once opened, re-sorting keeps the full list
+  function clampEdges(){
+    const g=document.querySelector('#edgebody .pickgrid:not([aria-busy])'); if(!g || g.dataset.clamp) return;
+    g.dataset.clamp='1';
+    const n=g.querySelectorAll(':scope > .pickcard').length; if(n<=10) return;
+    if(edgesOpen){ g.classList.add('all'); return; }
+    const b=document.createElement('button'); b.type='button'; b.className='btn ghost showall'; b.textContent=`Show all ${n} ↓`;
+    b.onclick=()=>{ edgesOpen=true; g.classList.add('all'); b.remove(); };
+    g.after(b);
+  }
+
+  // ---- plain-English explainers: tap a term for one line on what it means ----
+  const HELP={
+    model:['Model %', "Our estimate of how often this bet wins — from the player's recent games, adjusted for the matchup. 71% means about 7 times in 10."],
+    price:['Price', 'What one share costs on Polymarket. A share pays $1 if the bet wins, so a 43¢ price also means the market sees it as a 43% chance.'],
+    payout:['Payout', 'What you get back for each $1 if it wins, your stake included. 2.33× means a $10 bet returns $23.30.'],
+    edge:['Edge', "The model's chance minus the market's, in points. +28 means we rate it 28 points likelier than the price says. Bigger is better — but it's an estimate, not a promise."],
+    range:['Range · games', 'The first numbers are where the true chance most likely sits (80% range); "12g" is how many games it\'s based on. Wide range or few games = less certain.'],
+    value:['Value spots', 'Bets where Polymarket gives at least a 30% chance and our model is 15+ points higher. The best bets for the price — not the surest ones.'],
+    guaranteed:['25 Guaranteed', "The likeliest bets on the board, whatever they pay. Not actually guaranteed: they still lose sometimes, and at 85–97¢ a single loss wipes out several wins."],
+  };
+  const helpBtn=(k,label)=>`<button type="button" class="qhelp" data-help="${k}" aria-expanded="false">${label}<span class="qi" aria-hidden="true">?</span></button>`;
+  function legend(short){
+    return `<div class="pslegend"><span class="lg-lab">How to read a card</span>${helpBtn('model','Model %')}${helpBtn('price','Price')}${helpBtn('payout','Payout')}${helpBtn('edge','Edge')}${short?'':helpBtn('range','Range')}</div>`;
+  }
+  // One legend per page, just above the first real grid of pick cards. Boards render at
+  // different times (NFL's leaderboard at once, Value spots after the live scan), so it
+  // moves up when a grid appears above it.
+  function placeLegend(){
+    const root=document.querySelector('#page-week, #today'); if(!root) return;
+    const g=[...root.querySelectorAll('.pickgrid:not([aria-busy])')].find(x=>x.querySelector('.pickcard') && !x.closest('.collapsed')); if(!g) return;
+    const cur=root.querySelector('.pslegend');
+    if(cur && cur.nextElementSibling===g) return;
+    if(cur) cur.remove();
+    g.insertAdjacentHTML('beforebegin', legend(!!g.closest('#today')));
+  }
+  let pop=null;
+  function closeHelp(){ if(!pop) return; pop.remove(); pop=null;
+    document.querySelectorAll('.qhelp[aria-expanded="true"]').forEach(b=>{ b.setAttribute('aria-expanded','false'); b.removeAttribute('aria-describedby'); }); }
+  // Capture phase: runs before a collapsible panel header or a card link sees the tap.
+  document.addEventListener('click', e=>{
+    const b=e.target.closest && e.target.closest('.qhelp');
+    if(!b){ if(pop && !pop.contains(e.target)) closeHelp(); return; }
+    e.preventDefault(); e.stopPropagation();
+    const wasOpen=b.getAttribute('aria-expanded')==='true'; closeHelp(); if(wasOpen) return;
+    const h=HELP[b.dataset.help]; if(!h) return;
+    pop=document.createElement('div'); pop.className='pshelp'; pop.id='pshelp'; pop.setAttribute('role','tooltip');
+    pop.innerHTML=`<b>${esc(h[0])}</b>${esc(h[1])}`;
+    const w=Math.min(300, innerWidth-24); pop.style.width=w+'px';
+    document.body.appendChild(pop);
+    const r=b.getBoundingClientRect();
+    const left=Math.max(12, Math.min(r.left+r.width/2-w/2, innerWidth-w-12));
+    let top=r.bottom+8; if(top+pop.offsetHeight>innerHeight-8 && r.top-pop.offsetHeight-8>0) top=r.top-pop.offsetHeight-8;
+    pop.style.left=(left+scrollX)+'px'; pop.style.top=(top+scrollY)+'px';
+    b.setAttribute('aria-expanded','true'); b.setAttribute('aria-describedby','pshelp');
+  }, true);
+  document.addEventListener('keydown', e=>{ if(e.key==='Escape') closeHelp(); });
+  addEventListener('resize', closeHelp);
+
   let queued=false;
-  new MutationObserver(()=>{ if(queued) return; queued=true; setTimeout(()=>{ queued=false; watchRings(); }, 60); })
+  new MutationObserver(()=>{ if(queued) return; queued=true; setTimeout(()=>{ queued=false; watchRings(); clampEdges(); placeLegend(); }, 60); })
     .observe(document.documentElement, {childList:true, subtree:true});
 
   // ---- hover spotlight: the card's glow follows the pointer ----
@@ -126,5 +186,5 @@ window.PS = (function(){
     else window.prompt('Copy this link:', url);
   }
 
-  return {teamVars, ticker, until, skeleton, esc, hashFor, pickHash, parsePickHash, syncHash, sharePick, toast};
+  return {teamVars, ticker, until, skeleton, esc, hashFor, pickHash, parsePickHash, syncHash, sharePick, toast, helpBtn};
 })();
