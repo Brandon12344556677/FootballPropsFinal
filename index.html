@@ -269,18 +269,19 @@ h2 i{color:var(--green)}
 }
 
 /* promo strip at the top of the page */
-.promo{padding:18px 0 0}
-.promo .ref{margin:0 auto}
-.promo .ref2{margin:10px auto 0}
-.promo .social{margin-top:14px;align-items:center;gap:10px}
-.promo .social a{padding:8px 16px;font-size:14px}
-.promo .follow{font-family:var(--display);font-size:22px;color:var(--green);margin-right:4px}
-.promo + .hero{padding-top:44px}
-@media (max-width:620px){
-  .promo .ref{font-size:14.5px;padding:13px 14px}
-  .promo .ref2{font-size:14px;padding:11px 14px}
-  .promo .follow{width:100%;text-align:center;margin:0}
-}
+.promo{padding:16px 0 0}
+.promo .wrap{display:flex;flex-wrap:wrap;gap:10px;justify-content:center}
+.promo .ref,.promo .ref2{display:inline-flex;align-items:center;margin:0;max-width:none;border-radius:999px;padding:10px 20px;
+  font-size:15px;text-transform:none;letter-spacing:.05em}
+.promo + .hero{padding-top:40px}
+@media (max-width:620px){.promo .ref,.promo .ref2{width:100%;justify-content:center;font-size:14.5px;padding:11px 14px}}
+/* sport tiles: an even grid, so four sports never leave one stranded on its own row */
+.hero .sports{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));max-width:460px}
+.cta .sports{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));max-width:780px;margin:26px auto 0}
+.sports .sport{min-width:0}
+@media (max-width:720px){.cta .sports{grid-template-columns:repeat(2,minmax(0,1fr))}}
+footer .social{justify-content:flex-start;margin:0 0 18px}
+footer .social a{padding:8px 16px;font-size:14px}
 
 /* footer */
 footer{margin-top:80px;border-top:1px solid rgba(255,255,255,.07);padding:36px 0 60px;color:var(--muted);font-size:13.5px}
@@ -365,17 +366,11 @@ footer .fine a{color:#8394ab}
 </header>
 
 <main>
-  <!-- PROMO: Polymarket code, group, and social handles — first thing on the page -->
+  <!-- PROMO: Polymarket code + group, one slim row (socials live in the footer) -->
   <div class="promo">
     <div class="wrap">
-      <a class="ref" href="https://polymarket.us/join/propstreaklab" target="_blank" rel="noopener sponsored">🎁 Get $50 FREE with code PROPSTREAKLAB — sign up &amp; trade on Polymarket →</a>
+      <a class="ref" href="https://polymarket.us/join/propstreaklab" target="_blank" rel="noopener sponsored">🎁 Get $50 free with code PROPSTREAKLAB →</a>
       <a class="ref2" href="https://polymarket.us/squad/join/CDU9RMD97K7O1G95yAao?referrer=propstreaklab" target="_blank" rel="noopener sponsored">👥 Join our Polymarket group →</a>
-      <div class="social" aria-label="Follow us">
-        <span class="follow">Follow us</span>
-        <a href="https://www.instagram.com/propstreaklab" target="_blank" rel="noopener">📸 Instagram</a>
-        <a href="https://www.tiktok.com/@propstreaklab" target="_blank" rel="noopener">🎵 TikTok</a>
-        <a href="https://x.com/propstreaklab" target="_blank" rel="noopener">𝕏 Twitter</a>
-      </div>
     </div>
   </div>
 
@@ -434,9 +429,9 @@ footer .fine a{color:#8394ab}
   <!-- STATS STRIP -->
   <div class="strip" role="list" aria-label="At a glance">
     <div class="wrap">
-      <div class="stat" role="listitem"><b data-count="3">3</b><span>Sports</span></div>
-      <div class="stat" role="listitem"><b><span data-count="2000">2,000</span><em>+</em></b><span>Players tracked</span></div>
-      <div class="stat" role="listitem"><b>Daily</b><span>Auto-updated each morning</span></div>
+      <div class="stat" role="listitem"><b data-count="4">4</b><span>Sports</span></div>
+      <div class="stat" role="listitem"><b><span data-count="3800">3,800</span><em>+</em></b><span>Players tracked</span></div>
+      <div class="stat" role="listitem"><b>Hourly</b><span>Auto-updated every hour</span></div>
       <div class="stat" role="listitem"><b><em>$</em>0</b><span>100% free to use</span></div>
     </div>
   </div>
@@ -643,6 +638,11 @@ footer .fine a{color:#8394ab}
         <a href="mailto:info@propstreaklab.com">Contact</a>
       </nav>
     </div>
+    <div class="social" aria-label="Follow us">
+      <a href="https://www.instagram.com/propstreaklab" target="_blank" rel="noopener">📸 Instagram</a>
+      <a href="https://www.tiktok.com/@propstreaklab" target="_blank" rel="noopener">🎵 TikTok</a>
+      <a href="https://x.com/propstreaklab" target="_blank" rel="noopener">𝕏 Twitter</a>
+    </div>
     <p class="fine">Informational and entertainment use only — not betting or financial advice. Prop Streak Lab does not accept bets or facilitate wagering. Some links to Polymarket are affiliate links. © 2026 Prop Streak Lab.</p>
     <p class="fine">Data accuracy: stats, lines, injury reports and prices come from third-party sources (nflverse, ESPN, Polymarket) and may be delayed, incomplete, or occasionally wrong. Model outputs are estimates, not guarantees — verify independently before relying on anything here.</p>
     <p class="fine">For adults, 18+. If gambling stops being fun, stop — call 1-800-522-4700 (US, National Problem Gambling Helpline) or visit <a href="https://www.ncpgambling.org" rel="noopener" target="_blank">ncpgambling.org</a>.</p>
@@ -695,7 +695,7 @@ function countUp(el){ const to=+el.dataset.count; if(!to||el.dataset.done) retur
   let fired=false;
   const io=new IntersectionObserver(es=>{ fired=true; es.forEach(en=>{ if(!en.isIntersecting) return; const el=en.target;
     el.classList.add('in'); if(el.dataset.count) countUp(el); if(el.classList.contains('stage')) setTimeout(playDemo,250); io.unobserve(el); }); },
-    {threshold:.15, rootMargin:'0px 0px -40px 0px'});
+    {threshold:0, rootMargin:'0px 0px -40px 0px'});
   els.forEach(e=>io.observe(e));
   setTimeout(()=>{ if(!fired){ io.disconnect(); showAll(); } }, 1200); })();
 

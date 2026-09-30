@@ -1,0 +1,213 @@
+/* Prop Streak Lab — shared "app" design for the four sport boards (nfl/nba/nhl/mlb.html).
+   Loaded after each page's own <style>; every rule below is scoped to .app (the page's
+   .wrap) or to the shared header, so it wins over the older inline theme without
+   touching the page JS. Colors and type match the home page (index.html). */
+:root{
+  --ps-bg:#0a1628; --ps-surface:#0f2038; --ps-surface-2:#142743; --ps-line:#22354f; --ps-line-soft:rgba(255,255,255,.07);
+  --ps-text:#fff; --ps-soft:#dfe6ef; --ps-muted:#9fb0c6;
+  --ps-green:#00c805; --ps-green-2:#35c46b; --ps-green-ink:#06210b; --ps-red:#e07a86;
+  --ps-display:"Cormorant Garamond",Georgia,"Times New Roman",serif;
+  --ps-cond:"Barlow Condensed",Impact,"Arial Narrow",sans-serif;
+  --ps-body:"Barlow",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --ps-card:linear-gradient(180deg,rgba(20,39,67,.80),rgba(12,26,48,.88));
+  --ps-r:20px;
+}
+body{margin:0;background:var(--ps-bg);color:var(--ps-text);font-family:var(--ps-body);font-variant-numeric:lining-nums;
+  background-image:
+    linear-gradient(rgba(0,200,5,.035) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(0,200,5,.035) 1px,transparent 1px),
+    radial-gradient(1100px 700px at 12% -10%,rgba(0,200,5,.10),transparent 60%),
+    radial-gradient(900px 600px at 100% 30%,rgba(0,200,5,.05),transparent 60%),
+    linear-gradient(180deg,#0b1a32,#0a1628 45%,#081120);
+  background-size:58px 58px,58px 58px,100% 100%,100% 100%,100% 100%;background-attachment:fixed}
+[hidden]{display:none!important}
+
+/* ---------- top bar: logo, sport switcher, referral CTA ---------- */
+.apptop{position:sticky;top:0;z-index:60;background:rgba(10,22,40,.80);-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);
+  border-bottom:1px solid var(--ps-line-soft)}
+.apptop-in{max-width:1160px;margin:0 auto;padding:0 16px;height:62px;display:flex;align-items:center;gap:14px}
+.apptop .brand{display:flex;align-items:center;gap:9px;color:#fff;text-decoration:none;flex:none;white-space:nowrap}
+.apptop .brand svg{width:30px;height:30px;min-width:0;display:block;flex:none}   /* pages size chart SVGs to 100% / 520px+ */
+.apptop .brand b{font-family:var(--ps-display);font-weight:600;font-size:22px;line-height:1;letter-spacing:.01em}
+.apptop .brand b i{color:var(--ps-green);font-weight:600}
+.sportnav{display:flex;gap:6px;margin-left:auto;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+.sportnav::-webkit-scrollbar{display:none}
+.sportnav a{display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:999px;white-space:nowrap;text-decoration:none;
+  background:rgba(255,255,255,.04);border:1px solid var(--ps-line-soft);color:var(--ps-soft);
+  font-family:var(--ps-cond);font-weight:700;letter-spacing:.08em;text-transform:uppercase;font-size:14px;transition:border-color .15s,color .15s}
+.sportnav a:hover{border-color:rgba(0,200,5,.5);color:#fff}
+.sportnav a[aria-current=page]{background:var(--ps-green);border-color:var(--ps-green);color:var(--ps-green-ink)}
+.appcta{flex:none;display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:999px;text-decoration:none;
+  background:var(--ps-green);color:var(--ps-green-ink);font-family:var(--ps-cond);font-weight:700;letter-spacing:.1em;text-transform:uppercase;font-size:14px;
+  box-shadow:0 10px 26px rgba(0,200,5,.28)}
+.appcta:hover{box-shadow:0 14px 34px rgba(0,200,5,.42)}
+@media(max-width:760px){
+  .apptop-in{height:auto;flex-wrap:wrap;padding:10px 12px 8px;gap:8px 10px}
+  .apptop .brand b{font-size:20px}
+  .appcta{margin-left:auto;padding:7px 13px;font-size:13px}
+  .sportnav{order:3;width:100%;margin:0}
+  .sportnav a{flex:1;justify-content:center;padding:7px 8px;font-size:13px}
+}
+
+/* ---------- page shell ---------- */
+.app.wrap{max-width:1160px;padding:0 16px 70px}
+.app .apphero{padding:34px 2px 6px}
+.app .eyebrow{display:inline-flex;align-items:center;gap:10px;font-family:var(--ps-cond);text-transform:uppercase;letter-spacing:.16em;
+  font-size:13px;font-weight:700;color:var(--ps-green);background:rgba(0,200,5,.08);border:1px solid rgba(0,200,5,.3);padding:6px 14px;border-radius:999px}
+.app .eyebrow .dot{width:7px;height:7px;border-radius:50%;background:var(--ps-green);animation:psping 2s infinite}
+@keyframes psping{0%{box-shadow:0 0 0 0 rgba(0,200,5,.6)}80%,100%{box-shadow:0 0 0 10px rgba(0,200,5,0)}}
+.app .apphero h1{font-family:var(--ps-display);font-weight:600;font-size:clamp(38px,6vw,66px);line-height:1;letter-spacing:-.01em;margin:16px 0 12px}
+.app .apphero h1 i{color:var(--ps-green);font-weight:600}
+.app .apphero .lede{color:var(--ps-soft);font-size:clamp(16px,1.5vw,18px);max-width:40em;margin:0 0 20px;line-height:1.55}
+.app .herostats{display:flex;flex-wrap:wrap;gap:10px}
+.app .herostats>div{background:var(--ps-card);border:1px solid var(--ps-line);border-radius:16px;padding:10px 16px 11px;min-width:128px}
+.app .herostats b{display:block;font-family:var(--ps-display);font-weight:600;font-size:28px;line-height:1.05;color:#fff}
+.app .herostats span{font-family:var(--ps-cond);text-transform:uppercase;letter-spacing:.12em;font-size:12px;color:var(--ps-muted)}
+.app .promo{display:flex;flex-wrap:wrap;gap:10px;margin:18px 0 4px}
+.app .refbanner{display:inline-flex;width:auto;max-width:100%;margin:0;padding:10px 18px;border-radius:999px;border:1px solid var(--ps-green);
+  background:var(--ps-green);color:var(--ps-green-ink);font-family:var(--ps-cond);font-weight:700;letter-spacing:.06em;text-transform:none;font-size:15px;
+  line-height:1.3;text-align:left;box-shadow:0 10px 26px rgba(0,200,5,.22)}
+.app .refbanner:hover{transform:translateY(-1px);box-shadow:0 14px 34px rgba(0,200,5,.36)}
+.app .refbanner.group{background:transparent;color:var(--ps-green);border-color:rgba(0,200,5,.5);box-shadow:none}
+.app .refbanner.group:hover{background:rgba(0,200,5,.08)}
+
+/* Value spots banner */
+.app .vwbar{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:flex-start;gap:4px 14px;margin:16px 0 4px;padding:14px 18px;
+  background:var(--ps-card);border:1px solid rgba(0,200,5,.35);border-left:1px solid rgba(0,200,5,.35);border-radius:var(--ps-r);
+  box-shadow:0 18px 44px rgba(0,0,0,.3);text-align:left}
+.app .vwbar.down{border-color:rgba(224,122,134,.45)}
+.app .vwbar .lbl{font-family:var(--ps-cond);text-transform:uppercase;letter-spacing:.12em;font-size:14px;color:var(--ps-muted)}
+.app .vwbar .big{font-family:var(--ps-display);font-weight:600;font-size:clamp(26px,4vw,34px);color:var(--ps-green)}
+.app .vwbar.down .big{color:var(--ps-red)}
+.app .vwbar .sub{width:100%;text-align:left;color:var(--ps-soft);font-size:13.5px}
+
+/* tabs: one segmented pill control */
+.app .tabs{display:flex;flex-wrap:nowrap;gap:4px;justify-content:flex-start;width:max-content;max-width:100%;overflow-x:auto;scrollbar-width:none;
+  margin:18px 0 18px;padding:5px;background:rgba(15,32,56,.88);border:1px solid var(--ps-line);border-radius:999px}
+.app .tabs::-webkit-scrollbar{display:none}
+.app .tab{border:0;background:transparent;color:var(--ps-soft);border-radius:999px;padding:9px 18px;box-shadow:none;white-space:nowrap;
+  font-family:var(--ps-cond);font-weight:700;text-transform:uppercase;letter-spacing:.08em;font-size:15px}
+.app .tab:hover{color:#fff;background:rgba(255,255,255,.05);transform:none}
+.app .tab[aria-selected=true]{background:var(--ps-green);color:var(--ps-green-ink)}
+@media(min-width:761px){.app .tabs{position:sticky;top:72px;z-index:40;-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px)}}
+@media(max-width:760px){.app .tabs{width:100%}.app .tab{flex:1;padding:9px 8px;font-size:13px;letter-spacing:.04em}}
+
+/* ---------- cards ---------- */
+.app .panel{background:var(--ps-card);border:1px solid var(--ps-line);border-radius:var(--ps-r);box-shadow:0 18px 50px rgba(0,0,0,.34);
+  padding:20px 20px 18px;margin-bottom:18px}
+.app .panel>h2,.app .mkthead h2{font-family:var(--ps-cond);font-weight:700;text-transform:uppercase;letter-spacing:.08em;font-size:21px;
+  color:#fff;border-left:0;padding-left:0;margin:0}
+.app .mkthead{gap:8px 14px;margin-bottom:12px}
+.app .mktnote{color:var(--ps-soft);font-size:14px;line-height:1.6}
+.app .mktnote b{color:#fff}
+.app .mktmuted,.app .bmeta,.app .pmeta,.app .hint,.app .panel .hint{color:var(--ps-muted)}
+.app .panel.collapsible .chev{color:var(--ps-muted)}
+.app .valrules{border-radius:16px;background:rgba(0,200,5,.05)}
+@media(max-width:760px){.app .panel{padding:16px 14px 14px;border-radius:18px}.app .panel>h2,.app .mkthead h2{font-size:19px}}
+
+/* buttons, chips, controls */
+.app .btn{background:var(--ps-green);color:var(--ps-green-ink);border:0;border-radius:999px;padding:9px 18px;box-shadow:0 10px 26px rgba(0,200,5,.24);
+  font-family:var(--ps-cond);font-weight:700;text-transform:uppercase;letter-spacing:.1em;font-size:14px}
+.app .btn:hover{transform:translateY(-1px);box-shadow:0 14px 34px rgba(0,200,5,.38)}
+.app .btn.ghost{background:rgba(255,255,255,.04);color:#fff;border:1px solid rgba(255,255,255,.18);box-shadow:none}
+.app .btn.ghost:hover{border-color:var(--ps-green);color:var(--ps-green)}
+.app .chip{border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.03);color:var(--ps-soft);border-radius:999px;padding:7px 14px;font-weight:600}
+.app .chip:hover{border-color:rgba(0,200,5,.5);color:#fff;background:rgba(255,255,255,.05)}
+.app .chip[aria-pressed=true]{background:var(--ps-green);border-color:var(--ps-green);color:var(--ps-green-ink)}
+.app .linectl button,.app .linectl input,.app .oubtns button{border:1px solid var(--ps-line);background:rgba(255,255,255,.04);color:#fff;border-radius:12px;box-shadow:none}
+.app .oubtns button[aria-pressed=true]{background:var(--ps-green);border-color:var(--ps-green);color:var(--ps-green-ink)}
+.app input[type=text],.app input[type=search],.app select,.app textarea{border:1px solid var(--ps-line)!important;border-radius:14px!important;
+  background:rgba(255,255,255,.04)!important;color:#fff!important}
+.app input[type=text]:focus,.app select:focus,.app textarea:focus{outline:none;border-color:var(--ps-green)!important;box-shadow:0 0 0 3px rgba(0,200,5,.18)}
+.app .acbox{border-radius:14px;overflow:hidden}
+.app .weekstrip{background:rgba(255,255,255,.04);border:1px solid var(--ps-line);border-radius:16px}
+.app .tile{background:var(--ps-card);border:1px solid var(--ps-line);border-radius:18px;overflow:hidden;box-shadow:0 14px 34px rgba(0,0,0,.3)}
+.app .tile.model{border-color:rgba(0,200,5,.45)}
+.app .boardrow{border-radius:14px}
+.app .lbrow{border-bottom:1px solid var(--ps-line-soft)}
+
+/* ---------- pick tables ---------- */
+.app .edgetbl{border-collapse:separate;border-spacing:0;font-size:14px}
+.app .edgetbl th{color:var(--ps-muted);font-family:var(--ps-cond);font-weight:700;font-size:12px;letter-spacing:.12em;border-bottom:1px solid var(--ps-line);padding:8px 10px}
+.app .edgetbl td{color:#fff;border-bottom:1px solid var(--ps-line-soft);padding:10px}
+.app .edgetbl tr:last-child td{border-bottom:0}
+.app .edgetbl tr:hover td{background:rgba(255,255,255,.03)}
+.app .edgetbl td:first-child{font-weight:600}
+.app .edgeval{font-family:var(--ps-display);font-weight:600;font-size:19px;color:#fff}
+.app .edgeval.pos{color:var(--ps-green-2)} .app .edgeval.neg{color:var(--ps-red)}
+.app .rng{color:var(--ps-muted);font-size:11.5px}
+.app .leantag{display:inline-block;border:0;border-radius:999px;padding:3px 10px;font-family:var(--ps-cond);font-weight:700;font-size:12px;letter-spacing:.1em}
+.app .leantag.over{background:rgba(53,196,107,.16);color:#6fe39a} .app .leantag.under{background:rgba(224,122,134,.16);color:#f3a4ae}
+.app .edgeload{border-radius:999px;border:1px solid rgba(0,200,5,.45);background:transparent;color:var(--ps-green);padding:5px 13px}
+.app .edgeload:hover{background:var(--ps-green);color:var(--ps-green-ink)}
+.app .av{display:inline-grid;place-items:center;width:32px;height:32px;border-radius:50%;margin-right:10px;vertical-align:middle;flex:none;
+  background:#1d3456;border:1px solid var(--ps-line);color:var(--ps-soft);font-family:var(--ps-cond);font-weight:700;font-size:12px;letter-spacing:.04em}
+/* On phones each pick becomes a card: name + chance on top, the bet and price in the middle, game + Load below. */
+@media(max-width:760px){
+  .app .picktbl thead{display:none}
+  .app .picktbl,.app .picktbl tbody{display:block;width:100%}
+  .app .chartwrap:has(.picktbl){overflow:visible}
+  .app .picktbl tr{display:grid;grid-template-columns:auto auto auto minmax(0,1fr) auto;
+    grid-template-areas:"name name name name model" "prop line bet . price" "game game game game load";
+    gap:6px 8px;align-items:center;margin-bottom:10px;padding:12px 14px;
+    background:rgba(255,255,255,.035);border:1px solid var(--ps-line-soft);border-radius:16px}
+  .app .picktbl td{border:0!important;padding:0;background:none!important;text-align:left;white-space:normal}
+  .app .picktbl td:nth-child(1){grid-area:name;font-size:15px;display:flex;align-items:center;min-width:0}
+  .app .picktbl td:nth-child(2){grid-area:game;font-size:12.5px}
+  .app .picktbl td:nth-child(3){grid-area:prop;font-weight:600}
+  .app .picktbl td:nth-child(4){grid-area:line}
+  .app .picktbl td:nth-child(5){grid-area:bet}
+  .app .picktbl td:nth-child(6){grid-area:model;text-align:right}
+  .app .picktbl td:nth-child(6) .edgeval{font-size:24px}
+  .app .picktbl td:nth-child(6) .rng{display:block}
+  .app .picktbl td:nth-child(7){grid-area:price;text-align:right;font-size:13px}
+  .app .picktbl td:nth-child(8){grid-area:load;text-align:right}
+}
+
+/* ---------- pick cards (25 Guaranteed / Value spots) ---------- */
+.app .sortbar{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:4px 0 14px}
+.app .sortlab{font-family:var(--ps-cond);text-transform:uppercase;letter-spacing:.12em;font-size:12px;color:var(--ps-muted);margin-right:4px}
+.app .sortpill{border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.03);color:var(--ps-soft);border-radius:999px;padding:6px 13px;cursor:pointer;
+  font-family:var(--ps-cond);font-weight:700;text-transform:uppercase;letter-spacing:.08em;font-size:13px}
+.app .sortpill:hover{border-color:rgba(0,200,5,.5);color:#fff}
+.app .sortpill[aria-pressed=true]{background:rgba(0,200,5,.14);border-color:rgba(0,200,5,.6);color:var(--ps-green)}
+.app .pickgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px}
+.app .pickcard{display:flex;flex-direction:column;background:linear-gradient(180deg,#15294a,#10213d);border:1px solid var(--ps-line);border-radius:18px;
+  padding:14px 16px 12px;transition:transform .15s ease,border-color .15s ease,box-shadow .15s ease}
+.app .pickcard:hover{transform:translateY(-2px);border-color:rgba(0,200,5,.45);box-shadow:0 16px 36px rgba(0,0,0,.35)}
+.app .pc-top{display:flex;align-items:center;gap:12px}
+.app .pickcard .av{width:42px;height:42px;margin:0;font-size:14px;background:#1f3a62;color:#fff}
+.app .pc-who{min-width:0;flex:1}
+.app .pc-who b{display:block;font-size:16px;font-weight:700;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.app .pc-who span{display:block;font-size:12.5px;color:var(--ps-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.app .pc-prob{text-align:right;flex:none}
+.app .pc-prob b{display:block;font-family:var(--ps-display);font-weight:600;font-size:32px;line-height:1;color:#fff}
+.app .pickcard.hi .pc-prob b{color:var(--ps-green)} .app .pickcard.mid .pc-prob b{color:#9be7b2}
+.app .pc-prob span{font-size:11px;color:var(--ps-muted)}
+.app .pc-bet{display:flex;align-items:baseline;gap:8px;margin:12px 0;font-size:15px;color:var(--ps-soft)}
+.app .pc-bet b{font-family:var(--ps-cond);font-size:22px;font-weight:700;color:#fff;letter-spacing:.02em}
+.app .pc-bet .leantag{align-self:center}
+.app .pc-foot{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:auto;padding-top:10px;border-top:1px solid var(--ps-line-soft)}
+.app .pc-price{font-size:13px;min-width:0}
+.app .pc-model{font-size:13px;color:var(--ps-soft);white-space:nowrap}
+.app .pc-model b{font-family:var(--ps-display);font-size:19px;color:var(--ps-green)}
+.app .pc-price .pmpx{font-family:var(--ps-display);font-size:19px}
+@media(max-width:760px){.app .pickgrid{grid-template-columns:1fr}.app .pc-prob b{font-size:30px}
+  .app .sortbar{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none}.app .sortbar::-webkit-scrollbar{display:none}.app .sortpill{flex:none}}
+
+/* hit-streak leaderboard as a grid of small cards */
+.app #lbbody{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px}
+.app #lbbody .mktnote,.app #lbbody > .pickgrid{grid-column:1/-1}
+.app .lbrow{align-items:center;padding:12px 14px;border:1px solid var(--ps-line);border-radius:16px;background:linear-gradient(180deg,#15294a,#10213d)}
+.app .lbrow .lbn{font-size:14px;color:var(--ps-soft);line-height:1.4}
+.app .lbrow .lbn b{display:block;color:#fff;font-size:15px}
+.app .lbstreak{font-family:var(--ps-display);font-weight:600;font-size:28px;color:var(--ps-green);white-space:nowrap}
+
+/* ---------- footer + socials ---------- */
+.app .socialbar{justify-content:flex-start;gap:8px;margin:34px 0 0;max-width:none}
+.app .socialtag{width:auto;text-align:left;font-family:var(--ps-cond);text-transform:uppercase;letter-spacing:.12em;font-size:14px;color:var(--ps-muted);margin:0 6px 0 0}
+.app .sociallink{padding:8px 16px;border-radius:999px;border:1px solid rgba(255,255,255,.16);background:rgba(255,255,255,.03);color:#fff;
+  font-size:14px;box-shadow:none;font-family:var(--ps-cond);letter-spacing:.08em}
+.app .sociallink:hover{border-color:var(--ps-green);color:var(--ps-green);transform:none;box-shadow:none}
+.app footer{margin-top:18px;border-top:1px solid var(--ps-line-soft);padding-top:18px;color:var(--ps-muted);text-align:left!important}
+.app footer a{color:var(--ps-soft)}

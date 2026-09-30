@@ -607,53 +607,45 @@ table td,table th,thead th,tbody td,.edgetbl td,.edgetbl th,.caltbl td,.caltbl t
 .valrules .vrfoot b{color:#fff}
 </style>
 
-<div class="wrap">
-  <div class="hero">
-    <div class="hero-in">
-      <div>
-        <div class="brandmark">
-          <svg class="brandlogo" viewBox="0 0 260 132" role="img" aria-label="Prop Streak Lab logo" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
-            <path d="M200,8 Q200,66 232,66 Q200,66 200,124 Q200,66 168,66 Q200,66 200,8 Z"/>
-            <path d="M168,60 Q118,76 66,96 Q120,82 168,60 Z"/>
-            <path d="M154,68 Q116,80 82,95 Q118,86 154,68 Z"/>
-            <path d="M132,79 Q112,85 98,93 Q114,89 132,79 Z"/>
-            <path d="M88,99 Q80,102 72,106 Q80,104 88,99 Z"/>
-            <path d="M66,107 Q61,110 56,112 Q61,109 66,107 Z"/>
-          </svg>
-        </div>
-        <div class="eyebrow">NFL Player Props · Real game logs · Tracked picks</div>
-        <h1 class="hero-title">Prop <span class="hl">Streak</span> Lab<span class="tm">™</span></h1>
-        <div class="hero-tag">See how often any NFL player clears a prop, get a calibrated chance for the line, price it against Polymarket, and check how past picks actually held up.</div>
-      </div>
-      <div class="hero-meta"><b id="dncount">—</b>players tracked<br><br>data through<br><span class="wk" id="dnthru">—</span><br><span class="wk" id="dnweek"></span></div>
+<link rel="stylesheet" href="app.css">
+
+<header class="apptop">
+  <div class="apptop-in">
+    <a class="brand" href="./" aria-label="Prop Streak Lab home"><svg width="30" height="30" viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" rx="14" fill="#0f2038"/><path d="M32,6 Q32,32 54,32 Q32,32 32,58 Q32,32 10,32 Q32,32 32,6 Z" fill="#00c805"/></svg><b>Prop <i>Streak</i> Lab</b></a>
+    <nav class="sportnav" aria-label="Sports">
+      <a href="./nfl.html" aria-current="page">🏈 NFL</a>
+      <a href="./nba.html">🏀 NBA</a>
+      <a href="./nhl.html">🏒 NHL</a>
+      <a href="./mlb.html">⚾ MLB</a>
+    </nav>
+    <a class="appcta" href="https://polymarket.us/join/propstreaklab" target="_blank" rel="noopener sponsored">🎁 $50 free</a>
+  </div>
+</header>
+
+<div class="wrap app">
+  <section class="apphero">
+    <span class="eyebrow"><span class="dot"></span>NFL player props · live Polymarket prices</span>
+    <h1>Know who <i>clears</i> the line this week.</h1>
+    <p class="lede">Every NFL player's game log, a calibrated chance for any line — adjusted for the Vegas spread and total and the opponent's defense — priced live against Polymarket, and every pick graded in public.</p>
+    <div class="herostats">
+      <div><b id="dncount">—</b><span>Players tracked</span></div>
+      <div><b id="dnthru">—</b><span>Data through</span></div>
+      <div id="dnweekbox" hidden><b id="dnweek">—</b><span>On deck</span></div>
     </div>
+  </section>
+
+  <div class="promo">
+    <a id="refbanner" class="refbanner" href="#" target="_blank" rel="noopener" hidden></a>
+    <a id="refbanner2" class="refbanner group" href="#" target="_blank" rel="noopener" hidden></a>
   </div>
 
   <a id="valueweekbar" class="vwbar" href="#" onclick="showTab('past');return false;" hidden></a>
-
-  <div class="sportbar" style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin:0 0 18px">
-    <a href="./" style="display:inline-flex;align-items:center;gap:8px;border:2.5px solid var(--ink);background:var(--surface);color:var(--muted);border-radius:999px;padding:8px 20px;font-family:var(--dispers);font-weight:700;text-transform:uppercase;letter-spacing:.8px;font-size:16px;text-decoration:none;box-shadow:var(--hard-sm)">🏠 Home</a>
-    <a href="./nfl.html" aria-current="true" style="display:inline-flex;align-items:center;gap:8px;border:2.5px solid var(--ink);background:var(--ink);color:#fff;border-radius:999px;padding:8px 20px;font-family:var(--dispers);font-weight:700;text-transform:uppercase;letter-spacing:.8px;font-size:16px;text-decoration:none;box-shadow:var(--hard-sm)">🏈 NFL</a>
-    <a href="./nba.html" style="display:inline-flex;align-items:center;gap:8px;border:2.5px solid var(--ink);background:var(--surface);color:var(--muted);border-radius:999px;padding:8px 20px;font-family:var(--dispers);font-weight:700;text-transform:uppercase;letter-spacing:.8px;font-size:16px;text-decoration:none;box-shadow:var(--hard-sm)">🏀 NBA</a>
-    <a href="./nhl.html" style="display:inline-flex;align-items:center;gap:8px;border:2.5px solid var(--ink);background:var(--surface);color:var(--muted);border-radius:999px;padding:8px 20px;font-family:var(--dispers);font-weight:700;text-transform:uppercase;letter-spacing:.8px;font-size:16px;text-decoration:none;box-shadow:var(--hard-sm)">🏒 NHL</a>
-    <a href="./mlb.html" style="display:inline-flex;align-items:center;gap:8px;border:2.5px solid var(--ink);background:var(--surface);color:var(--muted);border-radius:999px;padding:8px 20px;font-family:var(--dispers);font-weight:700;text-transform:uppercase;letter-spacing:.8px;font-size:16px;text-decoration:none;box-shadow:var(--hard-sm)">⚾ MLB</a>
-  </div>
 
   <div class="tabs" role="tablist">
     <button class="tab" role="tab" data-tab="week" aria-selected="true">📅 This week</button>
     <button class="tab" role="tab" data-tab="player" aria-selected="false">🔬 Player</button>
     <button class="tab" role="tab" data-tab="tools" aria-selected="false">🧰 Tools</button>
     <button class="tab" role="tab" data-tab="past" aria-selected="false">📒 Past picks</button>
-  </div>
-
-  <a id="refbanner" class="refbanner" href="#" target="_blank" rel="noopener" hidden></a>
-  <a id="refbanner2" class="refbanner group" href="#" target="_blank" rel="noopener" hidden></a>
-
-  <div id="socialbar" class="socialbar" hidden>
-    <span class="socialtag">Follow us</span>
-    <a id="social_ig" class="sociallink" href="#" target="_blank" rel="noopener" hidden>📸 Instagram</a>
-    <a id="social_tt" class="sociallink" href="#" target="_blank" rel="noopener" hidden>🎵 TikTok</a>
-    <a id="social_x" class="sociallink" href="#" target="_blank" rel="noopener" hidden>𝕏 Twitter</a>
   </div>
 
 <div id="page-week">
@@ -905,6 +897,13 @@ table td,table th,thead th,tbody td,.edgetbl td,.edgetbl th,.caltbl td,.caltbl t
     <div class="fbrow"><button id="fbsend" class="btn" type="button">Send suggestion</button><span class="mktmuted" id="fbnote"></span></div>
   </div>
 
+  <div id="socialbar" class="socialbar" hidden>
+    <span class="socialtag">Follow us</span>
+    <a id="social_ig" class="sociallink" href="#" target="_blank" rel="noopener" hidden>📸 Instagram</a>
+    <a id="social_tt" class="sociallink" href="#" target="_blank" rel="noopener" hidden>🎵 TikTok</a>
+    <a id="social_x" class="sociallink" href="#" target="_blank" rel="noopener" hidden>𝕏 Twitter</a>
+  </div>
+
   <footer>
     <b>Data:</b> nflverse public weekly stats, schedules, injury reports and rosters (regular season + playoffs). Defense ranks blend this season with last. Injury status is the latest official report and can change on game day.<br>
     <b>Prices:</b> live odds come from Polymarket US, the exchange the referral links point to — every few seconds on a player's page, about once a minute in the <b>Polymarket</b> column of the week's boards, and at build time for the picks recorded in Past picks. Value spots are judged on that price, so the edge shown is the edge the pick qualified on. The global Polymarket book is only used where Polymarket US has no market for a prop at that line; its Under prices come off a mostly one-sided book and run rich, which is why they aren't trusted. Each share pays $1, so multiplier = $1 ÷ price. Backward-looking research, <b>not betting advice</b>; past accuracy is shown in the Past picks tab so you can judge it yourself.
@@ -1078,9 +1077,9 @@ function vegas(g){
 
 let state = { player:null, stat:'pass_yds', line:0.5, ou:'over', playoffs:true, adj:true };
 
-$('dncount').textContent = DB.players.filter(p=>p.g.length).length;
-$('dnthru').textContent = DB.thru || '—';
-if(WEEK.week) $('dnweek').textContent = `${WEEK.season} · week ${WEEK.week} on deck`;
+$('dncount').textContent = DB.players.filter(p=>p.g.length).length.toLocaleString();
+$('dnthru').textContent = (()=>{ const d=new Date((DB.thru||'')+'T12:00:00'); return isFinite(d.getTime())? MONS[d.getMonth()]+' '+d.getDate() : (DB.thru||'—'); })();
+if(WEEK.week){ $('dnweek').textContent = 'Week '+WEEK.week; $('dnweekbox').hidden=false; }
 (function renderRecords(){ const R=DB.record||{};
   ['T','V'].forEach(k=>{ const r=R[k], el=$('rec'+k); if(!el) return;
     if(!r||!r.n){ el.innerHTML='· live record: no graded picks yet — <a href="#picks" onclick="showTab(\'picks\');return false;">Past picks</a>'; return; }
@@ -1811,7 +1810,7 @@ function liveTd(r){
          ` data-p="${d.prob==null?'':d.prob.toFixed(4)}" data-ask="${d.ask==null?'':d.ask.toFixed(4)}">${liveCell(d)}</td>`;
 }
 function paintLive(){
-  document.querySelectorAll('td.livecell').forEach(td=>{
+  document.querySelectorAll('.livecell[data-mk]').forEach(td=>{
     const num=v=> (v==null||v==='')? null : parseFloat(v);
     td.innerHTML=liveCell({mk:td.dataset.mk, side:td.dataset.side, line:num(td.dataset.line),
                            prob:num(td.dataset.p), ask:num(td.dataset.ask)});
@@ -1976,18 +1975,33 @@ async function scanBoard(force){
     status.textContent='';
   }
 }
+// Avatar initials for a pick card: "Ja'Marr Chase" -> "JC".
+const initials=n=>{ const w=String(n||"").replace(/\s+(Jr|Sr|II|III|IV)\.?$/i,"").trim().split(/\s+/); return ((w[0]||"")[0]||"")+(w.length>1? (w[w.length-1][0]||"") : ""); };
+// A card's live-price element — same data-* as liveTd(), so paintLive() repaints it each minute.
+function liveSpan(r){
+  const d={mk:mkOf(r), side:r.side||'over', line:r.line, prob:r.prob==null?null:r.prob, ask:r.price==null?null:r.price};
+  return `<span class="pc-price livecell" data-mk="${esc(d.mk)}" data-side="${esc(d.side)}" data-line="${d.line}"`+
+         ` data-p="${d.prob==null?'':d.prob.toFixed(4)}" data-ask="${d.ask==null?'':d.ask.toFixed(4)}">${liveCell(d)}</span>`;
+}
+// Pick cards (25 Guaranteed, Value spots): who, the bet in words, the model's chance, the live
+// Polymarket price. With opts.sort, a pill row above the grid sorts it.
+const SORTS=[['prob','Chance'],['matchup','Game'],['name','Player']];
 function pickTable(rows, opts){
-  const cols=[['name','Player'],['matchup','Game'],['statText','Prop'],['line','Line'],['side','Bet'],['prob','Model']];
-  const th=(k,l)=>`<th data-k="${k}" class="${opts.sort&&opts.sort.key===k?'sorted'+(opts.sort.dir>0?' asc':''):''}">${l}</th>`;
-  let h=`<div class="chartwrap"><table class="edgetbl"><thead><tr>${cols.map(c=>th(c[0],c[1])).join('')}${liveHead()}<th></th></tr></thead><tbody>`;
+  const sort=opts.sort;
+  let h=sort? `<div class="sortbar"><span class="sortlab">Sort</span>${SORTS.map(([k,l])=>`<button type="button" class="sortpill" data-k="${k}" aria-pressed="${sort.key===k}">${l}${sort.key===k?(sort.dir>0?' ↑':' ↓'):''}</button>`).join('')}</div>` : '';
+  h+=`<div class="pickgrid">`;
   rows.forEach((r,idx)=>{
-    h+=`<tr><td>${esc(r.name)} <span class="mktmuted">${esc(r.team)}</span></td><td class="mktmuted">${esc(r.game.away)} @ ${esc(r.game.home)}</td><td>${esc(r.statText)}</td><td class="tnum">${r.line}</td>`+
-       `<td><span class="leantag ${r.side}">${r.side}</span></td>`+
-       `<td class="tnum"><span class="edgeval pos">${pct(r.prob)}</span> <span class="rng">${Math.round(r.lo*100)}–${Math.round(r.hi*100)} · ${r.n}g</span></td>`+
-       liveTd(r)+
-       `<td><button class="edgeload" data-i="${idx}">Load</button></td></tr>`;
+    const tier=r.prob>=0.9?'hi':r.prob>=0.7?'mid':'lo', g=r.game||{};
+    const vs=r.team===g.home? 'vs '+esc(g.away) : r.team===g.away? '@ '+esc(g.home) : esc(g.away)+' @ '+esc(g.home);
+    h+=`<article class="pickcard ${tier}">`+
+      `<div class="pc-top"><span class="av">${esc(initials(r.name))}</span>`+
+        `<div class="pc-who"><b>${esc(r.name)}</b><span>${esc(r.team)} · ${vs}</span></div>`+
+        `<div class="pc-prob"><b>${pct(r.prob)}</b><span>${Math.round(r.lo*100)}–${Math.round(r.hi*100)} · ${r.n}g</span></div></div>`+
+      `<div class="pc-bet"><span class="leantag ${r.side}">${r.side}</span><b>${r.line}</b><span>${esc(r.statText)}</span></div>`+
+      `<div class="pc-foot">${liveSpan(r)}<button class="edgeload" type="button" data-i="${idx}">Load</button></div>`+
+    `</article>`;
   });
-  return h+`</tbody></table></div>`;
+  return h+`</div>`;
 }
 function wireLoad(el, rows){ el.querySelectorAll('.edgeload').forEach(b=>b.onclick=()=>loadEdge(rows[+b.dataset.i])); }
 function sortRows(rows, key, dir){ return [...rows].sort((a,b)=>{
@@ -1997,8 +2011,8 @@ function sortRows(rows, key, dir){ return [...rows].sort((a,b)=>{
 function renderEdges(){
   const rows=sortRows(edgeRows, edgeSort.key, edgeSort.dir).slice(0,25);
   $('edgebody').innerHTML=pickTable(rows,{sort:edgeSort})+
-    `<p class="mktnote" style="margin-top:8px">The 25 props with the highest <b>model chance</b> on this week's board, regardless of payout — best if you're holding <b>credits you can't withdraw without trading</b>, since these are the props most likely to win and let you cash out. <b>Model</b> = the chance the Bet side hits, with its 80% range and the games it's based on. <b>Polymarket</b> is the live price on Polymarket US for that exact side — what you'd pay right now, the model's edge over it, and the payout multiplier; it refreshes about once a minute. Click a header to sort. These picks are recorded before kickoff and graded in <b>Past picks</b>.</p>`;
-  $('edgebody').querySelectorAll('.edgetbl th').forEach(t=>t.onclick=()=>{ const k=t.dataset.k; if(!k) return;
+    `<p class="mktnote" style="margin-top:8px">The 25 props with the highest <b>model chance</b> on this week's board, regardless of payout — best if you're holding <b>credits you can't withdraw without trading</b>, since these are the props most likely to win and let you cash out. <b>Model</b> = the chance the Bet side hits, with its 80% range and the games it's based on. <b>Polymarket</b> is the live price on Polymarket US for that exact side — what you'd pay right now, the model's edge over it, and the payout multiplier; it refreshes about once a minute. Use the pills to sort. These picks are recorded before kickoff and graded in <b>Past picks</b>.</p>`;
+  $('edgebody').querySelectorAll('.sortpill').forEach(t=>t.onclick=()=>{ const k=t.dataset.k; if(!k) return;
     if(edgeSort.key===k) edgeSort.dir*=-1; else { edgeSort.key=k; edgeSort.dir=['name','statText','side','matchup'].includes(k)?1:-1; } renderEdges(); });
   wireLoad($('edgebody'), rows);
   trackLive('T', rows);
@@ -2319,16 +2333,16 @@ function renderLeaderboard(){
   const body=$('lbbody'); if(!body) return;
   LB=computeStreaks();
   if(!LB.length){ body.innerHTML='<p class="mktnote">No active over streaks of 3+ games yet this season.</p>'; return; }
-  let h=`<div class="chartwrap"><table class="edgetbl"><thead><tr><th>#</th><th>Player</th><th>Prop</th><th>Streak</th><th>Latest</th><th>Model</th>${liveHead()}<th></th></tr></thead><tbody>`;
-  LB.forEach((e,i)=>{ h+=`<tr><td class="tnum">${i+1}</td>`+
-    `<td><button class="wload" type="button" data-i="${i}">${esc(e.p.n)}</button> <span class="mktmuted">${esc(e.p.p)}·${esc(e.p.t)}</span></td>`+
-    `<td>Over ${fmt(e.line)} ${esc(STATMAP[e.sk].label)}</td>`+
-    `<td class="tnum"><span class="edgeval pos">${e.streak} straight</span></td>`+
-    `<td class="tnum">${fmt(e.last)}</td>`+
-    `<td class="tnum">${e.prob==null? '<span class="pmdim">—</span>' : `<span class="edgeval pos">${pct(e.prob)}</span> <span class="rng">${Math.round(e.lo*100)}–${Math.round(e.hi*100)}</span>`}</td>`+
-    liveTd(e)+
-    `<td><button class="edgeload" type="button" data-i="${i}">Load</button></td></tr>`; });
-  body.innerHTML=h+'</tbody></table></div>'+
+  let h='<div class="pickgrid">';
+  LB.forEach((e,i)=>{ h+=`<article class="pickcard hi">`+
+    `<div class="pc-top"><span class="av">${esc(initials(e.p.n))}</span>`+
+      `<div class="pc-who"><b>${esc(e.p.n)}</b><span>${esc(e.p.p)} · ${esc(e.p.t)}</span></div>`+
+      `<div class="pc-prob"><b>${e.streak}🔥</b><span>straight · last ${fmt(e.last)}</span></div></div>`+
+    `<div class="pc-bet"><span class="leantag over">over</span><b>${fmt(e.line)}</b><span>${esc(STATMAP[e.sk].label)}</span></div>`+
+    `<div class="pc-foot"><span class="pc-model">${e.prob==null? '<span class="pmdim">no model yet</span>' : `Model <b>${pct(e.prob)}</b>`}</span>${liveSpan(e)}`+
+      `<button class="edgeload" type="button" data-i="${i}">Load</button></div>`+
+  `</article>`; });
+  body.innerHTML=h+'</div>'+
     `<p class="mktnote" style="margin-top:8px">A streak is consecutive games clearing the site's own realistic line — not a market line. <b>Model</b> is the calibrated chance that the streak extends this week. <b>Polymarket</b> shows the live Polymarket US price for that over <i>when the market is at the same line</i>, with the model's edge over it; where Polymarket US lists the prop at a different number it says so and shows that price as context only, since an edge against a different bet would be meaningless. A long streak on its own is not an edge: check the model number and the price together.</p>`;
   body.querySelectorAll('.wload,.edgeload').forEach(b=>b.onclick=()=>loadStreak(LB[+b.dataset.i]));
   trackLive('L', LB);

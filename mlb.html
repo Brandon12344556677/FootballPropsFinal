@@ -613,44 +613,44 @@ tr.hit td{background:var(--hit-soft)} tr.miss td{background:var(--miss-soft)}
 .panel.collapsed > *:not(:first-child){display:none!important}
 .panel.collapsed{padding-bottom:14px}
 </style>
+<link rel="stylesheet" href="app.css">
 
-<div class="wrap">
-  <div class="hero">
-    <div class="hero-in">
-      <div>
-        <div class="eyebrow">MLB Player Props · Real game logs · Tracked picks</div>
-        <h1 class="hero-title">Prop <span class="hl">Streak</span> Lab<span class="tm">™</span></h1>
-        <div class="hero-tag">See how often any MLB hitter or pitcher clears a prop, get a calibrated chance for the line, factor in the opponent, and check how past picks actually held up.</div>
-      </div>
-      <div class="hero-meta"><b id="dncount">—</b>players tracked<br><br>data through<br><span class="wk" id="dnthru">—</span></div>
+<header class="apptop">
+  <div class="apptop-in">
+    <a class="brand" href="./" aria-label="Prop Streak Lab home"><svg width="30" height="30" viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" rx="14" fill="#0f2038"/><path d="M32,6 Q32,32 54,32 Q32,32 32,58 Q32,32 10,32 Q32,32 32,6 Z" fill="#00c805"/></svg><b>Prop <i>Streak</i> Lab</b></a>
+    <nav class="sportnav" aria-label="Sports">
+      <a href="./nfl.html">🏈 NFL</a>
+      <a href="./nba.html">🏀 NBA</a>
+      <a href="./nhl.html">🏒 NHL</a>
+      <a href="./mlb.html" aria-current="page">⚾ MLB</a>
+    </nav>
+    <a class="appcta" href="https://polymarket.us/join/propstreaklab" target="_blank" rel="noopener sponsored">🎁 $50 free</a>
+  </div>
+</header>
+
+<div class="wrap app">
+  <section class="apphero">
+    <span class="eyebrow"><span class="dot"></span>MLB player props · playoffs live</span>
+    <h1>Know who <i>clears</i> the line tonight.</h1>
+    <p class="lede">Every MLB hitter's and pitcher's game log, a calibrated chance for any line, priced against Polymarket — and every pick graded in public.</p>
+    <div class="herostats">
+      <div><b id="dncount">—</b><span>Players tracked</span></div>
+      <div><b id="dnthru">—</b><span>Data through</span></div>
     </div>
+  </section>
+
+  <div class="promo">
+    <a id="refbanner" class="refbanner" href="#" target="_blank" rel="noopener" hidden></a>
+    <a id="refbanner2" class="refbanner group" href="#" target="_blank" rel="noopener" hidden></a>
   </div>
 
   <a id="valueweekbar" class="vwbar" href="#" hidden></a>
-
-  <div class="sportbar">
-    <a class="sportbtn" href="./">🏠 Home</a>
-    <a class="sportbtn" href="./nfl.html">🏈 NFL</a>
-    <a class="sportbtn" href="./nba.html">🏀 NBA</a>
-    <a class="sportbtn" href="./nhl.html">🏒 NHL</a>
-    <a class="sportbtn" href="./mlb.html" aria-current="true">⚾ MLB</a>
-  </div>
 
   <div class="tabs" role="tablist">
     <button class="tab" role="tab" data-tab="week" aria-selected="true">📅 This week</button>
     <button class="tab" role="tab" data-tab="player" aria-selected="false">🔬 Player</button>
     <button class="tab" role="tab" data-tab="tools" aria-selected="false">🧰 Tools</button>
     <button class="tab" role="tab" data-tab="past" aria-selected="false">📒 Past picks</button>
-  </div>
-
-  <a id="refbanner" class="refbanner" href="#" target="_blank" rel="noopener" hidden></a>
-  <a id="refbanner2" class="refbanner group" href="#" target="_blank" rel="noopener" hidden></a>
-
-  <div id="socialbar" class="socialbar" hidden>
-    <span class="socialtag">Follow us</span>
-    <a id="social_ig" class="sociallink" href="#" target="_blank" rel="noopener" hidden>📸 Instagram</a>
-    <a id="social_tt" class="sociallink" href="#" target="_blank" rel="noopener" hidden>🎵 TikTok</a>
-    <a id="social_x" class="sociallink" href="#" target="_blank" rel="noopener" hidden>𝕏 Twitter</a>
   </div>
 
 <div id="page-week">
@@ -808,6 +808,13 @@ tr.hit td{background:var(--hit-soft)} tr.miss td{background:var(--miss-soft)}
     <div class="fbrow"><button id="fbsend" class="btn" type="button">Send suggestion</button><span class="mktmuted" id="fbnote"></span></div>
   </div>
 
+  <div id="socialbar" class="socialbar" hidden>
+    <span class="socialtag">Follow us</span>
+    <a id="social_ig" class="sociallink" href="#" target="_blank" rel="noopener" hidden>📸 Instagram</a>
+    <a id="social_tt" class="sociallink" href="#" target="_blank" rel="noopener" hidden>🎵 TikTok</a>
+    <a id="social_x" class="sociallink" href="#" target="_blank" rel="noopener" hidden>𝕏 Twitter</a>
+  </div>
+
   <footer style="text-align:center;color:var(--muted);font-size:13px;margin-top:40px">
     Prop Streak Lab · model estimates for entertainment, not betting advice · <a href="./">Home</a> · <a href="./nfl.html">NFL</a> · <a href="./nba.html">NBA</a> · <a href="./nhl.html">NHL</a> · ⚾ MLB<br>
     <span style="display:inline-block;margin-top:10px"><a href="privacy.html">Privacy Policy</a> · <a href="terms.html">Terms &amp; Conditions</a> · <a href="cookies.html">Cookies Policy</a> · <a href="mailto:info@propstreaklab.com">Contact</a></span><br>
@@ -936,8 +943,8 @@ function dlabel(iso){ if(!iso) return ''; const d=new Date(iso+'T12:00:00'); if(
   return `${MONS[d.getMonth()]} ${d.getDate()}`; }
 function gameLabel(row){ return (row[3]==='REG'? '' : 'PO ')+dlabel(row[1]); }
 
-$('dncount').textContent = DB.players.filter(p=>p.g.length).length;
-$('dnthru').textContent = DB.thru || '—';
+$('dncount').textContent = DB.players.filter(p=>p.g.length).length.toLocaleString();
+$('dnthru').textContent = DB.thru? dlabel(DB.thru) : '—';
 
 // ---- state + shared getters ----
 let state = { player:null, stat:'h', line:0.5, ou:'over', playoffs:true, adj:true };
@@ -1171,22 +1178,29 @@ function priceCell(r){
   const signed=v=>(v>=0?'+':'−')+Math.abs(Math.round(v*100));
   const cls=r.edge==null? '' : r.edge>=0.04? 'pos' : r.edge<=-0.04? 'neg' : '';
   return `<span class="pmpx ${cls}">${Math.round(r.price*100)}¢</span> <span class="rng">${r.edge==null?'':signed(r.edge)+' edge · '}${(1/r.price).toFixed(2)}×</span>`; }
+// Avatar initials for a pick card: "Fernando Tatis Jr." -> "FT".
+const initials=n=>{ const w=String(n||"").replace(/\s+(Jr|Sr|II|III|IV)\.?$/i,"").trim().split(/\s+/); return ((w[0]||"")[0]||"")+(w.length>1? (w[w.length-1][0]||"") : ""); };
+// Pick cards (25 Guaranteed, Value spots): one card per prop — who, the bet in words, the
+// model's chance, the Polymarket price — sorted by the pill row above the grid.
+const SORTS=[['prob','Chance'],['edge','Edge'],['price','Price'],['matchup','Game'],['name','Player']];
 function pickTable(rows, sort){
-  const cols=[['name','Player'],['matchup','Game'],['statText','Prop'],['line','Line'],['side','Bet'],['prob','Model']];
-  const th=(k,l)=>`<th data-k="${k}" class="${sort&&sort.key===k?'sorted'+(sort.dir>0?' asc':''):''}">${l}</th>`;
-  let h=`<div class="chartwrap"><table class="edgetbl"><thead><tr>${cols.map(c=>th(c[0],c[1])).join('')}${liveHead(sort)}<th></th></tr></thead><tbody>`;
+  const pills=SORTS.map(([k,l])=>`<button type="button" class="sortpill" data-k="${k}" aria-pressed="${sort.key===k}">${l}${sort.key===k?(sort.dir>0?' ↑':' ↓'):''}</button>`).join('');
+  let h=`<div class="sortbar"><span class="sortlab">Sort</span>${pills}</div><div class="pickgrid">`;
   rows.forEach((r,idx)=>{
-    h+=`<tr><td>${esc(r.name)} <span class="mktmuted">${esc(r.team)}</span></td><td class="mktmuted">${esc(r.game.away)} @ ${esc(r.game.home)}</td><td>${esc(r.statText)}</td><td class="tnum">${r.line}</td>`+
-       `<td><span class="leantag ${esc(r.side)}">${esc(r.side)}</span></td>`+
-       `<td class="tnum"><span class="edgeval pos">${pct(r.prob)}</span> <span class="rng">${Math.round(r.lo*100)}–${Math.round(r.hi*100)} · ${r.n}g</span></td>`+
-       `<td class="livecell">${priceCell(r)}</td>`+
-       `<td><button class="edgeload" type="button" data-i="${idx}">Load</button></td></tr>`;
+    const tier=r.prob>=0.9?'hi':r.prob>=0.7?'mid':'lo';
+    h+=`<article class="pickcard ${tier}">`+
+      `<div class="pc-top"><span class="av">${esc(initials(r.name))}</span>`+
+        `<div class="pc-who"><b>${esc(r.name)}</b><span>${esc(r.team)} · ${r.team===r.game.home? "vs "+esc(r.game.away) : r.team===r.game.away? "@ "+esc(r.game.home) : esc(r.game.away)+" @ "+esc(r.game.home)}</span></div>`+
+        `<div class="pc-prob"><b>${pct(r.prob)}</b><span>${Math.round(r.lo*100)}–${Math.round(r.hi*100)} · ${r.n}g</span></div></div>`+
+      `<div class="pc-bet"><span class="leantag ${esc(r.side)}">${esc(r.side)}</span><b>${r.line}</b><span>${esc(r.statText)}</span></div>`+
+      `<div class="pc-foot"><span class="pc-price livecell">${priceCell(r)}</span><button class="edgeload" type="button" data-i="${idx}">Load</button></div>`+
+    `</article>`;
   });
-  return h+`</tbody></table></div>`; }
+  return h+`</div>`; }
 function wireTable(el, rows, sort, rerender){
   el.querySelectorAll('.edgeload').forEach(b=>b.onclick=()=>loadPick(rows[+b.dataset.i]));
-  el.querySelectorAll('.edgetbl th').forEach(t=>t.onclick=()=>{ const k=t.dataset.k; if(!k) return;
-    if(sort.key===k) sort.dir*=-1; else { sort.key=k; sort.dir=['name','statText','side','matchup'].includes(k)?1:-1; }
+  el.querySelectorAll('.sortpill').forEach(t=>t.onclick=()=>{ const k=t.dataset.k;
+    if(sort.key===k) sort.dir*=-1; else { sort.key=k; sort.dir=['name','matchup'].includes(k)?1:-1; }
     rerender(); }); }
 function loadPick(r){ const p=byId[r.pid]; if(!p) return;
   showTab('player');
@@ -1255,7 +1269,7 @@ function buildLeaderboard(){
   rows.sort((a,b)=>b.s-a.s);
   const body=$('lbbody');
   if(!rows.length){ body.innerHTML='<p class="mktnote">No active streaks yet — this fills in once the season is underway and current-season game logs land.</p>'; return; }
-  body.innerHTML=rows.slice(0,20).map(r=>`<div class="lbrow"><div class="lbn"><b>${esc(r.p.n)}</b> · ${esc(r.p.t)} · ${esc(statLabel(r.sk))} over ${r.line}</div><div class="lbstreak">${r.s} 🔥</div></div>`).join('');
+  body.innerHTML=rows.slice(0,20).map(r=>`<div class="lbrow"><div class="lbn"><b>${esc(r.p.n)}</b>${esc(r.p.t)} · ${esc(statLabel(r.sk))} over ${r.line}</div><div class="lbstreak">${r.s} 🔥</div></div>`).join('');
 }
 
 // ---- Picks store (drives both Upcoming and Past) ----
