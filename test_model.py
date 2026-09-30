@@ -110,10 +110,15 @@ class ModelTests(unittest.TestCase):
         hist_rows = [[2025, 1, "X", "REG"] + [0] * 12 + [1, 0, 44.5, -3.0], [2025, 2, "Y", "REG"] + [0] * 12 + [0, 0, 51.0, 6.5],
                      [2025, 3, "Z", "REG"] + [0] * 12 + [1, 0, None, None], [2025, 4, "W", "REG"] + [0] * 12 + [0, 0, 47.5, 1.0]]
         hist = B.hist_context(hist_rows)
+        shares_list = (None, [0.9, 0.6], [0.2, 0.7], [0.5, 0.5], [0.95, 0.4])
         for fam in ("pass", "rush", "rec"):
-            for game_pts, game_spr, dr in ((26.0, 4.0, 1.15), (19.5, -7.0, 0.8), (None, None, None), (24.0, 0.0, None)):
+            for i, (game_pts, game_spr, dr) in enumerate(((26.0, 4.0, 1.15), (19.5, -7.0, 0.8), (None, None, None), (24.0, 0.0, None),
+                                                           (40.0, 7.0, 1.6))):
+                shares = shares_list[i]
+                usage = B.usage_of(shares)
                 ctx_cases.append({"fam": fam, "hist": hist, "gamePts": game_pts, "gameSpr": game_spr, "defRatio": dr,
-                                  "expect": B.context_scale(fam, hist, game_pts, game_spr, dr)})
+                                  "shares": shares, "usage": usage,
+                                  "expect": B.context_scale(fam, hist, game_pts, game_spr, dr, usage)})
         with open(os.path.join(HERE, "model_cases.json"), "w", encoding="utf-8") as f:
             json.dump({"model": out, "ctx": ctx_cases, "hist": {"rows": hist_rows, "expect": hist},
                        "CTX": B.CTX, "MODEL": B.MODEL}, f)
@@ -121,6 +126,28 @@ class ModelTests(unittest.TestCase):
 
 class ContextTests(unittest.TestCase):
     ROW = lambda self, tot, spr: [2025, 1, "X", "REG"] + [0] * 12 + [1, 0, tot, spr]
+
+    def test_usage(self):
+        saved = dict(B.SNAPS)
+        try:
+            B.SNAPS.clear()
+            rows = [[2025, w, "X", "REG"] for w in range(1, 9)]
+            B.SNAPS.update({("p", 2025, w): s for w, s in zip(range(1, 9), [0.4] * 6 + [0.8, 0.8])})
+            recent, usual = B.usage_shares("p", rows)
+            self.assertEqual(recent, 0.8)
+            self.assertTrue(0.4 < usual < 0.8)
+            self.assertGreater(B.usage_of([recent, usual]), 1.0)
+            self.assertEqual(B.usage_of([0.9, 0.1]), 1.6)                   # clamped
+            self.assertIsNone(B.usage_shares("p", rows[:3]))               # fewer than 4 known games
+            self.assertIsNone(B.usage_shares("nobody", rows))
+            self.assertIsNone(B.usage_of(None))
+            base = B.context_scale("rush", {"pts": None, "spr": None}, None, None, None)
+            up = B.context_scale("rush", {"pts": None, "spr": None}, None, None, None, 1.44)
+            self.assertEqual(base["scale"], 1.0)
+            self.assertAlmostEqual(up["scale"], 1.2, places=9)              # 1.44 ** 0.5
+        finally:
+            B.SNAPS.clear()
+            B.SNAPS.update(saved)
 
     def test_hist_context(self):
         rows = [self.ROW(44.5, -3.0), self.ROW(51.0, 6.5)]

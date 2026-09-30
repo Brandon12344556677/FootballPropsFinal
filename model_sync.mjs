@@ -1,14 +1,14 @@
 // Proves the JavaScript model in template.html matches the Python model in build.py.
-// Run the Python tests first (they write tests/model_cases.json), then:  node tests/model_sync.mjs
+// Run the Python tests first (they write model_cases.json), then:  node model_sync.mjs
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const here = dirname(fileURLToPath(import.meta.url));
-const html = readFileSync(join(here, '..', 'template.html'), 'utf8');
+const html = readFileSync(join(here, 'template.html'), 'utf8');
 const m = html.match(/\/\/ ==== MODEL[\s\S]*?\n([\s\S]*?)\/\/ ==== END MODEL/);
 if (!m) { console.error('MODEL block not found in template.html'); process.exit(1); }
-const api = new Function(m[1] + '\nreturn {MODEL, CTX, modelProb, seedLine, gradeResult, sideProb, ncdf, contextScale, histContext, statFamily, defStatFor};')();
+const api = new Function(m[1] + '\nreturn {MODEL, CTX, modelProb, seedLine, gradeResult, sideProb, ncdf, contextScale, usageOf, histContext, statFamily, defStatFor};')();
 
 const doc = JSON.parse(readFileSync(join(here, 'model_cases.json'), 'utf8'));
 let bad = 0;
@@ -23,12 +23,16 @@ for (const c of doc.model) {
 }
 for (const key of ['betaPts', 'betaSpr', 'gamma']) for (const fam of ['pass', 'rush', 'rec'])
   if (api.CTX[key][fam] !== doc.CTX[key][fam]) { bad++; console.error(`CTX.${key}.${fam} differs: js=${api.CTX[key][fam]} py=${doc.CTX[key][fam]}`); }
+for (const key of ['usage', 'clampLo', 'clampHi'])
+  if (api.CTX[key] !== doc.CTX[key]) { bad++; console.error(`CTX.${key} differs: js=${api.CTX[key]} py=${doc.CTX[key]}`); }
 for (const key of Object.keys(doc.MODEL)) if (api.MODEL[key] !== doc.MODEL[key]) { bad++; console.error(`MODEL.${key} differs`); }
 const hist = api.histContext(doc.hist.rows);
 for (const k of ['pts', 'spr']) if (Math.abs((hist[k] ?? -1) - (doc.hist.expect[k] ?? -1)) > tol) { bad++; console.error(`histContext ${k} mismatch`, hist, doc.hist.expect); }
 for (const c of doc.ctx) {
-  const got = api.contextScale(c.fam, c.hist, c.gamePts, c.gameSpr, c.defRatio);
-  for (const k of ['scale', 'env', 'def']) if (Math.abs(got[k] - c.expect[k]) > tol) { bad++; console.error(`contextScale ${k} mismatch`, c, got); }
+  const usage = api.usageOf(c.shares);
+  if (Math.abs((usage ?? -1) - (c.usage ?? -1)) > tol) { bad++; console.error('usageOf mismatch', c.shares, usage, c.usage); }
+  const got = api.contextScale(c.fam, c.hist, c.gamePts, c.gameSpr, c.defRatio, usage);
+  for (const k of ['scale', 'env', 'def', 'use']) if (Math.abs(got[k] - c.expect[k]) > tol) { bad++; console.error(`contextScale ${k} mismatch`, c, got); }
 }
 if (api.statFamily('rush_rec_yds', 'WR') !== 'rec' || api.defStatFor('scrim_td', 'RB') !== 'rush_td') { bad++; console.error('family/defStat mismatch'); }
 if (api.gradeResult(70, 60.5, 'over') !== 'hit' || api.gradeResult(60, 60, 'over') !== 'push') { bad++; console.error('gradeResult mismatch'); }

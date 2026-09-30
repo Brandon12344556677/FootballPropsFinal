@@ -93,13 +93,13 @@ footer a:hover{color:#dfe6ef}
       </div>
 
       <h2 id="overview">Overview</h2>
-      <p>Every number on the site comes from one small, published model — the same code runs in your browser and in the hourly job that records picks. There is no hidden tuning per pick and no human override. The model is backward-looking: it knows a player's game log, the opponent, and (for the NFL) the Vegas line and the injury report. It does not know about weather, a coaching change, or who else is out.</p>
+      <p>Every number on the site comes from one small, published model — the same code runs in your browser and in the hourly job that records picks. There is no hidden tuning per pick and no human override. The model is backward-looking: it knows a player's game log, the opponent, and (for the NFL) the Vegas line, snap counts and the injury report. It does not know about weather, a coaching change, or who else is out.</p>
 
       <h2 id="data">Where the data comes from</h2>
       <table>
         <thead><tr><th>Sport</th><th>Game logs</th><th>Schedule &amp; context</th></tr></thead>
         <tbody>
-          <tr><td><b>NFL</b></td><td>nflverse weekly player stats (regular season and playoffs), with ESPN box scores for games nflverse hasn't posted yet</td><td>nflverse schedule with Vegas spread and total; official injury reports; rosters</td></tr>
+          <tr><td><b>NFL</b></td><td>nflverse weekly player stats (regular season and playoffs), with ESPN box scores for games nflverse hasn't posted yet</td><td>nflverse schedule with Vegas spread and total; official injury reports; rosters; snap counts</td></tr>
           <tr><td><b>NBA</b></td><td>ESPN public box scores</td><td>ESPN schedule with game totals and spreads; opponent defense</td></tr>
           <tr><td><b>NHL</b></td><td>ESPN public box scores (skaters and goalies)</td><td>ESPN schedule with game totals and spreads; opponent defense</td></tr>
           <tr><td><b>MLB</b></td><td>ESPN public box scores and play-by-play</td><td>ESPN schedule; opposing pitching staff or lineup; postseason flag</td></tr>
@@ -121,7 +121,7 @@ footer a:hover{color:#dfe6ef}
       <h2 id="context">Adjusting for the matchup</h2>
       <p>Before reading off the chance, the player's distribution is scaled for this game:</p>
       <ul>
-        <li><b>NFL:</b> the Vegas implied team points (from the total and the spread) against the player's usual, and how much the opponent allows to that position against the league average. The strengths were fitted on the backtest and checked on held-out weeks — they're deliberately small: implied points to the 0.25 power; defense to the 0.75 power for passing, 0.5 for receiving, 0.25 for rushing.</li>
+        <li><b>NFL:</b> the Vegas implied team points (from the total and the spread) against the player's usual, and how much the opponent allows to that position against the league average. The strengths were fitted on the backtest and checked on held-out weeks — they're deliberately small: implied points to the 0.25 power; defense to the 0.75 power for passing, 0.5 for receiving, 0.25 for rushing. The NFL model also reads each player's role from snap counts: the share of offensive snaps over the last two games against their usual, to the 0.5 power — so a back who just took over the job, or a starter who lost it, moves before the box score catches up. On held-out weeks that improved the model in every stat family (log loss 0.5960 → 0.5924 over 16,993 cases). It's skipped when the injury adjustment already raises that stat, so the same news isn't counted twice.</li>
         <li><b>NBA:</b> the team's implied points from the game total and spread, against the player's usual, and the opponent's defense against that stat.</li>
         <li><b>NHL:</b> the team's implied goals from the game total and spread, and the opponent's defense against that stat.</li>
         <li><b>MLB:</b> the opposing pitching staff (for hitters) or lineup (for pitchers). In the postseason, pitching props are also scaled down 10%, because starters get pulled earlier in October.</li>

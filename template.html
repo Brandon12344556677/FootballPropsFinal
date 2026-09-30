@@ -971,7 +971,7 @@ function cents(p){ return p==null? '—' : Math.round(p*100)+'¢'; }
 
 // ==== MODEL (mirrored in build.py — keep identical) ====
 const MODEL = {halfLife:6, maxGames:20, priorK:0.5, bwConst:0.9, bwFloorCount:0.35, bwFloorYards:1.0, z:1.2816};
-const CTX = {betaPts:{pass:0.25, rush:0.25, rec:0.25}, betaSpr:{pass:0, rush:0, rec:0}, gamma:{pass:0.75, rush:0.25, rec:0.5}, clampLo:0.6, clampHi:1.6};
+const CTX = {betaPts:{pass:0.25, rush:0.25, rec:0.25}, betaSpr:{pass:0, rush:0, rec:0}, gamma:{pass:0.75, rush:0.25, rec:0.5}, usage:0.5, clampLo:0.6, clampHi:1.6};
 const COUNT_STATS = new Set(['pass_td','pass_att','pass_cmp','pass_int','rush_att','rush_td','rec','tgt','rec_td','scrim_td']);
 function erf(x){ const s=x>=0?1:-1; x=Math.abs(x); const t=1/(1+0.3275911*x);
   const y=1-(((((1.061405429*t-1.453152027)*t)+1.421413741)*t-0.284496736)*t+0.254829592)*t*Math.exp(-x*x); return s*y; }
@@ -1012,13 +1012,17 @@ function histContext(rows){ const r=rows.slice(-MODEL.maxGames), n=r.length; let
   r.forEach((g,i)=>{ const tot=g[18], spr=g[19]; if(tot==null||spr==null) return;
     const w=Math.pow(0.5,(n-1-i)/MODEL.halfLife); sp+=w*(tot/2+spr/2); ss+=w*spr; wp+=w; });
   return {pts: wp? sp/wp : null, spr: wp? ss/wp : null}; }
-function contextScale(fam, hist, gamePts, gameSpr, defRatio){
+// Snap-share usage ratio from the builder's [recent, usual] shares (usage_of in build.py).
+function usageOf(u){ return (u&&u[1]>0)? Math.max(0.5, Math.min(1.6, u[0]/u[1])) : null; }
+function contextScale(fam, hist, gamePts, gameSpr, defRatio, usage){
   let env=1;
   if(hist.pts&&gamePts&&hist.pts>0&&gamePts>0) env*=Math.pow(gamePts/hist.pts, CTX.betaPts[fam]);
   if(hist.spr!=null&&gameSpr!=null) env*=Math.exp(CTX.betaSpr[fam]*(gameSpr-hist.spr)/7);
   let dfs=1; if(defRatio&&defRatio>0) dfs=Math.pow(defRatio, CTX.gamma[fam]);
-  const scale=Math.min(CTX.clampHi, Math.max(CTX.clampLo, env*dfs));
-  return {scale, env, def:dfs};
+  let scale=Math.min(CTX.clampHi, Math.max(CTX.clampLo, env*dfs));
+  const use=usage? Math.pow(usage, CTX.usage) : 1;
+  if(use!==1) scale=Math.min(CTX.clampHi, Math.max(CTX.clampLo, scale*use));
+  return {scale, env, def:dfs, use};
 }
 // ==== END MODEL ====
 
@@ -1158,7 +1162,7 @@ function defRatioFor(opp, pos, sk){ const dp=defPos(pos), ds=defStatFor(sk,pos);
   if(!opp||!ds||!DB.defense||!DB.defense[opp]||!DB.defense[opp][dp]||!DB.defense[opp][dp][ds]||!DB.defAvg||!DB.defAvg[dp]||!DB.defAvg[dp][ds]) return null;
   return DB.defense[opp][dp][ds].a/DB.defAvg[dp][ds]; }
 function contextFor(p, sk, oppOverride, gameOverride){
-  const off={scale:1, env:1, def:1, opp:null, gamePts:null, gameSpr:null, defRatio:null, on:false};
+  const off={scale:1, env:1, def:1, use:1, opp:null, gamePts:null, gameSpr:null, defRatio:null, on:false};
   if(!state.adj||!p) return off;
   const g=gameOverride||teamGame(p.t), hist=histContext(gamesOf(p));
   let gamePts=null, gameSpr=null, opp=null;
@@ -1166,7 +1170,8 @@ function contextFor(p, sk, oppOverride, gameOverride){
     if(g.spread!=null&&g.total!=null){ gameSpr=home?g.spread:-g.spread; gamePts=g.total/2+gameSpr/2; } }
   if(oppOverride) opp=oppOverride;
   const defRatio=defRatioFor(opp, p.p, sk);
-  return Object.assign(contextScale(statFamily(sk,p.p), hist, gamePts, gameSpr, defRatio), {opp, gamePts, gameSpr, defRatio, on:true});
+  const usage=injMult(p, sk)===1? usageOf(p.u) : null;
+  return Object.assign(contextScale(statFamily(sk,p.p), hist, gamePts, gameSpr, defRatio, usage), {opp, gamePts, gameSpr, defRatio, usage, on:true});
 }
 function currentOpp(){ return oppTouched? ($('oppsel').value||null) : null; }
 function injMult(p, sk){ const b=p&&p.inj_boost; if(!b) return 1; const f=statFamily(sk,p.p); return (f==='rec'?b.rec:f==='rush'?b.rush:1)||1; }
@@ -1307,7 +1312,7 @@ function buildWhy(p, sk, line, side, mp, ctx){
   if(!ctx.on){
     R.push(['⚙️','Game context is off',
       `The <b>Adjust for Vegas line &amp; opponent</b> box is unchecked, so nothing is scaled for the matchup — this is the raw history.`]);
-  } else if(ctx.gamePts==null && ctx.defRatio==null){
+  } else if(ctx.gamePts==null && ctx.defRatio==null && !ctx.usage){
     R.push(['⚙️','Game context',
       `No Vegas number or defensive rank is on file for this matchup yet, so the distribution is left alone (×1.00).`]);
   } else {
@@ -1317,6 +1322,10 @@ function buildWhy(p, sk, line, side, mp, ctx){
       bits.push(Math.abs(d)<1
         ? `${esc(ctx.opp||'the opponent')} gives up about the league average to ${esc(defPos(p.p))}s on ${whyDefLabel(sk,p.p)} (×${ctx.def.toFixed(2)})`
         : `${esc(ctx.opp||'the opponent')} allows <b>${Math.abs(d)}% ${d>0?'more':'less'}</b> than the league average to ${esc(defPos(p.p))}s on ${whyDefLabel(sk,p.p)} (×${ctx.def.toFixed(2)})`); }
+    if(ctx.usage && p.u){ const r=Math.round(p.u[0]*100), u=Math.round(p.u[1]*100);
+      bits.push(Math.abs(ctx.use-1)<0.005
+        ? `${esc(p.n)}’s snap share is steady (<b>${r}%</b> of offensive snaps lately, about the usual)`
+        : `${esc(p.n)} played <b>${r}%</b> of offensive snaps the last two games, against a usual <b>${u}%</b> (×${ctx.use.toFixed(2)})`); }
     const helps = side==='over'? ctx.scale>1.005 : ctx.scale<0.995;   // a bigger scale lifts the over and sinks the under
     const hurts = side==='over'? ctx.scale<0.995 : ctx.scale>1.005;
     const cls = helps? 'whyup' : hurts? 'whydown' : '';
@@ -2171,7 +2180,7 @@ function apCandidates(teamsSet){
     stats.forEach(sk=>{ const st=STATMAP[sk]; if(!st) return;
       const vals=p.g.map(st.get), line=seedLine(vals);
       if(line < (sk==='pass_yds'?150 : st.kind==='yards'?30 : 3.5)) return;
-      const cs=contextScale(statFamily(sk,p.p),hist,gamePts,gameSpr,defRatioFor(opp,p.p,sk));
+      const cs=contextScale(statFamily(sk,p.p),hist,gamePts,gameSpr,defRatioFor(opp,p.p,sk),usageOf(p.u));
       const mp=calMp(modelProb(vals,line,st.kind,cs.scale)); if(!mp||mp.neff<5) return;
       out.push({p, sk, line, side:'over', prob:mp.over, neff:mp.neff, gid:(wg.id||wg.away+'@'+wg.home)});
     });
@@ -2471,7 +2480,7 @@ function generateDigest(){
       if(line < (sk==='pass_yds'?150 : st.kind==='yards'?30 : 3.5)) return;
       substantive=true;
       if(out) return;
-      const cs=contextScale(statFamily(sk,p.p), hist, gamePts, gameSpr, defRatioFor(opp,p.p,sk));
+      const cs=contextScale(statFamily(sk,p.p), hist, gamePts, gameSpr, defRatioFor(opp,p.p,sk), usageOf(p.u));
       const mp=calMp(modelProb(vals, line, st.kind, cs.scale)); if(!mp) return;
       const tc=trapCheck(p, sk, line, 'over', mp, {on:true, scale:cs.scale, opp});
       cands.push({p, sk, line, prob:mp.over, neff:mp.neff, opp, trap:tc.trap, raw:tc.raw, reasons:tc.reasons});
@@ -2532,7 +2541,7 @@ function weekTopPicks(n){
     stats.forEach(sk=>{ const st=STATMAP[sk]; if(!st) return;
       const vals=p.g.map(st.get), line=seedLine(vals);
       if(line < (sk==='pass_yds'?150 : st.kind==='yards'?30 : 3.5)) return;
-      const cs=contextScale(statFamily(sk,p.p),hist,gamePts,gameSpr,defRatioFor(opp,p.p,sk));
+      const cs=contextScale(statFamily(sk,p.p),hist,gamePts,gameSpr,defRatioFor(opp,p.p,sk),usageOf(p.u));
       const mp=calMp(modelProb(vals,line,st.kind,cs.scale)); if(!mp||mp.neff<6) return;
       if(!best||mp.over>best.prob) best={p, sk, line, prob:mp.over, label:STATMAP[sk].label, opp, home, date:wg.date};
     });

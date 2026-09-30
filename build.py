@@ -37,6 +37,8 @@ STATS_URL = BASE + "stats_player/stats_player_week_{year}.csv"
 SCHED_URL = BASE + "schedules/games.csv"
 INJ_URL = BASE + "injuries/injuries_{year}.csv"
 ROSTER_URL = BASE + "rosters/roster_{year}.csv"
+SNAPS_URL = BASE + "snap_counts/snap_counts_{year}.csv"
+PLAYERS_URL = BASE + "players/players.csv"      # id crosswalk: snap counts use PFR ids
 UA = {"User-Agent": "prop-streak-lab/2.0"}
 
 # ESPN public box scores — a near-real-time fill for current-season games the
@@ -94,11 +96,15 @@ MODEL = {"halfLife": 6.0, "maxGames": 20, "priorK": 0.5, "bwConst": 0.9, "bwFloo
 #   (this game's implied team points / their usual implied points) ^ betaPts
 #   * exp(betaSpr * (spread swing in TDs))          (favorites run more, underdogs pass more)
 #   * (opponent's allowed-per-game / league average) ^ gamma
+#   * (recent snap share / usual snap share) ^ usage   (see usage_shares)
 # Strengths were fitted on the walk-forward backtest (tools/tune_context.py) and
 # validated on held-out weeks. 0 = adjustment off. Clamped to [clampLo, clampHi].
+# usage = 0.5 lowered held-out log-loss in every family and both week folds
+# (all cases with snap data: 0.5960 -> 0.5924, n = 16,993).
 CTX = {"betaPts": {"pass": 0.25, "rush": 0.25, "rec": 0.25},
        "betaSpr": {"pass": 0.0, "rush": 0.0, "rec": 0.0},
        "gamma": {"pass": 0.75, "rush": 0.25, "rec": 0.5},
+       "usage": 0.5,
        "clampLo": 0.6, "clampHi": 1.6}
 
 
@@ -192,8 +198,9 @@ def hist_context(rows):
     return {"pts": sp / wp if wp else None, "spr": ss / wp if wp else None}
 
 
-def context_scale(fam, hist, game_pts, game_spr, def_ratio):
-    """Multiplier for the player's distribution in this game. Missing inputs -> no change."""
+def context_scale(fam, hist, game_pts, game_spr, def_ratio, usage=None):
+    """Multiplier for the player's distribution in this game. Missing inputs -> no change.
+    usage is the snap-share ratio from usage_of(), or None."""
     env = 1.0
     if hist["pts"] and game_pts and hist["pts"] > 0 and game_pts > 0:
         env *= (game_pts / hist["pts"]) ** CTX["betaPts"][fam]
@@ -203,7 +210,61 @@ def context_scale(fam, hist, game_pts, game_spr, def_ratio):
     if def_ratio and def_ratio > 0:
         dfs = def_ratio ** CTX["gamma"][fam]
     scale = min(CTX["clampHi"], max(CTX["clampLo"], env * dfs))
-    return {"scale": scale, "env": env, "def": dfs}
+    use = usage ** CTX["usage"] if usage else 1.0
+    if use != 1.0:
+        scale = min(CTX["clampHi"], max(CTX["clampLo"], scale * use))
+    return {"scale": scale, "env": env, "def": dfs, "use": use}
+
+
+# ---------------------------------------------------------------------------
+# Snap-share usage: a role change the box score is slow to show (a back who took
+# over the starting job, a receiver returning from injury on a snap count).
+# Recent = mean offensive snap share of the last 2 games with snap data; usual =
+# recency-weighted share (half-life 6) over the last 8. Needs 4 known games.
+# ---------------------------------------------------------------------------
+SNAPS = {}   # (player id, season, week) -> offensive snap share 0..1; empty = adjustment off
+
+
+def load_snaps(seasons):
+    """nflverse snap counts keyed to the stats' player ids. Any failure -> {}."""
+    ids = {}
+    for r in fetch_csv(PLAYERS_URL, "players crosswalk") or []:
+        if r.get("pfr_id") and r.get("gsis_id"):
+            ids[r["pfr_id"]] = r["gsis_id"]
+    out = {}
+    if not ids:
+        return out
+    for y in seasons:
+        for r in fetch_csv(SNAPS_URL.format(year=y), f"snaps {y}") or []:
+            g = ids.get(r.get("pfr_player_id"))
+            try:
+                pct = float(r.get("offense_pct") or "nan")
+                key = (g, int(r["season"]), int(r["week"]))
+            except (TypeError, ValueError, KeyError):
+                continue
+            if g and pct == pct:
+                out[key] = pct
+    return out
+
+
+def usage_shares(pid, prior):
+    """[recent, usual] snap share before the next game, or None (too little snap data)."""
+    sh = [SNAPS.get((pid, r[0], r[1])) for r in prior[-8:]]
+    sh = [x for x in sh if x is not None]
+    if len(sh) < 4:
+        return None
+    w = [0.5 ** ((len(sh) - 1 - k) / 6.0) for k in range(len(sh))]
+    usual = sum(a * b for a, b in zip(sh, w)) / sum(w)
+    if usual <= 0.05:
+        return None
+    return [round((sh[-1] + sh[-2]) / 2.0, 3), round(usual, 3)]
+
+
+def usage_of(shares):
+    """The usage ratio recent / usual, clamped to [0.5, 1.6]; None -> None. Mirrored in JS."""
+    if not shares:
+        return None
+    return max(0.5, min(1.6, shares[0] / shares[1]))
 
 
 def median(a):
@@ -1167,7 +1228,8 @@ def build_live_picks(picks, slate_games, sched, by_key, snap, pmus=None):
             game_spr = None if (home is None or sg["spread"] is None) else (sg["spread"] if home else -sg["spread"])
             game_pts = None if (game_spr is None or sg["total"] is None) else sg["total"] / 2.0 + game_spr / 2.0
             ctx = context_scale(stat_family(sk, pl["p"]), hist_context(pl["g"]), game_pts, game_spr,
-                                def_ratio(snap, opp if home is not None else None, pl["p"], sk))
+                                def_ratio(snap, opp if home is not None else None, pl["p"], sk),
+                                None if inj_mult(pl, sk) != 1.0 else usage_of(pl.get("u")))
             vals = [stat_value(sk, r) for r in pl["g"]]
             mp = model_prob(vals, pm["line"], stat_kind(sk), ctx["scale"] * inj_mult(pl, sk))
             if not mp:
@@ -1272,6 +1334,7 @@ def build_backtest(players, seasons_used, sched, snapshot):
             else:
                 gid, date, team = f"{row[0]}_{row[1]:02d}_?", "", ""
             hist = hist_context(prior)
+            usage = usage_of(usage_shares(pl["id"], prior))
             game_spr, game_tot = row[19], row[18]
             game_pts = None if (game_spr is None or game_tot is None) else game_tot / 2.0 + game_spr / 2.0
             snap = snapshot(row[0], row[1])
@@ -1280,7 +1343,7 @@ def build_backtest(players, seasons_used, sched, snapshot):
                 if stat_kind(sk) == "yards" and median(vals[-10:]) < BT_MIN_YARDS_MEDIAN:
                     continue
                 line = seed_line(vals)
-                ctx = context_scale(stat_family(sk, pl["p"]), hist, game_pts, game_spr, def_ratio(snap, row[2], pl["p"], sk))
+                ctx = context_scale(stat_family(sk, pl["p"]), hist, game_pts, game_spr, def_ratio(snap, row[2], pl["p"], sk), usage)
                 mp = model_prob(vals, line, stat_kind(sk), ctx["scale"])
                 if not mp:
                     continue
@@ -1436,6 +1499,18 @@ def main():
         compute_injury_boosts(players)
     except Exception as e:  # noqa: BLE001
         print(f"  injury boosts: skipped ({e})")
+    try:
+        SNAPS.update(load_snaps(CANDIDATE_SEASONS))
+        n_u = 0
+        for p in players:
+            u = usage_shares(p["id"], p["g"]) if p["g"] else None
+            if u:
+                p["u"] = u               # [recent, usual] snap share, for the page's model
+                n_u += 1
+        print(f"  snap counts: {len(SNAPS)} player-games, usage for {n_u} player(s)")
+    except Exception as e:  # noqa: BLE001
+        SNAPS.clear()
+        print(f"  snap counts: skipped ({e}) — no usage adjustment")
     with_games = [p for p in players if p["g"]]
     latest = (0, 0, "REG")
     for p in with_games:

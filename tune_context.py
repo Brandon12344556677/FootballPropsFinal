@@ -12,6 +12,10 @@ odd weeks and scores even weeks (and vice versa) against the no-adjustment basel
 Run from the repo root (downloads the same nflverse files the build does):
     python tools/tune_context.py
 Then paste the printed CTX into build.py AND the CTX in template.html.
+
+CTX["usage"] (the snap-share strength) isn't refitted here: these cases run with it
+off, and the printed CTX carries the current value through. It was fitted the same
+way (odd/even weeks) on the cases that have snap data: 0.5 won in every family.
 """
 import itertools, math, os, sys, collections
 
@@ -114,6 +118,7 @@ def main():
     print("\nCTX = {")
     for key, idx in (("betaPts", 0), ("betaSpr", 1), ("gamma", 2)):
         print(f'    "{key}": {{' + ", ".join(f'"{f}": {fitted[f][idx]}' for f in ("pass", "rush", "rec")) + "},")
+    print(f'    "usage": {B.CTX["usage"]},')
     print('    "clampLo": 0.6, "clampHi": 1.6}')
 
 

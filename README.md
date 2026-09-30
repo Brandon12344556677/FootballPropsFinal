@@ -7,7 +7,7 @@ prices. Every pick the site makes is recorded before kickoff and graded afterwar
 so the **Past picks** tab shows exactly how well it has done.
 
 Data comes from [nflverse](https://github.com/nflverse) public releases (weekly
-player stats, schedules, injury reports, rosters). Prices come from Polymarket's
+player stats, snap counts, schedules, injury reports, rosters). Prices come from Polymarket's
 public API.
 
 **It updates itself.** A GitHub Action pulls fresh data every morning at 5 AM ET
@@ -28,8 +28,14 @@ the site.
   position versus the league average. The strengths were fitted on the backtest
   with `tools/tune_context.py` and validated on held-out weeks (they're small:
   implied points to the 0.25 power; defense to the 0.75 power for passing, 0.5 for
-  receiving, 0.25 for rushing). The tile shows the multiplier, and a checkbox
-  turns the adjustment off so you can see the raw history.
+  receiving, 0.25 for rushing). It also reads the player's role from nflverse
+  snap counts: offensive snap share over the last two games against their usual
+  (recency-weighted, last eight), to the 0.5 power — a back who just took over the
+  job, or a starter who lost it, moves before the box score catches up. On held-out
+  weeks that lowered log loss in every stat family (0.5960 -> 0.5924 over 16,993
+  cases). It's skipped when the injury boost already raises that stat. The tile
+  shows the multiplier, and a checkbox turns the adjustment off so you can see the
+  raw history.
 - **This week strip** — opponent, kickoff, Vegas spread and total from the schedule.
 - **Badges** — official injury report status, injured reserve / practice squad,
   offseason team changes ("now with X, log from Y"), rookies, small samples.
@@ -53,7 +59,7 @@ the site.
   and last.
 - **Why this number** — under the tiles, the model shows its work: the
   recency-weighted average and spread, how many standard deviations your line sits
-  from it, what the Vegas number and the opponent's defense scaled it by, how much
+  from it, what the Vegas number, the opponent's defense and the snap share scaled it by, how much
   a thin sample was shrunk toward 50/50, and the calibration temperature — each
   step with the running probability. "Show the math" prints the whole chain on one
   line.
@@ -133,8 +139,8 @@ Put your referral link in `url`. Leave it `""` to hide the banner.
 
 ## How the pipeline works
 
-1. `build.py` downloads the last three seasons of weekly stats, the schedule, the
-   current season's injury reports and roster.
+1. `build.py` downloads the last three seasons of weekly stats and snap counts, the
+   schedule, the current season's injury reports and roster.
 2. It builds `data.json`: per-player game logs (regular season + playoffs), current
    team from the roster, injury status, this week's games with kickoff and Vegas
    lines, and blended defense-vs-position ranks.
@@ -192,8 +198,8 @@ To test right away: **Actions → Update NFL data → Run workflow**, set *post*
 
 ## Honest limits
 - Backward-looking. The model knows the game log, the Vegas line, the opponent's
-  defense and the injury report, but not weather, a coaching change, or who else
-  is out on the team. The backtest lines are self-seeded from history, so the
+  defense, snap counts and the injury report, but not weather, a coaching change,
+  or who else is out on the team. The backtest lines are self-seeded from history, so the
   edge the adjustments show there is larger than against a real market, which
   already prices the line and the matchup.
 - Rookies and returning players appear in search right away but have no chance
