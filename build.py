@@ -1540,7 +1540,7 @@ def main():
     # SEO: sitemap (with a fresh lastmod each build) and robots.txt.
     site = "https://propstreaklab.com"
     pages = [("/", "daily", "1.0"), ("/nfl.html", "daily", "0.9"), ("/nba.html", "daily", "0.9"),
-             ("/nhl.html", "daily", "0.9"), ("/privacy.html", "monthly", "0.3"),
+             ("/nhl.html", "daily", "0.9"), ("/mlb.html", "daily", "0.9"), ("/privacy.html", "monthly", "0.3"),
              ("/terms.html", "monthly", "0.3"), ("/cookies.html", "monthly", "0.3")]
     with open("sitemap.xml", "w", encoding="utf-8") as f:
         f.write('<?xml version="1.0" encoding="UTF-8"?>\n'

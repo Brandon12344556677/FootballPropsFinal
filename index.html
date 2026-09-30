@@ -4,13 +4,13 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <script>document.documentElement.classList.add('js')</script>
-<title>Prop Streak Lab — Free NFL, NBA &amp; NHL Player Prop Analytics</title>
-<meta name="description" content="See how often any NFL, NBA or NHL player clears a prop, get a calibrated probability for any line, compare it to the market, and check how every past pick was graded. 100% free — no signup.">
+<title>Prop Streak Lab — Free NFL, NBA, NHL &amp; MLB Player Prop Analytics</title>
+<meta name="description" content="See how often any NFL, NBA, NHL or MLB player clears a prop, get a calibrated probability for any line, compare it to the market, and check how every past pick was graded. 100% free — no signup.">
 <link rel="canonical" href="https://propstreaklab.com/">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://propstreaklab.com/">
 <meta property="og:title" content="Prop Streak Lab — Free player-prop analytics">
-<meta property="og:description" content="Real game logs, a calibrated chance for any line, priced against the market, and every pick graded in public. NFL · NBA · NHL. Free.">
+<meta property="og:description" content="Real game logs, a calibrated chance for any line, priced against the market, and every pick graded in public. NFL · NBA · NHL · MLB. Free.">
 <meta property="og:site_name" content="Prop Streak Lab">
 <meta property="og:image" content="https://propstreaklab.com/icon-512.png">
 <meta property="og:image:width" content="512">
@@ -383,7 +383,7 @@ footer .fine a{color:#8394ab}
   <section class="hero" aria-labelledby="hero-h">
     <div class="wrap">
       <div>
-        <span class="eyebrow rv"><span class="dot"></span><span>100% free player-prop analytics<span class="hide-sm"> · NFL · NBA · NHL</span></span></span>
+        <span class="eyebrow rv"><span class="dot"></span><span>100% free player-prop analytics<span class="hide-sm"> · NFL · NBA · NHL · MLB</span></span></span>
         <h1 id="hero-h" class="rv d1">Know how often a player <i>actually</i> clears the line.</h1>
         <div class="freebadge rv d1" role="note">
           <span class="fb-price" aria-hidden="true"><sup>$</sup>0</span>
@@ -394,10 +394,11 @@ footer .fine a{color:#8394ab}
           <a class="sport" href="./nfl.html"><span class="ico" aria-hidden="true">🏈</span><span><b>NFL</b><small>Football props</small></span></a>
           <a class="sport" href="./nba.html"><span class="ico" aria-hidden="true">🏀</span><span><b>NBA</b><small>Basketball props</small></span></a>
           <a class="sport" href="./nhl.html"><span class="ico" aria-hidden="true">🏒</span><span><b>NHL</b><small>Hockey props</small></span></a>
+          <a class="sport" href="./mlb.html"><span class="ico" aria-hidden="true">⚾</span><span><b>MLB</b><small>Baseball props</small></span></a>
         </div>
         <div class="trust rv d3">
           <span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>$0, no account</span>
-          <span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>Updated every morning</span>
+          <span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>Updated every hour</span>
           <span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>Every pick graded</span>
         </div>
       </div>
@@ -444,13 +445,14 @@ footer .fine a{color:#8394ab}
   <section id="sports" class="center" aria-labelledby="sports-h">
     <div class="wrap">
       <p class="kicker rv">Pick your sport</p>
-      <h2 id="sports-h" class="rv d1">One model. <i>Three</i> leagues.</h2>
+      <h2 id="sports-h" class="rv d1">One model. <i>Four</i> leagues.</h2>
       <p class="sub rv d2">Same tools, same honesty on every board — switch sports anytime.</p>
 
       <div class="tabs rv d2" role="tablist" aria-label="Sports">
         <button class="tab" role="tab" id="t-nfl" aria-controls="p-nfl" aria-selected="true" tabindex="0">🏈 NFL</button>
         <button class="tab" role="tab" id="t-nba" aria-controls="p-nba" aria-selected="false" tabindex="-1">🏀 NBA</button>
         <button class="tab" role="tab" id="t-nhl" aria-controls="p-nhl" aria-selected="false" tabindex="-1">🏒 NHL</button>
+        <button class="tab" role="tab" id="t-mlb" aria-controls="p-mlb" aria-selected="false" tabindex="-1">⚾ MLB</button>
       </div>
 
       <div class="tabpanel rv d3" role="tabpanel" id="p-nfl" aria-labelledby="t-nfl">
@@ -494,6 +496,20 @@ footer .fine a{color:#8394ab}
           <div class="mini"><div class="ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3v18h18"/><path d="m7 15 4-4 3 3 5-6"/></svg></div><div><b>Graded in public</b><span>Every NHL pick is tracked and graded once the game is final.</span></div></div>
         </div>
       </div>
+
+      <div class="tabpanel" role="tabpanel" id="p-mlb" aria-labelledby="t-mlb" hidden>
+        <div>
+          <h3>MLB player props</h3>
+          <p>Every MLB hitter's and pitcher's game log with a calibrated chance for any line — adjusted for the opposing pitching staff or lineup. Built for the playoffs, priced against Polymarket's live MLB props.</p>
+          <ul class="stats-list"><li>Hits</li><li>Total bases</li><li>Hits + runs + RBIs</li><li>Home runs</li><li>RBIs</li><li>Pitcher strikeouts</li><li>Outs recorded</li></ul>
+          <a class="btn btn-go" href="./mlb.html">Open the MLB board →</a>
+        </div>
+        <div class="panel-side">
+          <div class="mini"><div class="ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></div><div><b>25 Guaranteed</b><span>The surest plays on the slate, posted before every first pitch.</span></div></div>
+          <div class="mini"><div class="ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13 2 4 14h7l-1 8 9-12h-7z"/></svg></div><div><b>Value spots</b><span>Where the model's chance clearly beats the Polymarket price.</span></div></div>
+          <div class="mini"><div class="ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3v18h18"/><path d="m7 15 4-4 3 3 5-6"/></svg></div><div><b>Graded in public</b><span>Every MLB pick is tracked and graded once the game is final.</span></div></div>
+        </div>
+      </div>
     </div>
   </section>
 
@@ -526,7 +542,7 @@ footer .fine a{color:#8394ab}
         </article>
       </div>
       <div class="steps">
-        <div class="step rv"><span class="n">1</span><div><b>Pick a sport</b><span>NFL, NBA or NHL — same tools on every board.</span></div></div>
+        <div class="step rv"><span class="n">1</span><div><b>Pick a sport</b><span>NFL, NBA, NHL or MLB — same tools on every board.</span></div></div>
         <div class="step rv d1"><span class="n">2</span><div><b>Search a player, set a line</b><span>Say 62.5 receiving yards, over or under.</span></div></div>
         <div class="step rv d2"><span class="n">3</span><div><b>See the chance, price &amp; edge</b><span>Then build a parlay or scan your bet slip.</span></div></div>
       </div>
@@ -592,7 +608,7 @@ footer .fine a{color:#8394ab}
         <p class="kicker rv">About us</p>
         <h2 id="about-h" class="rv d1">Built by fans who <i>wanted the data</i>.</h2>
         <p class="rv d2">Prop Streak Lab is an independent, fan-built project with a finance and data background behind it. We got tired of pick sellers charging every month for hot takes with no receipts — so we built the opposite.</p>
-        <p class="rv d2">A free tool that shows you the real game logs, puts an honest probability on every line, lines it up against the market, and grades itself in public. It rebuilds itself automatically every morning, for the NFL, NBA and NHL.</p>
+        <p class="rv d2">A free tool that shows you the real game logs, puts an honest probability on every line, lines it up against the market, and grades itself in public. It rebuilds itself automatically every hour, for the NFL, NBA, NHL and MLB.</p>
         <div class="values rv d3"><span>Free</span><span>Transparent</span><span>Data-first</span><span>Privacy-first</span></div>
       </div>
       <figure style="margin:0"><blockquote class="quote rv d2">“The best prop tool isn't the one that's most confident — it's the one that shows you its record.”</blockquote><figcaption class="cond rv d3" style="margin:14px 0 0 29px;color:var(--muted);font-size:13px">Our founding idea</figcaption></figure>
@@ -610,6 +626,7 @@ footer .fine a{color:#8394ab}
           <a class="sport" href="./nfl.html"><span class="ico" aria-hidden="true">🏈</span><span><b>NFL</b><small>Open the board</small></span></a>
           <a class="sport" href="./nba.html"><span class="ico" aria-hidden="true">🏀</span><span><b>NBA</b><small>Open the board</small></span></a>
           <a class="sport" href="./nhl.html"><span class="ico" aria-hidden="true">🏒</span><span><b>NHL</b><small>Open the board</small></span></a>
+          <a class="sport" href="./mlb.html"><span class="ico" aria-hidden="true">⚾</span><span><b>MLB</b><small>Open the board</small></span></a>
         </div>
       </div>
     </div>
@@ -621,7 +638,7 @@ footer .fine a{color:#8394ab}
     <div class="row">
       <a class="brand" href="./"><svg width="28" height="28" viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" rx="14" fill="#0f2038"/><path d="M32,6 Q32,32 54,32 Q32,32 32,58 Q32,32 10,32 Q32,32 32,6 Z" fill="#00c805"/></svg><b>Prop <i>Streak</i> Lab</b></a>
       <nav aria-label="Footer">
-        <a href="./nfl.html">NFL</a><a href="./nba.html">NBA</a><a href="./nhl.html">NHL</a>
+        <a href="./nfl.html">NFL</a><a href="./nba.html">NBA</a><a href="./nhl.html">NHL</a><a href="./mlb.html">MLB</a>
         <a href="privacy.html">Privacy Policy</a><a href="terms.html">Terms &amp; Conditions</a><a href="cookies.html">Cookies Policy</a>
         <a href="mailto:info@propstreaklab.com">Contact</a>
       </nav>

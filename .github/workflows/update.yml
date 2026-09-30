@@ -2,11 +2,11 @@ name: Update NFL data
 
 # Pulls fresh stats (nflverse + ESPN box scores for games nflverse hasn't posted
 # yet), grades finished picks, refreshes the boards and Polymarket prices, and
-# redeploys. Also builds the NBA and NHL pages (non-fatal: a failure there never
+# redeploys. Also builds the NBA, NHL and MLB pages (non-fatal: a failure there never
 # blocks the NFL deploy).
 on:
   schedule:
-    # Hourly, at :40 — 20-50 min before the usual :00/:15/:30 NFL/NBA/NHL starts,
+    # Hourly, at :40 — 20-50 min before the usual :00/:15/:30 NFL/NBA/NHL/MLB starts,
     # so boards and prices are fresh right before games begin. No builder records or
     # changes a pick once its game has started, so an hourly run mid-game is safe.
     # Off the top of the hour, where GitHub delays scheduled runs the most.
@@ -52,13 +52,19 @@ jobs:
           NHL_PROBE: ${{ github.event.inputs.probe }}
         run: python build_nhl.py || echo "NHL build failed — skipping NHL files this run"
 
+      - name: Build MLB data (non-fatal)
+        continue-on-error: true
+        timeout-minutes: 7
+        run: python build_mlb.py || echo "MLB build failed — skipping MLB files this run"
+
       - name: Commit and push if anything changed
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add nfl.html data.json slate.json picks.json weekly.json sitemap.xml robots.txt
           for f in nba.html nba.json nba_stats.json nba_picks.json \
-                   nhl.html nhl.json nhl_stats.json nhl_picks.json; do
+                   nhl.html nhl.json nhl_stats.json nhl_picks.json \
+                   mlb.html mlb.json mlb_stats.json mlb_picks.json; do
             git add "$f" 2>/dev/null || true
           done
           if git diff --cached --quiet; then
