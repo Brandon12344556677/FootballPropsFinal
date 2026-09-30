@@ -1112,9 +1112,19 @@ function renderMatchup(p, sk){ const sel=$('oppsel'); const teams=Object.keys(DB
 // ---- Upcoming games (from recorded, not-yet-graded picks) ----
 const TODAY_ISO = DB.gen || new Date().toISOString().slice(0,10);
 function gameTeams(p){ return [p.team, p.opp].sort(); }
-function upcomingPicks(){ return (PICKS||[]).filter(p=>p.res==null && (p.date||'')>=TODAY_ISO); }
+// A pick is upcoming until its game starts: the auto-updater saves each game's start time
+// on its picks, so they leave the boards at puck drop even between hourly updates. Started
+// picks stay saved as recorded until the final box score grades them into Past picks.
+function pickStarted(p){ const t=p.start? Date.parse(p.start) : NaN;
+  if(isFinite(t)) return Date.now()>=t;
+  const today=new Date().toISOString().slice(0,10);   // older picks saved without a start time
+  return (p.date||'') < (today>TODAY_ISO? today : TODAY_ISO); }
+function upcomingPicks(){ return (PICKS||[]).filter(p=>p.res==null && !pickStarted(p)); }
+function awaitingGrade(p){ if(p.res!=null || !pickStarted(p)) return false;   // started, box score still to come
+  const t=p.start? Date.parse(p.start) : Date.parse((p.date||'')+'T23:59:00Z');
+  return isFinite(t) && Date.now()-t < 2*864e5; }
 function scheduleNote(what){
-  const games=(WEEK.games||[]).filter(g=>!g.final);
+  const games=(WEEK.games||[]).filter(g=>!g.final && !(g.start && Date.parse(g.start)<=Date.now()));
   if(games.length) return games.map(g=>`<div class="boardrow"><div><div class="bp">${esc(g.away)} @ ${esc(g.home)}</div>`+
     `<div class="bmeta">${esc(dlabel(g.date))}${g.time?' · '+esc(g.time)+' ET':''}</div></div><div></div>`+
     `<div class="bmeta">picks post before puck drop</div></div>`).join('');
@@ -1227,16 +1237,22 @@ let PICKS=null;
 function loadPicks(){
   fetch('./nhl_picks.json',{cache:'no-store'}).then(r=>r.ok?r.json():null).then(d=>{
     if(!d||!d.picks){ PICKS=[]; } else { const cols=d.cols; PICKS=d.picks.map(row=>Object.fromEntries(cols.map((c,i)=>[c,row[i]]))); }
-    renderEdges(); renderValue(); renderValueWeek(); generateDigest(); renderPast(); renderApTeams();
-  }).catch(()=>{ PICKS=[]; renderEdges(); renderValue(); renderValueWeek(); generateDigest(); renderPast(); renderApTeams(); });
+    renderPickViews();
+  }).catch(()=>{ PICKS=[]; renderPickViews(); });
 }
+let upSig=-1;
+function renderPickViews(){ renderEdges(); renderValue(); renderValueWeek(); generateDigest(); renderPast(); renderApTeams(); upSig=upcomingPicks().length; }
+// Once a minute: when a game starts, its picks drop off the boards without a reload.
+setInterval(()=>{ if(PICKS!==null && !document.hidden && upcomingPicks().length!==upSig) renderPickViews(); }, 60000);
 function initPicks(){ renderPast(); }   // Past tab opened
 function renderPast(){ const body=$('pkbody'); if(!body) return;
   if(PICKS===null){ body.innerHTML='<p class="mktnote">Loading…</p>'; return; }
+  const wait=PICKS.filter(awaitingGrade), wg=new Set(wait.map(p=>p.gid)).size;
+  const lock=wait.length? `<p class="mktnote">⏳ <b>${wait.length} pick${wait.length===1?'':'s'}</b> from ${wg} game${wg===1?'':'s'} that ${wg===1?'has':'have'} started ${wait.length===1?'is':'are'} locked in as recorded before ${TIPOFF}. ${wait.length===1?'It shows':'They show'} up here once the final box score is in.</p>` : '';
   const graded=PICKS.filter(p=>p.res==='hit'||p.res==='miss'||p.res==='push');
-  if(!graded.length){ body.innerHTML='<p class="mktnote">No graded NHL picks yet. Every upcoming pick is recorded before tip-off and shows here once the box score is final — this fills in as games are played.</p>'; return; }
+  if(!graded.length){ body.innerHTML=lock+'<p class="mktnote">No graded NHL picks yet. Every upcoming pick is recorded before tip-off and shows here once the box score is final — this fills in as games are played.</p>'; return; }
   const hm=graded.filter(p=>p.res!=='push'); const hit=hm.filter(p=>p.res==='hit').length;
-  let h = hm.length? `<p><b>Record: ${hit}/${hm.length} (${Math.round(100*hit/hm.length)}%)</b> on graded picks.</p>` : '';
+  let h = lock + (hm.length? `<p><b>Record: ${hit}/${hm.length} (${Math.round(100*hit/hm.length)}%)</b> on graded picks.</p>` : '');
   const show=graded.slice().sort((a,b)=>(b.date||'').localeCompare(a.date||'')).slice(0,200);
   h+='<div class="tblwrap"><table><thead><tr><th>Date</th><th>Player</th><th>Matchup</th><th>Pick</th><th>Chance</th><th>Actual</th><th>Result</th></tr></thead><tbody>';
   show.forEach(p=>{ const cls=p.res==='hit'?'hit':p.res==='miss'?'miss':'';
@@ -1287,7 +1303,7 @@ function toggleCmp(id){ const i=CMP.indexOf(id); if(i<0){ if(CMP.length<6) CMP.p
 function openPlayer(id){ showTab('player'); pick(id); }
 $('watchstar').onclick=()=>{ if(state.player) toggleWatch(state.player.id); };
 $('cmpadd').onclick=()=>{ if(state.player) toggleCmp(state.player.id); };
-function apTeamList(){ return [...new Set((PICKS||[]).filter(p=>p.res==null && (p.date||'')>=TODAY_ISO && p.prob!=null).map(p=>p.team))].filter(Boolean).sort(); }
+function apTeamList(){ return [...new Set(upcomingPicks().filter(p=>p.prob!=null).map(p=>p.team))].filter(Boolean).sort(); }
 function renderApTeams(){ const wrap=$('apTeams'); if(!wrap) return;
   const teams=apTeamList();
   const chosen=new Set([...wrap.querySelectorAll('.chip[aria-pressed="true"]')].map(b=>b.dataset.t));
@@ -1298,7 +1314,7 @@ function renderApTeams(){ const wrap=$('apTeams'); if(!wrap) return;
 function buildParlay(){ const body=$('apbody');
   const risk=$('apRisk').value, legs=parseInt($('apLegs').value,10)||4;
   const teams=new Set([...document.querySelectorAll('#apTeams .chip[aria-pressed="true"]')].map(b=>b.dataset.t));
-  let pend=(PICKS||[]).filter(p=>p.res==null && (p.date||'')>=TODAY_ISO && p.prob!=null);
+  let pend=upcomingPicks().filter(p=>p.prob!=null);
   if(teams.size) pend=pend.filter(p=>teams.has(p.team));
   if(pend.length<2){ body.innerHTML='<p class="mktnote">'+(teams.size?'Not enough upcoming picks for the selected team(s) — try adding more teams or clearing the filter.':'Not enough upcoming picks to build a parlay yet — this fills in when games are on the schedule.')+'</p>'; return; }
   let pool=pend.slice().sort((a,b)=>b.prob-a.prob);

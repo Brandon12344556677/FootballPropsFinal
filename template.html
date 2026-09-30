@@ -1050,9 +1050,15 @@ DB.players.forEach(p=>{ p._label = `${p.n} (${p.p}, ${p.t})`; byId[p.id]=p;
 const WEEK = DB.week || {games:[]};
 const TEAM_GAME = {}; (WEEK.games||[]).forEach(g=>{ TEAM_GAME[g.away]=g; TEAM_GAME[g.home]=g; });
 function teamGame(t){ return TEAM_GAME[t]||null; }
+// nflverse kickoff times are Eastern, so read them as ET (EDT −4 / EST −5) whatever the
+// viewer's own time zone — otherwise a West Coast visitor sees games "upcoming" for 3h.
+function etOffset(date){ const [y,mo,d]=date.split('-').map(Number);
+  const firstSun=m=>1+(7-new Date(Date.UTC(y,m-1,1)).getUTCDay())%7;
+  const dst=(mo>3&&mo<11) || (mo===3&&d>=firstSun(3)+7) || (mo===11&&d<firstSun(11));
+  return dst? '-04:00' : '-05:00'; }
 function gameHappened(g){ if(!g) return false; if(g.final) return true; if(!g.date) return false;
   const m=String(g.time||'').match(/^(\d{1,2}):(\d{2})$/), tm=m?(m[1].padStart(2,'0')+':'+m[2]):'12:00';
-  const dt=new Date(g.date+'T'+tm+':00'); return isFinite(dt.getTime()) && dt.getTime()<=Date.now(); }
+  const t=Date.parse(g.date+'T'+tm+':00'+etOffset(g.date)); return isFinite(t) && t<=Date.now(); }
 function oppOf(p){ const g=teamGame(p.t); if(!g) return null; return g.away===p.t? g.home : g.away; }
 const DAYS=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'], MONS=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 function kickoff(g){
@@ -1830,6 +1836,14 @@ function liveTick(){
   if(!all.size) return;
   const wk=$('page-week');
   if(document.hidden || (wk && wk.hidden)){ scheduleLive(); return; }
+  // A game that just kicked off leaves both boards now, not at the next hourly rescan.
+  const gone=r=>r.sg? gameHappened(r.sg) : !!(r.game && r.game.date && r.game.date<new Date().toISOString().slice(0,10));
+  if(edgeRows.some(gone) || valueCands.some(gone)){
+    edgeRows=edgeRows.filter(r=>!gone(r)); valueCands=valueCands.filter(r=>!gone(r));
+    valueRows=computeValueRows();
+    if(edgeRows.length){ renderEdges(); renderValue(); }
+    else { $('edgebody').innerHTML=KICKED_MSG; $('valuebody').innerHTML=KICKED_MSG; liveWant.delete('T'); liveWant.delete('V'); }
+  }
   const gen=++liveGen;
   fillLive([...all.values()], true)
     .then(()=>{ if(gen!==liveGen) return;
@@ -1861,6 +1875,7 @@ function valueQualifies(prob, price){
   return price>=VALUE_MIN_PRICE && prob-price>=VALUE_MIN_EDGE;
 }
 let edgeRows=[], valueRows=[], valueCands=[], edgeSort={key:'prob',dir:-1};
+const KICKED_MSG=`<p class="mktnote">🔒 Every game on the board has kicked off. Those picks are locked in as recorded before kickoff and get graded into <b>Past picks</b> once the final box score is in — the board fills back in when the next games' props post.</p>`;
 
 /* The price a Value row is judged on: the live Polymarket US ask when there is one,
    since that is what you'd actually pay, falling back to the global book's ask when
@@ -1894,12 +1909,12 @@ async function scanBoard(force){
     const events=await mapLimit(gamesL, 4, async g=>{ let ev=null; try{ ev=await getEvent(g.slug, force); }catch(e){}
       done++; status.textContent=`Scanning ${done}/${gamesL.length}…`; return ev; });
     if(gamesL.length && events.every(e=>!e)) throw new Error('polymarket unreachable');
-    const rows=[]; const seen=new Set();
+    const rows=[]; const seen=new Set(); let kicked=0;
     const todayStr=new Date().toISOString().slice(0,10);
     gamesL.forEach((g,gi)=>{ const ev=events[gi]; if(!ev) return;
       const sg=(WEEK.games||[]).find(x=>(x.away===g.away&&x.home===g.home)||(x.away===g.home&&x.home===g.away));
       // Don't show props for games that have already kicked off or finished.
-      if(sg? gameHappened(sg) : (g.date && g.date < todayStr)) return;
+      if(sg? gameHappened(sg) : (g.date && g.date < todayStr)){ kicked++; return; }
       (ev.markets||[]).forEach(mk=>{
         const pm=parseMarket(mk); if(!pm) return;
         const sk=mktStatKey(pm.statText); if(!sk) return;
@@ -1946,7 +1961,8 @@ async function scanBoard(force){
     const vU=valueRows.filter(r=>r.side==='under').length;
     status.textContent=`${modeled.length} props modeled · ${valueRows.length} value (${valueRows.length-vU} over / ${vU} under) · ${gamesL.length} games${nohist?` · ${nohist} skipped (no game log)`:''}`;
     if(!modeled.length){
-      const msg = gamesL.length
+      const msg = gamesL.length && kicked===gamesL.length ? KICKED_MSG
+        : gamesL.length
         ? `<p class="mktnote">No props matched players yet — early in the week the board is thin. Check back closer to game day.</p>`
         : `<p class="mktnote">📅 <b>Polymarket hasn't posted this week's player-prop markets yet.</b> They usually go up a day or two before kickoff — this board fills in automatically once they do. Nothing's broken; there's just nothing to scan yet.</p>`;
       body.innerHTML=msg; $('valuebody').innerHTML=msg;

@@ -659,6 +659,9 @@ def fetch_new_games(store):
 # Matchups (frozenset of the two team codes) that ESPN shows as under way or over.
 # No new pick is recorded for these, so none is ever made at an in-game price.
 STARTED = set()
+# Every game on the scoreboard, started or not, as (away, home, UTC start). Copied onto
+# its picks by stamp_starts(), since the scoreboard only covers one day.
+SB_GAMES = []
 
 
 def fetch_slate():
@@ -680,6 +683,9 @@ def fetch_slate():
         away = team_code(next((c.get("team", {}).get("abbreviation") for c in cs if c.get("homeAway") == "away"), None))
         if not home or not away:
             continue
+        start = ev.get("date") or ""
+        if start:
+            SB_GAMES.append((away, home, start))
         if status.get("completed") or status.get("state", "pre") != "pre":
             STARTED.add(frozenset((away, home)))
             continue
@@ -694,16 +700,53 @@ def fetch_slate():
                     spread = -float(sp)   # ESPN spread is the home line (neg = home fav); store + = favored
                 except (TypeError, ValueError):
                     spread = None
-        start = ev.get("date") or ""
         tm = ""
         m = re.search(r"T(\d{2}):(\d{2})", start)
         if m:
             hh = (int(m.group(1)) - 4) % 24    # UTC -> ET (in-season, ~UTC-4)
             tm = f"{hh:02d}:{m.group(2)}"
         games.append({"away": away, "home": home, "date": start[:10],
-                      "time": tm, "total": total, "spread": spread, "final": False})
+                      "time": tm, "start": start, "total": total, "spread": spread, "final": False})
     games.sort(key=lambda g: (g["date"], g["time"]))
     return games
+
+
+def parse_utc(s):
+    """ESPN's '2026-09-29T23:00Z' -> an aware UTC datetime, or None."""
+    try:
+        t = datetime.datetime.fromisoformat((s or "").replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    return t if t.tzinfo else t.replace(tzinfo=datetime.timezone.utc)
+
+
+def stamp_starts(picks):
+    """Save the scoreboard's start time on each pending pick for that game (same two
+    teams, date within a day: a gid carries ESPN's UTC date or Polymarket's ET date)."""
+    for p in picks:
+        if p.get("res") is not None or p.get("start"):
+            continue
+        m = re.match(r"^(\d{4}-\d{2}-\d{2})-([A-Z]+)-([A-Z]+)$", p.get("gid") or "")
+        if not m:
+            continue
+        try:
+            d = datetime.date.fromisoformat(m.group(1))
+        except ValueError:
+            continue
+        for away, home, start in SB_GAMES:
+            t = parse_utc(start)
+            if t and (away, home) == (m.group(2), m.group(3)) and abs((t.date() - d).days) <= 1:
+                p["start"] = start
+                break
+
+
+def pick_started(p):
+    """True once the pick's game is under way or over. Picks saved before start times
+    were kept fall back to their date: one dated before today (ET) has started."""
+    t = parse_utc(p.get("start"))
+    if t:
+        return t <= datetime.datetime.now(datetime.timezone.utc)
+    return (p.get("date") or "") < ET_TODAY
 
 
 # ---------------------------------------------------------------------------
@@ -798,7 +841,7 @@ def def_ratio(defense, defavg, opp, sk):
 # Picks (board + grading + calibration)
 # ---------------------------------------------------------------------------
 PICK_COLS = ["src", "gid", "season", "date", "pid", "player", "pos", "team", "opp",
-             "stat", "line", "side", "prob", "lo", "hi", "neff", "price", "lists", "rec", "actual", "res", "adj"]
+             "stat", "line", "side", "prob", "lo", "hi", "neff", "price", "lists", "rec", "actual", "res", "adj", "start"]
 BOARD_STATS = ["pts", "sog", "g"]
 TOP_N = 25
 VALUE_MIN_NEFF = 6.0
@@ -979,10 +1022,10 @@ def grade_picks(picks, by_pid):
 def assign_lists(picks):
     """Mirrors build.py (NFL). T = the 25 highest model chances ('25 Guaranteed').
     V = 'Value' — the market prices it at 30c or more and the model puts it 15+ points
-    higher, ranked by that edge. Prices are fractions here. Only pending picks are
-    (re)tagged: a graded pick keeps the lists it was graded under, so the live record
-    by list builds up across runs."""
-    pending = [p for p in picks if p.get("res") is None]
+    higher, ranked by that edge. Prices are fractions here. Only picks whose game hasn't
+    started are (re)tagged: once it starts they keep the lists they had at puck drop until
+    graded, so the live record by list counts exactly what the page showed pre-game."""
+    pending = [p for p in picks if p.get("res") is None and not pick_started(p)]
     for p in pending:
         p["lists"] = ""
     ranked = sorted((p for p in pending if p["prob"] >= 0.5), key=lambda p: (-p["prob"], -p["neff"]))
@@ -1182,6 +1225,7 @@ def main():
         print(f"  market picks: skipped ({e})")
         mkt_added = 0
     added_picks = build_board_picks(picks, slate, players_by_team, defense, defavg)
+    stamp_starts(picks)
     assign_lists(picks)
     if mkt_added:
         print(f"  market picks: +{mkt_added} priced (Polymarket)")
