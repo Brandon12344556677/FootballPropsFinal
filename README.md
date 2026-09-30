@@ -17,9 +17,9 @@ finished games, records the upcoming picks with their prices, and redeploys the 
 
 ### Research tab
 - **Model chance** — the headline number. Instead of "hit 7 of the last 10", the
-  model takes the last 20 games, weights recent ones more (half-life 6 games),
-  smooths the values into a distribution and reads off the probability of clearing
-  the line. Small samples are shrunk toward 50/50 and every chance comes with an
+  model takes the last 30 games, weights recent ones more (half-life 8 games; the
+  NBA, NHL and MLB pages use their own, see methodology.html), smooths the values
+  into a distribution and reads off the probability of clearing the line. Small samples are shrunk toward 50/50 and every chance comes with an
   80% range. The Last 5/10/15/20 tiles show the plain hit rates for comparison.
 - **Game-context adjustment** — before reading off the chance, the distribution is
   scaled for this game: the Vegas implied team points (from the total and spread)
