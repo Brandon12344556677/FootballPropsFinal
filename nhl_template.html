@@ -866,9 +866,10 @@ function pct(p){ return Math.round(p*100)+'%'; }
 function cents(p){ return p==null? '' : Math.round(p*100)+'¢'; }
 
 // ==== MODEL (mirrored in build_nhl.py — keep identical) ====
-const MODEL = {halfLife:6, maxGames:20, priorK:0.5, bwConst:0.9, z:1.2816};
-const BW_FLOOR = {pts:0.6, g:0.5, a:0.5, sog:1.0, blk:0.7, hit:1.0, sv:4.0, toi:3.0};
-const CTX = {betaPts:0.30, gamma:0.45, clampLo:0.6, clampHi:1.6};
+const MODEL = {halfLife:30, maxGames:82, priorK:0.5, bwConst:0.9, z:1.2816};
+const BW_FLOOR = {pts:0.3, g:0.25, a:0.3, sog:1.0, blk:0.7, hit:1.0, sv:4.0, toi:3.0};
+const CTX = {betaPts:0.30, gamma:0.45, toi:0.5, b2b:-0.05, clampLo:0.6, clampHi:1.6};
+const USAGE_STATS = ['pts','g','a'];   // ice time and back-to-backs apply to these only
 function erf(x){ const s=x>=0?1:-1; x=Math.abs(x); const t=1/(1+0.3275911*x);
   const y=1-(((((1.061405429*t-1.453152027)*t)+1.421413741)*t-0.284496736)*t+0.254829592)*t*Math.exp(-x*x); return s*y; }
 function ncdf(x){ return 0.5*(1+erf(x/Math.sqrt(2))); }
@@ -900,12 +901,27 @@ function histPts(rows){ const r=rows.slice(-MODEL.maxGames), n=r.length; let sp=
   r.forEach((g,i)=>{ const tot=g[14], spr=g[15]; if(tot==null||spr==null) return;
     const w=Math.pow(0.5,(n-1-i)/MODEL.halfLife); sp+=w*(tot/2+spr/2); wp+=w; });
   return wp? sp/wp : null; }
-function contextScale(hp, gamePts, defR){
+const clampS = x => Math.min(CTX.clampHi, Math.max(CTX.clampLo, x));
+function contextScale(hp, gamePts, defR, toi, b2b){
   let env=1;
   if(hp&&gamePts&&hp>0&&gamePts>0) env*=Math.pow(gamePts/hp, CTX.betaPts);
   let dfs=1; if(defR&&defR>0) dfs=Math.pow(defR, CTX.gamma);
-  return {scale:Math.min(CTX.clampHi, Math.max(CTX.clampLo, env*dfs)), env, def:dfs};
+  let scale=clampS(env*dfs);
+  const use = toi? Math.pow(toi, CTX.toi) : 1; if(toi) scale=clampS(scale*use);
+  if(b2b) scale=clampS(scale*(1+CTX.b2b));
+  return {scale, env, def:dfs, use, b2b:!!b2b};
 }
+// Ice time of the last 2 games over the usual (recency-weighted, half-life 6, last 10),
+// clamped to [0.5, 1.6]; null with fewer than 4 games or under 3 usual minutes.
+function toiRatio(rows){ const t=rows.slice(-10).map(r=>r[11]||0); if(t.length<4) return null;
+  let sw=0, st=0; t.forEach((x,k)=>{ const w=Math.pow(0.5,(t.length-1-k)/6); sw+=w; st+=w*x; });
+  const usual=st/sw; if(usual<=3) return null;
+  return Math.max(0.5, Math.min(1.6, (t[t.length-1]+t[t.length-2])/2/usual)); }
+// [toi, b2b] for contextScale: only points, goals and assists; b2b = the player's last game
+// was the day before this one (0 days covers a UTC date against an ET one).
+function usageArgs(rows, sk, dateIso){ if(!USAGE_STATS.includes(sk) || !rows || !rows.length) return [null, false];
+  const rest=dateIso? Math.round((Date.parse(dateIso+'T12:00:00Z')-Date.parse(rows[rows.length-1][1]+'T12:00:00Z'))/864e5) : null;
+  return [toiRatio(rows), rest!=null && isFinite(rest) && rest>=0 && rest<=1]; }
 // ==== END MODEL ====
 function _calT(){ return (DB && DB.calT) ? DB.calT : 1; }
 function calP(p){ const T=_calT(); if(T===1||!(p>0)||!(p<1)) return p; return 1/(1+Math.exp(-Math.log(p/(1-p))/T)); }
@@ -959,7 +975,7 @@ function defRatioFor(opp, sk){ const ds=DEF_FOR[sk];
   if(!opp||!ds||!DB.defense||!DB.defense[opp]||!DB.defense[opp]['NHL']||!DB.defense[opp]['NHL'][ds]||!DB.defAvg||!DB.defAvg['NHL']||!DB.defAvg['NHL'][ds]) return null;
   return DB.defense[opp]['NHL'][ds].a/DB.defAvg['NHL'][ds]; }
 function contextFor(p, sk, oppOverride, gameOverride){
-  const off={scale:1, env:1, def:1, opp:null, gamePts:null, defRatio:null, on:false};
+  const off={scale:1, env:1, def:1, use:1, b2b:false, opp:null, gamePts:null, defRatio:null, on:false};
   if(!state.adj||!p) return off;
   const g=gameOverride||teamGame(p.t); const hp=histPts(gamesOf(p));
   const opp = oppOverride || (g? (g.away===p.t? g.home : g.away) : null);
@@ -967,8 +983,8 @@ function contextFor(p, sk, oppOverride, gameOverride){
   let gamePts=null;
   if(g && g.total!=null){ const sp = (g.home===p.t? g.spread : (g.spread!=null? -g.spread : null)); gamePts = g.total/2 + (sp!=null? sp/2 : 0); }
   const dr=defRatioFor(opp, sk);
-  const cs=contextScale(hp, gamePts, dr);
-  return {scale:cs.scale, env:cs.env, def:cs.def, opp, gamePts, defRatio:dr, on:true};
+  const cs=contextScale(hp, gamePts, dr, ...usageArgs(p.g, sk, g && !oppOverride? g.date : null));
+  return {scale:cs.scale, env:cs.env, def:cs.def, use:cs.use, b2b:cs.b2b, opp, gamePts, defRatio:dr, on:true};
 }
 
 // ---- tabs ----
@@ -1113,10 +1129,11 @@ function render(){
   $('tiles').innerHTML=tiles.join('');
   VERDICT= mSide!=null? {prob:mSide, lo:side==='over'?mp.lo:1-mp.hi, hi:side==='over'?mp.hi:1-mp.lo, neff:mp.neff} : null; paintVerdict();
   // context note
-  if(ctx.on && (ctx.env!==1 || ctx.def!==1)){
+  if(ctx.on && (ctx.env!==1 || ctx.def!==1 || ctx.use!==1 || ctx.b2b)){
     const parts=[]; if(ctx.gamePts) parts.push(`pace/total ×${fmt(ctx.env)}`); if(ctx.defRatio) parts.push(`vs ${esc(oppNow)} defense ×${fmt(ctx.def)}`);
-    $('disthint').textContent=`Adjusted for tonight: ${parts.join(', ')} → overall ×${fmt(ctx.scale)} vs the player's usual.`;
-  } else $('disthint').textContent='Weighted toward recent games (half-life 6). Smoothed to a distribution, then read off the line.';
+    if(ctx.use!==1) parts.push(`recent ice time ×${ctx.use.toFixed(2)}`); if(ctx.b2b) parts.push(`second night of a back-to-back ×${(1+CTX.b2b).toFixed(2)}`);
+    $('disthint').textContent=`Adjusted for tonight: ${parts.join(', ')} → overall ×${ctx.scale.toFixed(2)} vs the player's usual.`;
+  } else $('disthint').textContent=`Up to the last ${MODEL.maxGames} games, newer ones weighted more (half-life ${MODEL.halfLife} games). Smoothed to a distribution, then read off the line.`;
   drawDist(vals, line, sk);
   drawChart(vals, line, sk, gs);
   renderTable(gs, sk);

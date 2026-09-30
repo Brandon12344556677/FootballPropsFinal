@@ -122,14 +122,25 @@ STAT_ORDER = ["pts", "g", "a", "sog", "blk", "hit", "sv", "toi"]
 # Same weighted-KDE-over-recent-values engine as the NFL/NBA model; every NHL
 # stat is a count on its own scale, so the smoothing floor is per-stat.
 # ---------------------------------------------------------------------------
-MODEL = {"halfLife": 6.0, "maxGames": 20, "priorK": 0.5, "bwConst": 0.9, "z": 1.2816}
-# Minimum smoothing bandwidth per stat (roughly a third of a typical game-to-game swing).
-BW_FLOOR = {"pts": 0.6, "g": 0.5, "a": 0.5, "sog": 1.0, "blk": 0.7, "hit": 1.0,
+# Walk-forward backtest on the 2025-26 box scores (46,659 skater games per stat, each
+# predicted from earlier games only, scored on odd and on even days separately): a long
+# memory beat the old 20 games / half-life 6 on every stat and both halves, and the old
+# smoothing floors (0.5-0.6 for points, goals, assists) leaked chance across a 0.5 line,
+# so a 15% goal scorer read 27%. With these, log loss: goals 0.455 -> 0.410, assists
+# 0.558 -> 0.536, points 0.626 -> 0.609, shots 0.583 -> 0.577.
+MODEL = {"halfLife": 30.0, "maxGames": 82, "priorK": 0.5, "bwConst": 0.9, "z": 1.2816}
+MODEL_V = 2   # recorded on every pick ("mv"); calibration fits only this version's picks
+# Minimum smoothing bandwidth per stat. Blocks/hits/saves/TOI weren't refitted.
+BW_FLOOR = {"pts": 0.3, "g": 0.25, "a": 0.3, "sog": 1.0, "blk": 0.7, "hit": 1.0,
             "sv": 4.0, "toi": 3.0}
 # Game-context adjustment: the player's distribution is scaled by
 # (this game's implied team goals / their usual implied goals)^betaPts times
-# (opponent's allowed-per-game / league average)^gamma. Clamped.
-CTX = {"betaPts": 0.30, "gamma": 0.45, "clampLo": 0.6, "clampHi": 1.6}
+# (opponent's allowed-per-game / league average)^gamma. Clamped. For points, goals and
+# assists also (recent ice time / usual)^toi (toi_ratio) and (1 + b2b) on the second
+# night of a back-to-back: both small (log loss -0.0002 to -0.0005) but better on both
+# halves; teams scored 4.9% fewer goals on back-to-backs last season.
+CTX = {"betaPts": 0.30, "gamma": 0.45, "toi": 0.5, "b2b": -0.05, "clampLo": 0.6, "clampHi": 1.6}
+USAGE_STATS = ("pts", "g", "a")
 
 
 def _erf(x):
@@ -845,7 +856,8 @@ def def_ratio(defense, defavg, opp, sk):
 # ---------------------------------------------------------------------------
 PICK_COLS = ["src", "gid", "season", "date", "pid", "player", "pos", "team", "opp",
              "stat", "line", "side", "prob", "lo", "hi", "neff", "price", "lists", "rec", "actual", "res", "adj", "start",
-             "px0", "pxc"]   # px0/pxc: first and last pre-game price (closing line value)
+             "px0", "pxc",   # px0/pxc: first and last pre-game price (closing line value)
+             "mv"]           # model version the chance came from (MODEL_V)
 BOARD_STATS = ["pts", "sog", "g"]
 TOP_N = 25
 T_MIN_PROB = 0.90      # Top 25 Surest: the model has to give it 90%+ (and it needs a live price)
@@ -881,12 +893,46 @@ def hist_context(rows):
     return sp / wp if wp else None
 
 
-def context_scale(hist_pts, game_pts, def_r):
+def context_scale(hist_pts, game_pts, def_r, toi=None, b2b=False):
+    """toi is toi_ratio(rows) or None; b2b is True on the second night of a back-to-back.
+    Pass both only for USAGE_STATS (see usage_args)."""
     env = 1.0
     if hist_pts and game_pts and hist_pts > 0 and game_pts > 0:
         env *= (game_pts / hist_pts) ** CTX["betaPts"]
     dfs = def_r ** CTX["gamma"] if (def_r and def_r > 0) else 1.0
-    return min(CTX["clampHi"], max(CTX["clampLo"], env * dfs))
+    scale = min(CTX["clampHi"], max(CTX["clampLo"], env * dfs))
+    if toi:
+        scale = min(CTX["clampHi"], max(CTX["clampLo"], scale * toi ** CTX["toi"]))
+    if b2b:
+        scale = min(CTX["clampHi"], max(CTX["clampLo"], scale * (1 + CTX["b2b"])))
+    return scale
+
+
+def toi_ratio(rows):
+    """Ice time of the last 2 games over the usual (recency-weighted, half-life 6, last 10),
+    clamped to [0.5, 1.6]; None with fewer than 4 games or under 3 usual minutes. A skater
+    moved up or down the lineup shows it in his minutes before his points catch up.
+    Mirrored in nhl_template.html."""
+    t = [r[11] or 0 for r in rows[-10:]]
+    if len(t) < 4:
+        return None
+    w = [0.5 ** ((len(t) - 1 - k) / 6.0) for k in range(len(t))]
+    usual = sum(a * b for a, b in zip(t, w)) / sum(w)
+    if usual <= 3:
+        return None
+    return max(0.5, min(1.6, (t[-1] + t[-2]) / 2.0 / usual))
+
+
+def usage_args(rows, sk, date_iso):
+    """(toi, b2b) for context_scale: ice-time ratio and whether the player's last game was
+    the day before this one. Neither applies to shots, blocks, hits or saves."""
+    if sk not in USAGE_STATS or not rows:
+        return None, False
+    try:
+        rest = (datetime.date.fromisoformat(date_iso) - datetime.date.fromisoformat(rows[-1][1])).days
+    except (TypeError, ValueError):
+        rest = None
+    return toi_ratio(rows), rest is not None and 0 <= rest <= 1   # 0: a UTC date against an ET one
 
 
 def load_picks():
@@ -1023,7 +1069,7 @@ def build_market_picks(picks, poly_games, players_by_key, espn_slate, defense, d
                 sp = eg.get("spread") if team == eg["home"] else (-(eg["spread"]) if eg.get("spread") is not None else None)
                 gpts = eg["total"] / 2 + (sp / 2 if sp is not None else 0)
             dr = def_ratio(defense, defavg, opp, sk)
-            scale = context_scale(hp, gpts, dr)
+            scale = context_scale(hp, gpts, dr, *usage_args(rows, sk, date))
             vals = [stat_get(r, sk) for r in rows]
             mp = model_prob(vals, pm["line"], BW_FLOOR.get(sk, 1.0), scale)
             if not mp:
@@ -1036,7 +1082,7 @@ def build_market_picks(picks, poly_games, players_by_key, espn_slate, defense, d
                           "prob": round(prob, 3), "lo": round(lo, 3), "hi": round(hi, 3),
                           "neff": round(mp["neff"], 1), "price": round(price, 3) if price is not None else None,
                           "lists": "", "rec": f"{sk} {side} {pm['line']}", "actual": None, "res": None,
-                          "adj": round(scale, 3)})
+                          "adj": round(scale, 3), "mv": MODEL_V})
             have.setdefault((pl["id"], sk, pm["line"], g["away"], g["home"]), []).append(
                 (datetime.date.fromisoformat(date), picks[-1]))
             added += 1
@@ -1070,7 +1116,7 @@ def build_board_picks(picks, slate, players_by_team, defense, defavg):
                     vals = [stat_get(r, sk) for r in rows]
                     line = seed_line(vals)
                     dr = def_ratio(defense, defavg, opp, sk)
-                    scale = context_scale(hp, gpts, dr)
+                    scale = context_scale(hp, gpts, dr, *usage_args(rows, sk, g["date"]))
                     mp = model_prob(vals, line, BW_FLOOR.get(sk, 1.0), scale)
                     if not mp or mp["neff"] < VALUE_MIN_NEFF:
                         continue
@@ -1081,7 +1127,7 @@ def build_board_picks(picks, slate, players_by_team, defense, defavg):
                                   "prob": round(prob, 3), "lo": round(lo, 3), "hi": round(hi, 3),
                                   "neff": round(mp["neff"], 1), "price": None, "lists": "",
                                   "rec": f"{sk} {side} {line}", "actual": None, "res": None,
-                                  "adj": round(scale, 3)})
+                                  "adj": round(scale, 3), "mv": MODEL_V})
                     have.add((pl["id"], g["date"], sk))
                     now_added += 1
     return now_added
@@ -1173,8 +1219,8 @@ def assign_lists(picks):
 
 def fit_temperature(picks):
     data = []
-    for p in picks:
-        if p.get("res") in ("hit", "miss") and p.get("prob") is not None:
+    for p in picks:      # only picks made by this model version: older ones had other errors
+        if p.get("res") in ("hit", "miss") and p.get("prob") is not None and p.get("mv") == MODEL_V:
             pr = min(0.999, max(0.001, float(p["prob"])))
             data.append((math.log(pr / (1 - pr)), 1.0 if p["res"] == "hit" else 0.0))
     if len(data) < 400:
