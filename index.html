@@ -34,8 +34,8 @@
 <link rel="manifest" href="/site.webmanifest">
 <script data-goatcounter="https://propstreaklive.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
 <link rel="stylesheet" href="fonts.css">
-<link rel="stylesheet" href="app.css?v=20260930d">
-<script src="app.js?v=20260930c"></script>
+<link rel="stylesheet" href="app.css?v=20260930e">
+<script src="app.js?v=20260930e"></script>
 <style>
 :root{
   color-scheme:dark;
@@ -161,6 +161,12 @@ h2{font-family:var(--display);font-weight:600;font-size:clamp(36px,4.4vw,56px);l
 h2 i{color:var(--green)}
 .sub{color:var(--soft);font-size:18px;max-width:40em;margin:0}
 .center{text-align:center}.center .sub{margin:0 auto}
+
+/* hero card once it shows today's real top pick */
+.tag.live{background:var(--green);color:var(--green-ink);border-color:var(--green)}
+.tag.live::before{content:"";display:inline-block;width:6px;height:6px;margin-right:6px;border-radius:50%;background:var(--green-ink);vertical-align:1px;animation:psping 2s infinite}
+.demo-go{display:block;margin-top:14px;color:var(--green);font-family:var(--cond);font-weight:700;text-transform:uppercase;letter-spacing:.1em;font-size:13px;text-decoration:none}
+.demo-go:hover{text-decoration:underline}
 
 /* today feed: pick cards from app.css, as links */
 #today{padding:64px 0 8px}
@@ -414,12 +420,12 @@ footer .fine a{color:#8394ab}
         </div>
       </div>
 
-      <div class="stage rv d2" aria-label="Example of a prop readout">
+      <div class="stage rv d2" id="stage" aria-label="Example of a prop readout">
         <div class="glow" aria-hidden="true"></div>
         <div class="chip c2"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>Recorded before kickoff</div>
         <div class="demo">
-          <div class="demo-top"><span class="tag">Example</span><span class="demo-sport">🏈 NFL · Receiving yards</span></div>
-          <div class="demo-q">Wide receiver over <b>62.5</b> receiving yards?</div>
+          <div class="demo-top"><span class="tag" id="demotag">Example</span><span class="demo-sport" id="demosport">🏈 NFL · Receiving yards</span></div>
+          <div class="demo-q" id="demoq">Wide receiver over <b>62.5</b> receiving yards?</div>
           <div class="demo-main">
             <div class="ring">
               <svg width="132" height="132" viewBox="0 0 132 132" aria-hidden="true">
@@ -429,13 +435,14 @@ footer .fine a{color:#8394ab}
               <div class="num"><b id="ringnum">0%</b><small>model chance</small></div>
             </div>
             <div class="dstats">
-              <div><b>61–80%</b><span>80% range</span></div>
-              <div><b>9 / 12</b><span>last 12 games</span></div>
-              <div><b>55¢</b><span>market price</span></div>
-              <div class="pos"><b>+16</b><span>model edge</span></div>
+              <div><b id="ds-range">61–80%</b><span>80% range</span></div>
+              <div><b id="ds-last">9 / 12</b><span id="ds-lastlab">last 12 games</span></div>
+              <div><b id="ds-price">55¢</b><span>market price</span></div>
+              <div class="pos"><b id="ds-edge">+16</b><span>model edge</span></div>
             </div>
           </div>
           <div class="bars" id="bars" aria-hidden="true"></div>
+          <a class="demo-go" id="demogo" href="#" hidden>Open this pick — game log, live price, the full breakdown →</a>
         </div>
         <div class="chip c1"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>Graded from the box score</div>
       </div>
@@ -695,18 +702,25 @@ footer .fine a{color:#8394ab}
 
 const reduce = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-// Example card: bars vs the 62.5 line (9 of 12 over) and the 71% ring.
-(function(){ const vals=[48,71,90,55,80,102,66,74,95,73,88,59], line=62.5, max=110;
-  const box=document.getElementById('bars'); if(!box) return;
-  box.innerHTML=vals.map((v,i)=>`<i class="${v>line?'':'u'}" style="height:${(v/max*100).toFixed(1)}%;transition-delay:${(i*55)}ms"></i>`).join('')+
-    `<div class="line" style="bottom:${(line/max*100).toFixed(1)}%"><em>62.5</em></div>`;
-})();
-function playDemo(){ const arc=document.getElementById('arc'), num=document.getElementById('ringnum'), bars=document.getElementById('bars');
-  if(!arc||arc.dataset.done) return; arc.dataset.done='1';
-  const C=339.3, pct=71; arc.style.strokeDashoffset=(C*(1-pct/100)).toFixed(1); bars.classList.add('go');
+// Hero card: starts as the example (9 of 12 over 62.5, 71%) and becomes today's top pick
+// once today.json arrives (liveDemo, below).
+const DEMO={vals:[48,71,90,55,80,102,66,74,95,73,88,59], line:62.5, side:'over', pct:71, shown:0};
+function drawBars(){ const box=document.getElementById('bars'); if(!box) return;
+  const {vals, line, side}=DEMO, max=Math.max(line*1.6, ...vals, 1)*1.08;
+  const clears=v=> side==='under'? v<line : v>line;
+  box.innerHTML=vals.map((v,i)=>`<i class="${clears(v)?'':'u'}" style="height:${Math.max(4, v/max*100).toFixed(1)}%;transition-delay:${(i*55)}ms"></i>`).join('')+
+    `<div class="line" style="bottom:${(line/max*100).toFixed(1)}%"><em>${line}</em></div>`;
+  if(box.classList.contains('go')){ box.classList.remove('go'); void box.offsetWidth; box.classList.add('go'); }
+}
+drawBars();
+function playDemo(){ const arc=document.getElementById('arc'), bars=document.getElementById('bars');
+  if(!arc||arc.dataset.done) return; arc.dataset.done='1'; bars.classList.add('go'); ringTo(DEMO.pct); }
+// Sweep the ring and count the number from wherever they are to pct.
+function ringTo(pct){ const arc=document.getElementById('arc'), num=document.getElementById('ringnum'); if(!arc) return;
+  const C=339.3, from=DEMO.shown; DEMO.shown=pct; arc.style.strokeDashoffset=(C*(1-pct/100)).toFixed(1);
   if(reduce){ num.textContent=pct+'%'; return; }
   const t0=performance.now(); (function tick(t){ const k=Math.max(0,Math.min(1,(t-t0)/1500)), e=1-Math.pow(1-k,3);
-    num.textContent=Math.round(pct*e)+'%'; if(k<1) requestAnimationFrame(tick); })(t0); }
+    num.textContent=Math.round(from+(pct-from)*e)+'%'; if(k<1) requestAnimationFrame(tick); })(t0); }
 
 // Count-up numbers in the stats strip.
 function countUp(el){ const to=+el.dataset.count; if(!to||el.dataset.done) return; el.dataset.done='1';
@@ -772,7 +786,7 @@ function countUp(el){ const to=+el.dataset.count; if(!to||el.dataset.done) retur
       `<div class="pc-top"><span class="av">${esc(initials(p.player))}</span>`+
         `<div class="pc-who"><b>${esc(p.player)}</b><span><span class="tbadge">${esc(p.team)}</span>vs ${esc(p.opp)}</span><span>${SPORT[p.sport]||''} · <span class="cd" data-cd="${esc(p.start)}">${PS.until(Date.parse(p.start))}</span></span></div>`+
         `<div class="pc-prob"><div class="ring" style="--p:${pv}"><b>${pv}<small>%</small></b></div><span>model</span></div></div>`+
-      `<div class="pc-bet"><span class="leantag ${esc(p.side)}">${esc(p.side)}</span><b>${esc(p.line)}</b><span>${esc(p.statText)}</span></div>`+
+      `<div class="pc-bet"><span class="leantag ${esc(p.side)}">${esc(p.side)}</span><b>${esc(p.line)}</b><span>${esc(p.statText)}</span>${PS.spark(p.l10, p.line, p.side)}</div>`+
       `<div class="pc-foot"><span class="pc-price"><span class="pmpx">${Math.round(p.price*100)}¢</span> <span class="rng">${(1/p.price).toFixed(2)}× payout</span></span>${kind}</div>`+
     `</a>`;
   }
@@ -791,9 +805,29 @@ function countUp(el){ const to=+el.dataset.count; if(!to||el.dataset.done) retur
     sec.hidden=false;
   }
 
+  // Hero: today's top pick in place of the example — real numbers, linked to the pick.
+  function liveDemo(t){
+    const p=((t&&t.picks)||[]).filter(ahead).find(x=>(x.l10||[]).length>=5); if(!p) return;
+    const v=p.l10.slice(-12), line=+p.line, pv=Math.round(p.prob*100), c=Math.round(p.price*100), e=Math.round(p.edge*100);
+    const hits=v.filter(x=> p.side==='under'? x<line : x>line).length;
+    const set=(id,h)=>{ const el=document.getElementById(id); if(el) el.innerHTML=h; };
+    const tag=document.getElementById('demotag'); if(tag){ tag.textContent=p.kind==='value'? 'Live · top value pick' : 'Live · today'; tag.classList.add('live'); }
+    set('demosport', `${SPORT[p.sport]||''} · ${esc(p.statText)} · vs ${esc(p.opp)} · <span data-cd="${esc(p.start)}">${PS.until(Date.parse(p.start))}</span>`);
+    set('demoq', `${esc(p.player)} ${esc(p.side)} <b>${esc(p.line)}</b> ${esc(String(p.statText).toLowerCase())}?`);
+    if(p.lo!=null && p.hi!=null) set('ds-range', `${Math.round(p.lo*100)}–${Math.round(p.hi*100)}%`);
+    set('ds-last', `${hits} / ${v.length}`); set('ds-lastlab', `last ${v.length} games`);
+    set('ds-price', `${c}¢`); set('ds-edge', `${e>=0?'+':'−'}${Math.abs(e)}`);
+    const go=document.getElementById('demogo');
+    if(go){ go.href=`./${p.sport}.html#${PS.hashFor(p.pid, p.stat, p.line, p.side, p.player)}`; go.hidden=false; }
+    const st=document.getElementById('stage'); if(st) st.setAttribute('aria-label', `Today's top pick: ${p.player} ${p.side} ${p.line} ${p.statText}, model ${pv}%`);
+    DEMO.vals=v; DEMO.line=line; DEMO.side=p.side; DEMO.pct=pv; drawBars();
+    const arc=document.getElementById('arc'); if(arc && arc.dataset.done) ringTo(pv);   // already animated the example: sweep to the real number
+  }
+
   Promise.all([get('today.json'), get('weekly.json')]).then(([t,w])=>{
     PS.ticker(tickerItems(t, w));
     if(!t) return;
+    liveDemo(t);
     renderToday(t);
     setInterval(()=>{ if(!document.hidden){ renderToday(t); PS.ticker(tickerItems(t, w)); } }, 60000);
   });

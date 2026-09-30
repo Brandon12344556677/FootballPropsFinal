@@ -6,6 +6,7 @@ picks file, its dataset's season record, and the stat labels from its template)
 and writes a small file the home page can fetch in one request:
 
   today.json   {"gen", "record": {sport: {"T", "V"}}, "picks": [...], "valueLive": [[sport, start], ...]}
+               (each pick carries "l10": its last ten game values, for the mini chart)
 
 "picks" holds the best upcoming bets across all four sports at the last recorded
 Polymarket price: Value spots first (ranked by edge over the price), then, if there
@@ -48,6 +49,48 @@ def stat_labels(template):
     return dict(re.findall(r"\{key:'(\w+)',\s*label:'([^']+)'", src))
 
 
+def stat_getters(template):
+    """{key: row -> value} from the template's STATS list, so the last-10 values on the home
+    page use the same per-game formulas as the sport page. They're plain sums of box-score
+    columns (g[4]+g[10], 0.04*g[4]+...); anything else is skipped rather than evaluated."""
+    with open(template, "r", encoding="utf-8") as f:
+        src = f.read()
+    out = {}
+    for key, expr in re.findall(r"\{key:'(\w+)',[^}]*?get:g=>([^}]+?)\s*\}", src):
+        if not re.fullmatch(r"[\dg\[\]\s+\-*.]+", expr):
+            continue
+        code = compile(expr, "<stat>", "eval")
+        out[key] = lambda g, code=code: eval(code, {"__builtins__": {}}, {"g": g})
+    return out
+
+
+MLB_PITCH = {"k", "outs", "ha", "er", "pbb"}
+
+
+def mlb_games(rows, stat):
+    """MLB's statGames(): pitching props count starts (or any outing when there are too few
+    starts), hitting props count lineup starts (or any game) — as on the MLB page."""
+    col, need = (20, 3) if stat in MLB_PITCH else (19, 5)
+    starts = [g for g in rows if len(g) > col and g[col] == 2]
+    return starts if len(starts) >= need else [g for g in rows if len(g) > col and (g[col] or 0) >= 1]
+
+
+def last10(sport, player, stat, getters):
+    get = getters.get(stat)
+    if not player or not get:
+        return []
+    rows = player.get("g") or []
+    if sport == "mlb":
+        rows = mlb_games(rows, stat)
+    out = []
+    for g in rows[-10:]:
+        try:
+            out.append(round(float(get(g)), 2))
+        except (TypeError, ValueError, IndexError):
+            continue
+    return out
+
+
 def nfl_kickoffs(db):
     """NFL picks carry no start time; the week's schedule has date + time in ET."""
     out = {}
@@ -84,8 +127,9 @@ def record(db):
     return out
 
 
-def upcoming(sport, db, picks_doc, labels, now):
+def upcoming(sport, db, picks_doc, labels, getters, now):
     cols = picks_doc["cols"]
+    players = {str(p.get("id")): p for p in db.get("players") or []}
     kick = nfl_kickoffs(db) if sport == "nfl" else {}
     out = []
     for row in picks_doc["picks"]:
@@ -108,6 +152,7 @@ def upcoming(sport, db, picks_doc, labels, now):
             "lo": p.get("lo"), "hi": p.get("hi"), "price": round(price, 3),
             "edge": round(prob - price, 3), "value": "V" in (p.get("lists") or ""),
             "start": start.strftime("%Y-%m-%dT%H:%M:%SZ"),
+            "l10": last10(sport, players.get(str(p["pid"])), p["stat"], getters),
         })
     return out
 
@@ -148,7 +193,7 @@ def main():
         try:
             db = load(data_file)
             rec[sport] = record(db)
-            got = upcoming(sport, db, load(picks_file), stat_labels(template), now)
+            got = upcoming(sport, db, load(picks_file), stat_labels(template), stat_getters(template), now)
             cands += got
             print(f"  {sport}: {len(got)} upcoming priced pick(s), record {rec[sport]}")
         except Exception as e:     # one bad sport never blanks the others

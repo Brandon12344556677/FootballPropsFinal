@@ -75,7 +75,7 @@ window.PS = (function(){
   const io = ('IntersectionObserver' in window) ? new IntersectionObserver(es=>es.forEach(en=>{
     if(en.isIntersecting){ en.target.classList.add('on'); io.unobserve(en.target); } }), {threshold:.25}) : null;
   function watchRings(){
-    const fresh=[...document.querySelectorAll('.pickcard .ring:not([data-w])')];
+    const fresh=[...document.querySelectorAll('.pickcard .ring:not([data-w]), .verdict .ring:not([data-w])')];
     fresh.forEach(r=>{ r.dataset.w='1'; if(io) io.observe(r); else r.classList.add('on'); });
     // Safety net for browsers/webviews where the observer never reports: fill whatever is on screen.
     if(fresh.length) setTimeout(()=>fresh.forEach(r=>{ if(r.classList.contains('on')) return;
@@ -99,13 +99,14 @@ window.PS = (function(){
     price:['Price', 'What one share costs on Polymarket. A share pays $1 if the bet wins, so a 43¢ price also means the market sees it as a 43% chance.'],
     payout:['Payout', 'What you get back for each $1 if it wins, your stake included. 2.33× means a $10 bet returns $23.30.'],
     edge:['Edge', "The model's chance minus the market's, in points. +28 means we rate it 28 points likelier than the price says. Bigger is better — but it's an estimate, not a promise."],
+    last10:['Last 10', "The player's last ten games at this line: green bars cleared it, red ones didn't, and the dashed mark is the line. \"7/10\" = cleared it 7 times."],
     range:['Range · games', 'The first numbers are where the true chance most likely sits (80% range); "12g" is how many games it\'s based on. Wide range or few games = less certain.'],
     value:['Value spots', 'Bets where Polymarket gives at least a 30% chance and our model is 15+ points higher. The best bets for the price — not the surest ones.'],
     guaranteed:['25 Guaranteed', "The likeliest bets on the board, whatever they pay. Not actually guaranteed: they still lose sometimes, and at 85–97¢ a single loss wipes out several wins."],
   };
   const helpBtn=(k,label)=>`<button type="button" class="qhelp" data-help="${k}" aria-expanded="false">${label}<span class="qi" aria-hidden="true">?</span></button>`;
   function legend(short){
-    return `<div class="pslegend"><span class="lg-lab">How to read a card</span>${helpBtn('model','Model %')}${helpBtn('price','Price')}${helpBtn('payout','Payout')}${helpBtn('edge','Edge')}${short?'':helpBtn('range','Range')}</div>`;
+    return `<div class="pslegend"><span class="lg-lab">How to read a card</span>${helpBtn('model','Model %')}${helpBtn('last10','Last 10')}${helpBtn('price','Price')}${helpBtn('payout','Payout')}${helpBtn('edge','Edge')}${short?'':helpBtn('range','Range')}</div>`;
   }
   // One legend per page, just above the first real grid of pick cards. Boards render at
   // different times (NFL's leaderboard at once, Value spots after the live scan), so it
@@ -166,6 +167,9 @@ window.PS = (function(){
   // Keep the address bar on the prop being researched, so copying the URL shares it too.
   function syncHash(st){
     const pg=document.getElementById('page-player'); if(!pg || pg.hidden) return;
+    // Phones show the stat buttons as one swipeable row: keep the selected one in view.
+    const row=document.getElementById('chips'), on=row && row.querySelector('.chip[aria-pressed="true"]');
+    if(on && row.scrollWidth>row.clientWidth) row.scrollLeft=Math.max(0, on.offsetLeft-row.offsetLeft-40);
     const h='#'+pickHash(st); if(location.hash===h) return;
     try{ history.replaceState(null,'',h); }catch(e){}
   }
@@ -186,5 +190,57 @@ window.PS = (function(){
     else window.prompt('Copy this link:', url);
   }
 
-  return {teamVars, ticker, until, skeleton, esc, hashFor, pickHash, parsePickHash, syncHash, sharePick, toast, helpBtn};
+  // ---- mini "last 10" chart for a pick card: green bars cleared the line, red didn't ----
+  function spark(vals, line, side){
+    const v=(vals||[]).filter(x=>x!=null && isFinite(x)).slice(-10); line=+line;
+    if(v.length<3 || !isFinite(line)) return '';
+    const clears=x=> side==='under'? x<line : x>line;
+    const top=Math.max(line*1.6, ...v, 1), hits=v.filter(clears).length;
+    const bars=v.map(x=>`<i class="${x===line?'push':clears(x)?'hit':'miss'}" style="height:${Math.max(9, Math.round(100*x/top))}%"></i>`).join('');
+    return `<span class="spark" role="img" aria-label="Last ${v.length} games: cleared ${line} ${hits} times">`+
+      `<span class="sp-bars">${bars}<em style="bottom:${Math.round(100*line/top)}%"></em></span><span class="sp-n">${hits}/${v.length}</span></span>`;
+  }
+
+  // ---- the Player tab's verdict card: the model's chance against the price, in one call ----
+  // VALUE uses the site's own two rules (price 30¢+, model 15+ points better); SKIP means
+  // the price is above the model's chance; FAIR is everything between.
+  function verdictOf(prob, price){
+    const pv=Math.round(prob*100);
+    if(price==null) return {k:'none', label:'No price', say:"No Polymarket price for this exact line right now — the model's chance stands on its own. Check the price before you bet."};
+    const c=Math.round(price*100), e=Math.round((prob-price)*100), sg=(e>=0?'+':'−')+Math.abs(e);
+    if(price>=0.30 && prob-price>=0.15) return {k:'value', label:'Value', say:`Polymarket prices it at ${c}% and the model says ${pv}% — ${e} points better, which clears both value rules.`};
+    const an=/^(8|11|18)/.test(String(c))? 'an' : 'a';   // "an 80% chance", "a 60% chance"
+    if(prob-price<=-0.03) return {k:'skip', label:'Skip', say:`At ${c}¢ you'd be paying for ${an} ${c}% chance, and the model only gives it ${pv}%. Overpriced.`};
+    if(price<0.30 && prob-price>=0.15) return {k:'fair', label:'Fair', say:`Big edge on paper (${sg}), but at ${c}¢ it's a longshot — the value rules skip anything under 30¢.`};
+    if(e>=15) return {k:'fair', label:'Fair', say:`Right on the value bar (${sg}) but not clearly over it — the model's ${pv}% against ${c}¢.`};
+    return {k:'fair', label:'Fair', say:`Priced close to the model's ${pv}% — an edge of ${sg} points, short of the +15 it takes to call it value.`};
+  }
+  // o: {prob, lo, hi, neff, side, line, statText, price, live, marketLine, onShare} — or null to hide.
+  function verdict(el, o){
+    if(!el) return;
+    if(!o || o.prob==null){ el.hidden=true; return; }       // keep the markup, so re-showing it doesn't replay the ring
+    const pv=Math.round(o.prob*100), v=verdictOf(o.prob, o.price);
+    const c=o.price!=null? Math.round(o.price*100) : null, e=c!=null? Math.round((o.prob-o.price)*100) : null;
+    const tier=o.prob>=0.9?'hi':o.prob>=0.7?'mid':'lo';
+    const sig=[pv,o.side,o.line,o.statText,c,v.k,o.live,o.marketLine].join('|');
+    if(el.dataset.sig!==sig){
+      el.dataset.sig=sig;
+      el.className=`verdict v-${v.k} t-${tier}`;
+      const stats = c!=null
+        ? `<div class="vd-stats"><span><b>${c}¢</b>${o.live? '<i class="vd-live">● live price</i>' : 'price · last update'}</span>`+
+          `<span><b>${(1/o.price).toFixed(2)}×</b>payout</span><span><b class="${e>=0?'pos':'neg'}">${e>=0?'+':'−'}${Math.abs(e)}</b>edge</span></div>`
+        : (o.marketLine!=null? `<div class="vd-stats"><span class="vd-note">Polymarket lists this prop at <b>${esc(o.marketLine)}</b> — set the line to ${esc(o.marketLine)} to compare.</span></div>` : '');
+      const range=o.lo!=null? `${Math.round(o.lo*100)}–${Math.round(o.hi*100)}% range` : '';
+      const games=o.neff? `${Math.round(o.neff)} games` : '';
+      el.innerHTML=`<div class="ring" style="--p:${pv}"><b>${pv}<small>%</small></b></div>`+
+        `<div class="vd-main"><div class="vd-top"><span class="vd-chip">${v.label}</span><span class="vd-cap">Model chance${range?' · '+range:''}${games?' · '+games:''}</span></div>`+
+          `<div class="vd-bet"><span class="leantag ${esc(o.side)}">${esc(o.side)}</span><b>${esc(o.line)}</b><span>${esc(o.statText)}</span></div>`+
+          stats+`<p class="vd-say">${esc(v.say)}</p></div>`+
+        `<button type="button" class="btn ghost vd-share">🔗 Share</button>`;
+    }
+    const sb=el.querySelector('.vd-share'); if(sb) sb.onclick=o.onShare||null;
+    el.hidden=false;
+  }
+
+  return {teamVars, ticker, until, skeleton, esc, hashFor, pickHash, parsePickHash, syncHash, sharePick, toast, helpBtn, spark, verdict};
 })();

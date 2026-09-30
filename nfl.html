@@ -607,8 +607,8 @@ table td,table th,thead th,tbody td,.edgetbl td,.edgetbl th,.caltbl td,.caltbl t
 .valrules .vrfoot b{color:#fff}
 </style>
 
-<link rel="stylesheet" href="app.css?v=20260930d">
-<script src="app.js?v=20260930c"></script>
+<link rel="stylesheet" href="app.css?v=20260930e">
+<script src="app.js?v=20260930e"></script>
 
 <header class="apptop">
   <div class="apptop-in">
@@ -740,6 +740,8 @@ table td,table th,thead th,tbody td,.edgetbl td,.edgetbl th,.caltbl td,.caltbl t
   <div class="weekstrip" id="weekstrip" hidden></div>
 
   <div class="headline" id="headline"></div>
+
+  <div id="verdict" class="verdict" hidden></div>
 
   <div class="tiles" id="tiles"></div>
 
@@ -1187,8 +1189,21 @@ function renderEmpty(){
   hideMarketOdds();
   renderSplits(); renderCalc(); renderCompare();
 }
+// The verdict card under the headline: the model's chance against the live Polymarket US
+// price for this exact prop (render() sets the model side, pmDraw() the price side).
+let VERDICT=null;   // {prob, lo, hi, neff} for the prop on screen
+function paintVerdict(){
+  const v=VERDICT, p=state.player;
+  if(!v || !p){ PS.verdict($('verdict'), null); return; }
+  const q=PM.quote, mine=!!PM.slug && PM.key===p.id+'|'+state.stat;
+  const px=(mine && q && q.open && PM.line===state.line)? (state.ou==='over'? q.over : q.under) : null;
+  PS.verdict($('verdict'), {prob:v.prob, lo:v.lo, hi:v.hi, neff:v.neff, side:state.ou, line:fmt(state.line), statText:statLabel(state.stat),
+    price:px, live:px!=null, marketLine:(mine && PM.line!==state.line)? fmt(PM.line) : null,
+    onShare:()=>PS.sharePick(state, statLabel(state.stat))});
+}
 function render(){
   PS.syncHash(state);
+  VERDICT=null; paintVerdict();
   if(!state.player){ renderEmpty(); return; }
   const st=STATMAP[state.stat], p=state.player, g=games();
   renderMeta();
@@ -1221,6 +1236,7 @@ function render(){
         <div class="bar" style="width:${r.cnt?pc:0}%"></div></div>`;
   });
   $('tiles').innerHTML=tiles;
+  VERDICT={prob:pr.prob, lo:pr.lo, hi:pr.hi, neff:mp.neff}; paintVerdict();
   renderWhy(p, state.stat, state.line, state.ou, mp, ctx);
   try{ renderMarketOdds(); }catch(e){}
   renderTrapAlert(p, state.stat, state.line, state.ou, mp, ctx);
@@ -1634,7 +1650,7 @@ const PMUS_STAT = {
 };
 const PMUS_TEAM = { LA:'lar' };      // nflverse code -> Polymarket US code (the rest are just lower-cased)
 const PMUS_POLL_MS = 10000, PMUS_LIST_MS = 5*60*1000;
-const PM = { req:0, slug:null, line:null, quote:null, at:0, err:false, timer:null, poll:0, auto:null };
+const PM = { req:0, slug:null, line:null, key:null, quote:null, at:0, err:false, timer:null, poll:0, auto:null };   // key: "pid|stat" the market is for
 const pmGames = {};                  // event slug -> { t, idx: { "pkey|stat": [{line, slug}] } }
 
 function pmusEventSlug(g){ const c=t=>PMUS_TEAM[t]||String(t).toLowerCase(); return `nfl-${c(g.away)}-${c(g.home)}-${g.date}`; }
@@ -1685,7 +1701,7 @@ async function pmResolve(p, sk, line){
 }
 
 function pmStop(){ clearTimeout(PM.timer); PM.timer=null; PM.poll++; PM.slug=null; PM.quote=null; PM.err=false; }
-function hideMarketOdds(){ const mo=$('marketodds'); if(mo) mo.hidden=true; PM.req++; pmStop(); }
+function hideMarketOdds(){ const mo=$('marketodds'); if(mo) mo.hidden=true; PM.req++; pmStop(); paintVerdict(); }
 function pmClearAuto(){ const yo=$('yourodds'); if(yo && PM.auto!=null && yo.value===PM.auto){ yo.value=''; if(typeof updateCalc==='function') updateCalc(); } PM.auto=null; }
 
 async function renderMarketOdds(){
@@ -1697,13 +1713,13 @@ async function renderMarketOdds(){
   let m=null, err=false; try{ m=await pmResolve(p, sk, line); }catch(e){ err=true; }
   if(req!==PM.req) return;
   if(!m){
-    pmStop(); pmClearAuto(); mo.hidden=false; mo.className='mktodds none';
+    pmStop(); pmClearAuto(); paintVerdict(); mo.hidden=false; mo.className='mktodds none';
     mo.innerHTML=`<div class="mo-cap">Polymarket</div><div class="mo-body mktmuted">${err
       ? `Couldn't reach Polymarket right now.`
       : `No Polymarket market for ${esc(STATMAP[sk].label)} this week.`}</div>`;
     return;
   }
-  if(m.slug!==PM.slug){ pmStop(); PM.slug=m.slug; PM.line=m.line; pmDraw(); pmPoll(); }
+  if(m.slug!==PM.slug){ pmStop(); PM.slug=m.slug; PM.line=m.line; PM.key=p.id+'|'+sk; pmDraw(); pmPoll(); }
   else { pmDraw(); if(!PM.timer) pmPoll(); }
 }
 
@@ -1718,6 +1734,7 @@ async function pmPoll(){
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && PM.slug && !PM.timer) pmPoll(); });
 
 function pmDraw(){
+  paintVerdict();
   const mo=$('marketodds'); if(!mo || !PM.slug) return;
   const q=PM.quote, ou=state.ou, lineTxt=fmt(PM.line);
   const cap=`<div class="mo-cap">Polymarket <span class="mo-side ${ou}">${ou.toUpperCase()} ${lineTxt}</span></div>`;
@@ -2005,7 +2022,7 @@ function pickTable(rows, opts){
       `<div class="pc-top"><span class="av">${esc(initials(r.name))}</span>`+
         `<div class="pc-who"><b>${esc(r.name)}</b><span><span class="tbadge">${esc(r.team)}</span>${vs}</span></div>`+
         `<div class="pc-prob"><div class="ring" style="--p:${pv}"><b>${pv}<small>%</small></b></div><span>${Math.round(r.lo*100)}–${Math.round(r.hi*100)} · ${r.n}g</span></div></div>`+
-      `<div class="pc-bet"><span class="leantag ${r.side}">${r.side}</span><b>${r.line}</b><span>${esc(r.statText)}</span></div>`+
+      `<div class="pc-bet"><span class="leantag ${r.side}">${r.side}</span><b>${r.line}</b><span>${esc(r.statText)}</span>${r.pl? PS.spark(valuesOf(r.pl, r.sk), r.line, r.side) : ''}</div>`+
       `<div class="pc-foot">${liveSpan(r)}<button class="edgeload" type="button" data-i="${idx}">Load</button></div>`+
     `</article>`;
   });
@@ -2364,7 +2381,7 @@ function renderLeaderboard(){
     `<div class="pc-top"><span class="av">${esc(initials(e.p.n))}</span>`+
       `<div class="pc-who"><b>${esc(e.p.n)}</b><span><span class="tbadge">${esc(e.p.t)}</span>${esc(e.p.p)}</span></div>`+
       `<div class="pc-prob"><b>${e.streak}🔥</b><span>straight · last ${fmt(e.last)}</span></div></div>`+
-    `<div class="pc-bet"><span class="leantag over">over</span><b>${fmt(e.line)}</b><span>${esc(STATMAP[e.sk].label)}</span></div>`+
+    `<div class="pc-bet"><span class="leantag over">over</span><b>${fmt(e.line)}</b><span>${esc(STATMAP[e.sk].label)}</span>${PS.spark(valuesOf(e.p, e.sk), e.line, 'over')}</div>`+
     `<div class="pc-foot"><span class="pc-model">${e.prob==null? '<span class="pmdim">no model yet</span>' : `Model <b>${pct(e.prob)}</b>`}</span>${liveSpan(e)}`+
       `<button class="edgeload" type="button" data-i="${i}">Load</button></div>`+
   `</article>`; });

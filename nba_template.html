@@ -614,8 +614,8 @@ tr.hit td{background:var(--hit-soft)} tr.miss td{background:var(--miss-soft)}
 .panel.collapsed{padding-bottom:14px}
 </style>
 
-<link rel="stylesheet" href="app.css?v=20260930d">
-<script src="app.js?v=20260930c"></script>
+<link rel="stylesheet" href="app.css?v=20260930e">
+<script src="app.js?v=20260930e"></script>
 
 <header class="apptop">
   <div class="apptop-in">
@@ -723,6 +723,7 @@ tr.hit td{background:var(--hit-soft)} tr.miss td{background:var(--miss-soft)}
 
   <div class="weekstrip" id="weekstrip" hidden></div>
   <div class="headline" id="headline"></div>
+  <div id="verdict" class="verdict" hidden></div>
   <div class="tiles" id="tiles"></div>
 
   <div class="twocol">
@@ -1034,9 +1035,23 @@ $('adjctx').onchange=()=>{ state.adj=$('adjctx').checked; render(); };
 
 // ---- render player ----
 function tileClass(p){ return p>=0.6?'hi':p>=0.45?'mid':'lo'; }
+// The verdict card under the headline: the model's chance against the Polymarket price saved
+// with this exact pick at the last hourly update (these boards don't poll prices live).
+let VERDICT=null;   // {prob, lo, hi, neff} for the prop on screen, set by render()
+function paintVerdict(){
+  const v=VERDICT, p=state.player;
+  if(!v || !p){ PS.verdict($('verdict'), null); return; }
+  const mine=upcomingPicks().filter(x=>String(x.pid)===String(p.id) && x.stat===state.stat && x.price!=null);
+  const same=mine.find(x=>+x.line===+state.line && (x.side||'over')===state.ou);
+  const near=same? null : (mine.find(x=>(x.side||'over')===state.ou) || mine[0]);
+  PS.verdict($('verdict'), {prob:v.prob, lo:v.lo, hi:v.hi, neff:v.neff, side:state.ou, line:state.line, statText:statLabel(state.stat),
+    price: same? same.price : null, live:false, marketLine:(near && +near.line!==+state.line)? near.line : null,
+    onShare:()=>PS.sharePick(state, statLabel(state.stat))});
+}
 function render(){
   const p=state.player;
   PS.syncHash(state);
+  VERDICT=null; paintVerdict();
   updatePlayerBtns();
   if(!p){ $('headline').innerHTML='<span class="q">Search a player above to see their prop chances.</span>';
     $('tiles').innerHTML=''; $('pmeta').textContent=''; drawDist([],0,'pts'); drawChart([],0,'pts'); $('tbl').innerHTML=''; $('splitbody').innerHTML=''; return; }
@@ -1070,6 +1085,7 @@ function render(){
   const ceil=vals.length?Math.max(...vals):0, floor=vals.length?Math.min(...vals):0;
   tiles.push(tile('Range', `${floor}–${ceil}`, `sd ${mp?fmt(mp.sd):'—'}`, null));
   $('tiles').innerHTML=tiles.join('');
+  VERDICT= mSide!=null? {prob:mSide, lo:side==='over'?mp.lo:1-mp.hi, hi:side==='over'?mp.hi:1-mp.lo, neff:mp.neff} : null; paintVerdict();
   // context note
   if(ctx.on && (ctx.env!==1 || ctx.def!==1)){
     const parts=[]; if(ctx.gamePts) parts.push(`pace/total ×${fmt(ctx.env)}`); if(ctx.defRatio) parts.push(`vs ${esc(oppNow)} defense ×${fmt(ctx.def)}`);
@@ -1187,7 +1203,7 @@ function pickTable(rows, sort){
       `<div class="pc-top"><span class="av">${esc(initials(r.name))}</span>`+
         `<div class="pc-who"><b>${esc(r.name)}</b><span><span class="tbadge">${esc(r.team)}</span>${r.team===r.game.home? "vs "+esc(r.game.away) : r.team===r.game.away? "@ "+esc(r.game.home) : esc(r.game.away)+" @ "+esc(r.game.home)}</span></div>`+
         `<div class="pc-prob"><div class="ring" style="--p:${pv}"><b>${pv}<small>%</small></b></div><span>${Math.round(r.lo*100)}–${Math.round(r.hi*100)} · ${r.n}g</span></div></div>`+
-      `<div class="pc-bet"><span class="leantag ${esc(r.side)}">${esc(r.side)}</span><b>${r.line}</b><span>${esc(r.statText)}</span></div>`+
+      `<div class="pc-bet"><span class="leantag ${esc(r.side)}">${esc(r.side)}</span><b>${r.line}</b><span>${esc(r.statText)}</span>${byId[r.pid]? PS.spark(valuesOf(byId[r.pid], r.sk), r.line, r.side) : ''}</div>`+
       `<div class="pc-foot"><span class="pc-price livecell">${priceCell(r)}</span><button class="edgeload" type="button" data-i="${idx}">Load</button></div>`+
     `</article>`;
   });
@@ -1309,7 +1325,7 @@ function loadPicks(){
   }).catch(()=>{ PICKS=[]; renderPickViews(); });
 }
 let upSig=-1;
-function renderPickViews(){ renderEdges(); renderValue(); renderValueWeek(); generateDigest(); renderPast(); renderApTeams(); PS.ticker(tickerItems()); upSig=upcomingPicks().length; }
+function renderPickViews(){ paintVerdict(); renderEdges(); renderValue(); renderValueWeek(); generateDigest(); renderPast(); renderApTeams(); PS.ticker(tickerItems()); upSig=upcomingPicks().length; }
 // Once a minute: when a game starts, its picks drop off the boards without a reload.
 setInterval(()=>{ if(PICKS!==null && !document.hidden && upcomingPicks().length!==upSig) renderPickViews(); }, 60000);
 function initPicks(){ renderPast(); }   // Past tab opened
