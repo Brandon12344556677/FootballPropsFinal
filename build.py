@@ -43,9 +43,11 @@ UA = {"User-Agent": "prop-streak-lab/2.0"}
 
 # ESPN public box scores — a near-real-time fill for current-season games the
 # schedule already shows final but that nflverse hasn't published weekly stats
-# for yet (nflverse lags 1-2 days). Unofficial but stable and free.
-ESPN_SB = "https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard?dates={season}&seasontype=2&week={week}"
-ESPN_SUM = "https://site.api.espn.com/apis/site/v2/sports/football/nfl/summary?event={event}"
+# for yet (nflverse lags 1-2 days). Unofficial but stable and free. site.web.api,
+# not site.api: ESPN's CDN refuses site.api from data-center IPs like GitHub's
+# (HTTP 403), as the NBA/NHL/MLB builders found; site.web.api serves them.
+ESPN_SB = "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard?dates={season}&seasontype=2&week={week}"
+ESPN_SUM = "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event={event}"
 
 # ---------------------------------------------------------------------------
 # Game-row layout. The front-end reads rows by index — keep in sync with template.html.

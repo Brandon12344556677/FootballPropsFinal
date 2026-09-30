@@ -89,7 +89,7 @@ jobs:
           git add -A players 2>/dev/null || true
           for f in nba.html nba.json nba_stats.json nba_picks.json \
                    nhl.html nhl.json nhl_stats.json nhl_picks.json \
-                   mlb.html mlb.json mlb_stats.json mlb_picks.json today.json posted.json; do
+                   mlb.html mlb.json mlb_stats.json mlb_picks.json today.json posted.json top_cache.json; do
             git add "$f" 2>/dev/null || true
           done
           if git diff --cached --quiet; then
