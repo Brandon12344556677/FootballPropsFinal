@@ -615,6 +615,7 @@ tr.hit td{background:var(--hit-soft)} tr.miss td{background:var(--miss-soft)}
 </style>
 
 <link rel="stylesheet" href="app.css">
+<script src="app.js"></script>
 
 <header class="apptop">
   <div class="apptop-in">
@@ -628,6 +629,8 @@ tr.hit td{background:var(--hit-soft)} tr.miss td{background:var(--miss-soft)}
     <a class="appcta" href="https://polymarket.us/join/propstreaklab" target="_blank" rel="noopener sponsored">🎁 $50 free</a>
   </div>
 </header>
+<div id="psticker" class="ticker" hidden aria-label="Live updates"></div>
+<div class="sportbg sportbg-nhl" aria-hidden="true"></div>
 
 <div class="wrap app">
   <section class="apphero">
@@ -1149,6 +1152,7 @@ function scheduleNote(what){
 }
 // ---- NFL-style pick tables: Player · Game · Prop · Line · Bet · Model · Polymarket · Load ----
 const SPORT_NAME='NHL', TIPOFF='puck drop';
+const SPORT_KEY=SPORT_NAME.toLowerCase();   // team colors in app.js are keyed by sport
 let edgeSort={key:'prob',dir:-1}, valueSort={key:'prob',dir:-1}, goodSort={key:'edge',dir:-1};
 function gameOf(p){ const m=/^\d{4}-\d{2}-\d{2}-([A-Z]+)-([A-Z]+)$/.exec(p.gid||'');
   return m? {away:m[1], home:m[2]} : {away:p.team, home:p.opp}; }
@@ -1176,11 +1180,11 @@ function pickTable(rows, sort){
   const pills=SORTS.map(([k,l])=>`<button type="button" class="sortpill" data-k="${k}" aria-pressed="${sort.key===k}">${l}${sort.key===k?(sort.dir>0?' ↑':' ↓'):''}</button>`).join('');
   let h=`<div class="sortbar"><span class="sortlab">Sort</span>${pills}</div><div class="pickgrid">`;
   rows.forEach((r,idx)=>{
-    const tier=r.prob>=0.9?'hi':r.prob>=0.7?'mid':'lo';
-    h+=`<article class="pickcard ${tier}">`+
+    const tier=r.prob>=0.9?'hi':r.prob>=0.7?'mid':'lo', pv=Math.round(r.prob*100);
+    h+=`<article class="pickcard ${tier}" style="${PS.teamVars(SPORT_KEY, r.team)}">`+
       `<div class="pc-top"><span class="av">${esc(initials(r.name))}</span>`+
-        `<div class="pc-who"><b>${esc(r.name)}</b><span>${esc(r.team)} · ${r.team===r.game.home? "vs "+esc(r.game.away) : r.team===r.game.away? "@ "+esc(r.game.home) : esc(r.game.away)+" @ "+esc(r.game.home)}</span></div>`+
-        `<div class="pc-prob"><b>${pct(r.prob)}</b><span>${Math.round(r.lo*100)}–${Math.round(r.hi*100)} · ${r.n}g</span></div></div>`+
+        `<div class="pc-who"><b>${esc(r.name)}</b><span><span class="tbadge">${esc(r.team)}</span>${r.team===r.game.home? "vs "+esc(r.game.away) : r.team===r.game.away? "@ "+esc(r.game.home) : esc(r.game.away)+" @ "+esc(r.game.home)}</span></div>`+
+        `<div class="pc-prob"><div class="ring" style="--p:${pv}"><b>${pv}<small>%</small></b></div><span>${Math.round(r.lo*100)}–${Math.round(r.hi*100)} · ${r.n}g</span></div></div>`+
       `<div class="pc-bet"><span class="leantag ${esc(r.side)}">${esc(r.side)}</span><b>${r.line}</b><span>${esc(r.statText)}</span></div>`+
       `<div class="pc-foot"><span class="pc-price livecell">${priceCell(r)}</span><button class="edgeload" type="button" data-i="${idx}">Load</button></div>`+
     `</article>`;
@@ -1205,7 +1209,7 @@ function updateBoardStatus(){ const st=$('edgestatus'); if(!st) return;
   const games=new Set(up.map(p=>p.gid)).size;
   st.textContent=`${up.length} props modeled · ${v.length} value (${v.length-vU} over / ${vU} under) · ${games} game${games===1?'':'s'}`; }
 function renderEdges(){ const body=$('edgebody'); if(!body) return;
-  if(PICKS===null){ body.innerHTML='<p class="mktnote">Loading…</p>'; return; }
+  if(PICKS===null){ body.innerHTML=PS.skeleton(6); return; }
   updateBoardStatus();
   const all=listRows('T');
   if(!all.length){ body.innerHTML = upcomingPicks().length
@@ -1247,15 +1251,42 @@ function renderValue(){ const panel=$('valuepanel'), body=$('valuebody'); if(!pa
 // ---- Hit streak leaderboard ----
 function computeStreak(vals, line){ let s=0; for(let i=vals.length-1;i>=0;i--){ if(vals[i]>line) s++; else break; } return s; }
 const LEADER_STATS=['pts','sog','g'];
+let TOP_STREAK=null;   // longest active streak, for the ticker
 function buildLeaderboard(){
   const rows=[];
   DB.players.forEach(p=>{ if(!p.g||p.g.length<4) return; const live=p.g[p.g.length-1][0]===CUR_SEASON; if(!live) return;
     LEADER_STATS.forEach(sk=>{ const vals=p.g.map(STATMAP[sk].get); const line=seedLine(vals); const s=computeStreak(vals, line);
       if(s>=3) rows.push({p, sk, line, s}); }); });
   rows.sort((a,b)=>b.s-a.s);
+  TOP_STREAK=rows[0]||null;
   const body=$('lbbody');
   if(!rows.length){ body.innerHTML='<p class="mktnote">No active streaks yet — this fills in once the season is underway and current-season game logs land.</p>'; return; }
   body.innerHTML=rows.slice(0,20).map(r=>`<div class="lbrow"><div class="lbn"><b>${esc(r.p.n)}</b>${esc(r.p.t)} · ${esc(statLabel(r.sk))} over ${r.line}</div><div class="lbstreak">${r.s} 🔥</div></div>`).join('');
+}
+
+// ---- Live ticker (top of the page): next games, last results, value spots, records ----
+function tickerItems(){
+  const it=[], now=Date.now();
+  (WEEK.games||[]).filter(g=>g.start && Date.parse(g.start)>now).slice(0,3).forEach(g=>
+    it.push({ic:'⏱', html:`<b>${esc(g.away)} @ ${esc(g.home)}</b> · ${TIPOFF} <span data-cd="${esc(g.start)}"></span>`}));
+  if(PICKS){
+    const graded=PICKS.filter(p=>p.res==='hit'||p.res==='miss');
+    const last=graded.reduce((m,p)=>(p.date||'')>m? p.date : m, '');
+    if(last){
+      let day=graded.filter(p=>p.date===last); const listed=day.filter(p=>(p.lists||'').trim());
+      if(listed.length>=5) day=listed;      // the picks the site actually showed, when there are enough
+      const hits=day.filter(p=>p.res==='hit');
+      it.push({ic:'📊', cls:'up', html:`<b>${esc(dlabel(last))}: ${hits.length}/${day.length} picks hit (${Math.round(100*hits.length/day.length)}%)</b>`});
+      hits.sort((a,b)=>b.prob-a.prob).slice(0,5).forEach(p=>
+        it.push({ic:'✅', cls:'up', html:`<b>${esc(p.player)}</b> ${esc(p.side)} ${esc(p.line)} ${esc(statLabel(p.stat))} — hit (${esc(p.actual)})`}));
+    }
+    const v=listRows('V').sort((a,b)=>(b.edge||0)-(a.edge||0));
+    if(v.length) it.push({ic:'⚡', html:`<b>${v.length} value spot${v.length===1?'':'s'} live</b> — top: ${esc(v[0].name)} ${esc(v[0].side)} ${esc(v[0].line)} ${esc(v[0].statText)}, ${pct(v[0].prob)} vs ${Math.round(v[0].price*100)}¢`});
+  }
+  const R=DB.record||{};
+  if(R.T&&R.T.n) it.push({ic:'🔒', html:`25 Guaranteed record <b>${R.T.hit}/${R.T.n} (${Math.round(100*R.T.hit/R.T.n)}%)</b>`});
+  if(TOP_STREAK) it.push({ic:'🔥', html:`<b>${esc(TOP_STREAK.p.n)}</b> — ${TOP_STREAK.s} straight over ${TOP_STREAK.line} ${esc(statLabel(TOP_STREAK.sk))}`});
+  return it;
 }
 
 // ---- Picks store (drives both Upcoming and Past) ----
@@ -1267,7 +1298,7 @@ function loadPicks(){
   }).catch(()=>{ PICKS=[]; renderPickViews(); });
 }
 let upSig=-1;
-function renderPickViews(){ renderEdges(); renderValue(); renderValueWeek(); generateDigest(); renderPast(); renderApTeams(); upSig=upcomingPicks().length; }
+function renderPickViews(){ renderEdges(); renderValue(); renderValueWeek(); generateDigest(); renderPast(); renderApTeams(); PS.ticker(tickerItems()); upSig=upcomingPicks().length; }
 // Once a minute: when a game starts, its picks drop off the boards without a reload.
 setInterval(()=>{ if(PICKS!==null && !document.hidden && upcomingPicks().length!==upSig) renderPickViews(); }, 60000);
 function initPicks(){ renderPast(); }   // Past tab opened
@@ -1477,6 +1508,7 @@ const SOCIAL = { instagram: "https://www.instagram.com/propstreaklab", tiktok: "
 renderEdges();        // shows "Loading…" until picks arrive
 loadPicks();
 buildLeaderboard();
+PS.ticker(tickerItems());
 render();
 // Live record per list in the panel headers (T / V / G), like the NFL page.
 (function renderRecords(){ const R=DB.record||{};

@@ -211,3 +211,89 @@ body{margin:0;background:var(--ps-bg);color:var(--ps-text);font-family:var(--ps-
 .app .sociallink:hover{border-color:var(--ps-green);color:var(--ps-green);transform:none;box-shadow:none}
 .app footer{margin-top:18px;border-top:1px solid var(--ps-line-soft);padding-top:18px;color:var(--ps-muted);text-align:left!important}
 .app footer a{color:var(--ps-soft)}
+
+/* ================= wow layer: team colors, chance rings, ticker, shimmer, sport art ================= */
+
+/* team-colored pick cards: a stripe down the left edge, a glow in the corner, colored initials + badge
+   (--tc1/--tc2/--tcfg come from PS.teamVars() in app.js) */
+.app .pickcard{position:relative;overflow:hidden;
+  background:radial-gradient(300px 150px at 100% 0%,color-mix(in srgb,var(--tc1,#1f3a62) 34%,transparent),transparent 70%),
+             radial-gradient(260px 130px at 0% 100%,color-mix(in srgb,var(--tc2,#3d5a86) 14%,transparent),transparent 70%),
+             linear-gradient(180deg,#15294a,#10213d)}
+.app .pickcard>*{position:relative;z-index:1}
+.app .pickcard::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;z-index:1;background:linear-gradient(180deg,var(--tc1,#00c805),var(--tc2,#00c805))}
+.app .pickcard::after{content:"";position:absolute;inset:0;z-index:0;border-radius:inherit;pointer-events:none;opacity:0;transition:opacity .2s ease;
+  background:radial-gradient(260px circle at var(--mx,50%) var(--my,0%),color-mix(in srgb,var(--tc2,#00c805) 18%,transparent),transparent 65%)}
+.app .pickcard:hover::after{opacity:1}
+.app .pickcard:hover{border-color:color-mix(in srgb,var(--tc2,#00c805) 65%,transparent);box-shadow:0 18px 40px rgba(0,0,0,.4),0 0 0 1px color-mix(in srgb,var(--tc2,#00c805) 30%,transparent)}
+.app .pickcard .av{background:var(--tc1,#1f3a62);color:var(--tcfg,#fff);box-shadow:0 0 0 2px var(--tc2,#3d5a86);border:0}
+.app .pc-who .tbadge{display:inline-block;width:auto;overflow:visible;padding:0 7px;margin-right:5px;border-radius:6px;line-height:18px;background:var(--tc1,#1f3a62);color:var(--tcfg,#fff);
+  border:1px solid color-mix(in srgb,var(--tc2,#3d5a86) 70%,transparent);font-family:var(--ps-cond);font-weight:700;font-size:12px;letter-spacing:.06em}
+
+/* animated chance ring: fills from 0 to the model's chance when the card scrolls into view */
+@property --pp{syntax:'<number>';inherits:false;initial-value:0}
+.app .pc-prob{display:flex;flex-direction:column;align-items:center;gap:3px}
+.app .ring{--pp:0;position:relative;display:grid;place-items:center;width:64px;height:64px;border-radius:50%;flex:none;
+  background:conic-gradient(var(--ring,#00c805) calc(var(--pp)*1%),rgba(255,255,255,.09) 0);transition:--pp 1.3s cubic-bezier(.2,.8,.2,1)}
+.app .ring.on{--pp:var(--p)}
+.app .ring::before{content:"";position:absolute;inset:5px;border-radius:50%;background:#12264a}
+.app .pickcard .pc-prob .ring b{position:relative;font-family:var(--ps-display);font-weight:600;font-size:23px;line-height:1;color:#fff}
+.app .ring b small{font-size:.55em;margin-left:1px;color:var(--ps-soft)}
+.app .pickcard.hi .ring{--ring:#00c805;box-shadow:0 0 20px rgba(0,200,5,.22)}
+.app .pickcard.mid .ring{--ring:#7ee2a0} .app .pickcard.lo .ring{--ring:#9fb0c6}
+
+/* live ticker under the header (sports-TV style; pauses on hover) */
+.ticker{display:flex;align-items:center;height:38px;overflow:hidden;background:rgba(6,16,30,.88);border-bottom:1px solid rgba(0,200,5,.16);
+  color:#dfe6ef;font-size:13.5px;font-family:"Barlow",system-ui,sans-serif}
+.tk-live{flex:none;display:flex;align-items:center;gap:7px;height:100%;padding:0 14px;background:#00c805;color:#06210b;
+  font-family:"Barlow Condensed",Impact,sans-serif;font-weight:700;letter-spacing:.14em;text-transform:uppercase;font-size:13px}
+.tk-dot{width:7px;height:7px;border-radius:50%;background:#06210b;animation:tkblink 1.4s ease-in-out infinite}
+@keyframes tkblink{50%{opacity:.25}}
+.tk-view{flex:1;min-width:0;overflow:hidden;-webkit-mask-image:linear-gradient(90deg,transparent,#000 36px,#000 calc(100% - 36px),transparent);mask-image:linear-gradient(90deg,transparent,#000 36px,#000 calc(100% - 36px),transparent)}
+.tk-track{display:inline-flex;white-space:nowrap;animation:tkscroll var(--tkdur,60s) linear infinite}
+.ticker:hover .tk-track{animation-play-state:paused}
+@keyframes tkscroll{to{transform:translateX(-50%)}}
+.tk-seq{display:inline-flex;align-items:center;gap:18px;padding:0 18px}
+.tk-item{display:inline-flex;align-items:center;gap:7px}
+.tk-item b{color:#fff;font-weight:600}
+.tk-item.up b{color:#8ff0b0}
+.tk-ic{font-size:14px}
+.tk-sep{color:rgba(0,200,5,.6)}
+@media(prefers-reduced-motion:reduce){.tk-track{animation:none}.tk-view{overflow-x:auto}}
+
+/* loading shimmer: placeholder cards while picks load */
+.app .pickcard.skel{pointer-events:none;min-height:150px}
+.app .pickcard.skel::before{background:rgba(255,255,255,.08)}
+.app .sk{display:block;border-radius:8px;background:linear-gradient(90deg,rgba(255,255,255,.05) 25%,rgba(255,255,255,.13) 37%,rgba(255,255,255,.05) 63%);
+  background-size:400% 100%;animation:skshine 1.4s ease infinite}
+@keyframes skshine{0%{background-position:100% 50%}100%{background-position:0 50%}}
+.app .sk-av{width:42px;height:42px;border-radius:50%;flex:none} .app .sk-ring{width:64px;height:64px;border-radius:50%;flex:none}
+.app .sk-l1{height:14px;width:62%;margin-bottom:8px} .app .sk-l2{height:10px;width:40%}
+.app .sk-l3{height:18px;width:72%;margin-top:14px} .app .sk-l4{height:12px;width:46%;margin-top:14px}
+
+/* hover + shine */
+.appcta{position:relative;overflow:hidden}
+.appcta::after{content:"";position:absolute;top:0;bottom:0;left:-60%;width:40%;background:linear-gradient(100deg,transparent,rgba(255,255,255,.6),transparent);
+  transform:skewX(-20deg);animation:ctashine 5s ease-in-out infinite}
+@keyframes ctashine{0%,72%{left:-60%}100%{left:130%}}
+.sportnav a:hover{box-shadow:0 0 0 3px rgba(0,200,5,.12)}
+.app .btn,.app .refbanner{position:relative;overflow:hidden}
+.app .btn::after,.app .refbanner::after{content:"";position:absolute;top:0;bottom:0;left:-70%;width:45%;pointer-events:none;
+  background:linear-gradient(100deg,transparent,rgba(255,255,255,.35),transparent);transform:skewX(-20deg);transition:left .55s ease}
+.app .btn:hover::after,.app .refbanner:hover::after{left:130%}
+.app .tab{transition:background .15s ease,color .15s ease}
+.app .edgeload{transition:background .15s ease,color .15s ease,box-shadow .15s ease}
+.app .edgeload:hover{box-shadow:0 0 0 3px rgba(0,200,5,.15)}
+@media(prefers-reduced-motion:reduce){.appcta::after{animation:none;display:none}}
+
+/* sport-themed background art: faint line drawings of a diamond / court / rink / field */
+.sportbg{position:fixed;inset:0;z-index:-1;pointer-events:none;opacity:.075;background-repeat:no-repeat}
+.sportbg-mlb{background-size:min(1050px,115vw) auto;background-position:right -8vw bottom -6vh;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1000 1000' fill='none' stroke='white' stroke-width='3'%3E%3Cpath d='M500 930L110 540A552 552 0 0 1 890 540Z'/%3E%3Cpath d='M330 760A180 180 0 0 1 670 760'/%3E%3Cpath d='M500 930L620 810L500 690L380 810Z'/%3E%3Cpath d='M620 798L632 810L620 822L608 810ZM500 678L512 690L500 702L488 690ZM380 798L392 810L380 822L368 810ZM492 924H508V932L500 940L492 932Z' fill='white'/%3E%3Ccircle cx='500' cy='818' r='16'/%3E%3C/svg%3E")}
+.sportbg-nba{background-size:min(900px,110vw) auto;background-position:right -4vw bottom -12vh;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1000 1000' fill='none' stroke='white' stroke-width='3'%3E%3Crect x='60' y='60' width='880' height='880'/%3E%3Crect x='380' y='560' width='240' height='380'/%3E%3Ccircle cx='500' cy='560' r='120'/%3E%3Cpath d='M110 940V790A400 400 0 0 1 890 790V940'/%3E%3Ccircle cx='500' cy='880' r='15'/%3E%3Cpath d='M455 905H545M445 880A55 55 0 0 1 555 880M380 60A120 120 0 0 0 620 60'/%3E%3C/svg%3E")}
+.sportbg-nhl{background-size:min(1300px,140vw) auto;background-position:center bottom -4vh;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1400 700' fill='none' stroke='white' stroke-width='3'%3E%3Crect x='20' y='20' width='1360' height='660' rx='190'/%3E%3Cpath d='M120 60V640M1280 60V640'/%3E%3Cpath d='M480 20V680M920 20V680' stroke-width='9'/%3E%3Cpath d='M700 20V680' stroke-width='6'/%3E%3Ccircle cx='700' cy='350' r='90'/%3E%3Ccircle cx='270' cy='190' r='90'/%3E%3Ccircle cx='270' cy='510' r='90'/%3E%3Ccircle cx='1130' cy='190' r='90'/%3E%3Ccircle cx='1130' cy='510' r='90'/%3E%3Cpath d='M120 305A45 45 0 0 1 120 395M1280 305A45 45 0 0 0 1280 395'/%3E%3C/svg%3E")}
+.sportbg-nfl{background-size:min(1400px,160vw) auto;background-position:center bottom -2vh;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1400 700' fill='none' stroke='white' stroke-width='3'%3E%3Crect x='20' y='60' width='1360' height='580'/%3E%3Cpath d='M130 60V640M1270 60V640' stroke-width='6'/%3E%3Cpath d='M187 60V640' stroke-width='3'/%3E%3Cpath d='M244 60V640' stroke-width='5'/%3E%3Cpath d='M301 60V640' stroke-width='3'/%3E%3Cpath d='M358 60V640' stroke-width='5'/%3E%3Cpath d='M415 60V640' stroke-width='3'/%3E%3Cpath d='M472 60V640' stroke-width='5'/%3E%3Cpath d='M529 60V640' stroke-width='3'/%3E%3Cpath d='M586 60V640' stroke-width='5'/%3E%3Cpath d='M643 60V640' stroke-width='3'/%3E%3Cpath d='M700 60V640' stroke-width='5'/%3E%3Cpath d='M757 60V640' stroke-width='3'/%3E%3Cpath d='M814 60V640' stroke-width='5'/%3E%3Cpath d='M871 60V640' stroke-width='3'/%3E%3Cpath d='M928 60V640' stroke-width='5'/%3E%3Cpath d='M985 60V640' stroke-width='3'/%3E%3Cpath d='M1042 60V640' stroke-width='5'/%3E%3Cpath d='M1099 60V640' stroke-width='3'/%3E%3Cpath d='M1156 60V640' stroke-width='5'/%3E%3Cpath d='M1213 60V640' stroke-width='3'/%3E%3Cg fill='white' stroke='none' font-family='Arial,sans-serif' font-size='44' font-weight='700' text-anchor='middle'%3E%3Ctext x='244' y='600'%3E10%3C/text%3E%3Ctext x='358' y='600'%3E20%3C/text%3E%3Ctext x='472' y='600'%3E30%3C/text%3E%3Ctext x='586' y='600'%3E40%3C/text%3E%3Ctext x='700' y='600'%3E50%3C/text%3E%3Ctext x='814' y='600'%3E40%3C/text%3E%3Ctext x='928' y='600'%3E30%3C/text%3E%3Ctext x='1042' y='600'%3E20%3C/text%3E%3Ctext x='1156' y='600'%3E10%3C/text%3E%3C/g%3E%3C/svg%3E")}
+@media(max-width:760px){.sportbg{opacity:.06}.sportbg-mlb,.sportbg-nba{background-position:center bottom -4vh}}

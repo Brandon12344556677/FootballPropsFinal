@@ -608,6 +608,7 @@ table td,table th,thead th,tbody td,.edgetbl td,.edgetbl th,.caltbl td,.caltbl t
 </style>
 
 <link rel="stylesheet" href="app.css">
+<script src="app.js"></script>
 
 <header class="apptop">
   <div class="apptop-in">
@@ -621,6 +622,8 @@ table td,table th,thead th,tbody td,.edgetbl td,.edgetbl th,.caltbl td,.caltbl t
     <a class="appcta" href="https://polymarket.us/join/propstreaklab" target="_blank" rel="noopener sponsored">🎁 $50 free</a>
   </div>
 </header>
+<div id="psticker" class="ticker" hidden aria-label="Live updates"></div>
+<div class="sportbg sportbg-nfl" aria-hidden="true"></div>
 
 <div class="wrap app">
   <section class="apphero">
@@ -1904,6 +1907,7 @@ function valueSig(rows){ return rows.map(r=>mkOf(r)+'|'+r.side).join(','); }
 async function scanBoard(force){
   const body=$('edgebody'), status=$('edgestatus');
   status.textContent='Loading slate…';
+  if(!edgeRows.length) body.innerHTML=PS.skeleton(6);
   try{
     const slate=await getSlate(); const gamesL=slate.games||[]; let done=0;
     const events=await mapLimit(gamesL, 4, async g=>{ let ev=null; try{ ev=await getEvent(g.slug, force); }catch(e){}
@@ -1993,10 +1997,11 @@ function pickTable(rows, opts){
   rows.forEach((r,idx)=>{
     const tier=r.prob>=0.9?'hi':r.prob>=0.7?'mid':'lo', g=r.game||{};
     const vs=r.team===g.home? 'vs '+esc(g.away) : r.team===g.away? '@ '+esc(g.home) : esc(g.away)+' @ '+esc(g.home);
-    h+=`<article class="pickcard ${tier}">`+
+    const pv=Math.round(r.prob*100);
+    h+=`<article class="pickcard ${tier}" style="${PS.teamVars('nfl', r.team)}">`+
       `<div class="pc-top"><span class="av">${esc(initials(r.name))}</span>`+
-        `<div class="pc-who"><b>${esc(r.name)}</b><span>${esc(r.team)} · ${vs}</span></div>`+
-        `<div class="pc-prob"><b>${pct(r.prob)}</b><span>${Math.round(r.lo*100)}–${Math.round(r.hi*100)} · ${r.n}g</span></div></div>`+
+        `<div class="pc-who"><b>${esc(r.name)}</b><span><span class="tbadge">${esc(r.team)}</span>${vs}</span></div>`+
+        `<div class="pc-prob"><div class="ring" style="--p:${pv}"><b>${pv}<small>%</small></b></div><span>${Math.round(r.lo*100)}–${Math.round(r.hi*100)} · ${r.n}g</span></div></div>`+
       `<div class="pc-bet"><span class="leantag ${r.side}">${r.side}</span><b>${r.line}</b><span>${esc(r.statText)}</span></div>`+
       `<div class="pc-foot">${liveSpan(r)}<button class="edgeload" type="button" data-i="${idx}">Load</button></div>`+
     `</article>`;
@@ -2018,6 +2023,7 @@ function renderEdges(){
   trackLive('T', rows);
 }
 function renderValue(){
+  PS.ticker(tickerItems());
   const body=$('valuebody');
   if(!valueRows.length){ body.innerHTML=`<p class="mktnote">No value spots right now — nothing on the board, over <i>or</i> under, clears <b>both</b> rules above. That's normal when markets are thin or efficient; the list fills back in as prices move.</p>`; liveWant.delete('V'); return; }
   const rows=sortRows(valueRows,'vedge',-1);
@@ -2326,6 +2332,21 @@ function computeStreaks(){
   return top;
 }
 let LB=[];
+// ---- Live ticker (top of the page): next kickoffs, records, value spots, hottest streak ----
+function kickMs(g){ const m=String(g.time||'').match(/^(\d{1,2}):(\d{2})$/), tm=m?(m[1].padStart(2,'0')+':'+m[2]):'12:00';
+  return Date.parse(g.date+'T'+tm+':00'+etOffset(g.date)); }
+function tickerItems(){
+  const it=[];
+  (WEEK.games||[]).filter(g=>g.date && !gameHappened(g) && isFinite(kickMs(g))).sort((a,b)=>kickMs(a)-kickMs(b)).slice(0,3).forEach(g=>
+    it.push({ic:'⏱', html:`<b>${esc(g.away)} @ ${esc(g.home)}</b> · kickoff <span data-cd="${new Date(kickMs(g)).toISOString()}"></span>`}));
+  const R=DB.record||{};
+  if(R.T&&R.T.n) it.push({ic:'🔒', cls:'up', html:`<b>25 Guaranteed record ${R.T.hit}/${R.T.n} (${Math.round(100*R.T.hit/R.T.n)}%)</b>`});
+  if(R.V&&R.V.n) it.push({ic:'⚡', html:`Value spots record <b>${R.V.hit}/${R.V.n}</b>${R.V.roi!=null&&R.V.priced? ` · ${R.V.roi>=0?'+':''}${Math.round(R.V.roi*100)}% ROI`:''}`});
+  if(valueRows.length){ const v=valueRows[0];
+    it.push({ic:'⚡', html:`<b>${valueRows.length} value spot${valueRows.length===1?'':'s'} live</b> — top: ${esc(v.name)} ${esc(v.side)} ${esc(v.line)} ${esc(v.statText)}, ${pct(v.prob)} vs ${Math.round(v.vprice*100)}¢`}); }
+  if(LB.length){ const e=LB[0]; it.push({ic:'🔥', html:`<b>${esc(e.p.n)}</b> — ${e.streak} straight over ${fmt(e.line)} ${esc(STATMAP[e.sk].label)}`}); }
+  return it;
+}
 function loadStreak(e){ state.player=e.p; $('player').value=e.p.n; state.stat=e.sk; state.line=e.line; state.ou='over';
   syncChips(); $('line').value=e.line; $('over').setAttribute('aria-pressed','true'); $('under').setAttribute('aria-pressed','false');
   showTab('player'); render(); save(); }
@@ -2334,9 +2355,9 @@ function renderLeaderboard(){
   LB=computeStreaks();
   if(!LB.length){ body.innerHTML='<p class="mktnote">No active over streaks of 3+ games yet this season.</p>'; return; }
   let h='<div class="pickgrid">';
-  LB.forEach((e,i)=>{ h+=`<article class="pickcard hi">`+
+  LB.forEach((e,i)=>{ h+=`<article class="pickcard hi" style="${PS.teamVars('nfl', e.p.t)}">`+
     `<div class="pc-top"><span class="av">${esc(initials(e.p.n))}</span>`+
-      `<div class="pc-who"><b>${esc(e.p.n)}</b><span>${esc(e.p.p)} · ${esc(e.p.t)}</span></div>`+
+      `<div class="pc-who"><b>${esc(e.p.n)}</b><span><span class="tbadge">${esc(e.p.t)}</span>${esc(e.p.p)}</span></div>`+
       `<div class="pc-prob"><b>${e.streak}🔥</b><span>straight · last ${fmt(e.last)}</span></div></div>`+
     `<div class="pc-bet"><span class="leantag over">over</span><b>${fmt(e.line)}</b><span>${esc(STATMAP[e.sk].label)}</span></div>`+
     `<div class="pc-foot"><span class="pc-model">${e.prob==null? '<span class="pmdim">no model yet</span>' : `Model <b>${pct(e.prob)}</b>`}</span>${liveSpan(e)}`+
@@ -2346,6 +2367,7 @@ function renderLeaderboard(){
     `<p class="mktnote" style="margin-top:8px">A streak is consecutive games clearing the site's own realistic line — not a market line. <b>Model</b> is the calibrated chance that the streak extends this week. <b>Polymarket</b> shows the live Polymarket US price for that over <i>when the market is at the same line</i>, with the model's edge over it; where Polymarket US lists the prop at a different number it says so and shows that price as context only, since an edge against a different bet would be meaningless. A long streak on its own is not an edge: check the model number and the price together.</p>`;
   body.querySelectorAll('.wload,.edgeload').forEach(b=>b.onclick=()=>loadStreak(LB[+b.dataset.i]));
   trackLive('L', LB);
+  PS.ticker(tickerItems());
 }
 
 function trapCheck(p, sk, line, side, mp, ctx){

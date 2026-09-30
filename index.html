@@ -34,6 +34,8 @@
 <link rel="manifest" href="/site.webmanifest">
 <script data-goatcounter="https://propstreaklive.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
 <link rel="stylesheet" href="fonts.css">
+<link rel="stylesheet" href="app.css">
+<script src="app.js"></script>
 <style>
 :root{
   color-scheme:dark;
@@ -364,6 +366,7 @@ footer .fine a{color:#8394ab}
     <a class="btn btn-go" href="./nfl.html">Open <span class="hide-sm">the </span>board →</a>
   </div>
 </header>
+<div id="psticker" class="ticker" hidden aria-label="Live updates"></div>
 
 <main>
   <!-- PROMO: Polymarket code + group, one slim row (socials live in the footer) -->
@@ -708,6 +711,17 @@ function countUp(el){ const to=+el.dataset.count; if(!to||el.dataset.done) retur
       if(j!=null){ e.preventDefault(); tabs[j].focus(); select(tabs[j]); } }); }); })();
 
 // Receipts: the latest graded week of Value spots (auto-updated by the nightly build).
+// Live ticker under the header: the four boards, the latest NFL Value receipts, the referral code (app.js).
+(function(){ if(!window.PS) return;
+  const base=[
+    {ic:'🏟️', html:'<b>4 boards</b> — NFL · NBA · NHL · MLB, rebuilt every hour'},
+    {ic:'📒', html:'<b>Every pick graded in public</b> — the wins and the losses'},
+    {ic:'💯', html:'<b>100% free</b> — no signup, no paywall'},
+    {ic:'🎁', html:'<b>$50 free</b> on Polymarket with code PROPSTREAKLAB'}];
+  PS.ticker(base);
+  fetch('weekly.json',{cache:'no-store'}).then(r=>r.ok?r.json():null).then(d=>{ if(!d||!d.n) return;
+    const roi=d.priced? d.units/d.priced : null;
+    PS.ticker([{ic:'✅', cls:'up', html:`<b>NFL Value spots, week ${PS.esc(d.week)}: ${PS.esc(d.hit)}/${PS.esc(d.n)} hit</b>${roi==null?'':` · ${roi>=0?'+':''}${Math.round(roi*100)}% ROI`}`}].concat(base)); }).catch(()=>{}); })();
 (function(){ fetch('weekly.json',{cache:'no-store'}).then(r=>r.ok?r.json():null).then(d=>{
   if(!d||!d.n) return; const el=document.getElementById('receipt'); if(!el) return;
   const up=d.units>=0, roi=d.priced? d.units/d.priced : null;
