@@ -566,7 +566,10 @@ table td,table th,thead th,tbody td,.edgetbl td,.edgetbl th,.caltbl td,.caltbl t
 .boardrow .bpick{font-family:var(--dispers);text-transform:uppercase;letter-spacing:.5px;font-size:15px}
 .boardrow .bprob{font-family:var(--display);font-size:30px;line-height:1;text-align:right}
 .boardrow .bprob.hi{color:var(--hit)} .boardrow .bprob.mid{color:var(--gold)} .boardrow .bprob.lo{color:var(--miss)}
-.lbrow{display:flex;justify-content:space-between;gap:12px;padding:10px 4px;border-bottom:1px solid var(--line)}
+.lbrow{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:10px 8px;border:0;border-bottom:1px solid var(--line);
+  width:100%;background:none;color:inherit;font:inherit;text-align:left;cursor:pointer;border-radius:8px}
+.lbrow:hover{background:rgba(255,255,255,.05)} .lbrow:focus-visible{outline:2px solid var(--gold);outline-offset:-2px}
+.lbrow .lbgo{color:var(--muted);font-size:20px;margin-left:6px}
 .lbrow .lbn b{color:var(--gold)}
 .lbstreak{font-family:var(--display);font-size:26px;color:var(--hit)}
 .vbadge{display:inline-block;background:var(--gold);color:#04220a;font-family:var(--dispers);font-weight:700;font-size:11px;letter-spacing:.5px;padding:2px 7px;border-radius:6px}
@@ -685,7 +688,7 @@ tr.hit td{background:var(--hit-soft)} tr.miss td{background:var(--miss-soft)}
     <div id="edgebody"></div>
   </div>
   <div class="panel" id="lbpanel">
-    <div class="mkthead"><h2>🔥 Hit streak leaderboard</h2><span class="mktmuted">longest active over streaks — consecutive games clearing the site's realistic line</span></div>
+    <div class="mkthead"><h2>🔥 Hit streak leaderboard</h2><span class="mktmuted">longest active over streaks — consecutive games clearing the site's realistic line · tap one to open it</span></div>
     <div id="lbbody"></div>
   </div>
 </div>
@@ -1393,7 +1396,10 @@ function buildLeaderboard(){
   TOP_STREAK=rows[0]||null;
   const body=$('lbbody');
   if(!rows.length){ body.innerHTML='<p class="mktnote">No active streaks yet — this fills in once the season is underway and current-season game logs land.</p>'; return; }
-  body.innerHTML=rows.slice(0,20).map(r=>`<div class="lbrow"><div class="lbn"><b>${esc(r.p.n)}</b>${esc(r.p.t)} · ${esc(statLabel(r.sk))} over ${r.line}</div><div class="lbstreak">${r.s} 🔥</div></div>`).join('');
+  // Each row opens that prop (the player, the stat, over the streak's line) in the player view.
+  const top=rows.slice(0,20);
+  body.innerHTML=top.map((r,i)=>`<button type="button" class="lbrow" data-i="${i}" aria-label="Open ${esc(r.p.n)} over ${r.line} ${esc(statLabel(r.sk))}"><span class="lbn"><b>${esc(r.p.n)}</b>${esc(r.p.t)} · ${esc(statLabel(r.sk))} over ${r.line}</span><span class="lbstreak">${r.s} 🔥<span class="lbgo" aria-hidden="true">›</span></span></button>`).join('');
+  body.querySelectorAll('.lbrow').forEach(b=>b.onclick=()=>{ const r=top[+b.dataset.i]; loadPick({pid:r.p.id, sk:r.sk, line:r.line, side:'over'}); });
 }
 
 // ---- Live ticker (top of the page): next games, last results, value spots, records ----

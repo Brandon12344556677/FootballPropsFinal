@@ -333,6 +333,7 @@ footer b{color:var(--ink)}
 .cmptag{display:inline-block;font-family:var(--dispers);font-weight:700;font-size:10px;text-transform:uppercase;letter-spacing:.4px;padding:1px 6px;border-radius:4px;background:var(--hit);color:#fff;margin-left:6px}
 #comparebody .wload,#lbbody .wload{background:none;border:none;color:var(--accent);font-weight:700;cursor:pointer;font-family:inherit;font-size:inherit;padding:0}
 #comparebody .wload:hover,#lbbody .wload:hover{text-decoration:underline}
+#lbbody .lbcard{cursor:pointer}
 #comparebody .wx{cursor:pointer;color:var(--muted);border:none;background:none;font-size:17px;line-height:1;padding:0 2px}
 #comparebody .wx:hover{color:var(--miss)}
 #trapalert{border:2.5px solid var(--gold);border-radius:14px;background:var(--surface-2);padding:13px 16px;margin:0 0 8px;box-shadow:var(--hard-sm)}
@@ -682,7 +683,7 @@ table td,table th,thead th,tbody td,.edgetbl td,.edgetbl th,.caltbl td,.caltbl t
   </div>
 
   <div class="panel" id="lbpanel">
-    <div class="mkthead"><h2>🔥 Hit streak leaderboard</h2><span class="mktmuted">longest active over streaks — with the model's chance and the live Polymarket price</span></div>
+    <div class="mkthead"><h2>🔥 Hit streak leaderboard</h2><span class="mktmuted">longest active over streaks — with the model's chance and the live Polymarket price · tap one to open it</span></div>
     <div id="lbbody"></div>
   </div>
   <div class="panel" id="sharepanel" hidden>
@@ -2444,9 +2445,9 @@ function renderLeaderboard(){
   LB=computeStreaks();
   if(!LB.length){ body.innerHTML='<p class="mktnote">No active over streaks of 3+ games yet this season.</p>'; return; }
   let h='<div class="pickgrid">';
-  LB.forEach((e,i)=>{ h+=`<article class="pickcard hi" style="${PS.teamVars('nfl', e.p.t)}">`+
+  LB.forEach((e,i)=>{ h+=`<article class="pickcard hi lbcard" data-i="${i}" style="${PS.teamVars('nfl', e.p.t)}">`+
     `<div class="pc-top"><span class="av">${esc(initials(e.p.n))}</span>`+
-      `<div class="pc-who"><b>${esc(e.p.n)}</b><span><span class="tbadge">${esc(e.p.t)}</span>${esc(e.p.p)}</span></div>`+
+      `<div class="pc-who"><b><button class="wload" type="button" data-i="${i}">${esc(e.p.n)}</button></b><span><span class="tbadge">${esc(e.p.t)}</span>${esc(e.p.p)}</span></div>`+
       `<div class="pc-prob"><b>${e.streak}🔥</b><span>straight · last ${fmt(e.last)}</span></div></div>`+
     `<div class="pc-bet"><span class="leantag over">over</span><b>${fmt(e.line)}</b><span>${esc(STATMAP[e.sk].label)}</span>${PS.spark(valuesOf(e.p, e.sk), e.line, 'over')}</div>`+
     `<div class="pc-foot"><span class="pc-model">${e.prob==null? '<span class="pmdim">no model yet</span>' : `Model <b>${pct(e.prob)}</b>`}</span>${liveSpan(e)}`+
@@ -2455,6 +2456,8 @@ function renderLeaderboard(){
   body.innerHTML=h+'</div>'+
     `<p class="mktnote" style="margin-top:8px">A streak is consecutive games clearing the site's own realistic line — not a market line. <b>Model</b> is the calibrated chance that the streak extends this week. <b>Polymarket</b> shows the live Polymarket US price for that over <i>when the market is at the same line</i>, with the model's edge over it; where Polymarket US lists the prop at a different number it says so and shows that price as context only, since an edge against a different bet would be meaningless. A long streak on its own is not an edge: check the model number and the price together.</p>`;
   body.querySelectorAll('.wload,.edgeload').forEach(b=>b.onclick=()=>loadStreak(LB[+b.dataset.i]));
+  // The whole card opens the prop too, except clicks on its own links and buttons.
+  body.querySelectorAll('.lbcard').forEach(c=>c.onclick=ev=>{ if(!ev.target.closest('a,button')) loadStreak(LB[+c.dataset.i]); });
   trackLive('L', LB);
   PS.ticker(tickerItems());
 }
