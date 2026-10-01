@@ -868,7 +868,7 @@ function countUp(el){ const to=+el.dataset.count; if(!to||el.dataset.done) retur
 
   // Bet of the Day (botd.json, botd.py): today's entry from 11 AM ET; before that, yesterday's
   // picks with their results. A pick never changes once posted; the record counts every one.
-  const SLOT={lock:{t:'🔒 Lock of the Day', blurb:'The market’s favorite that the model also backs: short odds, the highest hit rate.'},
+  const SLOT={lock:{t:'🔒 Lock of the Day', blurb:'The surest pick on the board: the market and the model both put it at 90%+. Small payout, the highest hit rate.'},
               value:{t:'🎯 Value Shot', blurb:'Pays 2× or more. The model rates it well above the market — the riskier pick.'}};
   const etDay=d=>new Intl.DateTimeFormat('en-CA',{timeZone:'America/New_York'}).format(d);
   const fmtDay=iso=>new Date(iso+'T12:00:00Z').toLocaleDateString([], {weekday:'short', month:'short', day:'numeric', timeZone:'UTC'});
