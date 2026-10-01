@@ -1,5 +1,5 @@
 """
-Prop Streak Lab — health check after each build (every 20 min): is any data source quietly failing?
+Prop Streak Lab — health check after each build (every 10 min): is any data source quietly failing?
 
 Every builder already prints "<source>: skipped (<error>)" when a download or step
 fails, then carries on so the site still deploys. Nobody reads those lines, which is
@@ -31,7 +31,7 @@ import re
 import sys
 
 STATE = "health.json"
-ALERT_AFTER = 9              # consecutive runs before a problem alerts: ~3 hours at a run every 20 min
+ALERT_AFTER = 18             # consecutive runs before a problem alerts: ~3 hours at a run every 10 min
 REALERT_HOURS = 24           # then at most once a day while it lasts
 ITEM_MIN = 3                 # per-item skips from one source in one run that count as a problem
 STALE_DAYS = 2               # a data file older than this is stale

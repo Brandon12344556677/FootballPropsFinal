@@ -10,7 +10,7 @@ Data comes from [nflverse](https://github.com/nflverse) public releases (weekly
 player stats, snap counts, schedules, injury reports, rosters). Prices come from Polymarket's
 public API.
 
-**It updates itself.** A GitHub Action pulls fresh data every 20 minutes, grades
+**It updates itself.** A GitHub Action pulls fresh data every 10 minutes, grades
 finished games, records the upcoming picks with their prices, and redeploys the site.
 
 ## What's on the page
@@ -130,7 +130,7 @@ Put your referral link in `url`. Leave it `""` to hide the banner.
 | `build_today.py` | Runs after the four builders and writes `today.json` from their picks and season records. Standard library only; never fails the deploy. |
 | `today.json` | The home page's cross-sport **Today** feed (the best upcoming value spots, at most 3 per sport up top, each linking to its prop) and the season records its ticker leads with. |
 | `post_daily.py` | Once a day, posts yesterday's Value results and today's best value (with links) to Discord and/or Telegram. Needs the secrets below; does nothing without them. |
-| `health.py` | Last in every run (every 20 minutes): reads every step's log for a data source that failed (`skipped (…)`), a builder that crashed, a stale data file or picks stuck ungraded, and keeps `health.json`. A problem that lasts 9 runs in a row (~3 hours) turns the run red, so GitHub emails you (then at most once a day while it lasts). The site still deploys either way. |
+| `health.py` | Last in every run (every 10 minutes): reads every step's log for a data source that failed (`skipped (…)`), a builder that crashed, a stale data file or picks stuck ungraded, and keeps `health.json`. A problem that lasts 18 runs in a row (~3 hours) turns the run red, so GitHub emails you (then at most once a day while it lasts). The site still deploys either way. |
 | `news.py` | Pre-game news in **test mode**, used by the NFL, NBA and MLB builders: ESPN injury reports, MLB's posted lineups, and Open-Meteo forecasts at outdoor NFL stadiums and MLB parks. It's recorded on each pending pick (`nw`) with `p2`, the chance the pick would have with the news at the strength the backtest found. It changes no chance or list. Each build logs `news test: ...` lines, including how `p2` compares with the live chance on graded picks. A feed that can't be reached records nothing. |
 | `test_news.py` | Unit tests for `news.py` and the builders' `news_test` steps, on payloads shaped like the real feeds: `python -m unittest test_news`. |
 | `methodology.html` | "How the model works" — the public write-up of the model, the matchup adjustments, calibration, the list rules and how picks are graded. Linked from every footer and the trust line under each hero. |
