@@ -54,6 +54,17 @@ class FeedTests(unittest.TestCase):
         self.assertTrue(news.is_out("Out"))
         self.assertFalse(news.is_out("Questionable"))
 
+    def test_injuries_try_the_host_that_serves_ci_first(self):
+        class Feeds(FakeFeeds):
+            def __call__(self, url):
+                self.calls.append(url)
+                if "site.web.api" in url:
+                    raise RuntimeError("HTTP Error 403: Forbidden")
+                return {"injuries": []}
+        with Feeds({}) as f:
+            self.assertEqual(news.espn_injuries("basketball/nba"), [])
+        self.assertEqual([u.split("/")[2] for u in f.calls], ["site.web.api.espn.com", "site.api.espn.com"])
+
     def test_an_unreachable_feed_records_nothing(self):
         with FakeFeeds({"injuries": RuntimeError("HTTP 403")}):
             self.assertIsNone(news.espn_injuries("football/nfl"))
