@@ -27,6 +27,7 @@ import json
 import math
 import urllib.request
 
+ESPN_HOSTS = ("site.web.api.espn.com", "site.api.espn.com")   # first that answers
 UA = {"User-Agent": "prop-streak-lab/2.0 (+https://propstreaklab.com)"}
 TIMEOUT = 15
 
@@ -53,11 +54,17 @@ def _log(msg):
 def espn_injuries(league):
     """league 'basketball/nba' or 'football/nfl' -> [{"id", "name", "status"}], or None.
     The feed lists teams, each with its injured players; ids are ESPN athlete ids."""
-    url = f"https://site.api.espn.com/apis/site/v2/sports/{league}/injuries"
-    try:
-        d = get_json(url)
-    except Exception as e:  # noqa: BLE001
-        _log(f"{league} injuries unavailable ({e})")
+    # site.api.espn.com answers GitHub's runners with 403 (Akamai blocks data-center IPs, as
+    # the builders note); site.web.api.espn.com serves the same paths, so it goes first.
+    d, err = None, None
+    for host in ESPN_HOSTS:
+        try:
+            d = get_json(f"https://{host}/apis/site/v2/sports/{league}/injuries")
+            break
+        except Exception as e:  # noqa: BLE001
+            err = f"{host}: {e}"
+    if d is None:
+        _log(f"{league} injuries unavailable ({err})")
         return None
     out = []
     for team in d.get("injuries") or []:
