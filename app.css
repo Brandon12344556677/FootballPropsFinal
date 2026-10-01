@@ -124,6 +124,10 @@ body{margin:0;background:var(--ps-bg);color:var(--ps-text);font-family:var(--ps-
 .app input[type=text],.app input[type=search],.app select,.app textarea{border:1px solid var(--ps-line)!important;border-radius:14px!important;
   background:rgba(255,255,255,.04)!important;color:#fff!important}
 .app input[type=text]:focus,.app select:focus,.app textarea:focus{outline:none;border-color:var(--ps-green)!important;box-shadow:0 0 0 3px rgba(34,208,127,.18)}
+/* The opened list of a dropdown: Chrome and Edge on Windows draw it on their own white
+   background with the select's white text, so the options get a solid dark one. */
+select option,select optgroup,.app select option,.app select optgroup{background-color:#142743!important;color:#fff!important}
+select option:checked,.app select option:checked{background-color:#22d07f!important;color:#06210b!important}
 .app .acbox{border-radius:14px;overflow:hidden}
 .app .weekstrip{background:rgba(255,255,255,.04);border:1px solid var(--ps-line);border-radius:16px}
 .app .tile{background:var(--ps-card);border:1px solid var(--ps-line);border-radius:18px;overflow:hidden;box-shadow:0 14px 34px rgba(0,0,0,.3)}
