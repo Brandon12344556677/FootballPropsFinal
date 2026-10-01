@@ -514,6 +514,12 @@ def season_year(d):
     return d.year if d.month >= 9 else d.year - 1
 
 
+def pick_season(date_iso):
+    """The season a game on this date belongs to. Picks used to take the season of the
+    player's last game, which before his first game of a new season is last season's."""
+    return season_year(datetime.date.fromisoformat(date_iso))
+
+
 # ---------------------------------------------------------------------------
 # ESPN scoreboard + box scores
 # ---------------------------------------------------------------------------
@@ -957,7 +963,13 @@ def load_picks():
     except (OSError, ValueError):
         return []
     cols = d.get("cols") or []
-    return [dict(zip(cols, row)) for row in d.get("picks", [])]
+    picks = [dict(zip(cols, row)) for row in d.get("picks", [])]
+    for p in picks:      # season from the game's date (older picks took the player's last game's)
+        try:
+            p["season"] = pick_season(p["date"])
+        except (TypeError, ValueError):
+            pass
+    return picks
 
 
 def side_prob(mp):
@@ -1022,8 +1034,8 @@ def find_same_game(index, pid, sk, line, away, home, date_iso):
 
 def drop_same_game_duplicates(picks):
     """Remove pending picks recorded twice for one game (once under each date), keeping the
-    one whose gid date is the game's UTC date (ESPN's, as the store uses), else the newest.
-    Graded picks are never touched. Returns how many were dropped."""
+    one with a price, then the one whose gid date is the game's UTC date (ESPN's, as the
+    store uses). Graded picks are never touched. Returns how many were dropped."""
     drop = set()
     for group in same_game_index(p for p in picks if p.get("src") == "live" and p.get("res") is None).values():
         group.sort(key=lambda x: x[0])
@@ -1036,7 +1048,10 @@ def drop_same_game_duplicates(picks):
                 run = [p for _, p in group[i:j + 1]]
                 t = parse_utc(run[0].get("start"))
                 utc = t.date().isoformat() if t else None
-                keep = next((p for p in run if utc and p["gid"].startswith(utc)), run[-1])
+                # keep the copy with a price (its price history and lists), then the one dated like
+                # ESPN; grading finds the game a day either way (pick_box_game)
+                order = sorted(run, key=lambda p: (p.get("price") is None, not (utc and p["gid"].startswith(utc))))
+                keep = order[0]
                 drop.update(id(p) for p in run if p is not keep)
             i = j + 1
     if drop:
@@ -1091,7 +1106,7 @@ def build_market_picks(picks, poly_games, players_by_key, espn_slate, defense, d
                 continue
             side, prob, lo, hi = side_prob(mp)
             price = (pm["over"] if side == "over" else pm["under"]) if pm.get("tradeable") else None
-            picks.append({"src": "live", "gid": gid, "season": rows[-1][0], "date": date,
+            picks.append({"src": "live", "gid": gid, "season": pick_season(date), "date": date,
                           "pid": pl["id"], "player": pl["n"], "pos": pl["p"], "team": team, "opp": opp,
                           "stat": sk, "line": pm["line"], "side": side,
                           "prob": round(prob, 3), "lo": round(lo, 3), "hi": round(hi, 3),
@@ -1106,8 +1121,19 @@ def build_market_picks(picks, poly_games, players_by_key, espn_slate, defense, d
 
 def build_board_picks(picks, slate, players_by_team, defense, defavg):
     """One pick per (player, board stat) for players on teams playing an upcoming
-    game — the highest-confidence side. Deduped against already-recorded picks."""
-    have = {(p["pid"], p["date"], p["stat"]) for p in picks}
+    game — the highest-confidence side. Deduped against already-recorded picks for the same
+    game at any line: a market pick may carry Polymarket's ET date, a day before the ESPN
+    (UTC) date the board uses for a late game, so an exact-date match recorded it twice."""
+    have = {}
+    for p in picks:
+        m = GID_RE.match(str(p.get("gid") or ""))
+        if m:
+            have.setdefault((p["pid"], p["stat"], m.group(2), m.group(3)), set()).add(m.group(1))
+
+    def recorded(pid, sk, date_iso):
+        d = datetime.date.fromisoformat(date_iso)
+        return any(abs((datetime.date.fromisoformat(x) - d).days) <= 1
+                   for x in have.get((pid, sk, g["away"], g["home"]), ()))
     now_added = 0
     for g in slate:
         if g.get("final"):
@@ -1126,7 +1152,7 @@ def build_board_picks(picks, slate, players_by_team, defense, defavg):
                     continue
                 hp = hist_context(rows)
                 for sk in BOARD_STATS:
-                    if (pl["id"], g["date"], sk) in have:
+                    if recorded(pl["id"], sk, g["date"]):
                         continue
                     vals = [stat_get(r, sk) for r in rows]
                     line = seed_line(vals)
@@ -1136,14 +1162,14 @@ def build_board_picks(picks, slate, players_by_team, defense, defavg):
                     if not mp or mp["neff"] < VALUE_MIN_NEFF:
                         continue
                     side, prob, lo, hi = side_prob(mp)
-                    picks.append({"src": "live", "gid": gid, "season": rows[-1][0], "date": g["date"],
+                    picks.append({"src": "live", "gid": gid, "season": pick_season(g["date"]), "date": g["date"],
                                   "pid": pl["id"], "player": pl["n"], "pos": pl["p"], "team": team, "opp": opp,
                                   "stat": sk, "line": line, "side": side,
                                   "prob": round(prob, 3), "lo": round(lo, 3), "hi": round(hi, 3),
                                   "neff": round(mp["neff"], 1), "price": None, "lists": "",
                                   "rec": f"{sk} {side} {line}", "actual": None, "res": None,
                                   "adj": round(scale, 3), "mv": MODEL_V})
-                    have.add((pl["id"], g["date"], sk))
+                    have.setdefault((pl["id"], sk, g["away"], g["home"]), set()).add(g["date"])
                     now_added += 1
     return now_added
 
