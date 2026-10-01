@@ -2,12 +2,14 @@
 Prop Streak Lab — Bet of the Day for the home page: a Lock and a Value Shot, picked once a
 day from every sport's upcoming priced picks, frozen once posted, and graded in public.
 
-  Lock        the market's favorite that the model also backs: Polymarket price 80-90c
-              (pays 1.11-1.25x) and a model chance of 80%+. On the graded record, picks
-              priced 75-90c hit 79.9% (696 picks) and 80-90c hit 82.7% (439) — a few points
-              under their price; the model agreeing didn't raise that, so it's there to keep
-              out picks the model is against, not to promise more. Ranked by the lower of
-              the two chances (both have to be high), then by price.
+  Lock        the surest pick on the board: Polymarket price 90-96c (pays 1.04-1.11x) and a
+              model chance of 90%+. On the graded record, picks priced 90-96c hit 91-92%
+              when the model was under 90%, and 135 of 138 (97.8%) when it was 90%+ — on
+              both halves (odd days 63/63, even days 72/75) and in each sport with enough
+              picks (NHL 42/44, MLB 88/89). Lower down (80-90c) the model agreeing added
+              nothing, so that band isn't used. Ranked by the lower of the two chances (both
+              have to be high), then by price. Nothing hits 100%: at ~98% expect a miss
+              every month or two.
   Value Shot  pays 2x or more: price 30-50c with a model chance of 70-80%. The market thinks
               these are coin flips; on the graded record they've hit about what the price
               says (model 65%+ at 30-50c: 26 of 54, 48%, against a 46% price), so it's the
@@ -47,7 +49,7 @@ MIN_NEFF = 6.0
 VOID_AFTER = datetime.timedelta(days=5)
 SLOTS = ("lock", "value")
 RULES = {   # inclusive bounds
-    "lock": {"price": [0.80, 0.90], "prob": [0.80, 1.00]},
+    "lock": {"price": [0.90, 0.96], "prob": [0.90, 1.00]},
     "value": {"price": [0.30, 0.50], "prob": [0.70, 0.80]},
 }
 KEEP = ("sport", "pid", "player", "team", "opp", "gid", "stat", "statText", "line", "side",
