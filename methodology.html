@@ -88,12 +88,12 @@ footer a:hover{color:#dfe6ef}
       <p class="lead">Prop Streak Lab turns a player's recent games into a <b>calibrated chance</b> of clearing any line, compares it with what the market charges, and records every pick before the game so the results can be checked in public.</p>
       <div class="meta">
         <span>NFL · NBA · NHL · MLB</span>
-        <span>Rebuilt every hour</span>
+        <span>Rebuilt every 20 minutes</span>
         <span class="gold">Every pick graded from the box score</span>
       </div>
 
       <h2 id="overview">Overview</h2>
-      <p>Every number on the site comes from one small, published model — the same code runs in your browser and in the hourly job that records picks. There is no hidden tuning per pick and no human override. The model is backward-looking: it knows a player's game log, the opponent, and (for the NFL) the Vegas line, snap counts and the injury report. It does not know about weather, a coaching change, or who else is out.</p>
+      <p>Every number on the site comes from one small, published model — the same code runs in your browser and in the job that records picks every 20 minutes. There is no hidden tuning per pick and no human override. The model is backward-looking: it knows a player's game log, the opponent, and (for the NFL) the Vegas line, snap counts and the injury report. It does not know about weather, a coaching change, or who else is out.</p>
 
       <h2 id="data">Where the data comes from</h2>
       <table>
@@ -109,9 +109,9 @@ footer a:hover{color:#dfe6ef}
 
       <h2 id="model">The model, step by step</h2>
       <ol class="steps">
-        <li><b>Take the last 20 games</b> for that stat (fewer if the player has fewer). For MLB, hitting props use lineup starts and pitching props use starts, so a pinch-hit appearance doesn't drag a starter's numbers down.</li>
-        <li><b>Weight recent games more.</b> Each game's weight halves every 6 games back, so last week counts about twice as much as six weeks ago.</li>
-        <li><b>Smooth the values into a distribution</b> instead of counting hits. "Cleared 7 of 10" is noisy; a smoothed distribution uses how far over or under each game was, which is steadier.</li>
+        <li><b>Take the player's recent games</b> for that stat: up to the last <b>30</b> in the NFL, the last <b>82</b> in the NBA and NHL and for MLB hitters, and the last <b>20</b> starts for MLB pitchers (fewer if the player has fewer). For MLB, hitting props use lineup starts and pitching props use starts, so a pinch-hit appearance doesn't drag a starter's numbers down.</li>
+        <li><b>Weight recent games more.</b> A game's weight halves every 8 games back in the NFL, every 10 in the NBA, every 30 in the NHL, every 40 for MLB hitters and every 6 for MLB pitchers. These were chosen on a walk-forward backtest: every past game predicted from only the games before it, scored on two halves of the data separately. A short memory chased hot and cold streaks; for pitchers, a recent workload says more about how deep they'll go.</li>
+        <li><b>Smooth the values into a distribution</b> instead of counting hits. "Cleared 7 of 10" is noisy; a smoothed distribution uses how far over or under each game was, which is steadier. Each stat has a minimum amount of smoothing. For rare events on a 0.5 line (NHL goals, NBA threes and blocks, homers, anytime touchdowns) it's kept small. Too much spreads a scoreless game over the line: until September 30, 2026 the NHL model gave the average skater a 27% chance to score when it happened 15% of the time.</li>
         <li><b>Read off the chance of clearing the line</b> — the share of the distribution above it (for an over) or below it (for an under).</li>
         <li><b>Shrink thin samples toward 50/50.</b> A player with four games can't be 95%; the fewer the effective games, the more the chance is pulled toward a coin flip.</li>
         <li><b>Give a range.</b> Every chance comes with an 80% range — where the true chance most likely sits. A wide range means less to go on.</li>
@@ -122,14 +122,19 @@ footer a:hover{color:#dfe6ef}
       <p>Before reading off the chance, the player's distribution is scaled for this game:</p>
       <ul>
         <li><b>NFL:</b> the Vegas implied team points (from the total and the spread) against the player's usual, and how much the opponent allows to that position against the league average. The strengths were fitted on the backtest and checked on held-out weeks — they're deliberately small: implied points to the 0.25 power; defense to the 0.75 power for passing, 0.5 for receiving, 0.25 for rushing. The NFL model also reads each player's role from snap counts: the share of offensive snaps over the last two games against their usual, to the 0.5 power — so a back who just took over the job, or a starter who lost it, moves before the box score catches up. On held-out weeks that improved the model in every stat family (log loss 0.5960 → 0.5924 over 16,993 cases). It's skipped when the injury adjustment already raises that stat, so the same news isn't counted twice.</li>
-        <li><b>NBA:</b> the team's implied points from the game total and spread, against the player's usual, and the opponent's defense against that stat. It also reads the player's role from <b>minutes</b>: the last three games against the usual, to the 0.5 power, so a player who just moved into or out of the rotation moves before the averages catch up. Tested on halves of last season it wasn't fitted to, it improved every stat (log loss 0.6238 → 0.6222 over 122,805 props).</li>
-        <li><b>NHL:</b> the team's implied goals from the game total and spread, and the opponent's defense against that stat.</li>
-        <li><b>MLB:</b> the opposing pitching staff (for hitters) or lineup (for pitchers). In the postseason, pitching props are also scaled down 10%, because starters get pulled earlier in October.</li>
+        <li><b>NBA:</b> the team's implied points from the game total and spread, against the player's usual, and the opponent's defense against that stat (to the 0.65 power). It also reads the player's role from <b>minutes</b>: the last three games against the usual, to the 0.5 power, so a player who just moved into or out of the rotation moves before the averages catch up. Tested on halves of last season it wasn't fitted to, it improved every stat (log loss 0.6238 → 0.6222 over 122,805 props).</li>
+        <li><b>NHL:</b> the team's implied goals from the game total and spread, and the opponent's defense against that stat. For points, goals and assists it also reads <b>ice time</b> (the last two games against the usual, to the 0.5 power: a player moved up the lineup gets more chances before his points show it) and takes 5% off on the <b>second night of a back-to-back</b> (teams scored 4.9% fewer goals on those last season). Both are small; they were kept because they improved both halves of the backtest.</li>
+        <li><b>MLB:</b> the opposing pitching staff (for hitters) or lineup (for pitchers). Hitters' hits, total bases, H+R+RBI, runs, RBIs and homers are also scaled for tonight's <b>probable starter</b>: how many hits and walks he allows per out against all starters, pulled toward average until he has a few starts, to the 0.5 power. In the postseason, pitching props are also scaled down 10%, because starters get pulled earlier in October.</li>
+        <li><b>Tested and left out</b> because they didn't improve the backtest on both halves: rest and back-to-backs (NBA, NFL short weeks and byes), the opponent being on a back-to-back, NBA pace, home field in every sport, and MLB batting-order spot (no gain even knowing the real one).</li>
       </ul>
       <p>The multiplier is shown on the Player tab, and a checkbox turns the adjustment off so you can see the raw history.</p>
 
       <h2 id="calibration">Calibration</h2>
-      <p>A model can be right about order and wrong about size — saying 90% for things that happen 80% of the time. So the raw chance goes through one last step: a <b>calibration temperature</b> learned from the site's own graded record, which pulls over-confident chances back toward what actually happened.</p>
+      <p>A model can be right about order and wrong about size — saying 90% for things that happen 80% of the time. So the raw chance goes through two last steps.</p>
+      <ul>
+        <li><b>A correction per prop</b>, fitted on the backtest. Left alone, the smoothed distributions read most overs a few points high (MLB total bases said 49% when 44% happened; NHL assists 17% vs 14%), and some props were over- or under-confident. Each prop's chance is corrected by two numbers fitted on half the past games and checked on the other half. It's used only for the props where it helped on both halves; passing props in the NFL and PRA-type combos in the NBA are left as they were. On the 580 graded NFL picks that had a Polymarket price, this took the model's log loss from 0.6545 to 0.6475. The market's own price is still better at 0.6305.</li>
+        <li><b>A calibration temperature</b> learned from the site's own graded record, which pulls over-confident chances back toward what actually happened. It's learned only from picks made by the current version of the model, so it starts fresh (no change) after a model update until enough new picks are graded.</li>
+      </ul>
       <p>You can check the result yourself: the <b>Past picks</b> tab on every board has a calibration chart — "when the model said 80%, how often did it hit?" — built from every graded pick.</p>
 
       <h2 id="prices">Prices and edge</h2>
@@ -150,7 +155,7 @@ footer a:hover{color:#dfe6ef}
       </ul>
       <div class="card">
         <h3 style="margin-top:0">The fair chance</h3>
-        <p style="margin-bottom:0">Because of that, every card that shows a price also shows a <b>fair chance</b>: the model blended with the market, <code>w × model + (1 − w) × price</code>, where <i>w</i> is the mix that has predicted the graded picks best. It's refit every hour; right now it's about <b>10% model, 90% market</b>. It's the most realistic number on the card — and the gap between it and the price is the realistic edge, which is usually small.</p>
+        <p style="margin-bottom:0">Because of that, every card that shows a price also shows a <b>fair chance</b>: the model blended with the market, <code>w × model + (1 − w) × price</code>, where <i>w</i> is the mix that has predicted the graded picks best. It's refit on every run; right now it's about <b>10% model, 90% market</b>. It's the most realistic number on the card — and the gap between it and the price is the realistic edge, which is usually small.</p>
       </div>
 
       <h2 id="lists">Value spots and Top 25 Surest</h2>
@@ -170,7 +175,7 @@ footer a:hover{color:#dfe6ef}
 
       <h2 id="grading">How picks are recorded and graded</h2>
       <ul>
-        <li>An automated job runs <b>every hour</b>. It records every modeled prop on the Polymarket board — with the model's chance and the price at that moment — <b>before the game starts</b>, and refreshes it until kickoff, tip-off, puck drop or first pitch. After that it is frozen.</li>
+        <li>An automated job runs <b>every 20 minutes</b>. It records every modeled prop on the Polymarket board — with the model's chance and the price at that moment — <b>before the game starts</b>, and refreshes it until kickoff, tip-off, puck drop or first pitch. After that it is frozen.</li>
         <li>Once the game is final and the box score is in, each pick is graded <b>hit, miss or push</b>. A player who doesn't play is marked <b>DNP</b> and left out of the record.</li>
         <li>Profit is counted at the <b>recorded price</b>: 1 unit on every pick, a win at 43¢ returns +1.33 units, a loss is −1.</li>
         <li>The <b>backtest</b> (NFL 2025) shows what the model would have said before each past game using only earlier games. It has no market prices, and it's never mixed into the live record.</li>
@@ -182,7 +187,8 @@ footer a:hover{color:#dfe6ef}
         <li><b>Backward-looking.</b> The model can't know about weather, a coaching change, or a teammate's injury unless it's in the data.</li>
         <li><b>Markets are hard to beat.</b> The market already prices the line and the matchup, so real edges are smaller than they look against the site's own seeded lines.</li>
         <li><b>New players</b> appear in search right away but have no chance until their first box score.</li>
-        <li><b>Prices move.</b> Board prices refresh about once a minute on the NFL board and hourly elsewhere. Always check the price before you trade.</li>
+        <li><b>Prices move.</b> Board prices refresh about once a minute on the NFL board and every 20 minutes elsewhere. Always check the price before you trade.</li>
+        <li><b>Where the price started.</b> Every pick keeps the Polymarket price it was first recorded at. Cards show it under the current price (<i>opened 40¢ ▲5</i>), and <b>Past picks</b> shows first price → last price before the game. A price that rises means the market moved toward the pick. Across many picks, that <b>closing line value</b> is the quickest honest test of whether the model sees anything before the market does, and it's shown next to each list's live record (<i>price moved its way on X of Y</i>). Tracking started September 30, 2026; earlier picks have no first price.</li>
         <li><b>Calibration is measured, not promised.</b> Look at the Past picks tab before trusting a number.</li>
       </ul>
       <p class="note">Research and entertainment, not betting advice. For adults 18+. If gambling stops being fun, call 1-800-522-4700 or visit <a href="https://www.ncpgambling.org" rel="noopener">ncpgambling.org</a>.</p>

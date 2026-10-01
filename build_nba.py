@@ -22,6 +22,8 @@ ESPN response degrades to "no new data" instead of failing the build.
 """
 import json, math, os, re, sys, time, datetime, unicodedata, urllib.request
 
+import news   # pre-game news feeds, test mode
+
 TODAY = datetime.date.today()
 ET_TODAY = (datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(hours=4)).date().isoformat()
 UA = {"User-Agent": "prop-streak-lab/2.0 (+https://propstreaklab.com)"}
@@ -115,15 +117,32 @@ STAT_ORDER = ["pts", "reb", "ast", "tpm", "stl", "blk", "to", "min", "fgm", "fga
 # stat is a count on its own scale, so the smoothing floor is per-stat rather
 # than one number for "yards" vs "count".
 # ---------------------------------------------------------------------------
-MODEL = {"halfLife": 6.0, "maxGames": 20, "priorK": 0.5, "bwConst": 0.9, "z": 1.2816}
-# Minimum smoothing bandwidth per stat (roughly a third of a typical game-to-game swing).
-BW_FLOOR = {"pts": 3.0, "reb": 1.2, "ast": 1.0, "tpm": 0.7, "stl": 0.5, "blk": 0.5,
+# Walk-forward backtest on the 2025-26 box scores (27,564 player games per stat, each
+# predicted from earlier games only, scored on odd and on even days separately): 82 games
+# at half-life 10 beat 20 at half-life 6 on every stat and both halves, and the floors
+# below (threes 0.7 -> 0.17: the old one put 58% on overs that hit 54%). Log loss, old ->
+# new: threes 0.5688 -> 0.5445, blocks 0.5741 -> 0.5586, rebounds 0.6053 -> 0.6002,
+# assists 0.5986 -> 0.5956, points 0.6716 -> 0.6694, PRA 0.6672 -> 0.6653.
+MODEL = {"halfLife": 10.0, "maxGames": 82, "priorK": 0.5, "bwConst": 0.9, "z": 1.2816}
+MODEL_V = 2   # recorded on every pick ("mv"); calibration fits only this version's picks
+# Minimum smoothing bandwidth per stat. FG/FT and minutes weren't refitted.
+BW_FLOOR = {"pts": 4.0, "reb": 0.8, "ast": 0.75, "tpm": 0.17, "stl": 0.5, "blk": 0.35,
             "to": 0.7, "min": 3.0, "fgm": 1.4, "fga": 2.0, "ftm": 1.2, "fta": 1.4,
-            "pra": 4.0, "pr": 3.4, "pa": 3.4, "ra": 1.6}
+            "pra": 3.0, "pr": 3.4, "pa": 3.4, "ra": 1.6}
 # Game-context adjustment (one family for the NBA): the player's distribution is
 # scaled by (this game's implied team points / their usual implied points)^betaPts
 # times (opponent's allowed-per-game / league average)^gamma. Clamped.
-CTX = {"betaPts": 0.30, "gamma": 0.45, "minutes": 0.5, "clampLo": 0.6, "clampHi": 1.6}
+# gamma 0.65 (was 0.45) won on every stat and both halves, by 0.0002-0.0005. Also tested
+# and not used: rest / back-to-backs, the opponent on a back-to-back, opponent pace and
+# home court (none beat the model without them on both halves).
+CTX = {"betaPts": 0.30, "gamma": 0.65, "minutes": 0.5, "clampLo": 0.6, "clampHi": 1.6}
+
+# Per-stat calibration, fitted on the same walk-forward backtest: the chance's log-odds become
+# a + b * log-odds. It removes a bias the smoothing leaves (most props read overs a few points
+# high) and fixes over/under-confidence. Fitted at the seeded line and a line either side on
+# one half of the data and scored on the other, both ways; only stats where that improved
+# both halves are listed (the rest are left as they were).
+CAL = {"pts": (-0.034, 1.135), "reb": (-0.028, 1.09), "ast": (-0.076, 1.088), "tpm": (-0.055, 0.962), "blk": (-0.252, 0.969), "stl": (-0.193, 0.965), "ra": (-0.016, 1.114), "to": (-0.147, 1.097)}
 # Minutes: recent minutes / usual minutes (see minutes_ratio), to the power CTX["minutes"].
 # On last season's stored games, fitting on one half of the dates and scoring the other
 # (odd/even days, first/second half, each both ways) chose 0.5 every time and improved
@@ -145,7 +164,13 @@ def ncdf(x):
     return 0.5 * (1.0 + _erf(x / math.sqrt(2.0)))
 
 
-def model_prob(values, line, floor, scale=1.0):
+def calibrate(p, cal):
+    """A chance through a per-stat (a, b) from CAL: log-odds -> a + b * log-odds."""
+    q = min(1 - 1e-4, max(1e-4, p))
+    return 1.0 / (1.0 + math.exp(-(cal[0] + cal[1] * math.log(q / (1 - q)))))
+
+
+def model_prob(values, line, floor, scale=1.0, cal=None):
     """values oldest -> newest; floor is the per-stat bandwidth floor; scale
     multiplies every value (game-context adjustment). Mirror of the JS version."""
     v = [x * scale for x in values[-MODEL["maxGames"]:]]
@@ -174,6 +199,8 @@ def model_prob(values, line, floor, scale=1.0):
     pc = over_raw / tot if tot > 0 else 0.5
     k = MODEL["priorK"]
     p = (neff * pc + k * 0.5) / (neff + k)
+    if cal:
+        p = calibrate(p, cal)
     nq = neff + k
     z = MODEL["z"]
     z2 = z * z
@@ -612,6 +639,89 @@ def pick_started(p):
     return (p.get("date") or "") < ET_TODAY
 
 
+def refresh_price(p, pm):
+    """A pending pick whose game hasn't started keeps the market's current price for its
+    side (None once that market stops being tradeable), like the other sports' pre-game
+    refresh — so the price shown, and the one closing line value ends on, is current."""
+    if p.get("res") is None and not pick_started(p):
+        px = (pm["over"] if p["side"] == "over" else pm["under"]) if pm.get("tradeable") else None
+        p["price"] = round(px, 3) if px is not None else None
+
+
+def regular_minutes(rows):
+    """{team: {pid: average minutes}} for each team's regulars going into its next game:
+    players who played in 3+ of the team's last 5 games, averaging 20+ minutes in them
+    (the definition the injury backtest used, see news.py)."""
+    games = {}
+    for r in rows:
+        games.setdefault(r["team"], {}).setdefault(r["date"], {})[r["pid"]] = r.get("min") or 0
+    out = {}
+    for team, by in games.items():
+        cnt, tot = {}, {}
+        for d in sorted(by)[-5:]:
+            for pid, m in by[d].items():
+                if m > 0:
+                    cnt[pid] = cnt.get(pid, 0) + 1
+                    tot[pid] = tot.get(pid, 0) + m
+        out[team] = {pid: tot[pid] / cnt[pid] for pid in cnt if cnt[pid] >= 3 and tot[pid] / cnt[pid] >= 20}
+    return out
+
+
+def news_test(picks, by_pid, rows):
+    """TEST MODE (news.py): on every pending pick whose game hasn't started, record the
+    player's status on ESPN's injury report and "om", the usual minutes of his team's
+    regulars listed Out, plus p2: the chance with the backtest's boost for those minutes
+    (points, assists, threes, PRA). Nothing here changes a pick's chance or its lists."""
+    inj = news.espn_injuries("basketball/nba")
+    if inj is None:
+        return
+    by_name = {pkey(p["n"]): pid for pid, p in by_pid.items()}
+    status = {}
+    for x in inj:
+        pid = x["id"] if x["id"] in by_pid else by_name.get(pkey(x["name"]))
+        if pid:
+            status[pid] = x["status"]
+    usual = regular_minutes(rows)
+    n = boosted = 0
+    for p in picks:
+        if p.get("src") != "live" or p.get("res") is not None or pick_started(p):
+            continue
+        om = sum(m for q, m in usual.get(p["team"], {}).items() if q != p["pid"] and news.is_out(status.get(q)))
+        nw = {"st": status.get(p["pid"]), "om": round(om, 1)}
+        pl = by_pid.get(p["pid"])
+        # p2 only on picks this model version made, so it differs from prob by the news alone
+        if p["stat"] in news.NBA_OUT_STATS and pl and p.get("adj") is not None and p.get("mv") == MODEL_V:
+            scale = min(CTX["clampHi"], max(CTX["clampLo"], p["adj"] * (1 + news.NBA_OUT_BOOST * om / 48.0)))
+            mp = model_prob([stat_get(r, p["stat"]) for r in pl["g"]], p["line"], BW_FLOOR.get(p["stat"], 1.0),
+                            scale, CAL.get(p["stat"]))
+            if mp:
+                nw["p2"] = round(mp[p["side"]], 3)
+                boosted += om > 0
+        p["nw"] = nw
+        n += 1
+    print(f"  news test: recorded on {n} pending pick(s), {boosted} with regular teammates listed Out")
+    news.report(picks, "NBA injuries")
+
+
+def note_price(p):
+    """Closing line value: px0 keeps the first price a pick was recorded at and pxc the last
+    one seen before its game started (price itself goes None whenever a market stops trading)."""
+    if p.get("price") is not None:
+        if p.get("px0") is None:
+            p["px0"] = p["price"]
+        p["pxc"] = p["price"]
+
+
+def clv_stats(ps, cents=100):
+    """How the price of the side taken moved from a pick's first recording (px0) to the last
+    price before its game (pxc), in cents. The market moving toward a pick (it got pricier)
+    is the usual sign of a real edge, and it shows up long before a win/loss record does."""
+    mv = [round((p["pxc"] - p["px0"]) * cents, 1) for p in ps
+          if p.get("px0") is not None and p.get("pxc") is not None]
+    return {"clvN": len(mv), "clvUp": sum(1 for m in mv if m >= 1), "clvDn": sum(1 for m in mv if m <= -1),
+            "clv": round(sum(mv) / len(mv), 1) if mv else None}
+
+
 # ---------------------------------------------------------------------------
 # Build players / defense from the accumulated store
 # ---------------------------------------------------------------------------
@@ -706,7 +816,10 @@ def def_ratio(defense, defavg, opp, sk):
 # ---------------------------------------------------------------------------
 PICK_COLS = ["src", "gid", "season", "date", "pid", "player", "pos", "team", "opp",
              "stat", "line", "side", "prob", "lo", "hi", "neff", "price", "lists", "rec", "actual", "res", "adj", "start",
-             "sh"]   # sh: chance with the minutes strength at MIN_TEST, for comparison
+             "sh",    # sh: chance with the minutes strength at MIN_TEST, for comparison
+             "px0", "pxc",   # px0/pxc: first and last pre-game price (closing line value)
+             "mv",           # model version the chance came from (MODEL_V)
+             "nw"]           # pre-game news, test mode (news.py): {"st", "om", "p2"}
 BOARD_STATS = ["pts", "reb", "ast", "tpm", "pra"]
 TOP_N = 25
 VALUE_MIN_NEFF = 6.0
@@ -785,7 +898,7 @@ def test_prob(vals, line, sk, side, hp, gpts, dr, rows):
     u = minutes_ratio(rows)
     if not u:
         return None
-    mp = model_prob(vals, line, BW_FLOOR.get(sk, 1.0), context_scale(hp, gpts, dr, u, MIN_TEST))
+    mp = model_prob(vals, line, BW_FLOOR.get(sk, 1.0), context_scale(hp, gpts, dr, u, MIN_TEST), CAL.get(sk))
     return round(mp[side], 3) if mp else None
 
 
@@ -825,7 +938,7 @@ def build_market_picks(picks, poly_games, players_by_key, espn_slate, defense, d
     """Priced picks from Polymarket NBA markets, matched to players by name. Each
     is modeled at the market's line so Value spots can compare model vs price.
     Returns count added; no-op when there are no NBA markets (off-season)."""
-    have = {(p["pid"], p["date"], p["stat"], p["line"]) for p in picks}
+    have = {(p["pid"], p["date"], p["stat"], p["line"]): p for p in picks}
     added = 0
     for g in poly_games:
         eg = next((x for x in espn_slate if {x["away"], x["home"]} == {g["away"], g["home"]}), None)
@@ -850,6 +963,7 @@ def build_market_picks(picks, poly_games, players_by_key, espn_slate, defense, d
                 continue
             key = (pl["id"], g["date"], sk, pm["line"])
             if key in have:
+                refresh_price(have[key], pm)
                 continue
             rows = pl["g"]
             hp = hist_context(rows)
@@ -860,7 +974,7 @@ def build_market_picks(picks, poly_games, players_by_key, espn_slate, defense, d
             dr = def_ratio(defense, defavg, opp, sk)
             scale = context_scale(hp, gpts, dr, minutes_ratio(rows))
             vals = [stat_get(r, sk) for r in rows]
-            mp = model_prob(vals, pm["line"], BW_FLOOR.get(sk, 1.0), scale)
+            mp = model_prob(vals, pm["line"], BW_FLOOR.get(sk, 1.0), scale, CAL.get(sk))
             if not mp:
                 continue
             side, prob, lo, hi = side_prob(mp)
@@ -872,8 +986,8 @@ def build_market_picks(picks, poly_games, players_by_key, espn_slate, defense, d
                           "prob": round(prob, 3), "lo": round(lo, 3), "hi": round(hi, 3),
                           "neff": round(mp["neff"], 1), "price": round(price, 3) if price is not None else None,
                           "lists": "", "rec": f"{sk} {side} {pm['line']}", "actual": None, "res": None,
-                          "adj": round(scale, 3), "sh": sh})
-            have.add(key)
+                          "adj": round(scale, 3), "sh": sh, "mv": MODEL_V})
+            have[key] = picks[-1]
             added += 1
     return added
 
@@ -904,7 +1018,7 @@ def build_board_picks(picks, slate, players_by_team, defense, defavg):
                     line = seed_line(vals)
                     dr = def_ratio(defense, defavg, opp, sk)
                     scale = context_scale(hp, gpts, dr, minutes_ratio(rows))
-                    mp = model_prob(vals, line, BW_FLOOR.get(sk, 1.0), scale)
+                    mp = model_prob(vals, line, BW_FLOOR.get(sk, 1.0), scale, CAL.get(sk))
                     if not mp or mp["neff"] < VALUE_MIN_NEFF:
                         continue
                     side, prob, lo, hi = side_prob(mp)
@@ -915,7 +1029,7 @@ def build_board_picks(picks, slate, players_by_team, defense, defavg):
                                   "prob": round(prob, 3), "lo": round(lo, 3), "hi": round(hi, 3),
                                   "neff": round(mp["neff"], 1), "price": None, "lists": "",
                                   "rec": f"{sk} {side} {line}", "actual": None, "res": None,
-                                  "adj": round(scale, 3), "sh": sh})
+                                  "adj": round(scale, 3), "sh": sh, "mv": MODEL_V})
                     have.add((pl["id"], g["date"], sk))
                     now_added += 1
     return now_added
@@ -998,8 +1112,8 @@ def assign_lists(picks):
 
 def fit_temperature(picks):
     data = []
-    for p in picks:
-        if p.get("res") in ("hit", "miss") and p.get("prob") is not None:
+    for p in picks:      # only picks made by this model version: older ones had other errors
+        if p.get("res") in ("hit", "miss") and p.get("prob") is not None and p.get("mv") == MODEL_V:
             pr = min(0.999, max(0.001, float(p["prob"])))
             data.append((math.log(pr / (1 - pr)), 1.0 if p["res"] == "hit" else 0.0))
     if len(data) < 400:
@@ -1035,8 +1149,11 @@ def live_record(picks):
             if p.get("price"):
                 r["priced"] += 1
                 r["units"] += (1.0 / p["price"] - 1) if p["res"] == "hit" else -1
-    for r in out.values():
+    graded = [p for p in picks if p.get("res") in ("hit", "miss")]
+    for tag, r in out.items():
         r["units"] = round(r["units"], 2)
+        r.update(clv_stats([p for p in graded if tag in (p.get("lists") or "")]))
+    out["clv"] = clv_stats(graded)      # every graded pick, listed or not
     return out
 
 
@@ -1181,6 +1298,13 @@ def main():
     added_picks = build_board_picks(picks, slate, players_by_team, defense, defavg)
     stamp_starts(picks)
     assign_lists(picks)
+    for p in picks:
+        if p.get("res") is None and not pick_started(p):
+            note_price(p)
+    try:
+        news_test(picks, by_pid, store["rows"])
+    except Exception as e:  # noqa: BLE001
+        print(f"  news test: step unavailable ({e})")
     if mkt_added:
         print(f"  market picks: +{mkt_added} priced (Polymarket)")
     print(f"  picks: graded {graded}, {dnp} DNP, added {added_picks} board pick(s)")

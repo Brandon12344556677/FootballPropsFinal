@@ -6,11 +6,12 @@ name: Update NFL data
 # blocks the NFL deploy).
 on:
   schedule:
-    # Hourly, at :40 — 20-50 min before the usual :00/:15/:30 NFL/NBA/NHL/MLB starts,
-    # so boards and prices are fresh right before games begin. No builder records or
-    # changes a pick once its game has started, so an hourly run mid-game is safe.
+    # Every 20 minutes (:05, :25, :45), so every start time gets a run within ~20 min
+    # before it: prices, and the closing price each pick's line value is measured
+    # against, are fresh right before games begin. A full run takes ~10 min. No builder
+    # records or changes a pick once its game has started, so a run mid-game is safe.
     # Off the top of the hour, where GitHub delays scheduled runs the most.
-    - cron: "40 * * * *"
+    - cron: "5,25,45 * * * *"
   workflow_dispatch:
     inputs:
       probe:

@@ -8,13 +8,13 @@ const here = dirname(fileURLToPath(import.meta.url));
 const html = readFileSync(join(here, 'template.html'), 'utf8');
 const m = html.match(/\/\/ ==== MODEL[\s\S]*?\n([\s\S]*?)\/\/ ==== END MODEL/);
 if (!m) { console.error('MODEL block not found in template.html'); process.exit(1); }
-const api = new Function(m[1] + '\nreturn {MODEL, CTX, modelProb, seedLine, gradeResult, sideProb, ncdf, contextScale, usageOf, histContext, statFamily, defStatFor};')();
+const api = new Function(m[1] + '\nreturn {MODEL, CTX, CAL, modelProb, seedLine, gradeResult, sideProb, ncdf, contextScale, usageOf, histContext, statFamily, defStatFor};')();
 
 const doc = JSON.parse(readFileSync(join(here, 'model_cases.json'), 'utf8'));
 let bad = 0;
 const tol = 1e-9;
 for (const c of doc.model) {
-  const got = api.modelProb(c.values, c.line, c.kind, c.scale);
+  const got = api.modelProb(c.values, c.line, c.kind, c.scale, c.cal || undefined);
   for (const k of ['over', 'under', 'push', 'lo', 'hi', 'neff', 'mean', 'sd', 'h', 'scale']) {
     if (Math.abs(got[k] - c.expect[k]) > tol) { bad++; console.error(`mismatch ${k}: js=${got[k]} py=${c.expect[k]} for`, c.values, c.line, c.scale); }
   }
@@ -26,6 +26,8 @@ for (const key of ['betaPts', 'betaSpr', 'gamma']) for (const fam of ['pass', 'r
 for (const key of ['usage', 'clampLo', 'clampHi'])
   if (api.CTX[key] !== doc.CTX[key]) { bad++; console.error(`CTX.${key} differs: js=${api.CTX[key]} py=${doc.CTX[key]}`); }
 for (const key of Object.keys(doc.MODEL)) if (api.MODEL[key] !== doc.MODEL[key]) { bad++; console.error(`MODEL.${key} differs`); }
+if (JSON.stringify(Object.keys(api.CAL).sort()) !== JSON.stringify(Object.keys(doc.CAL).sort())) { bad++; console.error('CAL stats differ'); }
+for (const key of Object.keys(doc.CAL)) if (!api.CAL[key] || api.CAL[key][0] !== doc.CAL[key][0] || api.CAL[key][1] !== doc.CAL[key][1]) { bad++; console.error(`CAL.${key} differs`); }
 const hist = api.histContext(doc.hist.rows);
 for (const k of ['pts', 'spr']) if (Math.abs((hist[k] ?? -1) - (doc.hist.expect[k] ?? -1)) > tol) { bad++; console.error(`histContext ${k} mismatch`, hist, doc.hist.expect); }
 for (const c of doc.ctx) {

@@ -103,6 +103,7 @@ window.PS = (function(){
     last10:['Last 10', "The player's last ten games at this line: green bars cleared it, red ones didn't, and the dashed mark is the line. \"7/10\" = cleared it 7 times."],
     range:['Range · games', 'The first numbers are where the true chance most likely sits (80% range); "12g" is how many games it\'s based on. Wide range or few games = less certain.'],
     value:['Value spots', "Bets where Polymarket gives at least a 30% chance and our model is 15+ points higher — the model's biggest disagreements with the market. On the graded record they're roughly break-even so far, so treat them as leads to research, not sure things."],
+    clv:['Price moved its way', "Closing line value: how the Polymarket price of each graded pick moved between when the site first recorded it and the start of the game. If prices keep moving toward the model's picks, the market is coming around to what the model saw first — the most reliable early sign of a real edge, long before the win-loss record means much. If they mostly move away, the market knew something the model didn't."],
     surest:['Top 25 Surest', "The likeliest bets on the board, whatever they pay. Likely isn't certain: they still lose sometimes, and at 85–97¢ a single loss wipes out several wins."],
   };
   const helpBtn=(k,label)=>`<button type="button" class="qhelp" data-help="${k}" aria-expanded="false">${label}<span class="qi" aria-hidden="true">?</span></button>`;
@@ -422,6 +423,19 @@ window.PS = (function(){
   }
   if(document.readyState!=='loading') trust(); else document.addEventListener('DOMContentLoaded', trust);
 
+  // ---- opening vs current price: has the market moved toward a pick since it was recorded? ----
+  // open/now are fractions for the side taken. Up = the price rose since the site first
+  // recorded the pick, i.e. the market moved toward it (closing line value). closed=true
+  // is the Past picks form: the price at recording -> the last one before the game.
+  function pxMove(open, now, closed){
+    if(open==null || now==null) return '';
+    const o=Math.round(open*100), n=Math.round(now*100), d=n-o;
+    const cls=d>=1?'up':d<=-1?'dn':'flat', arrow=d>=1?'\u25b2'+d:d<=-1?'\u25bc'+(-d):'\u00b10';
+    const say=d>=1? `the market moved ${d}\u00a2 toward this pick` : d<=-1? `the market moved ${-d}\u00a2 away from this pick` : 'no real move';
+    const title=`Polymarket price when the site first recorded this pick: ${o}\u00a2. ${closed?'Last price before the game':'Now'}: ${n}\u00a2 \u2014 ${say}.`;
+    return `<span class="pxmove ${cls}${closed?' inl':''}" title="${esc(title)}">${closed? `${o}\u00a2 \u2192 ${n}\u00a2` : `opened ${o}\u00a2`} <b>${arrow}</b></span>`;
+  }
+
   return {teamVars, ticker, until, skeleton, esc, hashFor, pickHash, parsePickHash, syncHash, sharePick, toast, helpBtn, spark, verdict, icon, sheet, closeSheet, pickSheet,
-          isTracked, toggleBet, renderBets, fairOf, setFair};
+          isTracked, toggleBet, renderBets, fairOf, setFair, pxMove};
 })();

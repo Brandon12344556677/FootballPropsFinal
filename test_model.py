@@ -22,6 +22,7 @@ CASES = [
     ([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 0.5, "count"),
     ([3, 7, 2, 9, 4, 6, 8, 1, 5, 6, 7, 3], 4.5, "count"),
     ([33, 40, 28, 35, 41, 30, 38, 36], 33.5, "count"),
+    ([0, 0, 1, 0, 0, 1, 0, 0, 0, 1, 0, 0, 2, 0, 1], 0.5, "td"),       # anytime-TD floor
 ]
 
 
@@ -100,12 +101,22 @@ class ModelTests(unittest.TestCase):
         self.assertAlmostEqual(up["mean"], base["mean"] * 1.2, places=9)
         self.assertEqual(up["scale"], 1.2)
 
+    def test_calibration_moves_the_chance(self):
+        vals = [3, 7, 2, 9, 4, 6, 8, 1, 5, 6, 7, 3]
+        raw = B.model_prob(vals, 4.5, "count")
+        cal = B.model_prob(vals, 4.5, "count", 1.0, B.CAL["rec"])
+        self.assertAlmostEqual(cal["over"], B.calibrate(raw["over"], B.CAL["rec"]), places=12)
+        self.assertLess(cal["over"], raw["over"])          # receptions read overs high
+        self.assertLessEqual(cal["lo"], cal["over"])
+        self.assertGreaterEqual(cal["hi"], cal["over"])
+
     def test_write_cases_for_js_sync(self):
         out = []
         for i, (vals, line, kind) in enumerate(CASES):
             scale = [1.0, 1.15, 0.85][i % 3]
-            mp = B.model_prob(vals, line, kind, scale)
-            out.append({"values": vals, "line": line, "kind": kind, "scale": scale, "expect": mp, "seed": B.seed_line(vals)})
+            cal = [None, B.CAL["rec"], B.CAL["rec_td"]][i % 3]     # calibrated cases too
+            mp = B.model_prob(vals, line, kind, scale, cal)
+            out.append({"values": vals, "line": line, "kind": kind, "scale": scale, "cal": cal, "expect": mp, "seed": B.seed_line(vals)})
         ctx_cases = []
         hist_rows = [[2025, 1, "X", "REG"] + [0] * 12 + [1, 0, 44.5, -3.0], [2025, 2, "Y", "REG"] + [0] * 12 + [0, 0, 51.0, 6.5],
                      [2025, 3, "Z", "REG"] + [0] * 12 + [1, 0, None, None], [2025, 4, "W", "REG"] + [0] * 12 + [0, 0, 47.5, 1.0]]
@@ -121,7 +132,7 @@ class ModelTests(unittest.TestCase):
                                   "expect": B.context_scale(fam, hist, game_pts, game_spr, dr, usage)})
         with open(os.path.join(HERE, "model_cases.json"), "w", encoding="utf-8") as f:
             json.dump({"model": out, "ctx": ctx_cases, "hist": {"rows": hist_rows, "expect": hist},
-                       "CTX": B.CTX, "MODEL": B.MODEL}, f)
+                       "CTX": B.CTX, "MODEL": B.MODEL, "CAL": B.CAL}, f)
 
 
 class ContextTests(unittest.TestCase):
@@ -258,6 +269,15 @@ class MarketTests(unittest.TestCase):
 
 
 class ListTests(unittest.TestCase):
+    # These test how picks are listed, priced and pruned, on fixtures that sit right at a
+    # 53% lean; the per-stat calibration (tested in ModelTests) would move that, so it's off.
+    def setUp(self):
+        self._cal = B.CAL
+        B.CAL = {}
+
+    def tearDown(self):
+        B.CAL = self._cal
+
     def _pick(self, prob, lo, price=None, neff=12.0):
         return {"prob": prob, "lo": lo, "hi": min(1, prob + 0.1), "neff": neff, "price": price, "lists": ""}
 

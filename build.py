@@ -20,6 +20,8 @@ marked "MODEL"). tests/test_model.py checks the two agree. Change both or neithe
 import csv, io, json, math, os, re, sys, time, datetime, unicodedata, urllib.parse, urllib.request
 from zoneinfo import ZoneInfo
 
+import news   # pre-game news feeds, test mode
+
 TODAY = datetime.date.today()
 
 
@@ -29,7 +31,7 @@ def season_year(d):
 
 
 SEASON = season_year(TODAY)
-CANDIDATE_SEASONS = [SEASON - 2, SEASON - 1, SEASON]   # 3 seasons so "last 20" has depth
+CANDIDATE_SEASONS = [SEASON - 2, SEASON - 1, SEASON]   # 3 seasons so "last 30" has depth
 
 SKILL = {"QB", "RB", "WR", "TE", "FB"}
 BASE = "https://github.com/nflverse/nflverse-data/releases/download/"
@@ -76,8 +78,11 @@ def stat_value(key, row):
     return row[a] + row[b]
 
 
+TD_STATS = {"rec_td", "rush_td", "scrim_td"}   # "anytime"-style TD props: their own smoothing floor
+
+
 def stat_kind(key):
-    return "count" if key in COUNT_STATS else "yards"
+    return "td" if key in TD_STATS else "count" if key in COUNT_STATS else "yards"
 
 
 # ---------------------------------------------------------------------------
@@ -85,14 +90,30 @@ def stat_kind(key):
 #
 # Instead of a raw "hit 7 of last 10" frequency, the chance of clearing a line is
 # estimated from the *distribution* of the player's recent values:
-#   1. take up to the last 20 games, weight recent ones more (half-life 6 games);
+#   1. take up to the last 30 games, weight recent ones more (half-life 8 games);
 #   2. smooth the weighted values with a Gaussian kernel (Silverman bandwidth, with
 #      a floor so a run of identical values still has spread);
 #   3. read P(over) / P(under) / P(push) off that smoothed distribution;
 #   4. shrink toward 50/50 by half a pseudo-game, so tiny samples can't claim 100%;
 #   5. attach an 80% Wilson interval sized by the *effective* sample (weights).
 # ---------------------------------------------------------------------------
-MODEL = {"halfLife": 6.0, "maxGames": 20, "priorK": 0.5, "bwConst": 0.9, "bwFloorCount": 0.35, "bwFloorYards": 1.0, "z": 1.2816}
+# Walk-forward backtest (2025 + 2026 so far: 33,000 player games over 13 props, each from
+# earlier games only, scored on odd and on even weeks separately): 30 games at half-life 8
+# beat 20 at half-life 6 pooled on both halves, and receiving / rushing / scrimmage TDs got
+# their own floor, 0.25 (was the count floor, 0.35, which put 24-27% on TDs that happened
+# 18-20% of the time): log loss -0.004 to -0.010 on both halves. Passing TDs keep 0.35
+# (the lower floor was worse on one half). Re-scoring the 580 graded live picks with a
+# Polymarket price: log loss 0.6557 -> 0.6545 (the market's own price: 0.6305).
+MODEL = {"halfLife": 8.0, "maxGames": 30, "priorK": 0.5, "bwConst": 0.9, "bwFloorCount": 0.35, "bwFloorYards": 1.0,
+         "bwFloorTd": 0.25, "z": 1.2816}
+MODEL_V = 2   # recorded on every live pick ("mv"); calibration uses only this version's live picks
+
+# Per-stat calibration, fitted on the same walk-forward backtest: the chance's log-odds become
+# a + b * log-odds. It removes a bias the smoothing leaves (most props read overs a few points
+# high) and fixes over/under-confidence. Fitted at the seeded line and a line either side on
+# one half of the data and scored on the other, both ways; only stats where that improved
+# both halves are listed (the rest are left as they were).
+CAL = {"rec_yds": (-0.243, 1.014), "rec": (-0.142, 0.98), "rec_td": (-0.481, 0.906), "tgt": (-0.121, 1.002), "scrim_td": (-0.434, 0.914), "rush_yds": (-0.147, 1.15), "rush_att": (-0.116, 0.954), "rush_td": (-0.474, 0.884)}
 
 # Game-context adjustment. The player's distribution is scaled by
 #   (this game's implied team points / their usual implied points) ^ betaPts
@@ -123,7 +144,13 @@ def ncdf(x):
     return 0.5 * (1.0 + _erf(x / math.sqrt(2.0)))
 
 
-def model_prob(values, line, kind, scale=1.0):
+def calibrate(p, cal):
+    """A chance through a per-stat (a, b) from CAL: log-odds -> a + b * log-odds."""
+    q = min(1 - 1e-4, max(1e-4, p))
+    return 1.0 / (1.0 + math.exp(-(cal[0] + cal[1] * math.log(q / (1 - q)))))
+
+
+def model_prob(values, line, kind, scale=1.0, cal=None):
     """values oldest -> newest; scale multiplies every value (game-context adjustment).
     Returns dict with over/under/push probabilities, an 80% interval on P(over),
     the effective sample size and moments, or None."""
@@ -139,7 +166,7 @@ def model_prob(values, line, kind, scale=1.0):
     mean = sum(wi * x for wi, x in zip(w, v)) / W
     var = sum(wi * (x - mean) ** 2 for wi, x in zip(w, v)) / W
     sd = math.sqrt(max(var, 0.0))
-    floor = MODEL["bwFloorCount"] if kind == "count" else MODEL["bwFloorYards"]
+    floor = MODEL["bwFloorTd"] if kind == "td" else MODEL["bwFloorCount"] if kind == "count" else MODEL["bwFloorYards"]
     h = max(MODEL["bwConst"] * sd * neff ** (-0.2), floor)
 
     def F(t):
@@ -154,6 +181,8 @@ def model_prob(values, line, kind, scale=1.0):
     pc = over_raw / tot if tot > 0 else 0.5
     k = MODEL["priorK"]
     p = (neff * pc + k * 0.5) / (neff + k)
+    if cal:
+        p = calibrate(p, cal)
     nq = neff + k
     z = MODEL["z"]
     z2 = z * z
@@ -373,6 +402,7 @@ def load_schedule(seasons):
             "hs": num(r.get("home_score")) if final else None,
             "spread": fnum(r.get("spread_line")),   # positive = home favored
             "total": fnum(r.get("total_line")),
+            "roof": r.get("roof") or "", "stadium": r.get("stadium") or "",   # for the weather test
         }
     return games
 
@@ -1110,7 +1140,10 @@ def kickoff_utc(sg):
 # and backtest (what the model would have picked each past week, graded).
 # ---------------------------------------------------------------------------
 PICK_COLS = ["src", "gid", "season", "week", "date", "pid", "player", "pos", "team", "opp",
-             "stat", "line", "side", "prob", "lo", "hi", "neff", "price", "lists", "rec", "actual", "res", "adj"]
+             "stat", "line", "side", "prob", "lo", "hi", "neff", "price", "lists", "rec", "actual", "res", "adj",
+             "px0", "pxc",   # px0/pxc: first and last pre-kickoff price, in cents (closing line value)
+             "mv",           # model version the chance came from (MODEL_V)
+             "nw"]           # pre-game news, test mode (news.py): {"st", "wx", "roof", "p2"}
 VALUE_MIN_NEFF = 6.0
 TOP_N = 25
 VALUE_N = 200           # a safety cap only. At 50 it bound in busy weeks (NFL week 3: 27 picks that
@@ -1166,7 +1199,7 @@ def make_pick(src, gid, season, week, date, pl, opp, sk, line, mp, price, rec, s
             "stat": sk, "line": line, "side": side,
             "prob": round(prob, 3), "lo": round(lo, 3), "hi": round(hi, 3), "neff": round(mp["neff"], 1),
             "price": price, "lists": "", "rec": rec, "actual": None, "res": None,
-            "adj": round(mp.get("scale", 1.0), 3)}
+            "adj": round(mp.get("scale", 1.0), 3), "mv": MODEL_V}
 
 
 def assign_lists(picks):
@@ -1234,7 +1267,7 @@ def build_live_picks(picks, slate_games, sched, by_key, snap, pmus=None):
                                 def_ratio(snap, opp if home is not None else None, pl["p"], sk),
                                 None if inj_mult(pl, sk) != 1.0 else usage_of(pl.get("u")))
             vals = [stat_value(sk, r) for r in pl["g"]]
-            mp = model_prob(vals, pm["line"], stat_kind(sk), ctx["scale"] * inj_mult(pl, sk))
+            mp = model_prob(vals, pm["line"], stat_kind(sk), ctx["scale"] * inj_mult(pl, sk), CAL.get(sk))
             if not mp:
                 continue
             fav = "over" if mp["over"] >= 0.5 else "under"
@@ -1279,12 +1312,54 @@ def build_live_picks(picks, slate_games, sched, by_key, snap, pmus=None):
         ex = existing.get(key)
         if ex is None:
             picks.append(f)
+            note_price(f)
             added += 1
         elif ex["res"] is None:      # still pending: refresh to the latest pre-kickoff snapshot
             for k in ("side", "prob", "lo", "hi", "neff", "price", "lists", "rec", "team", "opp", "adj"):
                 ex[k] = f[k]
+            note_price(ex)
             updated += 1
     return len(fresh), added, updated
+
+
+def news_test(picks, sched, by_pid):
+    """TEST MODE (news.py): on every pending live pick whose game hasn't kicked off, record
+    ESPN's injury status for the player and, at outdoor stadiums, the forecast for kickoff,
+    plus p2: the chance with the wind adjustment the backtest found, for the stats it moved.
+    Nothing here changes a pick's chance or its lists."""
+    inj = news.espn_injuries("football/nfl")
+    status = {pkey(x["name"]): x["status"] for x in (inj or []) if x.get("name")}
+    now = datetime.datetime.now(datetime.timezone.utc)
+    n = nwx = 0
+    for p in picks:
+        if p.get("src") != "live" or p.get("res") is not None:
+            continue
+        sg = sched.get(p["gid"])
+        ko = kickoff_utc(sg) if sg else None
+        if not sg or sg["final"] or (ko is not None and ko <= now):
+            continue
+        nw = {"st": status.get(pkey(p["player"]))} if inj is not None else {}
+        roof = sg.get("roof") or ""
+        nw["roof"] = roof or "unknown"
+        wind = 0.0 if roof in ("dome", "closed") else None
+        if roof in ("outdoors", "open") and sg.get("stadium") in news.NFL_STADIUMS and ko is not None:
+            wx = news.forecast(*news.NFL_STADIUMS[sg["stadium"]], ko.strftime("%Y-%m-%dT%H:%MZ"))
+            if wx:
+                nw["wx"] = wx
+                wind = wx[1]
+                nwx += 1
+        pl = by_pid.get(p["pid"])
+        # p2 only on picks this model version made, so it differs from prob by the news alone
+        if wind is not None and p["stat"] in news.WIND_STATS and pl and p.get("adj") is not None and p.get("mv") == MODEL_V:
+            scale = min(CTX["clampHi"], max(CTX["clampLo"], p["adj"] * news.wind_factor(wind)))
+            mp = model_prob([stat_value(p["stat"], r) for r in pl["g"]], p["line"], stat_kind(p["stat"]), scale,
+                            CAL.get(p["stat"]))
+            if mp:
+                nw["p2"] = round(mp[p["side"]], 3)
+        p["nw"] = nw
+        n += 1
+    print(f"  news test: recorded on {n} pending pick(s), {nwx} with a kickoff forecast")
+    news.report(picks, "NFL wind")
 
 
 def grade_picks(picks, sched, by_pid, stats_gids, espn_gids=frozenset()):
@@ -1347,7 +1422,7 @@ def build_backtest(players, seasons_used, sched, snapshot):
                     continue
                 line = seed_line(vals)
                 ctx = context_scale(stat_family(sk, pl["p"]), hist, game_pts, game_spr, def_ratio(snap, row[2], pl["p"], sk), usage)
-                mp = model_prob(vals, line, stat_kind(sk), ctx["scale"])
+                mp = model_prob(vals, line, stat_kind(sk), ctx["scale"], CAL.get(sk))
                 if not mp:
                     continue
                 pk = make_pick("bt", gid, row[0], row[1], date, dict(pl, t=team or pl["t"]), row[2], sk, line, mp, None, None)
@@ -1370,7 +1445,9 @@ def fit_temperature(picks):
     graded history. Applied to the live/displayed chances so the site keeps tuning its
     confidence to its own tracked results each week."""
     data = []
-    for p in picks:
+    for p in picks:      # the backtest is rebuilt each run; live picks count only from this model version
+        if p.get("src") == "live" and p.get("mv") != MODEL_V:
+            continue
         if p.get("res") in ("hit", "miss") and p.get("prob") is not None:
             pr = min(0.999, max(0.001, float(p["prob"])))
             data.append((math.log(pr / (1 - pr)), 1.0 if p["res"] == "hit" else 0.0))
@@ -1401,8 +1478,35 @@ def live_record(picks):
         hits = sum(1 for p in ps if p["res"] == "hit")
         priced = [p for p in ps if p.get("price")]
         roi = (sum((100.0 / p["price"] - 1) if p["res"] == "hit" else -1 for p in priced) / len(priced)) if priced else None
-        out[k] = {"n": len(ps), "hit": hits, "roi": round(roi, 3) if roi is not None else None, "priced": len(priced)}
+        out[k] = {"n": len(ps), "hit": hits, "roi": round(roi, 3) if roi is not None else None, "priced": len(priced),
+                  **clv_stats(ps)}
     return out
+
+
+def js_num(x):
+    """A number as JavaScript prints it (4.0 -> "4"), for keys the page builds from its own numbers."""
+    x = float(x)
+    return str(int(x)) if x.is_integer() else repr(x)
+
+
+def note_price(p):
+    """Closing line value: px0 keeps the first price a pick was recorded at and pxc the last
+    one seen before kickoff (price itself goes None whenever a market stops trading)."""
+    if p.get("price") is not None:
+        if p.get("px0") is None:
+            p["px0"] = p["price"]
+        p["pxc"] = p["price"]
+
+
+def clv_stats(ps, cents=1):
+    """How the price of the side taken moved from a pick's first recording (px0) to the last
+    price before kickoff (pxc), in cents (NFL prices already are). The market moving toward a
+    pick (it got pricier) is the usual sign of a real edge, and it shows up long before a
+    win/loss record does."""
+    mv = [round((p["pxc"] - p["px0"]) * cents, 1) for p in ps
+          if p.get("px0") is not None and p.get("pxc") is not None]
+    return {"clvN": len(mv), "clvUp": sum(1 for m in mv if m >= 1), "clvDn": sum(1 for m in mv if m <= -1),
+            "clv": round(sum(mv) / len(mv), 1) if mv else None}
 
 
 def save_picks(picks):
@@ -1569,6 +1673,11 @@ def main():
         with open("slate.json", "w", encoding="utf-8") as f:
             json.dump(slate, f, separators=(",", ":"), ensure_ascii=False)
 
+    try:
+        news_test(picks, sched, by_pid)
+    except Exception as e:  # noqa: BLE001
+        print(f"  news test: step unavailable ({e})")
+
     bt = build_backtest(with_games, seasons_used, sched, snapshot)
     summary = save_picks(picks + bt)
     print(f"  picks.json: {summary}")
@@ -1601,6 +1710,10 @@ def main():
         "calT": cal_t,
         "top": team_top,
         "record": live_record(picks),
+        # first recorded price (cents) of every pending pick, so the board can show how far the
+        # live price has moved since: "pid|stat|line|side" -> px0
+        "open": {f"{p['pid']}|{p['stat']}|{js_num(p['line'])}|{p['side']}": p["px0"] for p in picks
+                 if p["src"] == "live" and p["res"] is None and p.get("px0") is not None},
         "players": players,
     }
     sanity_check(db)

@@ -34,8 +34,8 @@
 <link rel="manifest" href="/site.webmanifest">
 <script data-goatcounter="https://propstreaklive.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
 <link rel="stylesheet" href="fonts.css">
-<link rel="stylesheet" href="app.css?v=20260930l">
-<script src="app.js?v=20260930l"></script>
+<link rel="stylesheet" href="app.css?v=20261001a">
+<script src="app.js?v=20261001a"></script>
 <style>
 :root{
   color-scheme:dark;
@@ -418,7 +418,7 @@ footer .fine a{color:#8394ab}
         </div>
         <div class="trust rv d3">
           <span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>$0, no account</span>
-          <span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>Updated every hour</span>
+          <span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>Updated every 20 minutes</span>
           <span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>Every pick graded</span>
         </div>
       </div>
@@ -457,7 +457,7 @@ footer .fine a{color:#8394ab}
     <div class="wrap">
       <div class="stat" role="listitem"><b data-count="4">4</b><span>Sports</span></div>
       <div class="stat" role="listitem"><b><span data-count="3800">3,800</span><em>+</em></b><span>Players tracked</span></div>
-      <div class="stat" role="listitem"><b>Hourly</b><span>Auto-updated every hour</span></div>
+      <div class="stat" role="listitem"><b>Every 20 min</b><span>Auto-updated three times an hour</span></div>
       <div class="stat" role="listitem"><b><em>$</em>0</b><span>100% free to use</span></div>
     </div>
   </div>
@@ -640,7 +640,7 @@ footer .fine a{color:#8394ab}
         <p class="kicker rv">About us</p>
         <h2 id="about-h" class="rv d1">Built by fans who <i>wanted the data</i>.</h2>
         <p class="rv d2">Prop Streak Lab is an independent, fan-built project with a finance and data background behind it. We got tired of pick sellers charging every month for hot takes with no receipts — so we built the opposite.</p>
-        <p class="rv d2">A free tool that shows you the real game logs, puts an honest probability on every line, lines it up against the market, and grades itself in public. It rebuilds itself automatically every hour, for the NFL, NBA, NHL and MLB.</p>
+        <p class="rv d2">A free tool that shows you the real game logs, puts an honest probability on every line, lines it up against the market, and grades itself in public. It rebuilds itself automatically every 20 minutes, for the NFL, NBA, NHL and MLB.</p>
         <div class="values rv d3"><span>Free</span><span>Transparent</span><span>Data-first</span><span>Privacy-first</span></div>
       </div>
       <figure style="margin:0"><blockquote class="quote rv d2">“The best prop tool isn't the one that's most confident — it's the one that shows you its record.”</blockquote><figcaption class="cond rv d3" style="margin:14px 0 0 29px;color:var(--muted);font-size:13px">Our founding idea</figcaption></figure>
@@ -757,7 +757,7 @@ function countUp(el){ const to=+el.dataset.count; if(!to||el.dataset.done) retur
 (function(){ if(!window.PS) return;
   const esc=PS.esc, SPORT={nfl:'🏈 NFL', nba:'🏀 NBA', nhl:'🏒 NHL', mlb:'⚾ MLB'};
   const base=[
-    {ic:'🏟️', html:'<b>4 boards</b> — NFL · NBA · NHL · MLB, rebuilt every hour'},
+    {ic:'🏟️', html:'<b>4 boards</b> — NFL · NBA · NHL · MLB, rebuilt every 20 minutes'},
     {ic:'📒', html:'<b>Every pick graded in public</b> — the wins and the losses'},
     {ic:'💯', html:'<b>100% free</b> — no signup, no paywall'},
     {ic:'🎁', html:'<b>$50 free</b> on Polymarket with code PROPSTREAKLAB'}];

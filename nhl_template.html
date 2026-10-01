@@ -614,8 +614,8 @@ tr.hit td{background:var(--hit-soft)} tr.miss td{background:var(--miss-soft)}
 .panel.collapsed{padding-bottom:14px}
 </style>
 
-<link rel="stylesheet" href="app.css?v=20260930l">
-<script src="app.js?v=20260930l"></script>
+<link rel="stylesheet" href="app.css?v=20261001a">
+<script src="app.js?v=20261001a"></script>
 
 <header class="apptop">
   <div class="apptop-in">
@@ -802,8 +802,50 @@ tr.hit td{background:var(--hit-soft)} tr.miss td{background:var(--miss-soft)}
 
 <div id="tab-picks" hidden>
   <div class="panel">
-    <div class="mkthead"><h2>📒 Past picks</h2><span class="mktmuted" id="pkcap">every NHL pick the model has recorded, graded as games finish</span></div>
-    <div id="pkbody"></div>
+    <div class="mkthead"><h2>📒 Past picks — how they held up</h2><span class="mktmuted" id="pkstatus"></span></div>
+    <p class="mktnote">Every pick is recorded live by the auto-updater before puck drop (every prop on the Polymarket board with a model chance, plus the site's own board, tagged Top 25 Surest / Value where it qualified) and graded from the official box score. Filter by anything below.</p>
+    <div id="pklock"></div>
+    <div class="pkfilters" id="pkfilters"></div>
+    <div id="pksummary"></div>
+  </div>
+  <div class="twocol">
+    <div class="panel">
+      <h2>Calibration</h2>
+      <p class="hint">When the model said X%, how often did it hit? Bars should match the dotted diagonal.</p>
+      <div class="chartwrap"><svg id="calchart" class="small" viewBox="0 0 520 240" preserveAspectRatio="xMidYMid meet" role="img" aria-label="calibration chart"></svg></div>
+      <div class="tblwrap"><table class="caltbl" id="caltbl"></table></div>
+    </div>
+    <div class="panel">
+      <h2>By week</h2>
+      <p class="hint">Hit rate of the filtered picks, week by week (Monday to Sunday; bar label = picks graded).</p>
+      <div class="chartwrap"><svg id="wkchart" class="small" viewBox="0 0 520 240" preserveAspectRatio="xMidYMid meet" role="img" aria-label="hit rate by week"></svg></div>
+      <div id="wkempty" class="mktnote" hidden>No graded picks match these filters yet.</div>
+    </div>
+  </div>
+  <div class="panel" id="pfpanel" hidden>
+    <h2>Profit — if you'd bet 1 unit on every pick</h2>
+    <p class="hint">Running units for the filtered picks that had a recorded market price, staking 1 unit on each at the price you'd have paid. A win at 60¢ returns +0.67u; a loss is −1u. Picks with no Polymarket price aren't counted here.</p>
+    <div class="chartwrap"><svg id="pfchart" class="small" viewBox="0 0 520 240" preserveAspectRatio="xMidYMid meet" role="img" aria-label="cumulative units won"></svg></div>
+    <div id="pfempty" class="mktnote" hidden>No priced, graded picks match these filters yet — profit tracking fills in once picks with recorded prices are graded.</div>
+    <div id="pfnote" class="mktnote" hidden></div>
+  </div>
+  <div class="panel">
+    <h2>Breakdown</h2>
+    <p class="hint">Record by recommendation list and by prop type for the current filters (the list filter itself is ignored here so every list shows).</p>
+    <div class="twocol" style="margin-bottom:0">
+      <div><div class="tblwrap"><table class="caltbl" id="bylist"></table></div></div>
+      <div><div class="tblwrap"><table class="caltbl" id="byprop"></table></div></div>
+    </div>
+  </div>
+  <div class="panel">
+    <div class="mkthead"><h2>Picks</h2><span class="mktmuted" id="pkcount"></span></div>
+    <div class="mktmuted" style="margin:-4px 0 12px;display:flex;gap:8px 18px;align-items:center;flex-wrap:wrap;font-size:13px;line-height:1.5">
+      <span style="text-transform:uppercase;letter-spacing:.6px;font-weight:700;font-family:var(--dispers)">Lists key:</span>
+      <span><span class="listchip T">T</span> = Top 25 Surest — up to 25 props with a 90%+ model chance and a live Polymarket price</span>
+      <span><span class="listchip V">V</span> = Value — Polymarket priced it at 30¢+ and the model was 15+ points higher, over <i>or</i> under</span>
+    </div>
+    <div class="chartwrap"><table class="edgetbl" id="pktbl"></table></div>
+    <div style="margin-top:10px;display:flex;gap:10px;align-items:center;flex-wrap:wrap"><button id="pkmore" class="btn ghost" hidden>Show more</button><button id="pkall" class="btn ghost" hidden>Show all</button><span class="mktmuted" id="pkcountb"></span></div>
   </div>
 </div>
 
@@ -866,13 +908,18 @@ function pct(p){ return Math.round(p*100)+'%'; }
 function cents(p){ return p==null? '' : Math.round(p*100)+'¢'; }
 
 // ==== MODEL (mirrored in build_nhl.py — keep identical) ====
-const MODEL = {halfLife:6, maxGames:20, priorK:0.5, bwConst:0.9, z:1.2816};
-const BW_FLOOR = {pts:0.6, g:0.5, a:0.5, sog:1.0, blk:0.7, hit:1.0, sv:4.0, toi:3.0};
-const CTX = {betaPts:0.30, gamma:0.45, clampLo:0.6, clampHi:1.6};
+const MODEL = {halfLife:30, maxGames:82, priorK:0.5, bwConst:0.9, z:1.2816};
+const BW_FLOOR = {pts:0.3, g:0.25, a:0.3, sog:1.0, blk:0.7, hit:1.0, sv:4.0, toi:3.0};
+const CTX = {betaPts:0.30, gamma:0.45, toi:0.5, b2b:-0.05, clampLo:0.6, clampHi:1.6};
+const USAGE_STATS = ['pts','g','a'];   // ice time and back-to-backs apply to these only
 function erf(x){ const s=x>=0?1:-1; x=Math.abs(x); const t=1/(1+0.3275911*x);
   const y=1-(((((1.061405429*t-1.453152027)*t)+1.421413741)*t-0.284496736)*t+0.254829592)*t*Math.exp(-x*x); return s*y; }
 function ncdf(x){ return 0.5*(1+erf(x/Math.sqrt(2))); }
-function modelProb(values, line, floor, scale){
+// Per-stat calibration (mirrored in the builder's CAL): log-odds -> a + b * log-odds, fitted on
+// the walk-forward backtest; only stats where it improved both held-out halves are listed.
+const CAL = {pts:[-0.226, 0.921], g:[-0.37, 0.934], a:[-0.321, 0.928], sog:[-0.123, 1.24]};
+function calibrate(p, cal){ const q=Math.min(1-1e-4, Math.max(1e-4, p)); return 1/(1+Math.exp(-(cal[0]+cal[1]*Math.log(q/(1-q))))); }
+function modelProb(values, line, floor, scale, cal){
   if(scale==null) scale=1;
   const v=values.slice(-MODEL.maxGames).map(x=>x*scale), n=v.length; if(!n) return null;
   const w=v.map((_,i)=>Math.pow(0.5,(n-1-i)/MODEL.halfLife));
@@ -887,7 +934,8 @@ function modelProb(values, line, floor, scale){
   const overRaw=1-F(loE), underRaw=F(hiE);
   const push=Math.max(0,1-overRaw-underRaw), tot=overRaw+underRaw;
   const pc=tot>0? overRaw/tot : 0.5, k=MODEL.priorK;
-  const p=(neff*pc+k*0.5)/(neff+k), nq=neff+k, z=MODEL.z, z2=z*z;
+  let p=(neff*pc+k*0.5)/(neff+k); if(cal) p=calibrate(p, cal);
+  const nq=neff+k, z=MODEL.z, z2=z*z;
   const c=(p+z2/(2*nq))/(1+z2/nq), hw=z*Math.sqrt(p*(1-p)/nq+z2/(4*nq*nq))/(1+z2/nq);
   return {over:p, under:1-p, push, lo:Math.max(0,c-hw), hi:Math.min(1,c+hw), neff, mean, sd, h, n, scale};
 }
@@ -900,12 +948,27 @@ function histPts(rows){ const r=rows.slice(-MODEL.maxGames), n=r.length; let sp=
   r.forEach((g,i)=>{ const tot=g[14], spr=g[15]; if(tot==null||spr==null) return;
     const w=Math.pow(0.5,(n-1-i)/MODEL.halfLife); sp+=w*(tot/2+spr/2); wp+=w; });
   return wp? sp/wp : null; }
-function contextScale(hp, gamePts, defR){
+const clampS = x => Math.min(CTX.clampHi, Math.max(CTX.clampLo, x));
+function contextScale(hp, gamePts, defR, toi, b2b){
   let env=1;
   if(hp&&gamePts&&hp>0&&gamePts>0) env*=Math.pow(gamePts/hp, CTX.betaPts);
   let dfs=1; if(defR&&defR>0) dfs=Math.pow(defR, CTX.gamma);
-  return {scale:Math.min(CTX.clampHi, Math.max(CTX.clampLo, env*dfs)), env, def:dfs};
+  let scale=clampS(env*dfs);
+  const use = toi? Math.pow(toi, CTX.toi) : 1; if(toi) scale=clampS(scale*use);
+  if(b2b) scale=clampS(scale*(1+CTX.b2b));
+  return {scale, env, def:dfs, use, b2b:!!b2b};
 }
+// Ice time of the last 2 games over the usual (recency-weighted, half-life 6, last 10),
+// clamped to [0.5, 1.6]; null with fewer than 4 games or under 3 usual minutes.
+function toiRatio(rows){ const t=rows.slice(-10).map(r=>r[11]||0); if(t.length<4) return null;
+  let sw=0, st=0; t.forEach((x,k)=>{ const w=Math.pow(0.5,(t.length-1-k)/6); sw+=w; st+=w*x; });
+  const usual=st/sw; if(usual<=3) return null;
+  return Math.max(0.5, Math.min(1.6, (t[t.length-1]+t[t.length-2])/2/usual)); }
+// [toi, b2b] for contextScale: only points, goals and assists; b2b = the player's last game
+// was the day before this one (0 days covers a UTC date against an ET one).
+function usageArgs(rows, sk, dateIso){ if(!USAGE_STATS.includes(sk) || !rows || !rows.length) return [null, false];
+  const rest=dateIso? Math.round((Date.parse(dateIso+'T12:00:00Z')-Date.parse(rows[rows.length-1][1]+'T12:00:00Z'))/864e5) : null;
+  return [toiRatio(rows), rest!=null && isFinite(rest) && rest>=0 && rest<=1]; }
 // ==== END MODEL ====
 function _calT(){ return (DB && DB.calT) ? DB.calT : 1; }
 function calP(p){ const T=_calT(); if(T===1||!(p>0)||!(p<1)) return p; return 1/(1+Math.exp(-Math.log(p/(1-p))/T)); }
@@ -959,7 +1022,7 @@ function defRatioFor(opp, sk){ const ds=DEF_FOR[sk];
   if(!opp||!ds||!DB.defense||!DB.defense[opp]||!DB.defense[opp]['NHL']||!DB.defense[opp]['NHL'][ds]||!DB.defAvg||!DB.defAvg['NHL']||!DB.defAvg['NHL'][ds]) return null;
   return DB.defense[opp]['NHL'][ds].a/DB.defAvg['NHL'][ds]; }
 function contextFor(p, sk, oppOverride, gameOverride){
-  const off={scale:1, env:1, def:1, opp:null, gamePts:null, defRatio:null, on:false};
+  const off={scale:1, env:1, def:1, use:1, b2b:false, opp:null, gamePts:null, defRatio:null, on:false};
   if(!state.adj||!p) return off;
   const g=gameOverride||teamGame(p.t); const hp=histPts(gamesOf(p));
   const opp = oppOverride || (g? (g.away===p.t? g.home : g.away) : null);
@@ -967,8 +1030,8 @@ function contextFor(p, sk, oppOverride, gameOverride){
   let gamePts=null;
   if(g && g.total!=null){ const sp = (g.home===p.t? g.spread : (g.spread!=null? -g.spread : null)); gamePts = g.total/2 + (sp!=null? sp/2 : 0); }
   const dr=defRatioFor(opp, sk);
-  const cs=contextScale(hp, gamePts, dr);
-  return {scale:cs.scale, env:cs.env, def:cs.def, opp, gamePts, defRatio:dr, on:true};
+  const cs=contextScale(hp, gamePts, dr, ...usageArgs(p.g, sk, g && !oppOverride? g.date : null));
+  return {scale:cs.scale, env:cs.env, def:cs.def, use:cs.use, b2b:cs.b2b, opp, gamePts, defRatio:dr, on:true};
 }
 
 // ---- tabs ----
@@ -1092,8 +1155,8 @@ function render(){
   } else ws.hidden=true;
   const ctx=contextFor(p, sk), oppNow=ctx.opp;
   const line=state.line;
-  const rawMp=modelProb(vals, line, floorFor(sk), 1);
-  const adjMp=ctx.on? modelProb(vals, line, floorFor(sk), ctx.scale) : rawMp;
+  const rawMp=modelProb(vals, line, floorFor(sk), 1, CAL[sk]);
+  const adjMp=ctx.on? modelProb(vals, line, floorFor(sk), ctx.scale, CAL[sk]) : rawMp;
   const mp=calMp(adjMp);
   const hitCount=vals.filter(v=> state.ou==='over'? v>line : v<line).length;
   const l10=vals.slice(-10), l10hit=l10.filter(v=> state.ou==='over'? v>line : v<line).length;
@@ -1113,10 +1176,11 @@ function render(){
   $('tiles').innerHTML=tiles.join('');
   VERDICT= mSide!=null? {prob:mSide, lo:side==='over'?mp.lo:1-mp.hi, hi:side==='over'?mp.hi:1-mp.lo, neff:mp.neff} : null; paintVerdict();
   // context note
-  if(ctx.on && (ctx.env!==1 || ctx.def!==1)){
+  if(ctx.on && (ctx.env!==1 || ctx.def!==1 || ctx.use!==1 || ctx.b2b)){
     const parts=[]; if(ctx.gamePts) parts.push(`pace/total ×${fmt(ctx.env)}`); if(ctx.defRatio) parts.push(`vs ${esc(oppNow)} defense ×${fmt(ctx.def)}`);
-    $('disthint').textContent=`Adjusted for tonight: ${parts.join(', ')} → overall ×${fmt(ctx.scale)} vs the player's usual.`;
-  } else $('disthint').textContent='Weighted toward recent games (half-life 6). Smoothed to a distribution, then read off the line.';
+    if(ctx.use!==1) parts.push(`recent ice time ×${ctx.use.toFixed(2)}`); if(ctx.b2b) parts.push(`second night of a back-to-back ×${(1+CTX.b2b).toFixed(2)}`);
+    $('disthint').textContent=`Adjusted for tonight: ${parts.join(', ')} → overall ×${ctx.scale.toFixed(2)} vs the player's usual.`;
+  } else $('disthint').textContent=`Up to the last ${MODEL.maxGames} games, newer ones weighted more (half-life ${MODEL.halfLife} games). Smoothed to a distribution, then read off the line.`;
   drawDist(vals, line, sk);
   drawChart(vals, line, sk, gs);
   renderTable(gs, sk);
@@ -1206,7 +1270,7 @@ function gameOf(p){ const m=/^\d{4}-\d{2}-\d{2}-([A-Z]+)-([A-Z]+)$/.exec(p.gid||
 function normPick(p){ const px=p.price==null? null : p.price;
   return {pid:p.pid, gid:p.gid, name:p.player, team:p.team, game:gameOf(p), sk:p.stat, statText:statLabel(p.stat),
     line:p.line, side:p.side||'over', prob:p.prob, lo:p.lo, hi:p.hi, n:Math.round(p.neff||0),
-    price:px, edge:(px==null||p.prob==null)? null : p.prob-px}; }
+    price:px, px0:p.px0==null? null : p.px0, edge:(px==null||p.prob==null)? null : p.prob-px}; }
 function listRows(tag){ return upcomingPicks().filter(p=>(p.lists||'').includes(tag) && p.prob!=null).map(normPick); }
 function sortRows(rows, key, dir){ return [...rows].sort((a,b)=>{
   if(key==='matchup') return dir*((a.game.away+a.game.home).localeCompare(b.game.away+b.game.home));
@@ -1217,7 +1281,7 @@ function priceCell(r){
   if(r.price==null) return `<span class="pmdim" title="Polymarket hasn't listed ${SPORT_NAME} player props yet — the price appears here automatically once it does">no market yet</span>`;
   const signed=v=>(v>=0?'+':'−')+Math.abs(Math.round(v*100));
   const cls=r.edge==null? '' : r.edge>=0.04? 'pos' : r.edge<=-0.04? 'neg' : '';
-  return `<span class="pmpx ${cls}">${Math.round(r.price*100)}¢</span> <span class="rng">${r.edge==null?'':signed(r.edge)+' edge · '}${(1/r.price).toFixed(2)}×</span>`; }
+  return `<span class="pmpx ${cls}">${Math.round(r.price*100)}¢</span> <span class="rng">${r.edge==null?'':signed(r.edge)+' edge · '}${(1/r.price).toFixed(2)}×</span>`+PS.pxMove(r.px0, r.price); }
 // Avatar initials for a pick card: "Fernando Tatis Jr." -> "FT".
 const initials=n=>{ const w=String(n||"").replace(/\s+(Jr|Sr|II|III|IV)\.?$/i,"").trim().split(/\s+/); return ((w[0]||"")[0]||"")+(w.length>1? (w[w.length-1][0]||"") : ""); };
 // Pick cards (Top 25 Surest, Value spots): one card per prop — who, the bet in words, the
@@ -1271,7 +1335,7 @@ function renderEdges(){ const body=$('edgebody'); if(!body) return;
   updateBoardStatus();
   const all=listRows('T');
   if(!all.length){ body.innerHTML = upcomingPicks().length
-      ? `<p class="mktnote">Nothing makes the list right now. A prop needs a <b>90%+ model chance</b> <i>and</i> a <b>live Polymarket price</b>, and nothing on the upcoming ${SPORT_NAME} slate clears both. It refills as markets post and prices update (every hour) — some days it stays short or empty on purpose.</p>`
+      ? `<p class="mktnote">Nothing makes the list right now. A prop needs a <b>90%+ model chance</b> <i>and</i> a <b>live Polymarket price</b>, and nothing on the upcoming ${SPORT_NAME} slate clears both. It refills as markets post and prices update (every 20 minutes) — some days it stays short or empty on purpose.</p>`
       : scheduleNote('the Top 25 Surest board'); return; }
   const rows=sortRows(all, edgeSort.key, edgeSort.dir).slice(0,25);
   body.innerHTML=pickTable(rows, edgeSort)+
@@ -1371,28 +1435,206 @@ function renderPickViews(){ paintVerdict(); renderEdges(); renderValue(); render
 // Once a minute: when a game starts, its picks drop off the boards without a reload.
 setInterval(()=>{ if(PICKS!==null && !document.hidden && upcomingPicks().length!==upSig) renderPickViews(); }, 60000);
 function initPicks(){ renderPast(); }   // Past tab opened
-let pastRes='';   // Past picks Result filter: '' = graded (hit/miss/push)
-function renderPast(){ const body=$('pkbody'); if(!body) return;
-  if(PICKS===null){ body.innerHTML='<p class="mktnote">Loading…</p>'; return; }
+// ---- Past picks: the NFL page's layout (filters, summary, calibration, by week, profit,
+// breakdown, sortable table). Every pick here was recorded live before its game; prices are
+// fractions (0.43 = 43¢), and weeks are calendar weeks (this sport has no week numbers).
+const DISP="'Barlow Condensed',Impact,'Arial Narrow',sans-serif";
+function cv(name){ return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); }
+const LIST_NAME={T:'Top 25 Surest',V:'Value'};
+const PK_MON=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const PK_DEFAULT={list:'listed', season:'', week:'', team:'', opp:'', pos:'', stat:'', side:'', pmin:'', pmax:'', res:'', q:''};
+const pkF={...PK_DEFAULT};
+let pkSort={key:'date',dir:-1}, pkShown=150, pkBuiltFor=null;
+function uniq(arr){ return [...new Set(arr.filter(x=>x!=null&&x!==''))]; }
+function weekOf(iso){ const t=Date.parse((iso||'')+'T12:00:00Z'); if(!isFinite(t)) return '';   // the Monday of its week
+  return new Date(t-((new Date(t).getUTCDay()+6)%7)*864e5).toISOString().slice(0,10); }
+function weekLabel(w){ const d=new Date(w+'T12:00:00Z'); return isFinite(d.getTime())? PK_MON[d.getUTCMonth()]+' '+d.getUTCDate() : w; }
+const unitsOf = p => p.res==='hit'? 1/p.price-1 : -1;
+function renderPast(){ const st=$('pkstatus'); if(!st) return;
+  if(PICKS===null){ $('pksummary').innerHTML='<p class="mktnote">Loading picks…</p>'; return; }
+  const nG=PICKS.filter(p=>p.res==='hit'||p.res==='miss').length, nP=PICKS.filter(p=>p.res==null).length;
+  st.textContent=`${PICKS.length.toLocaleString()} picks (${nG.toLocaleString()} graded, ${nP.toLocaleString()} pending)`;
   const boxIn=new Set(PICKS.filter(p=>p.res!=null).map(p=>p.gid));   // a graded pick means that game's box score is in
   const wait=PICKS.filter(p=>awaitingGrade(p) && !boxIn.has(p.gid)), wg=new Set(wait.map(p=>p.gid)).size;
-  const lock=wait.length? `<p class="mktnote">⏳ <b>${wait.length} pick${wait.length===1?'':'s'}</b> from ${wg} game${wg===1?'':'s'} that ${wg===1?'has':'have'} started ${wait.length===1?'is':'are'} locked in as recorded before ${TIPOFF}. ${wait.length===1?'It shows':'They show'} up here once the final box score is in.</p>` : '';
-  const graded=PICKS.filter(p=>p.res==='hit'||p.res==='miss'||p.res==='push'), dnp=PICKS.filter(p=>p.res==='dnp');
-  if(!graded.length && !dnp.length){ body.innerHTML=lock+'<p class="mktnote">No graded NHL picks yet. Every upcoming pick is recorded before puck drop and shows here once the box score is final — this fills in as games are played.</p>'; return; }
-  const hm=graded.filter(p=>p.res!=='push'); const hit=hm.filter(p=>p.res==='hit').length;
-  const dnpNote=dnp.length? ` <span class="mktmuted">${dnp.length} pick${dnp.length===1?'':'s'} on players who didn't play ${dnp.length===1?'is':'are'} voided, not counted.</span>` : '';
-  let h = lock + (hm.length? `<p><b>Record: ${hit}/${hm.length} (${Math.round(100*hit/hm.length)}%)</b> on graded picks.${dnpNote}</p>` : dnpNote? `<p>${dnpNote}</p>` : '');
-  const opts=[['','Graded'],['hit','Hit'],['miss','Miss'],['push','Push'],['dnp','Did not play'],['all','All (incl. DNP)']];
-  h+=`<div class="pkfilters"><div><label for="pk_res">Result</label><select id="pk_res">${opts.map(o=>`<option value="${o[0]}"${o[0]===pastRes?' selected':''}>${o[1]}</option>`).join('')}</select></div></div>`;
-  const rows= pastRes==='all'? graded.concat(dnp) : pastRes==='dnp'? dnp : pastRes? graded.filter(p=>p.res===pastRes) : graded;
-  const show=rows.slice().sort((a,b)=>(b.date||'').localeCompare(a.date||'')).slice(0,200);
-  if(!show.length) h+='<p class="mktnote">No picks match this filter yet.</p>';
-  else { h+='<div class="tblwrap"><table><thead><tr><th>Date</th><th>Player</th><th>Matchup</th><th>Pick</th><th>Chance</th><th>Actual</th><th>Result</th></tr></thead><tbody>';
-    show.forEach(p=>{ const cls=p.res==='hit'?'hit':p.res==='miss'?'miss':'';
-      h+=`<tr class="${cls}"><td>${esc(dlabel(p.date))}</td><td>${esc(p.player)}</td><td>${esc(p.team)} @ ${esc(p.opp)}</td><td>${esc(statLabel(p.stat))} ${esc(p.side)} ${esc(p.line)}</td><td>${p.prob!=null?pct(p.prob):'—'}</td><td>${p.actual!=null?p.actual:'—'}</td><td>${p.res==='dnp'?'DNP':esc(p.res)}</td></tr>`; });
-    h+='</tbody></table></div>'; }
-  body.innerHTML=h;
-  $('pk_res').onchange=e=>{ pastRes=e.target.value; renderPast(); };
+  $('pklock').innerHTML = wait.length? `<p class="mktnote">⏳ <b>${wait.length} pick${wait.length===1?'':'s'}</b> from ${wg} game${wg===1?'':'s'} that ${wg===1?'has':'have'} started ${wait.length===1?'is':'are'} locked in as recorded before ${TIPOFF}. ${wait.length===1?'It is':'They are'} graded once the final box score is in.</p>` : '';
+  if(pkBuiltFor!==PICKS){ buildPickFilters(); pkBuiltFor=PICKS; }
+  renderPicks();
+}
+function buildPickFilters(){
+  const wrap=$('pkfilters');
+  const seasons=uniq(PICKS.map(p=>p.season)).sort((a,b)=>b-a);
+  const teams=uniq(PICKS.map(p=>p.team)).sort(), opps=uniq(PICKS.map(p=>p.opp)).sort(), poss=uniq(PICKS.map(p=>p.pos)).sort();
+  const stats=uniq(PICKS.map(p=>p.stat)).sort((a,b)=>statLabel(a).localeCompare(statLabel(b)));
+  const sel=(id,label,opts)=>`<div><label for="pk_${id}">${label}</label><select id="pk_${id}">${opts.map(o=>`<option value="${esc(o[0])}">${esc(o[1])}</option>`).join('')}</select></div>`;
+  const pctOpts=[['','Any']]; for(let i=50;i<=100;i++) pctOpts.push([String(i), i+'%']);
+  wrap.innerHTML=
+    sel('list','List',[['listed','Recommended (Top 25 Surest / Value)'],['T','Top 25 Surest'],['V','Value spots'],['all','All tracked props']])+
+    sel('season','Season',[['','All']].concat(seasons.map(s=>[s,s])))+
+    sel('week','Week',[['','All']])+
+    sel('team','Team',[['','All']].concat(teams.map(t=>[t,t])))+
+    sel('opp','Opponent',[['','All']].concat(opps.map(t=>[t,t])))+
+    sel('pos','Position',[['','All']].concat(poss.map(t=>[t,t])))+
+    sel('stat','Prop',[['','All']].concat(stats.map(s=>[s,statLabel(s)])))+
+    sel('side','Side',[['','Both'],['over','Over'],['under','Under']])+
+    sel('pmin','Model chance ≥',pctOpts)+
+    sel('pmax','Model chance ≤',pctOpts)+
+    sel('res','Result',[['','All'],['graded','Graded (hit/miss)'],['hit','Hit'],['miss','Miss'],['push','Push'],['dnp','Did not play'],['pending','Pending']])+
+    `<div><label for="pk_q">Player</label><input type="search" id="pk_q" placeholder="Search name…"></div>`+
+    `<div><label>&nbsp;</label><button id="pk_reset" class="btn ghost" style="width:100%">Reset</button></div>`;
+  const weekOpts=()=>{ const s=$('pk_season').value; const wks=uniq(PICKS.filter(p=>!s||String(p.season)===s).map(p=>weekOf(p.date))).sort().reverse();
+    $('pk_week').innerHTML=[['','All']].concat(wks.map(w=>[w,'Week of '+weekLabel(w)])).map(o=>`<option value="${esc(o[0])}">${esc(o[1])}</option>`).join(''); };
+  weekOpts();
+  Object.keys(pkF).forEach(k=>{ const el=$('pk_'+k); if(!el) return;
+    el.value=pkF[k]; el.addEventListener(k==='q'?'input':'change', ()=>{ pkF[k]=el.value; if(k==='season'){ pkF.week=''; weekOpts(); } pkShown=150; renderPicks(); }); });
+  if(pkF.week) $('pk_week').value=pkF.week;
+  $('pk_reset').onclick=()=>{ Object.assign(pkF,PK_DEFAULT);
+    Object.keys(pkF).forEach(k=>{ const el=$('pk_'+k); if(el) el.value=pkF[k]; }); weekOpts(); pkShown=150; renderPicks(); };
+}
+function pkRows(ignoreList){
+  const f=pkF, q=norm(f.q);
+  return PICKS.filter(p=>{
+    if(p.prob==null) return false;
+    if(!ignoreList){ if(f.list==='listed'){ if(!p.lists) return false; } else if(f.list!=='all' && !(p.lists||'').includes(f.list)) return false; }
+    if(f.season && String(p.season)!==f.season) return false;
+    if(f.week && weekOf(p.date)!==f.week) return false;
+    if(f.team && p.team!==f.team) return false;
+    if(f.opp && p.opp!==f.opp) return false;
+    if(f.pos && p.pos!==f.pos) return false;
+    if(f.stat && p.stat!==f.stat) return false;
+    if(f.side && p.side!==f.side) return false;
+    if(f.pmin || f.pmax){ const pc=Math.round(p.prob*100); if(f.pmin && pc<+f.pmin) return false; if(f.pmax && pc>+f.pmax) return false; }
+    if(f.res){ if(f.res==='pending'){ if(p.res!=null) return false; } else if(f.res==='graded'){ if(p.res!=='hit'&&p.res!=='miss') return false; } else if(p.res!==f.res) return false; }
+    if(q && !norm(p.player).includes(q)) return false;
+    return true;
+  });
+}
+function renderPicks(){
+  const rows=pkRows(), graded=rows.filter(p=>p.res==='hit'||p.res==='miss');
+  const hits=graded.filter(p=>p.res==='hit').length, pushes=rows.filter(p=>p.res==='push').length, pending=rows.filter(p=>p.res==null).length, dnp=rows.filter(p=>p.res==='dnp').length;
+  const avgPred=graded.length? graded.reduce((a,p)=>a+p.prob,0)/graded.length : null;
+  const priced=graded.filter(p=>p.price), units=priced.reduce((a,p)=>a+unitsOf(p),0), roi=priced.length? units/priced.length*100 : null;
+  const showProfit = priced.length>0;   // shown win or lose: a record that hides its losses isn't one
+  $('pksummary').innerHTML=`<div class="parlaysum" style="margin-top:4px">`+
+    `<div><div class="lab">Graded</div><div class="big">${graded.length.toLocaleString()}</div><div class="sub">${pushes} push · ${dnp} DNP · ${pending} pending</div></div>`+
+    `<div><div class="lab">Hit rate</div><div class="big ${graded.length&&hits/graded.length>=0.5?'hit':''}">${graded.length? Math.round(100*hits/graded.length)+'%' : '—'}</div><div class="sub">${hits} of ${graded.length}</div></div>`+
+    `<div><div class="lab">Model said</div><div class="big">${avgPred!=null? Math.round(avgPred*100)+'%' : '—'}</div><div class="sub">average predicted chance</div></div>`+
+    (showProfit ? `<div><div class="lab">Units ${units>=0?'won':'lost'}</div><div class="big ${units>=0?'hit':''}"${units<0?' style="color:var(--miss)"':''}>${units>=0?'+':'−'}${Math.abs(units).toFixed(1)}u</div>`+
+      `<div class="sub">${priced.length.toLocaleString()} priced bets · ${roi>=0?'+':'−'}${Math.abs(roi).toFixed(0)}% ROI</div></div>` : ``)+
+  `</div>`;
+  drawCalibration(graded); drawByWeek(graded); $('pfpanel').hidden=!showProfit; if(showProfit) drawProfit(priced); renderBreakdown(pkRows(true));
+  renderPickTable(pkF.res==='pending' ? rows : rows.filter(p=>p.res!=null));
+}
+function recordRow(label, ps){
+  const g=ps.filter(p=>p.res==='hit'||p.res==='miss'), h=g.filter(p=>p.res==='hit').length;
+  const pred=g.length? g.reduce((a,p)=>a+p.prob,0)/g.length : null;
+  const gap=(g.length&&pred!=null)? h/g.length-pred : null;
+  return `<tr><td>${esc(label)}</td><td class="tnum">${g.length}</td><td class="tnum">${g.length?Math.round(100*h/g.length)+'%':'—'}</td><td class="tnum">${pred!=null?Math.round(pred*100)+'%':'—'}</td>`+
+    `<td class="tnum ${gap==null?'':gap>=0?'up':'down'}">${gap==null?'—':(gap>=0?'+':'')+Math.round(gap*100)}</td></tr>`;
+}
+function renderBreakdown(rows){
+  const head=`<thead><tr><th>List</th><th>Graded</th><th>Hit</th><th>Model said</th><th>Gap</th></tr></thead><tbody>`;
+  $('bylist').innerHTML=head+
+    recordRow('Top 25 Surest', rows.filter(p=>(p.lists||'').includes('T')))+recordRow('Value spots', rows.filter(p=>(p.lists||'').includes('V')))+
+    recordRow('Any recommended', rows.filter(p=>p.lists))+
+    recordRow('Not recommended', rows.filter(p=>!p.lists))+'</tbody>';
+  const stats=uniq(rows.map(p=>p.stat)).sort((a,b)=>statLabel(a).localeCompare(statLabel(b)));
+  const sub = pkF.list==='all'? rows : rows.filter(p=> pkF.list==='listed'? !!p.lists : (p.lists||'').includes(pkF.list));
+  $('byprop').innerHTML=head.replace('<th>List</th>','<th>Prop</th>')+stats.map(sk=>recordRow(statLabel(sk), sub.filter(p=>p.stat===sk))).join('')+'</tbody>';
+}
+function drawCalibration(graded){
+  const svg=$('calchart'), tbl=$('caltbl');
+  const C={hit:cv('--hit'),accent:cv('--accent'),line:cv('--line'),muted:cv('--muted'),text:cv('--text'),s2:cv('--surface-2')};
+  const B=[[0.5,0.6],[0.6,0.7],[0.7,0.8],[0.8,0.9],[0.9,1.01]];
+  const rows=B.map(([a,b])=>{ const g=graded.filter(p=>p.prob>=a&&p.prob<b); const h=g.filter(p=>p.res==='hit').length;
+    return {a,b:Math.min(b,1),n:g.length,hit:g.length?h/g.length:null,pred:g.length?g.reduce((s,p)=>s+p.prob,0)/g.length:null}; });
+  const W=520,H=240,padL=42,padR=14,padT=14,padB=34, pw=W-padL-padR, ph=H-padT-padB;
+  const x=v=>padL+(v-0.5)/0.5*pw, y=v=>padT+ph-(v-0.5)/0.5*ph;
+  let s=`<line x1="${x(0.5)}" y1="${y(0.5)}" x2="${x(1)}" y2="${y(1)}" stroke="${C.muted}" stroke-dasharray="4 4"/>`;
+  [0.5,0.6,0.7,0.8,0.9,1].forEach(v=>{ s+=`<text x="${padL-6}" y="${y(v)+4}" text-anchor="end" font-size="11" fill="${C.muted}" font-family="${DISP}">${Math.round(v*100)}%</text>`;
+    s+=`<text x="${x(v)}" y="${H-padB+16}" text-anchor="middle" font-size="11" fill="${C.muted}" font-family="${DISP}">${Math.round(v*100)}%</text>`; });
+  s+=`<text x="${padL+pw/2}" y="${H-4}" text-anchor="middle" font-size="11" fill="${C.muted}" font-family="${DISP}">model said</text>`;
+  s+=`<text transform="translate(10 ${padT+ph/2}) rotate(-90)" text-anchor="middle" font-size="11" fill="${C.muted}" font-family="${DISP}">actually hit</text>`;
+  rows.forEach(r=>{ if(!r.n) return; const x0=x(r.a)+3, x1=x(r.b)-3, yy=y(Math.max(0.5,r.hit));
+    s+=`<rect x="${x0}" y="${Math.min(yy,y(0.5))}" width="${Math.max(2,x1-x0)}" height="${Math.abs(y(0.5)-yy)}" rx="3" fill="${C.hit}" opacity=".85"><title>${Math.round(r.a*100)}–${Math.round(r.b*100)}%: hit ${Math.round(r.hit*100)}% of ${r.n}</title></rect>`;
+    s+=`<circle cx="${(x0+x1)/2}" cy="${y(r.pred)}" r="4" fill="${C.accent}"/>`;
+    s+=`<text x="${(x0+x1)/2}" y="${Math.min(yy,y(r.pred))-7}" text-anchor="middle" font-size="11" font-weight="700" fill="${C.text}" font-family="${DISP}">${Math.round(r.hit*100)}%</text>`; });
+  svg.innerHTML=s;
+  tbl.innerHTML=`<thead><tr><th>Model said</th><th>Picks</th><th>Actually hit</th><th>Avg predicted</th><th>Gap</th></tr></thead><tbody>`+
+    rows.map(r=>`<tr><td>${Math.round(r.a*100)}–${Math.round(r.b*100)}%</td><td class="tnum">${r.n}</td><td class="tnum">${r.n?Math.round(r.hit*100)+'%':'—'}</td><td class="tnum">${r.n?Math.round(r.pred*100)+'%':'—'}</td><td class="tnum ${r.n?(r.hit-r.pred>=0?'up':'down'):''}">${r.n?((r.hit-r.pred>=0?'+':'')+Math.round((r.hit-r.pred)*100)):'—'}</td></tr>`).join('')+`</tbody>`;
+}
+function drawByWeek(graded){
+  const svg=$('wkchart'), empty=$('wkempty');
+  const C={hit:cv('--hit'),miss:cv('--miss'),line:cv('--line'),muted:cv('--muted'),text:cv('--text')};
+  const groups={}; graded.forEach(p=>{ const k=weekOf(p.date); if(!k) return; (groups[k]=groups[k]||{k,n:0,h:0}); groups[k].n++; if(p.res==='hit') groups[k].h++; });
+  const g=Object.values(groups).sort((a,b)=>a.k.localeCompare(b.k)).slice(-30);
+  if(!g.length){ svg.innerHTML=''; empty.hidden=false; return; } empty.hidden=true;
+  const W=520,H=240,padL=36,padR=10,padT=14,padB=40, pw=W-padL-padR, ph=H-padT-padB, slot=pw/g.length, bw=Math.min(slot*0.7,40);
+  const y=v=>padT+ph-v*ph; let s='';
+  [0,0.25,0.5,0.75,1].forEach(v=>{ s+=`<line x1="${padL}" y1="${y(v)}" x2="${W-padR}" y2="${y(v)}" stroke="${C.line}" stroke-width="${v===0.5?1.5:0.6}"/><text x="${padL-5}" y="${y(v)+4}" text-anchor="end" font-size="10" fill="${C.muted}" font-family="${DISP}">${Math.round(v*100)}%</text>`; });
+  g.forEach((w,i)=>{ const r=w.h/w.n, cx=padL+slot*i+slot/2;
+    s+=`<rect x="${cx-bw/2}" y="${y(r)}" width="${bw}" height="${Math.max(1,y(0)-y(r))}" rx="3" fill="${r>=0.5?C.hit:C.miss}" opacity=".9"><title>Week of ${weekLabel(w.k)}: ${w.h}/${w.n}</title></rect>`;
+    s+=`<text x="${cx}" y="${y(r)-4}" text-anchor="middle" font-size="9.5" fill="${C.text}" font-family="${DISP}">${w.n}</text>`;
+    s+=`<text x="${cx}" y="${H-padB+13}" text-anchor="middle" font-size="9.5" fill="${C.muted}" font-family="${DISP}">${weekLabel(w.k)}</text>`;
+    if(i===0||g[i-1].k.slice(0,4)!==w.k.slice(0,4)) s+=`<text x="${cx}" y="${H-padB+26}" text-anchor="middle" font-size="9.5" fill="${C.muted}" font-family="${DISP}">${w.k.slice(0,4)}</text>`; });
+  svg.innerHTML=s;
+}
+function drawProfit(priced){
+  const svg=$('pfchart'), empty=$('pfempty');
+  const C={hit:cv('--hit'),miss:cv('--miss'),line:cv('--line'),muted:cv('--muted'),text:cv('--text')};
+  const note=$('pfnote');
+  const g=[...priced].sort((a,b)=>(a.date||'').localeCompare(b.date||''));
+  if(!g.length){ svg.innerHTML=''; empty.hidden=false; note.hidden=true; return; } empty.hidden=true;
+  if(g.length<200){ note.hidden=false; note.innerHTML=`⚠ <b>Small sample</b> — ${g.length.toLocaleString()} graded bet${g.length===1?'':'s'} so far. One hot or cold week swings this a lot, so don't read too much into it yet; the real verdict comes after a few hundred.`; } else note.hidden=true;
+  let cum=0; const pts=g.map((p,i)=>{ cum+=unitsOf(p); return {i,cum}; });
+  const finalU=cum;
+  let lo=Math.min(0,...pts.map(o=>o.cum)), hi=Math.max(0,...pts.map(o=>o.cum));
+  if(hi-lo<1){ hi+=0.5; lo-=0.5; } const pd=(hi-lo)*0.12; hi+=pd; lo-=pd;
+  const W=520,H=240,padL=46,padR=14,padT=14,padB=26, pw=W-padL-padR, ph=H-padT-padB, n=pts.length;
+  const x=i=> n<=1? padL+pw/2 : padL+i/(n-1)*pw, y=v=>padT+ph-(v-lo)/(hi-lo)*ph;
+  let s='';
+  for(let t=0;t<=4;t++){ const v=lo+(hi-lo)*t/4; s+=`<line x1="${padL}" y1="${y(v)}" x2="${W-padR}" y2="${y(v)}" stroke="${C.line}" stroke-width="0.6"/><text x="${padL-6}" y="${y(v)+4}" text-anchor="end" font-size="10" fill="${C.muted}" font-family="${DISP}">${v>=0?'+':''}${v.toFixed(1)}u</text>`; }
+  if(lo<0&&hi>0) s+=`<line x1="${padL}" y1="${y(0)}" x2="${W-padR}" y2="${y(0)}" stroke="${C.muted}" stroke-width="1.2" stroke-dasharray="4 4"/>`;
+  const col=finalU>=0?C.hit:C.miss;
+  const linePath=pts.map((o,i)=>`${i?'L':'M'}${x(o.i).toFixed(1)} ${y(o.cum).toFixed(1)}`).join(' ');
+  const baseV=(0>=lo&&0<=hi)?0:lo, base=y(baseV);
+  s+=`<path d="${linePath} L${x(n-1).toFixed(1)} ${base.toFixed(1)} L${x(0).toFixed(1)} ${base.toFixed(1)} Z" fill="${col}" opacity="0.12"/>`;
+  s+=`<path d="${linePath}" fill="none" stroke="${col}" stroke-width="2"/>`;
+  s+=`<circle cx="${x(n-1).toFixed(1)}" cy="${y(pts[n-1].cum).toFixed(1)}" r="3.5" fill="${col}"/>`;
+  s+=`<text x="${W-padR}" y="${padT+12}" text-anchor="end" font-size="13" font-weight="700" fill="${C.text}" font-family="${DISP}">${finalU>=0?'+':''}${finalU.toFixed(1)}u after ${n} bet${n===1?'':'s'}</text>`;
+  s+=`<text x="${padL}" y="${H-6}" text-anchor="start" font-size="9.5" fill="${C.muted}" font-family="${DISP}">${(g[0].date||'').slice(5)}</text>`;
+  s+=`<text x="${W-padR}" y="${H-6}" text-anchor="end" font-size="9.5" fill="${C.muted}" font-family="${DISP}">${(g[n-1].date||'').slice(5)}</text>`;
+  svg.innerHTML=s;
+}
+function renderPickTable(rows){
+  const k=pkSort.key, d=pkSort.dir;
+  const sorted=[...rows].sort((a,b)=>{ const va=a[k], vb=b[k];
+    if(typeof va==='string'||typeof vb==='string') return d*String(va??'').localeCompare(String(vb??''));
+    return d*((va==null?-Infinity:va)-(vb==null?-Infinity:vb)); });
+  const shown=sorted.slice(0,pkShown);
+  const cols=[['date','Date'],['player','Player'],['team','Team'],['opp','Opp'],['stat','Prop'],['line','Line'],['side','Bet'],['prob','Model'],['px0','Price'],['actual','Actual'],['res','Result'],['lists','Lists']];
+  const th=(kk,l)=>`<th data-k="${kk}" class="${pkSort.key===kk?'sorted'+(pkSort.dir>0?' asc':''):''}">${l}</th>`;
+  const resTag=p=> p.res==='hit'?'<span class="res h">Hit</span>': p.res==='miss'?'<span class="res m">Miss</span>': p.res==='push'?'<span class="res p">Push</span>': p.res==='dnp'?'<span class="res d">DNP</span>':'<span class="res w">Pending</span>';
+  let h=`<thead><tr>${cols.map(c=>th(c[0],c[1])).join('')}</tr></thead><tbody>`;
+  shown.forEach(p=>{
+    h+=`<tr><td class="tnum">${esc(dlabel(p.date))}</td><td>${esc(p.player)} <span class="mktmuted">${esc(p.pos)}</span></td><td>${esc(p.team)}</td><td>${esc(p.opp)}</td><td>${esc(statLabel(p.stat))}</td><td class="tnum">${p.line}</td>`+
+      `<td><span class="leantag ${esc(p.side)}">${esc(p.side)}</span></td><td class="tnum">${Math.round(p.prob*100)}%${p.lo!=null&&p.hi!=null?` <span class="rng">${Math.round(p.lo*100)}–${Math.round(p.hi*100)}</span>`:''}</td>`+
+      `<td class="tnum">${p.px0!=null&&p.pxc!=null? PS.pxMove(p.px0, p.pxc, true) : p.price!=null? Math.round(p.price*100)+'¢' : '—'}</td>`+
+      `<td class="tnum">${p.actual!=null? p.actual : '—'}</td><td>${resTag(p)}</td>`+
+      `<td>${(p.lists||'').split('').filter(c=>LIST_NAME[c]).map(c=>`<span class="listchip ${c}" title="${LIST_NAME[c]}">${c}</span>`).join('')}</td></tr>`;
+  });
+  $('pktbl').innerHTML=h+'</tbody>';
+  const remaining = rows.length - shown.length, step = 150;
+  const countTxt = rows.length ? `Showing ${shown.length.toLocaleString()} of ${rows.length.toLocaleString()} picks` : `No picks match these filters`;
+  $('pkcount').textContent = countTxt;
+  $('pkcountb').textContent = remaining>0 ? countTxt : '';
+  $('pkmore').hidden = remaining<=0;
+  $('pkmore').textContent = `Show ${Math.min(step, remaining).toLocaleString()} more`;
+  $('pkmore').onclick=()=>{ pkShown+=step; renderPickTable(rows); };
+  $('pkall').hidden = remaining<=0;
+  $('pkall').textContent = `Show all ${rows.length.toLocaleString()}`;
+  $('pkall').onclick=()=>{ pkShown=rows.length; renderPickTable(rows); };
+  $('pktbl').querySelectorAll('th').forEach(t=>t.onclick=()=>{ const kk=t.dataset.k; if(!kk) return;
+    if(pkSort.key===kk) pkSort.dir*=-1; else { pkSort.key=kk; pkSort.dir=['player','team','opp','stat','side','lists'].includes(kk)?1:-1; } renderPickTable(rows); });
 }
 
 // ---- Tools: watchlist, compare, parlay ----
@@ -1406,7 +1648,7 @@ function updatePlayerBtns(){ const box=$('playerbtns'), p=state.player; if(!box)
   $('cmpadd').textContent = c? '⚖ In compare' : '⚖ Compare';
 }
 function playerModel(p, sk, line){ const vals=valuesOf(p, sk); if(vals.length<3) return null;
-  const ctx=contextFor(p, sk); return calMp(modelProb(vals, line, floorFor(sk), ctx.scale)); }
+  const ctx=contextFor(p, sk); return calMp(modelProb(vals, line, floorFor(sk), ctx.scale, CAL[sk])); }
 function renderWatch(){ const body=$('watchbody'); if(!body) return;
   const items=WATCH.map(id=>byId[id]).filter(p=>p&&p.g&&p.g.length);
   if(!items.length){ body.innerHTML='<p class="mktnote">No players starred yet. Open a player in the <b>Player</b> tab and tap <b>☆ Watch</b>.</p>'; return; }
@@ -1519,7 +1761,7 @@ function parseBetSlip(text){
   return legs;
 }
 function probForSlip(p, sk, line, side){ const vals=valuesOf(p,sk); if(vals.length<3) return null;
-  const mp=calMp(modelProb(vals, line, floorFor(sk), contextFor(p,sk).scale)); if(!mp) return null;
+  const mp=calMp(modelProb(vals, line, floorFor(sk), contextFor(p,sk).scale, CAL[sk])); if(!mp) return null;
   return side==='over'? {prob:mp.over,lo:mp.lo,hi:mp.hi} : {prob:mp.under,lo:1-mp.hi,hi:1-mp.lo}; }
 function renderSlip(legs, raw){
   const body=$('slipbody');
@@ -1584,7 +1826,7 @@ render();
 (function renderRecords(){ const R=DB.record||{};
   [['recT','T'],['recV','V'],['recG','G']].forEach(([id,k])=>{ const el=$(id); if(!el) return; const r=R[k];
     if(!r||!r.n){ el.innerHTML='· live record: no graded picks yet — <a href="#past" onclick="showTab(\'past\');return false;">Past picks</a>'; return; }
-    el.innerHTML=`· <b>live record ${r.hit}/${r.n} (${Math.round(100*r.hit/r.n)}%)</b> — <a href="#past" onclick="showTab('past');return false;">details</a>`; }); })();
+    el.innerHTML=`· <b>live record ${r.hit}/${r.n} (${Math.round(100*r.hit/r.n)}%)</b> — <a href="#past" onclick="showTab('past');return false;">details</a>`+(r.clvN? ` · price moved its way on <b>${r.clvUp} of ${r.clvN}</b> (avg ${r.clv>=0?'+':''}${r.clv}¢)<button type="button" class="qhelp hq" data-help="clv" aria-expanded="false" aria-label="What is closing line value?"><span class="qi" aria-hidden="true">?</span></button>` : ''); }); })();
 // "Scan the board" re-pulls the latest recorded board and re-renders every table.
 (function(){ const b=$('edgescan'); if(!b) return;
   b.onclick=()=>{ const st=$('edgestatus'); if(st) st.textContent='Scanning the board…'; loadPicks(); }; })();

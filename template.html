@@ -607,8 +607,8 @@ table td,table th,thead th,tbody td,.edgetbl td,.edgetbl th,.caltbl td,.caltbl t
 .valrules .vrfoot b{color:#fff}
 </style>
 
-<link rel="stylesheet" href="app.css?v=20260930l">
-<script src="app.js?v=20260930l"></script>
+<link rel="stylesheet" href="app.css?v=20261001a">
+<script src="app.js?v=20261001a"></script>
 
 <header class="apptop">
   <div class="apptop-in">
@@ -970,13 +970,18 @@ function pct(p){ return Math.round(p*100)+'%'; }
 function cents(p){ return p==null? '—' : Math.round(p*100)+'¢'; }
 
 // ==== MODEL (mirrored in build.py — keep identical) ====
-const MODEL = {halfLife:6, maxGames:20, priorK:0.5, bwConst:0.9, bwFloorCount:0.35, bwFloorYards:1.0, z:1.2816};
+const MODEL = {halfLife:8, maxGames:30, priorK:0.5, bwConst:0.9, bwFloorCount:0.35, bwFloorYards:1.0, bwFloorTd:0.25, z:1.2816};
+const TD_STATS = new Set(['rec_td','rush_td','scrim_td']);   // "anytime"-style TD props: their own smoothing floor
 const CTX = {betaPts:{pass:0.25, rush:0.25, rec:0.25}, betaSpr:{pass:0, rush:0, rec:0}, gamma:{pass:0.75, rush:0.25, rec:0.5}, usage:0.5, clampLo:0.6, clampHi:1.6};
 const COUNT_STATS = new Set(['pass_td','pass_att','pass_cmp','pass_int','rush_att','rush_td','rec','tgt','rec_td','scrim_td']);
 function erf(x){ const s=x>=0?1:-1; x=Math.abs(x); const t=1/(1+0.3275911*x);
   const y=1-(((((1.061405429*t-1.453152027)*t)+1.421413741)*t-0.284496736)*t+0.254829592)*t*Math.exp(-x*x); return s*y; }
 function ncdf(x){ return 0.5*(1+erf(x/Math.sqrt(2))); }
-function modelProb(values, line, kind, scale){
+// Per-stat calibration (mirrored in the builder's CAL): log-odds -> a + b * log-odds, fitted on
+// the walk-forward backtest; only stats where it improved both held-out halves are listed.
+const CAL = {rec_yds:[-0.243, 1.014], rec:[-0.142, 0.98], rec_td:[-0.481, 0.906], tgt:[-0.121, 1.002], scrim_td:[-0.434, 0.914], rush_yds:[-0.147, 1.15], rush_att:[-0.116, 0.954], rush_td:[-0.474, 0.884]};
+function calibrate(p, cal){ const q=Math.min(1-1e-4, Math.max(1e-4, p)); return 1/(1+Math.exp(-(cal[0]+cal[1]*Math.log(q/(1-q))))); }
+function modelProb(values, line, kind, scale, cal){
   if(scale==null) scale=1;
   const v=values.slice(-MODEL.maxGames).map(x=>x*scale), n=v.length; if(!n) return null;
   const w=v.map((_,i)=>Math.pow(0.5,(n-1-i)/MODEL.halfLife));
@@ -985,14 +990,15 @@ function modelProb(values, line, kind, scale){
   let mean=0; for(let i=0;i<n;i++) mean+=w[i]*v[i]; mean/=W;
   let vr=0; for(let i=0;i<n;i++) vr+=w[i]*(v[i]-mean)*(v[i]-mean); vr/=W;
   const sd=Math.sqrt(Math.max(vr,0));
-  const floor=kind==='count'?MODEL.bwFloorCount:MODEL.bwFloorYards;
+  const floor=kind==='td'?MODEL.bwFloorTd : kind==='count'?MODEL.bwFloorCount:MODEL.bwFloorYards;
   const h=Math.max(MODEL.bwConst*sd*Math.pow(neff,-0.2), floor);
   const F=t=>{ let s=0; for(let i=0;i<n;i++) s+=w[i]*ncdf((t-v[i])/h); return s/W; };
   const loE=Math.floor(line)+0.5, hiE=Math.ceil(line)-0.5;
   const overRaw=1-F(loE), underRaw=F(hiE);
   const push=Math.max(0,1-overRaw-underRaw), tot=overRaw+underRaw;
   const pc=tot>0? overRaw/tot : 0.5, k=MODEL.priorK;
-  const p=(neff*pc+k*0.5)/(neff+k), nq=neff+k, z=MODEL.z, z2=z*z;
+  let p=(neff*pc+k*0.5)/(neff+k); if(cal) p=calibrate(p, cal);
+  const nq=neff+k, z=MODEL.z, z2=z*z;
   const c=(p+z2/(2*nq))/(1+z2/nq), hw=z*Math.sqrt(p*(1-p)/nq+z2/(4*nq*nq))/(1+z2/nq);
   return {over:p, under:1-p, push, lo:Math.max(0,c-hw), hi:Math.min(1,c+hw), neff, mean, sd, h, n, scale};
 }
@@ -1052,7 +1058,7 @@ const STATS = [
   {key:'scrim_td',   label:'Rush+Rec TDs',  grp:'Combo',     get:g=>g[11]+g[15]},
   {key:'fantasy',    label:'Fantasy (PPR)', grp:'Fantasy',   get:g=>0.04*g[4]+4*g[5]-2*g[8]+0.1*g[10]+6*g[11]+g[12]+0.1*g[14]+6*g[15]},
 ];
-STATS.forEach(s=>{ s.kind = COUNT_STATS.has(s.key)?'count':'yards'; });
+STATS.forEach(s=>{ s.kind = TD_STATS.has(s.key)?'td' : COUNT_STATS.has(s.key)?'count':'yards'; });
 const STATMAP = Object.fromEntries(STATS.map(s=>[s.key,s]));
 const GRPORDER = ['Passing','Rushing','Receiving','Combo','Fantasy'];
 const POS_DEFAULT = {QB:'pass_yds', RB:'rush_yds', FB:'rush_yds', WR:'rec_yds', TE:'rec_yds'};
@@ -1097,7 +1103,7 @@ if(WEEK.week){ $('dnweek').textContent = 'Week '+WEEK.week; $('dnweekbox').hidde
 (function renderRecords(){ const R=DB.record||{};
   ['T','V'].forEach(k=>{ const r=R[k], el=$('rec'+k); if(!el) return;
     if(!r||!r.n){ el.innerHTML='· live record: no graded picks yet — <a href="#picks" onclick="showTab(\'picks\');return false;">Past picks</a>'; return; }
-    el.innerHTML=`· <b>live record ${r.hit}/${r.n} (${Math.round(100*r.hit/r.n)}%)</b> — <a href="#picks" onclick="showTab(\'picks\');return false;">details</a>`; }); })();
+    el.innerHTML=`· <b>live record ${r.hit}/${r.n} (${Math.round(100*r.hit/r.n)}%)</b> — <a href="#picks" onclick="showTab(\'picks\');return false;">details</a>`+(r.clvN? ` · price moved its way on <b>${r.clvUp} of ${r.clvN}</b> (avg ${r.clv>=0?'+':''}${r.clv}¢)<button type="button" class="qhelp hq" data-help="clv" aria-expanded="false" aria-label="What is closing line value?"><span class="qi" aria-hidden="true">?</span></button>` : ''); }); })();
 (function renderRef(){ const b=$('refbanner');
   if(REFERRAL.url){ b.href=REFERRAL.url; b.textContent=REFERRAL.text; b.hidden=false; } else b.hidden=true;
   const b2=$('refbanner2'); if(REFERRAL2.url){ b2.href=REFERRAL2.url; b2.textContent=REFERRAL2.text; b2.hidden=false; } else b2.hidden=true; })();
@@ -1175,7 +1181,7 @@ function contextFor(p, sk, oppOverride, gameOverride){
 }
 function currentOpp(){ return oppTouched? ($('oppsel').value||null) : null; }
 function injMult(p, sk){ const b=p&&p.inj_boost; if(!b) return 1; const f=statFamily(sk,p.p); return (f==='rec'?b.rec:f==='rush'?b.rush:1)||1; }
-function modelFor(p, sk, line, ctx){ const st=STATMAP[sk]; if(!st) return null; const c=ctx||contextFor(p,sk,p===state.player?currentOpp():null); return calMp(modelProb(valuesOf(p,sk), line, st.kind, c.scale * injMult(p, sk))); }
+function modelFor(p, sk, line, ctx){ const st=STATMAP[sk]; if(!st) return null; const c=ctx||contextFor(p,sk,p===state.player?currentOpp():null); return calMp(modelProb(valuesOf(p,sk), line, st.kind, c.scale * injMult(p, sk), CAL[sk])); }
 function probFor(p, sk, line, side, ctx){ const mp=modelFor(p,sk,line,ctx); if(!mp) return null;
   return side==='over'? {prob:mp.over, lo:mp.lo, hi:mp.hi, mp} : {prob:mp.under, lo:1-mp.hi, hi:1-mp.lo, mp}; }
 function reseedLine(){
@@ -1290,7 +1296,7 @@ function buildWhy(p, sk, line, side, mp, ctx){
   const k=MODEL.priorK, neff=adj.neff, used=Math.min(MODEL.maxGames, vals.length);
   const unshrink = o => (o*(neff+k)-k*0.5)/neff;           // undo the pull toward 50/50
   const pHist=S(unshrink(hist.over)), pAdj=S(unshrink(adj.over));
-  const pShrunk=S(adj.over), pFinal=S(mp.over);
+  const pShrunk=S(adj.over), pFinal=S(mp.over), pCal=CAL[sk]? S(calibrate(adj.over, CAL[sk])) : pShrunk;
   const w=[]; for(let i=0;i<used;i++) w.push(Math.pow(0.5,(used-1-i)/MODEL.halfLife));
   const W=w.reduce((a,b)=>a+b,0), w5=w.slice(-5).reduce((a,b)=>a+b,0)/W;
   const z = hist.sd>0? (line-hist.mean)/hist.sd : 0;
@@ -1341,10 +1347,15 @@ function buildWhy(p, sk, line, side, mp, ctx){
       ? `${neff<8?'That’s thin':'That’s a moderate sample'}, so the model pulls the number back toward a coin flip: <b>${pct(pAdj)} → ${pct(pShrunk)}</b>.`
       : `That’s enough history that the pull toward a coin flip barely registers (<b>${pct(pShrunk)}</b>).`)]);
 
+  if(CAL[sk] && !same(pShrunk, pCal)){
+    R.push(['📐','Correction for this prop',
+      `On the backtest, ${esc(st.label.toLowerCase())} props read a few points ${pCal<pShrunk===(side==='over')?'high on overs':'low on overs'}, so the chance is corrected `+
+      `with a fit from past games it wasn't tuned on: <b>${pct(pShrunk)} → ${pct(pCal)}</b>.`]);
+  }
   if(Math.abs(T-1)>0.005){
     R.push(['🎚️','Calibration from its own record',
       `The site’s graded picks say the model has been running <b>${T>1?'a little hot':'a little cold'}</b>, so every chance is `+
-      `${T>1?'softened':'sharpened'} by a temperature of <b>${T.toFixed(2)}</b>: <b>${pct(pShrunk)} → ${pct(pFinal)}</b>. `+
+      `${T>1?'softened':'sharpened'} by a temperature of <b>${T.toFixed(2)}</b>: <b>${pct(pCal)} → ${pct(pFinal)}</b>. `+
       `<a href="#picks" onclick="showTab('picks');return false;">See the calibration chart</a>.`]);
   }
 
@@ -1854,7 +1865,8 @@ function liveCell(d){
   const off = '';   // an off-line market never reaches here
   const sub = edge==null? (1/px).toFixed(2)+'\u00d7' : signed(edge)+' edge \u00b7 '+(1/px).toFixed(2)+'\u00d7';
   const gap = (d.ask!=null && Math.abs(d.ask-px)>=0.03)? boardBare : '';
-  return '<span class="pmpx '+cls+'">'+Math.round(px*100)+'\u00a2</span>'+off+' <span class="rng">'+sub+'</span>'+gap;
+  const open = (DB.open||{})[d.mk+'|'+d.side];   // cents, the price the pick was first recorded at
+  return '<span class="pmpx '+cls+'">'+Math.round(px*100)+'\u00a2</span>'+off+' <span class="rng">'+sub+'</span>'+gap+(open!=null? PS.pxMove(open/100, px) : '');
 }
 function liveTd(r){
   const d={mk:mkOf(r), side:r.side||'over', line:r.line, prob:r.prob==null?null:r.prob, ask:r.price==null?null:r.price};
@@ -2181,7 +2193,7 @@ function apCandidates(teamsSet){
       const vals=p.g.map(st.get), line=seedLine(vals);
       if(line < (sk==='pass_yds'?150 : st.kind==='yards'?30 : 3.5)) return;
       const cs=contextScale(statFamily(sk,p.p),hist,gamePts,gameSpr,defRatioFor(opp,p.p,sk),usageOf(p.u));
-      const mp=calMp(modelProb(vals,line,st.kind,cs.scale)); if(!mp||mp.neff<5) return;
+      const mp=calMp(modelProb(vals,line,st.kind,cs.scale,CAL[sk])); if(!mp||mp.neff<5) return;
       out.push({p, sk, line, side:'over', prob:mp.over, neff:mp.neff, gid:(wg.id||wg.away+'@'+wg.home)});
     });
   });
@@ -2481,7 +2493,7 @@ function generateDigest(){
       substantive=true;
       if(out) return;
       const cs=contextScale(statFamily(sk,p.p), hist, gamePts, gameSpr, defRatioFor(opp,p.p,sk), usageOf(p.u));
-      const mp=calMp(modelProb(vals, line, st.kind, cs.scale)); if(!mp) return;
+      const mp=calMp(modelProb(vals, line, st.kind, cs.scale, CAL[sk])); if(!mp) return;
       const tc=trapCheck(p, sk, line, 'over', mp, {on:true, scale:cs.scale, opp});
       cands.push({p, sk, line, prob:mp.over, neff:mp.neff, opp, trap:tc.trap, raw:tc.raw, reasons:tc.reasons});
     });
@@ -2542,7 +2554,7 @@ function weekTopPicks(n){
       const vals=p.g.map(st.get), line=seedLine(vals);
       if(line < (sk==='pass_yds'?150 : st.kind==='yards'?30 : 3.5)) return;
       const cs=contextScale(statFamily(sk,p.p),hist,gamePts,gameSpr,defRatioFor(opp,p.p,sk),usageOf(p.u));
-      const mp=calMp(modelProb(vals,line,st.kind,cs.scale)); if(!mp||mp.neff<6) return;
+      const mp=calMp(modelProb(vals,line,st.kind,cs.scale,CAL[sk])); if(!mp||mp.neff<6) return;
       if(!best||mp.over>best.prob) best={p, sk, line, prob:mp.over, label:STATMAP[sk].label, opp, home, date:wg.date};
     });
     if(best) out.push(best);
@@ -2738,12 +2750,13 @@ function renderPicks(){
   const hits=graded.filter(p=>p.res==='hit').length, pushes=rows.filter(p=>p.res==='push').length, pending=rows.filter(p=>p.res==null).length, dnp=rows.filter(p=>p.res==='dnp').length;
   const avgPred=graded.length? graded.reduce((a,p)=>a+p.prob,0)/graded.length : null;
   const priced=graded.filter(p=>p.price), units=priced.reduce((a,p)=>a+(p.res==='hit'? 100/p.price-1 : -1),0), roi=priced.length? units/priced.length*100 : null;
-  const showProfit = priced.length>0 && units>0;
+  const showProfit = priced.length>0;   // shown win or lose: a record that hides its losses isn't one
   $('pksummary').innerHTML=`<div class="parlaysum" style="margin-top:4px">`+
     `<div><div class="lab">Graded</div><div class="big">${graded.length.toLocaleString()}</div><div class="sub">${pushes} push · ${dnp} DNP · ${pending} pending</div></div>`+
     `<div><div class="lab">Hit rate</div><div class="big ${graded.length&&hits/graded.length>=0.5?'hit':''}">${graded.length? Math.round(100*hits/graded.length)+'%' : '—'}</div><div class="sub">${hits} of ${graded.length}</div></div>`+
     `<div><div class="lab">Model said</div><div class="big">${avgPred!=null? Math.round(avgPred*100)+'%' : '—'}</div><div class="sub">average predicted chance</div></div>`+
-    (showProfit ? `<div><div class="lab">Units won</div><div class="big hit">+${units.toFixed(1)}u</div><div class="sub">${priced.length.toLocaleString()} priced bets · +${roi.toFixed(0)}% ROI</div></div>` : ``)+
+    (showProfit ? `<div><div class="lab">Units ${units>=0?'won':'lost'}</div><div class="big ${units>=0?'hit':''}"${units<0?' style="color:var(--miss)"':''}>${units>=0?'+':'−'}${Math.abs(units).toFixed(1)}u</div>`+
+      `<div class="sub">${priced.length.toLocaleString()} priced bets · ${roi>=0?'+':'−'}${Math.abs(roi).toFixed(0)}% ROI</div></div>` : ``)+
   `</div>`;
   drawCalibration(graded); drawByWeek(graded); $('pfpanel').hidden=!showProfit; if(showProfit) drawProfit(priced); renderBreakdown(pkRows(true));
   renderPickTable(pkF.res==='pending' ? rows : rows.filter(p=>p.res!=null));
@@ -2836,7 +2849,7 @@ function renderPickTable(rows){
     if(typeof va==='string'||typeof vb==='string') return d*String(va??'').localeCompare(String(vb??''));
     return d*((va==null?-Infinity:va)-(vb==null?-Infinity:vb)); });
   const shown=sorted.slice(0,pkShown);
-  const cols=[['date','Week'],['player','Player'],['team','Team'],['opp','Opp'],['stat','Prop'],['line','Line'],['side','Bet'],['prob','Model'],['actual','Actual'],['res','Result'],['lists','Lists'],['season','Season']];
+  const cols=[['date','Week'],['player','Player'],['team','Team'],['opp','Opp'],['stat','Prop'],['line','Line'],['side','Bet'],['prob','Model'],['px0','Price'],['actual','Actual'],['res','Result'],['lists','Lists'],['season','Season']];
   const th=(kk,l)=>`<th data-k="${kk}" class="${pkSort.key===kk?'sorted'+(pkSort.dir>0?' asc':''):''}">${l}</th>`;
   const resTag=p=> p.res==='hit'?'<span class="res h">Hit</span>': p.res==='miss'?'<span class="res m">Miss</span>': p.res==='push'?'<span class="res p">Push</span>': p.res==='dnp'?'<span class="res d">DNP</span>':'<span class="res w">Pending</span>';
   let h=`<thead><tr>${cols.map(c=>th(c[0],c[1])).join('')}</tr></thead><tbody>`;
@@ -2844,6 +2857,7 @@ function renderPickTable(rows){
     const wk = p.week>18? 'PO' : 'W'+p.week;
     h+=`<tr><td class="tnum">${p.season} ${wk} <span class="mktmuted">${esc((p.date||'').slice(5))}</span></td><td>${esc(p.player)} <span class="mktmuted">${esc(p.pos)}</span></td><td>${esc(p.team)}</td><td>${esc(p.opp)}</td><td>${esc(statLabel(p.stat))}</td><td class="tnum">${p.line}</td>`+
       `<td><span class="leantag ${p.side}">${p.side}</span></td><td class="tnum">${Math.round(p.prob*100)}% <span class="rng">${Math.round(p.lo*100)}–${Math.round(p.hi*100)}</span></td>`+
+      `<td class="tnum">${p.px0!=null&&p.pxc!=null? PS.pxMove(p.px0/100, p.pxc/100, true) : p.price? p.price+'¢' : '—'}</td>`+
       `<td class="tnum">${p.actual!=null? p.actual : '—'}</td><td>${resTag(p)}</td>`+
       `<td>${(p.lists||'').split('').filter(c=>LIST_NAME[c]).map(c=>`<span class="listchip ${c}" title="${LIST_NAME[c]}">${c}</span>`).join('')}</td><td class="mktmuted">${p.season}</td></tr>`;
   });
