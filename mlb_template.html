@@ -1519,12 +1519,13 @@ function renderPicks(){
   const hits=graded.filter(p=>p.res==='hit').length, pushes=rows.filter(p=>p.res==='push').length, pending=rows.filter(p=>p.res==null).length, dnp=rows.filter(p=>p.res==='dnp').length;
   const avgPred=graded.length? graded.reduce((a,p)=>a+p.prob,0)/graded.length : null;
   const priced=graded.filter(p=>p.price), units=priced.reduce((a,p)=>a+unitsOf(p),0), roi=priced.length? units/priced.length*100 : null;
-  const showProfit = priced.length>0 && units>0;
+  const showProfit = priced.length>0;   // shown win or lose: a record that hides its losses isn't one
   $('pksummary').innerHTML=`<div class="parlaysum" style="margin-top:4px">`+
     `<div><div class="lab">Graded</div><div class="big">${graded.length.toLocaleString()}</div><div class="sub">${pushes} push · ${dnp} DNP · ${pending} pending</div></div>`+
     `<div><div class="lab">Hit rate</div><div class="big ${graded.length&&hits/graded.length>=0.5?'hit':''}">${graded.length? Math.round(100*hits/graded.length)+'%' : '—'}</div><div class="sub">${hits} of ${graded.length}</div></div>`+
     `<div><div class="lab">Model said</div><div class="big">${avgPred!=null? Math.round(avgPred*100)+'%' : '—'}</div><div class="sub">average predicted chance</div></div>`+
-    (showProfit ? `<div><div class="lab">Units won</div><div class="big hit">+${units.toFixed(1)}u</div><div class="sub">${priced.length.toLocaleString()} priced bets · +${roi.toFixed(0)}% ROI</div></div>` : ``)+
+    (showProfit ? `<div><div class="lab">Units ${units>=0?'won':'lost'}</div><div class="big ${units>=0?'hit':''}"${units<0?' style="color:var(--miss)"':''}>${units>=0?'+':'−'}${Math.abs(units).toFixed(1)}u</div>`+
+      `<div class="sub">${priced.length.toLocaleString()} priced bets · ${roi>=0?'+':'−'}${Math.abs(roi).toFixed(0)}% ROI</div></div>` : ``)+
   `</div>`;
   drawCalibration(graded); drawByWeek(graded); $('pfpanel').hidden=!showProfit; if(showProfit) drawProfit(priced); renderBreakdown(pkRows(true));
   renderPickTable(pkF.res==='pending' ? rows : rows.filter(p=>p.res!=null));
