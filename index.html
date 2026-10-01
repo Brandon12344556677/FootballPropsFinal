@@ -170,6 +170,31 @@ h2 i{color:var(--green)}
 .demo-go{display:block;margin-top:14px;color:var(--green);font-family:var(--cond);font-weight:700;text-transform:uppercase;letter-spacing:.1em;font-size:13px;text-decoration:none}
 .demo-go:hover{text-decoration:underline}
 
+/* bet of the day: two slots, each a pick card from app.css plus the record */
+#botd{padding:64px 0 8px}
+.botdgrid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:28px}
+.botdslot{background:var(--surface);border:1px solid var(--line);border-radius:22px;padding:18px;display:flex;flex-direction:column;gap:12px;min-width:0}
+.botdslot.lock{border-color:rgba(34,208,127,.45);box-shadow:0 0 0 1px rgba(34,208,127,.12),0 18px 40px rgba(0,0,0,.25)}
+.bs-head{display:flex;justify-content:space-between;align-items:baseline;gap:8px 12px;flex-wrap:wrap}
+.bs-title{font-family:var(--display);font-weight:800;font-size:21px;letter-spacing:-.01em}
+.bs-rec{font-family:var(--cond);font-weight:700;text-transform:uppercase;letter-spacing:.08em;font-size:13.5px;color:var(--soft);white-space:nowrap}
+.bs-rec b{color:var(--text)} .bs-rec .up{color:var(--green)} .bs-rec .dn{color:var(--red)}
+.bs-blurb{color:var(--muted);font-size:14px;margin:-4px 0 0}
+.botdslot .pickcard{color:inherit;text-decoration:none}
+.botdslot .pickcard:focus-visible{outline:2px solid var(--green);outline-offset:2px}
+.botdslot .pc-who .cd{display:inline;color:var(--soft)}
+.bs-st{font-family:var(--cond);font-weight:700;text-transform:uppercase;letter-spacing:.08em;font-size:13px;white-space:nowrap;padding:3px 10px;border-radius:999px;border:1px solid var(--line);color:var(--soft)}
+.bs-st.live{color:var(--gold);border-color:rgba(232,181,74,.5)}
+.bs-st.hit{background:var(--green);border-color:var(--green);color:var(--green-ink)}
+.bs-st.miss{background:rgba(235,111,125,.14);border-color:rgba(235,111,125,.6);color:var(--red)}
+.bs-facts{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:13.5px;color:var(--soft);margin:0}
+.bs-facts b{color:var(--text)}
+.bs-empty{border:1px dashed var(--line);border-radius:16px;padding:26px 16px;text-align:center;color:var(--soft);font-size:15px;margin:0}
+.bs-dots{display:flex;align-items:center;gap:5px;font-size:12px;color:var(--muted)}
+.bs-dots i{width:11px;height:11px;border-radius:50%;display:inline-block;background:var(--line)}
+.bs-dots i.hit{background:var(--green)} .bs-dots i.miss{background:var(--red)} .bs-dots i.push,.bs-dots i.void{background:var(--muted)}
+@media(max-width:760px){#botd{padding:44px 0 0}.botdgrid{grid-template-columns:1fr;margin-top:20px}.botdslot{padding:14px}}
+
 /* today feed: pick cards from app.css, as links */
 #today{padding:64px 0 8px}
 .todayfeed{margin-top:28px}
@@ -461,6 +486,17 @@ footer .fine a{color:#8394ab}
       <div class="stat" role="listitem"><b><em>$</em>0</b><span>100% free to use</span></div>
     </div>
   </div>
+
+  <!-- BET OF THE DAY: a Lock and a Value Shot, from botd.json (botd.py): picked once a day, never swapped, graded in public -->
+  <section id="botd" aria-labelledby="botd-h" hidden>
+    <div class="wrap">
+      <p class="kicker" id="botdkick">Bet of the Day</p>
+      <h2 id="botd-h">Today's <i>Lock</i> &amp; <i>Value Shot</i>.</h2>
+      <p class="sub">One of each, picked from all four sports once a day, locked in when it posts and graded in public — the wins and the losses.</p>
+      <div class="app botdgrid"><div class="botdslot lock" id="botd-lock"></div><div class="botdslot" id="botd-value"></div></div>
+      <p class="todaynote" id="botdnote"></p>
+    </div>
+  </section>
 
   <!-- TODAY: the best bets across all four sports, from today.json (rebuilt hourly) -->
   <section id="today" aria-labelledby="today-h" hidden>
@@ -829,6 +865,64 @@ function countUp(el){ const to=+el.dataset.count; if(!to||el.dataset.done) retur
     DEMO.vals=v; DEMO.line=line; DEMO.side=p.side; DEMO.pct=pv; drawBars();
     const arc=document.getElementById('arc'); if(arc && arc.dataset.done) ringTo(pv);   // already animated the example: sweep to the real number
   }
+
+  // Bet of the Day (botd.json, botd.py): today's entry from 11 AM ET; before that, yesterday's
+  // picks with their results. A pick never changes once posted; the record counts every one.
+  const SLOT={lock:{t:'🔒 Lock of the Day', blurb:'The market’s favorite that the model also backs: short odds, the highest hit rate.'},
+              value:{t:'🎯 Value Shot', blurb:'Pays 2× or more. The model rates it well above the market — the riskier pick.'}};
+  const etDay=d=>new Intl.DateTimeFormat('en-CA',{timeZone:'America/New_York'}).format(d);
+  const fmtDay=iso=>new Date(iso+'T12:00:00Z').toLocaleDateString([], {weekday:'short', month:'short', day:'numeric', timeZone:'UTC'});
+  const etTime=iso=>new Date(iso).toLocaleTimeString([], {hour:'numeric', minute:'2-digit', timeZone:'America/New_York'});
+  const units=u=>`${u>=0?'+':'−'}${Math.abs(u).toFixed(2)}u`;
+  function bsStatus(p){
+    if(p.res==='hit') return `<span class="bs-st hit">✓ Hit${p.actual!=null?` · ${esc(p.actual)}`:''}</span>`;
+    if(p.res==='miss') return `<span class="bs-st miss">✗ Miss${p.actual!=null?` · ${esc(p.actual)}`:''}</span>`;
+    if(p.res==='push') return `<span class="bs-st">Push</span>`;
+    if(p.res==='void') return `<span class="bs-st">Void · didn’t play</span>`;
+    return Date.parse(p.start)>Date.now()? `<span class="bs-st">Pending</span>` : `<span class="bs-st live">Live · graded after the final</span>`;
+  }
+  function bsCard(p){
+    const pv=Math.round(p.prob*100), tier=p.prob>=0.9?'hi':p.prob>=0.7?'mid':'lo';
+    const href=`./${p.sport}.html#${PS.hashFor(p.pid, p.stat, p.line, p.side, p.player)}`;
+    return `<a class="pickcard ${tier}" href="${esc(href)}" style="${PS.teamVars(p.sport, p.team)}">`+
+      `<div class="pc-top"><span class="av">${esc(initials(p.player))}</span>`+
+        `<div class="pc-who"><b>${esc(p.player)}</b><span><span class="tbadge">${esc(p.team)}</span>vs ${esc(p.opp)}</span><span>${SPORT[p.sport]||''} · <span class="cd" data-cd="${esc(p.start)}">${PS.until(Date.parse(p.start))}</span></span></div>`+
+        `<div class="pc-prob"><div class="ring" style="--p:${pv}"><b>${pv}<small>%</small></b></div><span>model</span></div></div>`+
+      `<div class="pc-bet"><span class="leantag ${esc(p.side)}">${esc(p.side)}</span><b>${esc(p.line)}</b><span>${esc(p.statText)}</span>${PS.spark(p.l10||[], p.line, p.side)}</div>`+
+      `<div class="pc-foot"><span class="pc-price"><span class="pmpx">${Math.round(p.price*100)}¢</span> <span class="rng">${(1/p.price).toFixed(2)}× payout</span></span>${bsStatus(p)}</div>`+
+    `</a>`;
+  }
+  function bsSlot(slot, day, b){
+    const m=SLOT[slot], r=(b.record||{})[slot]||{}, h=(b.hist||{})[slot]||{}, p=day&&day[slot];
+    const rec=(r.n||r.push||r.void)? `Record <b>${r.hit}–${r.miss}</b>${r.push?`–${r.push}`:''} · <span class="${r.units>=0?'up':'dn'}">${units(r.units||0)}</span>` : 'Record starts today';
+    let html=`<div class="bs-head"><span class="bs-title">${m.t}</span><span class="bs-rec">${rec}</span></div><p class="bs-blurb">${m.blurb}</p>`;
+    if(p){
+      const base=h.n>=10? `Picks like this: <b>${h.hit} of ${h.n} hit (${Math.round(100*h.hit/h.n)}%)</b>${h.n<50?' — small sample':''}` : 'Too few graded picks like this yet to quote a hit rate';
+      html+=bsCard(p)+`<p class="bs-facts"><span>Market <b>${Math.round(p.price*100)}%</b> · Model <b>${Math.round(p.prob*100)}%</b></span><span>Posted ${esc(etTime(p.picked))} ET · locked</span><span>${base}</span></p>`;
+    } else if(!day){
+      html+=`<p class="bs-empty">Today’s pick posts at ${esc(b.pickFrom==='11:00'?'11 AM':b.pickFrom||'11 AM')} ET.</p>`;
+    } else if(day.closed){
+      html+=`<p class="bs-empty"><b>No bet today.</b> Nothing cleared the bar, and we don’t force a pick.</p>`;
+    } else {
+      html+=`<p class="bs-empty">Nothing has cleared the bar yet — checking every 10 minutes until 7:30 PM ET.</p>`;
+    }
+    if((r.last||[]).length) html+=`<div class="bs-dots" aria-label="Last ${r.last.length} results">Last ${r.last.length}: ${r.last.map(x=>`<i class="${esc(x)}" title="${esc(x)}"></i>`).join('')}</div>`;
+    return html;
+  }
+  function renderBotd(b){
+    const sec=document.getElementById('botd'); if(!sec||!b) return;
+    const days=b.days||[], today=etDay(new Date());
+    const day=days.find(d=>d.date===today), prev=[...days].reverse().find(d=>d.date<today);
+    const show=day||(prev&&(prev.lock||prev.value)? prev : null);
+    document.getElementById('botdkick').textContent = day? `Bet of the Day · ${fmtDay(day.date)}`
+      : show? `Bet of the Day · yesterday’s results · today’s post at 11 AM ET` : 'Bet of the Day';
+    document.getElementById('botd-h').innerHTML = day||!show? 'Today\'s <i>Lock</i> &amp; <i>Value Shot</i>.' : 'Yesterday\'s <i>Lock</i> &amp; <i>Value Shot</i>.';
+    ['lock','value'].forEach(s=>{ document.getElementById('botd-'+s).innerHTML=bsSlot(s, show, b); });
+    document.getElementById('botdnote').textContent='Picked from every sport’s upcoming props at the Polymarket price at that moment and never swapped afterward, even if the price moves. A player who doesn’t play is a void. Research, not betting advice — 21+.';
+    sec.hidden=false;
+  }
+  get('botd.json').then(b=>{ if(!b) return; renderBotd(b);
+    setInterval(()=>{ if(!document.hidden) get('botd.json').then(n=>{ if(n){ b=n; renderBotd(b); } }); }, 300000); });
 
   Promise.all([get('today.json'), get('weekly.json')]).then(([t,w])=>{
     PS.ticker(tickerItems(t, w));

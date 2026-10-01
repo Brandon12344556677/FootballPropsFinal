@@ -75,7 +75,7 @@ jobs:
           set -o pipefail
           python build_mlb.py 2>&1 | tee "$RUNNER_TEMP/build_mlb.log" || echo "MLB build failed — skipping MLB files this run"
 
-      - name: Build the home page's Today feed (non-fatal)
+      - name: Build the home page's Today feed and Bet of the Day (non-fatal)
         continue-on-error: true
         run: |
           set -o pipefail
@@ -116,7 +116,7 @@ jobs:
           git add -A players 2>/dev/null || true
           for f in nba.html nba.json nba_stats.json nba_picks.json \
                    nhl.html nhl.json nhl_stats.json nhl_picks.json \
-                   mlb.html mlb.json mlb_stats.json mlb_picks.json today.json posted.json top_cache.json health.json; do
+                   mlb.html mlb.json mlb_stats.json mlb_picks.json today.json botd.json posted.json top_cache.json health.json; do
             git add "$f" 2>/dev/null || true
           done
           if git diff --cached --quiet; then

@@ -15,6 +15,9 @@ Polymarket price: Value spots first (ranked by edge over the price), then, if th
 are too few of those, the likeliest picks that still pay (price 85¢ or less). One
 pick per player. The home page drops any whose game has started since.
 
+It also updates botd.json, the home page's Bet of the Day (botd.py), from the same
+upcoming picks.
+
 Standard library only. Never fails the deploy: a sport whose files are missing is
 skipped, and a failure leaves the previous today.json in place.
 """
@@ -24,6 +27,8 @@ import os
 import re
 import sys
 from zoneinfo import ZoneInfo
+
+import botd
 
 SPORTS = [
     # sport, dataset (has "record"), picks file, template (has the stat labels)
@@ -133,6 +138,7 @@ def upcoming(sport, db, picks_doc, labels, getters, now):
     cols = picks_doc["cols"]
     players = {str(p.get("id")): p for p in db.get("players") or []}
     kick = nfl_kickoffs(db) if sport == "nfl" else {}
+    week = (db.get("week") or {}).get("week")
     out = []
     for row in picks_doc["picks"]:
         p = dict(zip(cols, row))
@@ -155,6 +161,9 @@ def upcoming(sport, db, picks_doc, labels, getters, now):
             "edge": round(prob - price, 3), "value": "V" in (p.get("lists") or ""),
             "start": start.strftime("%Y-%m-%dT%H:%M:%SZ"),
             "l10": last10(sport, players.get(str(p["pid"])), p["stat"], getters),
+            # for Bet of the Day (botd.py); not written to today.json
+            "neff": p.get("neff"),
+            "flag": botd.news_flag(sport, p.get("nw"), players.get(str(p["pid"])) if sport == "nfl" else None, week),
         })
     return out
 
@@ -247,7 +256,7 @@ def main():
             print(f"  {sport}: {len(got)} upcoming priced pick(s), record {rec[sport]}")
         except Exception as e:     # one bad sport never blanks the others
             print(f"  {sport}: skipped ({e})")
-    picks = best(cands)
+    picks = [{k: v for k, v in c.items() if k not in ("neff", "flag")} for c in best(cands)]
     # [sport, start] of every upcoming value spot, so the ticker can count what's still live.
     value_live = sorted([c["sport"], c["start"]] for c in cands if c["value"])
     doc = {"gen": now.strftime("%Y-%m-%dT%H:%M:%SZ"), "record": rec, "picks": picks, "valueLive": value_live,
@@ -256,6 +265,10 @@ def main():
         json.dump(doc, f, separators=(",", ":"), ensure_ascii=False)
     kinds = sum(1 for p in picks if p["kind"] == "value")
     print(f"  {OUT}: {len(picks)} pick(s) ({kinds} value, {len(picks) - kinds} safe)")
+    try:
+        botd.run(cands, docs, now)
+    except Exception as e:     # never costs the home page its Today feed
+        print(f"  {botd.OUT}: not updated ({e})")
 
 
 if __name__ == "__main__":
