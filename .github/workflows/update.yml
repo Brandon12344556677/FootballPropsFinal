@@ -6,15 +6,17 @@ name: Update NFL data
 # blocks the NFL deploy).
 on:
   schedule:
-    # Every 10 minutes (:05, :15, ... :55): the NBA, NHL and MLB pages show the prices
-    # baked in at build time, and the closing price each pick's line value is measured
-    # against is the last one recorded before the game, so both stay within ~10 min.
-    # (The NFL board also fetches live prices in the browser.) A full run takes ~2 min,
-    # and the concurrency group below queues a run rather than overlapping one. GitHub
-    # starts scheduled runs late (8-10 min lately) and can skip some under load. No
-    # builder records or changes a pick once its game has started, so a run mid-game is
+    # Every 20 minutes (:05, :25, :45), and each run updates twice, 10 minutes apart
+    # (update_pass.sh), so the site refreshes about every 10 minutes. A 10-minute cron
+    # doesn't work: GitHub delays and drops frequent scheduled runs under load (after
+    # switching to one, no run started for 22 minutes), while this 20-minute schedule
+    # has fired reliably, 8-10 minutes after each slot. Fresh prices matter for the NBA,
+    # NHL and MLB pages (they show the prices baked in at build time) and for each pick's
+    # closing price; the NFL board also fetches live prices in the browser. A pass takes
+    # ~2 min; the concurrency group below queues a run rather than overlapping one. No
+    # builder records or changes a pick once its game has started, so a pass mid-game is
     # safe. Off the top of the hour, where GitHub delays scheduled runs the most.
-    - cron: "5,15,25,35,45,55 * * * *"
+    - cron: "5,25,45 * * * *"
   workflow_dispatch:
     inputs:
       probe:
@@ -43,99 +45,27 @@ jobs:
         with:
           python-version: "3.12"
 
-      # Each step's output is also saved to $RUNNER_TEMP/<script>.log for the health
-      # check at the end; pipefail keeps each script's own exit code.
-      - name: Build site data
-        run: |
-          set -o pipefail
-          python build.py 2>&1 | tee "$RUNNER_TEMP/build.log"
-
-      - name: Build NBA data (non-fatal)
-        continue-on-error: true
-        timeout-minutes: 6
+      # Two passes of update_pass.sh (every builder, the health check, commit + push), the
+      # second 10 minutes after the first began. A manual run does one pass.
+      - name: Update the site (two passes, 10 minutes apart)
         env:
           NBA_PROBE: ${{ github.event.inputs.probe }}
-        run: |
-          set -o pipefail
-          python build_nba.py 2>&1 | tee "$RUNNER_TEMP/build_nba.log" || echo "NBA build failed — skipping NBA files this run"
-
-      - name: Build NHL data (non-fatal)
-        continue-on-error: true
-        timeout-minutes: 6
-        env:
           NHL_PROBE: ${{ github.event.inputs.probe }}
-        run: |
-          set -o pipefail
-          python build_nhl.py 2>&1 | tee "$RUNNER_TEMP/build_nhl.log" || echo "NHL build failed — skipping NHL files this run"
-
-      - name: Build MLB data (non-fatal)
-        continue-on-error: true
-        timeout-minutes: 7
-        run: |
-          set -o pipefail
-          python build_mlb.py 2>&1 | tee "$RUNNER_TEMP/build_mlb.log" || echo "MLB build failed — skipping MLB files this run"
-
-      - name: Build the home page's Today feed and Bet of the Day (non-fatal)
-        continue-on-error: true
-        run: |
-          set -o pipefail
-          python build_today.py 2>&1 | tee "$RUNNER_TEMP/build_today.log" || echo "today.json not rebuilt this run"
-
-      # One page per most-bet player, for search engines: rebuilt once a day, sitemap every run.
-      - name: Build player pages (non-fatal)
-        continue-on-error: true
-        run: |
-          set -o pipefail
-          python build_players.py 2>&1 | tee "$RUNNER_TEMP/build_players.log" || echo "player pages not rebuilt this run"
-
-      # Once a day (first run after 11 AM ET): yesterday's Value results + today's best
-      # value, to whichever of these secrets are set. With none set, it does nothing.
-      - name: Daily post to Discord / Telegram (non-fatal)
-        continue-on-error: true
-        env:
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           POST_NOW: ${{ github.event.inputs.post }}
         run: |
-          set -o pipefail
-          python post_daily.py 2>&1 | tee "$RUNNER_TEMP/post_daily.log" || echo "daily post skipped this run"
-
-      # Reads those logs: any data source that failed, a builder that crashed, a data
-      # file gone stale, picks stuck ungraded. Records it in health.json (committed below,
-      # so it remembers across runs) and flags every open problem on the run's page.
-      - name: Data health check (non-fatal)
-        continue-on-error: true
-        run: python health.py "$RUNNER_TEMP" || true
-
-      - name: Commit and push if anything changed
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add nfl.html data.json slate.json picks.json weekly.json sitemap.xml robots.txt
-          git add -A players 2>/dev/null || true
-          for f in nba.html nba.json nba_stats.json nba_picks.json \
-                   nhl.html nhl.json nhl_stats.json nhl_picks.json \
-                   mlb.html mlb.json mlb_stats.json mlb_picks.json today.json botd.json posted.json top_cache.json health.json; do
-            git add "$f" 2>/dev/null || true
-          done
-          if git diff --cached --quiet; then
-            echo "No changes."
-          else
-            git commit -m "Auto-update data ($(date -u +'%Y-%m-%d %H:%M UTC'))"
-            # Push with rebase-retry so two runs finishing close together can't
-            # fail on a non-fast-forward.
-            for i in 1 2 3 4 5; do
-              if git push; then
-                echo "pushed"; break
-              fi
-              echo "push rejected, rebasing (attempt $i)…"
-              git pull --rebase --autostash origin main || true
-              sleep 3
-            done
+          start=$(date +%s)
+          bash update_pass.sh
+          if [ "${{ github.event_name }}" = "schedule" ]; then
+            wait=$(( start + 600 - $(date +%s) ))
+            if [ "$wait" -gt 0 ]; then sleep "$wait"; fi
+            git pull --rebase --autostash origin main || true    # anything merged meanwhile
+            bash update_pass.sh
           fi
 
       # Last, after the site is pushed: turns the run red (so GitHub emails you) when a
-      # problem has lasted ~3 hours (18 runs in a row), then at most once a day while it lasts.
+      # problem has lasted ~3 hours (18 passes in a row), then at most once a day while it lasts.
       - name: Alert if a data source keeps failing
         run: python health.py --gate
