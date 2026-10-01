@@ -32,7 +32,10 @@ finished games, records the upcoming picks with their prices, and redeploys the 
   (recency-weighted, last eight), to the 0.5 power — a back who just took over the
   job, or a starter who lost it, moves before the box score catches up. On held-out
   weeks that lowered log loss in every stat family (0.5960 -> 0.5924 over 16,993
-  cases). It's skipped when the injury boost already raises that stat. The tile
+  cases). For everything but passing stats, each past game is put on the recent
+  share by its own snap share, so games already played at the new share aren't
+  cut twice (log loss 0.55471 -> 0.55431 on odd weeks, 0.55707 -> 0.55635 on
+  even). It's skipped when the injury boost already raises that stat. The tile
   shows the multiplier, and a checkbox turns the adjustment off so you can see the
   raw history.
 - **This week strip** — opponent, kickoff, Vegas spread and total from the schedule.
