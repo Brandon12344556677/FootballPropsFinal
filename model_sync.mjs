@@ -8,13 +8,13 @@ const here = dirname(fileURLToPath(import.meta.url));
 const html = readFileSync(join(here, 'template.html'), 'utf8');
 const m = html.match(/\/\/ ==== MODEL[\s\S]*?\n([\s\S]*?)\/\/ ==== END MODEL/);
 if (!m) { console.error('MODEL block not found in template.html'); process.exit(1); }
-const api = new Function(m[1] + '\nreturn {MODEL, CTX, CAL, modelProb, seedLine, gradeResult, sideProb, ncdf, contextScale, usageOf, histContext, statFamily, defStatFor};')();
+const api = new Function(m[1] + '\nreturn {MODEL, CTX, CAL, modelProb, seedLine, gradeResult, sideProb, ncdf, contextScale, gamePer, usageOf, histContext, statFamily, defStatFor};')();
 
 const doc = JSON.parse(readFileSync(join(here, 'model_cases.json'), 'utf8'));
 let bad = 0;
 const tol = 1e-9;
 for (const c of doc.model) {
-  const got = api.modelProb(c.values, c.line, c.kind, c.scale, c.cal || undefined);
+  const got = api.modelProb(c.values, c.line, c.kind, c.scale, c.cal || undefined, c.per || undefined);
   for (const k of ['over', 'under', 'push', 'lo', 'hi', 'neff', 'mean', 'sd', 'h', 'scale']) {
     if (Math.abs(got[k] - c.expect[k]) > tol) { bad++; console.error(`mismatch ${k}: js=${got[k]} py=${c.expect[k]} for`, c.values, c.line, c.scale); }
   }
@@ -34,9 +34,15 @@ for (const c of doc.ctx) {
   const usage = api.usageOf(c.shares);
   if (Math.abs((usage ?? -1) - (c.usage ?? -1)) > tol) { bad++; console.error('usageOf mismatch', c.shares, usage, c.usage); }
   const got = api.contextScale(c.fam, c.hist, c.gamePts, c.gameSpr, c.defRatio, usage);
-  for (const k of ['scale', 'env', 'def', 'use']) if (Math.abs(got[k] - c.expect[k]) > tol) { bad++; console.error(`contextScale ${k} mismatch`, c, got); }
+  for (const k of ['scale', 'env', 'def', 'use', 'base']) if (Math.abs(got[k] - c.expect[k]) > tol) { bad++; console.error(`contextScale ${k} mismatch`, c, got); }
+}
+for (const c of doc.per) {
+  const got = api.gamePer(c.scale, c.usage, c.recent, c.shares, c.fam);
+  if ((got === null) !== (c.expect === null) || (got && got.some((x, i) => Math.abs(x - c.expect[i]) > tol))) {
+    bad++; console.error('gamePer mismatch', c, got);
+  }
 }
 if (api.statFamily('rush_rec_yds', 'WR') !== 'rec' || api.defStatFor('scrim_td', 'RB') !== 'rush_td') { bad++; console.error('family/defStat mismatch'); }
 if (api.gradeResult(70, 60.5, 'over') !== 'hit' || api.gradeResult(60, 60, 'over') !== 'push') { bad++; console.error('gradeResult mismatch'); }
 if (bad) { console.error(`${bad} mismatch(es)`); process.exit(1); }
-console.log(`JS model matches Python on ${doc.model.length} model cases + ${doc.ctx.length} context cases (tolerance ${tol}).`);
+console.log(`JS model matches Python on ${doc.model.length} model cases + ${doc.ctx.length} context cases + ${doc.per.length} per-game cases (tolerance ${tol}).`);

@@ -115,8 +115,19 @@ class ModelTests(unittest.TestCase):
         for i, (vals, line, kind) in enumerate(CASES):
             scale = [1.0, 1.15, 0.85][i % 3]
             cal = [None, B.CAL["rec"], B.CAL["rec_td"]][i % 3]     # calibrated cases too
-            mp = B.model_prob(vals, line, kind, scale, cal)
-            out.append({"values": vals, "line": line, "kind": kind, "scale": scale, "cal": cal, "expect": mp, "seed": B.seed_line(vals)})
+            per = None
+            if i % 4 == 1:                                          # per-game snap factors too
+                shares = [None if k % 5 == 0 else 0.3 + 0.6 * ((k * 7) % 10) / 10 for k in range(len(vals))]
+                per = B.game_per(scale, 0.6, 0.35, shares, "rec")
+            mp = B.model_prob(vals, line, kind, scale, cal, per)
+            out.append({"values": vals, "line": line, "kind": kind, "scale": scale, "cal": cal, "per": per, "expect": mp,
+                        "seed": B.seed_line(vals)})
+        per_cases = []
+        for scale, usage, recent, fam in ((0.765, 0.5, 0.31, "rec"), (1.2, 1.6, 0.9, "rush"), (0.62, 0.5, 0.3, "rec"),
+                                          (1.0, 1.0, 0.7, "rec"), (1.1, 0.8, 0.5, "pass"), (1.0, None, None, "rec")):
+            shares = [0.85, None, 0.9, 0.04, 0.31, 0.29, 0.6, 1.0]
+            per_cases.append({"scale": scale, "usage": usage, "recent": recent, "fam": fam, "shares": shares,
+                              "expect": B.game_per(scale, usage, recent, shares, fam)})
         ctx_cases = []
         hist_rows = [[2025, 1, "X", "REG"] + [0] * 12 + [1, 0, 44.5, -3.0], [2025, 2, "Y", "REG"] + [0] * 12 + [0, 0, 51.0, 6.5],
                      [2025, 3, "Z", "REG"] + [0] * 12 + [1, 0, None, None], [2025, 4, "W", "REG"] + [0] * 12 + [0, 0, 47.5, 1.0]]
@@ -131,7 +142,7 @@ class ModelTests(unittest.TestCase):
                                   "shares": shares, "usage": usage,
                                   "expect": B.context_scale(fam, hist, game_pts, game_spr, dr, usage)})
         with open(os.path.join(HERE, "model_cases.json"), "w", encoding="utf-8") as f:
-            json.dump({"model": out, "ctx": ctx_cases, "hist": {"rows": hist_rows, "expect": hist},
+            json.dump({"model": out, "ctx": ctx_cases, "per": per_cases, "hist": {"rows": hist_rows, "expect": hist},
                        "CTX": B.CTX, "MODEL": B.MODEL, "CAL": B.CAL}, f)
 
 
@@ -159,6 +170,29 @@ class ContextTests(unittest.TestCase):
         finally:
             B.SNAPS.clear()
             B.SNAPS.update(saved)
+
+    def test_game_per_puts_each_game_on_the_recent_share(self):
+        # A receiver back on a 31% snap count after years near 85%: the plain cut scales every
+        # game x(0.31/0.674 -> 0.5 clamp)^0.5; per game, the 85% games get that cut and the
+        # games already near 31% are left at the matchup scale.
+        usage = B.usage_of([0.31, 0.674])
+        ctx = B.context_scale("rec", {"pts": None, "spr": None}, None, None, None, usage)
+        per = B.game_per(ctx["scale"], usage, 0.31, [0.85, None, 0.30, 0.33], "rec")
+        f = [ctx["scale"] * k for k in per]
+        self.assertAlmostEqual(f[0], ctx["scale"], places=9)          # 0.31/0.85 clamps to 0.5, like the plain cut
+        self.assertAlmostEqual(f[1], ctx["scale"], places=9)          # no snap data: the plain scale
+        self.assertAlmostEqual(f[2], ctx["base"] * (0.31 / 0.30) ** 0.5, places=9)
+        self.assertAlmostEqual(f[3], ctx["base"] * (0.31 / 0.33) ** 0.5, places=9)
+        self.assertIsNone(B.game_per(ctx["scale"], usage, 0.31, [0.85, 0.3], "pass"))   # passing keeps the plain cut
+        self.assertIsNone(B.game_per(1.0, None, None, [0.85], "rec"))
+        vals = [90, 100, 150, 84]
+        a = B.model_prob(vals, 80.5, "yards", ctx["scale"], None, per)
+        b = B.model_prob([x * k for x, k in zip(vals, f)], 80.5, "yards", 1.0)
+        self.assertAlmostEqual(a["over"], b["over"], places=9)
+        plain = B.model_prob(vals, 80.5, "yards", ctx["scale"])
+        self.assertGreater(a["over"], plain["over"])                  # the low-snap games aren't cut twice
+        self.assertEqual(B.model_prob(vals, 80.5, "yards", 1.0, None, [1.0, 2.0])["over"],
+                         B.model_prob(vals, 80.5, "yards")["over"])    # misaligned factors are ignored
 
     def test_hist_context(self):
         rows = [self.ROW(44.5, -3.0), self.ROW(51.0, 6.5)]

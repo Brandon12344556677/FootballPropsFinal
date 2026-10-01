@@ -58,6 +58,7 @@ ESPN_SUM = "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summa
 #   9 rush_att 10 rush_yds 11 rush_td 12 rec 13 tgt 14 rec_yds 15 rec_td
 #   16 home(1/0)  17 target_share (0-1)
 #   18 Vegas total for that game (or null)  19 spread for the player's team (+ = favored, or null)
+#   20 offensive snap share (0-1 or null; only on players with snap usage, see game_per)
 # ---------------------------------------------------------------------------
 STAT_COLS = ["passing_yards", "passing_tds", "attempts", "completions", "passing_interceptions",
              "carries", "rushing_yards", "rushing_tds",
@@ -106,7 +107,7 @@ def stat_kind(key):
 # Polymarket price: log loss 0.6557 -> 0.6545 (the market's own price: 0.6305).
 MODEL = {"halfLife": 8.0, "maxGames": 30, "priorK": 0.5, "bwConst": 0.9, "bwFloorCount": 0.35, "bwFloorYards": 1.0,
          "bwFloorTd": 0.25, "z": 1.2816}
-MODEL_V = 2   # recorded on every live pick ("mv"); calibration uses only this version's live picks
+MODEL_V = 3   # recorded on every live pick ("mv"); calibration uses only this version's live picks
 
 # Per-stat calibration, fitted on the same walk-forward backtest: the chance's log-odds become
 # a + b * log-odds. It removes a bias the smoothing leaves (most props read overs a few points
@@ -119,7 +120,8 @@ CAL = {"rec_yds": (-0.243, 1.014), "rec": (-0.142, 0.98), "rec_td": (-0.481, 0.9
 #   (this game's implied team points / their usual implied points) ^ betaPts
 #   * exp(betaSpr * (spread swing in TDs))          (favorites run more, underdogs pass more)
 #   * (opponent's allowed-per-game / league average) ^ gamma
-#   * (recent snap share / usual snap share) ^ usage   (see usage_shares)
+#   * (recent snap share / usual snap share) ^ usage   (see usage_shares; for non-passing stats
+#     each past game is put on the recent share instead, see game_per)
 # Strengths were fitted on the walk-forward backtest (tools/tune_context.py) and
 # validated on held-out weeks. 0 = adjustment off. Clamped to [clampLo, clampHi].
 # usage = 0.5 lowered held-out log-loss in every family and both week folds
@@ -150,11 +152,16 @@ def calibrate(p, cal):
     return 1.0 / (1.0 + math.exp(-(cal[0] + cal[1] * math.log(q / (1 - q)))))
 
 
-def model_prob(values, line, kind, scale=1.0, cal=None):
-    """values oldest -> newest; scale multiplies every value (game-context adjustment).
+def model_prob(values, line, kind, scale=1.0, cal=None, per=None):
+    """values oldest -> newest; scale multiplies every value (game-context adjustment);
+    per, if given, is one more factor per value (same length, see game_per).
     Returns dict with over/under/push probabilities, an 80% interval on P(over),
     the effective sample size and moments, or None."""
-    v = [x * scale for x in values[-MODEL["maxGames"]:]]
+    vals = values[-MODEL["maxGames"]:]
+    if per and len(per) == len(values):
+        v = [x * scale * k for x, k in zip(vals, per[-MODEL["maxGames"]:])]
+    else:
+        v = [x * scale for x in vals]
     n = len(v)
     if n == 0:
         return None
@@ -241,10 +248,11 @@ def context_scale(fam, hist, game_pts, game_spr, def_ratio, usage=None):
     if def_ratio and def_ratio > 0:
         dfs = def_ratio ** CTX["gamma"][fam]
     scale = min(CTX["clampHi"], max(CTX["clampLo"], env * dfs))
+    base = scale
     use = usage ** CTX["usage"] if usage else 1.0
     if use != 1.0:
         scale = min(CTX["clampHi"], max(CTX["clampLo"], scale * use))
-    return {"scale": scale, "env": env, "def": dfs, "use": use}
+    return {"scale": scale, "env": env, "def": dfs, "use": use, "base": base}
 
 
 # ---------------------------------------------------------------------------
@@ -296,6 +304,32 @@ def usage_of(shares):
     if not shares:
         return None
     return max(0.5, min(1.6, shares[0] / shares[1]))
+
+
+def game_shares(pid, rows):
+    """Each game's snap share (or None), aligned with rows."""
+    return [SNAPS.get((pid, r[0], r[1])) for r in rows]
+
+
+def game_per(scale, usage, recent, shares, fam):
+    """Per-game factors for model_prob(per=...), or None.
+    The plain usage cut scales every past game by (recent / usual) ^ usage, which counts
+    the change twice for games already played at the new share: a receiver back from a
+    hamstring on a 30% snap count had his 150- and 84-yard low-snap games cut by 29% again.
+    Instead each game with a known share is put on the recent share itself:
+    scale * (recent / its share) ^ usage / (recent / usual) ^ usage, clamped like the scale;
+    games without snap data keep the plain scale. Passing stats keep the plain cut (a
+    quarterback's partial games are injuries and blowouts, not a role), which also tested
+    better. Walk-forward backtest, every non-passing case: log loss 0.55471 -> 0.55431
+    (odd weeks), 0.55707 -> 0.55635 (even weeks); the graded live picks with a Polymarket
+    price 0.6475 -> 0.6462. Mirrored in JS (gamePer)."""
+    if not usage or not recent or not scale or fam == "pass":
+        return None
+    use = usage ** CTX["usage"]
+    lo, hi = CTX["clampLo"], CTX["clampHi"]
+    return [1.0 if s is None or s <= 0.05 else
+            min(hi, max(lo, scale * max(0.5, min(1.6, recent / s)) ** CTX["usage"] / use)) / scale
+            for s in shares]
 
 
 def median(a):
@@ -1263,11 +1297,13 @@ def build_live_picks(picks, slate_games, sched, by_key, snap, pmus=None):
                 opp, home = sg["away"] + "/" + sg["home"], None
             game_spr = None if (home is None or sg["spread"] is None) else (sg["spread"] if home else -sg["spread"])
             game_pts = None if (game_spr is None or sg["total"] is None) else sg["total"] / 2.0 + game_spr / 2.0
-            ctx = context_scale(stat_family(sk, pl["p"]), hist_context(pl["g"]), game_pts, game_spr,
-                                def_ratio(snap, opp if home is not None else None, pl["p"], sk),
-                                None if inj_mult(pl, sk) != 1.0 else usage_of(pl.get("u")))
+            fam = stat_family(sk, pl["p"])
+            usage = None if inj_mult(pl, sk) != 1.0 else usage_of(pl.get("u"))
+            ctx = context_scale(fam, hist_context(pl["g"]), game_pts, game_spr,
+                                def_ratio(snap, opp if home is not None else None, pl["p"], sk), usage)
             vals = [stat_value(sk, r) for r in pl["g"]]
-            mp = model_prob(vals, pm["line"], stat_kind(sk), ctx["scale"] * inj_mult(pl, sk), CAL.get(sk))
+            per = game_per(ctx["scale"], usage, (pl.get("u") or [None])[0], game_shares(pl["id"], pl["g"]), fam)
+            mp = model_prob(vals, pm["line"], stat_kind(sk), ctx["scale"] * inj_mult(pl, sk), CAL.get(sk), per)
             if not mp:
                 continue
             fav = "over" if mp["over"] >= 0.5 else "under"
@@ -1352,8 +1388,11 @@ def news_test(picks, sched, by_pid):
         # p2 only on picks this model version made, so it differs from prob by the news alone
         if wind is not None and p["stat"] in news.WIND_STATS and pl and p.get("adj") is not None and p.get("mv") == MODEL_V:
             scale = min(CTX["clampHi"], max(CTX["clampLo"], p["adj"] * news.wind_factor(wind)))
+            usage = None if inj_mult(pl, p["stat"]) != 1.0 else usage_of(pl.get("u"))
+            per = game_per(p["adj"], usage, (pl.get("u") or [None])[0], game_shares(pl["id"], pl["g"]),
+                           stat_family(p["stat"], pl["p"]))
             mp = model_prob([stat_value(p["stat"], r) for r in pl["g"]], p["line"], stat_kind(p["stat"]), scale,
-                            CAL.get(p["stat"]))
+                            CAL.get(p["stat"]), per)
             if mp:
                 nw["p2"] = round(mp[p["side"]], 3)
         p["nw"] = nw
@@ -1412,7 +1451,9 @@ def build_backtest(players, seasons_used, sched, snapshot):
             else:
                 gid, date, team = f"{row[0]}_{row[1]:02d}_?", "", ""
             hist = hist_context(prior)
-            usage = usage_of(usage_shares(pl["id"], prior))
+            shares = usage_shares(pl["id"], prior)
+            usage = usage_of(shares)
+            gsh = game_shares(pl["id"], prior)
             game_spr, game_tot = row[19], row[18]
             game_pts = None if (game_spr is None or game_tot is None) else game_tot / 2.0 + game_spr / 2.0
             snap = snapshot(row[0], row[1])
@@ -1421,8 +1462,10 @@ def build_backtest(players, seasons_used, sched, snapshot):
                 if stat_kind(sk) == "yards" and median(vals[-10:]) < BT_MIN_YARDS_MEDIAN:
                     continue
                 line = seed_line(vals)
-                ctx = context_scale(stat_family(sk, pl["p"]), hist, game_pts, game_spr, def_ratio(snap, row[2], pl["p"], sk), usage)
-                mp = model_prob(vals, line, stat_kind(sk), ctx["scale"], CAL.get(sk))
+                fam = stat_family(sk, pl["p"])
+                ctx = context_scale(fam, hist, game_pts, game_spr, def_ratio(snap, row[2], pl["p"], sk), usage)
+                per = game_per(ctx["scale"], usage, shares and shares[0], gsh, fam)
+                mp = model_prob(vals, line, stat_kind(sk), ctx["scale"], CAL.get(sk), per)
                 if not mp:
                     continue
                 pk = make_pick("bt", gid, row[0], row[1], date, dict(pl, t=team or pl["t"]), row[2], sk, line, mp, None, None)
@@ -1614,6 +1657,8 @@ def main():
             if u:
                 p["u"] = u               # [recent, usual] snap share, for the page's model
                 n_u += 1
+                for r, sh in zip(p["g"], game_shares(p["id"], p["g"])):
+                    r.append(sh)         # column 20, for the page's game_per
         print(f"  snap counts: {len(SNAPS)} player-games, usage for {n_u} player(s)")
     except Exception as e:  # noqa: BLE001
         SNAPS.clear()

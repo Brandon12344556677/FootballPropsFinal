@@ -981,9 +981,10 @@ function ncdf(x){ return 0.5*(1+erf(x/Math.sqrt(2))); }
 // the walk-forward backtest; only stats where it improved both held-out halves are listed.
 const CAL = {rec_yds:[-0.243, 1.014], rec:[-0.142, 0.98], rec_td:[-0.481, 0.906], tgt:[-0.121, 1.002], scrim_td:[-0.434, 0.914], rush_yds:[-0.147, 1.15], rush_att:[-0.116, 0.954], rush_td:[-0.474, 0.884]};
 function calibrate(p, cal){ const q=Math.min(1-1e-4, Math.max(1e-4, p)); return 1/(1+Math.exp(-(cal[0]+cal[1]*Math.log(q/(1-q))))); }
-function modelProb(values, line, kind, scale, cal){
+function modelProb(values, line, kind, scale, cal, per){
   if(scale==null) scale=1;
-  const v=values.slice(-MODEL.maxGames).map(x=>x*scale), n=v.length; if(!n) return null;
+  const pr=(per&&per.length===values.length)? per.slice(-MODEL.maxGames) : null;
+  const v=values.slice(-MODEL.maxGames).map((x,i)=>pr? x*scale*pr[i] : x*scale), n=v.length; if(!n) return null;
   const w=v.map((_,i)=>Math.pow(0.5,(n-1-i)/MODEL.halfLife));
   let W=0, W2=0; for(const x of w){ W+=x; W2+=x*x; }
   const neff=W*W/W2;
@@ -1025,10 +1026,19 @@ function contextScale(fam, hist, gamePts, gameSpr, defRatio, usage){
   if(hist.pts&&gamePts&&hist.pts>0&&gamePts>0) env*=Math.pow(gamePts/hist.pts, CTX.betaPts[fam]);
   if(hist.spr!=null&&gameSpr!=null) env*=Math.exp(CTX.betaSpr[fam]*(gameSpr-hist.spr)/7);
   let dfs=1; if(defRatio&&defRatio>0) dfs=Math.pow(defRatio, CTX.gamma[fam]);
-  let scale=Math.min(CTX.clampHi, Math.max(CTX.clampLo, env*dfs));
+  let scale=Math.min(CTX.clampHi, Math.max(CTX.clampLo, env*dfs)); const base=scale;
   const use=usage? Math.pow(usage, CTX.usage) : 1;
   if(use!==1) scale=Math.min(CTX.clampHi, Math.max(CTX.clampLo, scale*use));
-  return {scale, env, def:dfs, use};
+  return {scale, env, def:dfs, use, base};
+}
+// Per-game factors on top of the scale (game_per in build.py): each past game with a known snap
+// share (row column 20) is put on the recent share itself, so games already played at the new
+// share aren't cut twice. Passing stats keep the plain cut. null = no per-game factors.
+function gamePer(scale, usage, recent, shares, fam){
+  if(!usage||!recent||!scale||fam==='pass') return null;
+  const use=Math.pow(usage, CTX.usage);
+  return shares.map(s=> (s==null||s<=0.05)? 1
+    : Math.min(CTX.clampHi, Math.max(CTX.clampLo, scale*Math.pow(Math.max(0.5, Math.min(1.6, recent/s)), CTX.usage)/use))/scale);
 }
 // ==== END MODEL ====
 
@@ -1176,12 +1186,14 @@ function contextFor(p, sk, oppOverride, gameOverride){
     if(g.spread!=null&&g.total!=null){ gameSpr=home?g.spread:-g.spread; gamePts=g.total/2+gameSpr/2; } }
   if(oppOverride) opp=oppOverride;
   const defRatio=defRatioFor(opp, p.p, sk);
-  const usage=injMult(p, sk)===1? usageOf(p.u) : null;
-  return Object.assign(contextScale(statFamily(sk,p.p), hist, gamePts, gameSpr, defRatio, usage), {opp, gamePts, gameSpr, defRatio, usage, on:true});
+  const usage=injMult(p, sk)===1? usageOf(p.u) : null, fam=statFamily(sk,p.p);
+  const cs=contextScale(fam, hist, gamePts, gameSpr, defRatio, usage);
+  return Object.assign(cs, {opp, gamePts, gameSpr, defRatio, usage, on:true,
+    per:gamePer(cs.scale, usage, p.u&&p.u[0], gamesOf(p).map(g=>g[20]), fam)});
 }
 function currentOpp(){ return oppTouched? ($('oppsel').value||null) : null; }
 function injMult(p, sk){ const b=p&&p.inj_boost; if(!b) return 1; const f=statFamily(sk,p.p); return (f==='rec'?b.rec:f==='rush'?b.rush:1)||1; }
-function modelFor(p, sk, line, ctx){ const st=STATMAP[sk]; if(!st) return null; const c=ctx||contextFor(p,sk,p===state.player?currentOpp():null); return calMp(modelProb(valuesOf(p,sk), line, st.kind, c.scale * injMult(p, sk), CAL[sk])); }
+function modelFor(p, sk, line, ctx){ const st=STATMAP[sk]; if(!st) return null; const c=ctx||contextFor(p,sk,p===state.player?currentOpp():null); return calMp(modelProb(valuesOf(p,sk), line, st.kind, c.scale * injMult(p, sk), CAL[sk], c.per)); }
 function probFor(p, sk, line, side, ctx){ const mp=modelFor(p,sk,line,ctx); if(!mp) return null;
   return side==='over'? {prob:mp.over, lo:mp.lo, hi:mp.hi, mp} : {prob:mp.under, lo:1-mp.hi, hi:1-mp.lo, mp}; }
 function reseedLine(){
@@ -1290,7 +1302,7 @@ function buildWhy(p, sk, line, side, mp, ctx){
   const st=STATMAP[sk], g=gamesOf(p), vals=g.map(st.get);
   if(!st || !vals.length) return null;
   const hist=modelProb(vals, line, st.kind, 1);            // history only
-  const adj =modelProb(vals, line, st.kind, ctx.scale);    // + this game's context, pre-calibration
+  const adj =modelProb(vals, line, st.kind, ctx.scale, null, ctx.per);   // + this game's context, pre-calibration
   if(!hist || !adj) return null;
   const S = v => side==='over'? v : 1-v;                   // read a two-sided number off the chosen side
   const k=MODEL.priorK, neff=adj.neff, used=Math.min(MODEL.maxGames, vals.length);
@@ -1331,12 +1343,13 @@ function buildWhy(p, sk, line, side, mp, ctx){
     if(ctx.usage && p.u){ const r=Math.round(p.u[0]*100), u=Math.round(p.u[1]*100);
       bits.push(Math.abs(ctx.use-1)<0.005
         ? `${esc(p.n)}’s snap share is steady (<b>${r}%</b> of offensive snaps lately, about the usual)`
-        : `${esc(p.n)} played <b>${r}%</b> of offensive snaps the last two games, against a usual <b>${u}%</b> (×${ctx.use.toFixed(2)})`); }
+        : `${esc(p.n)} played <b>${r}%</b> of offensive snaps the last two games, against a usual <b>${u}%</b> (×${ctx.use.toFixed(2)})`+
+          (ctx.per? ` — each past game is put on that ${r}% share, so games already played near it aren’t cut twice` : '')); }
     const helps = side==='over'? ctx.scale>1.005 : ctx.scale<0.995;   // a bigger scale lifts the over and sinks the under
     const hurts = side==='over'? ctx.scale<0.995 : ctx.scale>1.005;
     const cls = helps? 'whyup' : hurts? 'whydown' : '';
     R.push(['⚙️','This week’s matchup',
-      `${bits.join('; ')}. Net, every game in the log is scaled <b class="${cls}">×${ctx.scale.toFixed(2)}</b>, `+
+      `${bits.join('; ')}. Net, ${ctx.per? 'the games at the usual snap share are' : 'every game in the log is'} scaled <b class="${cls}">×${ctx.scale.toFixed(2)}</b>, `+
       (same(pAdj,pHist)? `which barely moves the ${side} (<b>${pct(pAdj)}</b>).`
         : `which moves the ${side} to <b>${pct(pAdj)}</b>.`)]);
   }
@@ -1406,7 +1419,7 @@ function buildWhy(p, sk, line, side, mp, ctx){
     `weighted mean <b>${fmt(hist.mean)}</b> ±${fmt(hist.sd)} over ${used} g · n<sub>eff</sub> <b>${neff.toFixed(1)}</b> · `+
     `line ${fmt(line)} = ${z<0?'−':'+'}${Math.abs(z).toFixed(2)} SD`+
     `<span class="ar">→</span>history <b>${pct(pHist)}</b>`+
-    (ctx.on? `<span class="ar">→</span>×${ctx.scale.toFixed(2)} context <b>${pct(pAdj)}</b>` : '')+
+    (ctx.on? `<span class="ar">→</span>×${ctx.scale.toFixed(2)} context${ctx.per? ' (snaps per game)' : ''} <b>${pct(pAdj)}</b>` : '')+
     `<span class="ar">→</span>shrink (k=${MODEL.priorK}) <b>${pct(pShrunk)}</b>`+
     (Math.abs(T-1)>0.005? `<span class="ar">→</span>calibration T=${T.toFixed(2)} <b>${pct(pFinal)}</b>` : '')+
     ` · 80% range <b>${Math.round(lo*100)}–${Math.round(hi*100)}%</b>${mp.push>0.005? ` · push ${pct(mp.push)}`:''}`;
@@ -2192,8 +2205,8 @@ function apCandidates(teamsSet){
     stats.forEach(sk=>{ const st=STATMAP[sk]; if(!st) return;
       const vals=p.g.map(st.get), line=seedLine(vals);
       if(line < (sk==='pass_yds'?150 : st.kind==='yards'?30 : 3.5)) return;
-      const cs=contextScale(statFamily(sk,p.p),hist,gamePts,gameSpr,defRatioFor(opp,p.p,sk),usageOf(p.u));
-      const mp=calMp(modelProb(vals,line,st.kind,cs.scale,CAL[sk])); if(!mp||mp.neff<5) return;
+      const fam=statFamily(sk,p.p), usage=usageOf(p.u), cs=contextScale(fam,hist,gamePts,gameSpr,defRatioFor(opp,p.p,sk),usage);
+      const mp=calMp(modelProb(vals,line,st.kind,cs.scale,CAL[sk],gamePer(cs.scale,usage,p.u&&p.u[0],p.g.map(g=>g[20]),fam))); if(!mp||mp.neff<5) return;
       out.push({p, sk, line, side:'over', prob:mp.over, neff:mp.neff, gid:(wg.id||wg.away+'@'+wg.home)});
     });
   });
@@ -2446,7 +2459,7 @@ function renderLeaderboard(){
   PS.ticker(tickerItems());
 }
 
-function trapCheck(p, sk, line, side, mp, ctx){
+function trapCheck(p, sk, line, side, mp, ctx, rows){
   const g=gamesOf(p);
   const fr=n=>{ const r=rateOn(g.slice(-n),sk,line,side); return r.cnt? r.hit/r.cnt : null; };
   const r5=fr(5), r20=fr(20), r10=fr(10);
@@ -2455,10 +2468,22 @@ function trapCheck(p, sk, line, side, mp, ctx){
   const trap = raw>=0.7 && (raw-model)>=0.12;
   const reasons=[];
   if(trap){
-    if(r5!=null&&r20!=null&&r5-r20>=0.3) reasons.push(`hit ${Math.round(r5*100)}% over the last 5 but ${Math.round(r20*100)}% over the last 20 — a hot streak, not a new level`);
-    if(mp.neff<6) reasons.push(`only ${mp.neff.toFixed(1)} effective games of history, so the model shrinks it toward a coin-flip`);
-    const adverse = side==='over'? (ctx&&ctx.on&&ctx.scale<=0.93) : (ctx&&ctx.on&&ctx.scale>=1.07);
-    if(adverse) reasons.push(`this week's matchup${ctx.opp?' vs '+ctx.opp:''} and the Vegas script pull the ${side} down (×${ctx.scale.toFixed(2)})`);
+    // Split the gap between the tally and the model into what each step takes off — the record
+    // itself (history only), the snap-share change, this week's matchup + Vegas script — and
+    // list the reasons biggest first, so the note leads with what actually moves the number.
+    const st=STATMAP[sk], vals=(rows||g).map(st.get), on=!!(ctx&&ctx.on);
+    const at=(scale, per)=>{ const m=calMp(modelProb(vals, line, st.kind, scale, CAL[sk], per)); return m? (side==='over'? m.over : m.under) : null; };
+    const pAll=on? at(ctx.scale, ctx.per) : model, pNoSnap=on? at(ctx.base!=null? ctx.base : ctx.scale, null) : model, pNone=at(1, null);
+    const parts=[], histGap=raw-(pNone!=null? pNone : model);
+    if(r5!=null&&r20!=null&&r5-r20>=0.3) parts.push([histGap, `hit ${Math.round(r5*100)}% over the last 5 but ${Math.round(r20*100)}% over the last 20 — a hot streak, not a new level`]);
+    if(mp.neff<6) parts.push([histGap-0.001, `only ${mp.neff.toFixed(1)} effective games of history, so the model shrinks it toward a coin-flip`]);
+    if(on && ctx.usage && p.u && pAll!=null && pNoSnap!=null && pNoSnap-pAll>=0.03){
+      const r=Math.round(p.u[0]*100), u=Math.round(p.u[1]*100), down=p.u[0]<p.u[1];
+      parts.push([pNoSnap-pAll, `${p.n}’s snap share ${down?'fell':'rose'} to ${r}% the last two games from a usual ${u}%, so the games played at the old share count for ${down?'less':'more'} (×${ctx.use.toFixed(2)})`]);
+    }
+    if(on && pNoSnap!=null && pNone!=null && pNone-pNoSnap>=0.03)
+      parts.push([pNone-pNoSnap, `this week's matchup${ctx.opp?' vs '+ctx.opp:''} and the Vegas script pull the ${side} down (×${(ctx.base!=null? ctx.base : ctx.scale).toFixed(2)})`]);
+    parts.sort((a,b)=>b[0]-a[0]).forEach(x=>reasons.push(x[1]));
     if(!reasons.length) reasons.push(`the calibrated model weights recent games and the range, and lands lower than the raw tally`);
   }
   return {trap, raw, model, reasons};
@@ -2492,9 +2517,10 @@ function generateDigest(){
       if(line < (sk==='pass_yds'?150 : st.kind==='yards'?30 : 3.5)) return;
       substantive=true;
       if(out) return;
-      const cs=contextScale(statFamily(sk,p.p), hist, gamePts, gameSpr, defRatioFor(opp,p.p,sk), usageOf(p.u));
-      const mp=calMp(modelProb(vals, line, st.kind, cs.scale, CAL[sk])); if(!mp) return;
-      const tc=trapCheck(p, sk, line, 'over', mp, {on:true, scale:cs.scale, opp});
+      const fam=statFamily(sk,p.p), usage=usageOf(p.u), cs=contextScale(fam, hist, gamePts, gameSpr, defRatioFor(opp,p.p,sk), usage);
+      const per=gamePer(cs.scale, usage, p.u&&p.u[0], p.g.map(g=>g[20]), fam);
+      const mp=calMp(modelProb(vals, line, st.kind, cs.scale, CAL[sk], per)); if(!mp) return;
+      const tc=trapCheck(p, sk, line, 'over', mp, Object.assign(cs, {on:true, opp, usage, per}), p.g);
       cands.push({p, sk, line, prob:mp.over, neff:mp.neff, opp, trap:tc.trap, raw:tc.raw, reasons:tc.reasons});
     });
     if(out && substantive){ const l5=p.g.slice(-5).map(fpts.get); outList.push({p, imp:l5.reduce((a,b)=>a+b,0)/Math.max(1,l5.length)}); }
@@ -2521,7 +2547,7 @@ function generateDigest(){
   if(mid.length) s+=`<p>`+mid.join('&nbsp;&nbsp;·&nbsp;&nbsp;')+`.</p>`;
   if(outNames.length) s+=`<p><b>⛔ Ruled out this week:</b> ${outNames.map(n=>esc(n)).join(', ')} — not playing, so their props are off the board.</p>`;
   if(traps.length){ const t=traps[0];
-    s+=`<p class="digesttrap">⚠️ <b>Biggest trap:</b> ${link(t)} has hit ${Math.round(t.raw*100)}% lately, but the model gives it just ${pct(t.prob)} — ${esc((t.reasons&&t.reasons[0])||'a hot streak the calibration discounts')}. Load it for the full ⚠️ breakdown.</p>`; }
+    s+=`<p class="digesttrap">⚠️ <b>Biggest trap:</b> ${link(t)} has hit ${Math.round(t.raw*100)}% lately, but the model gives it just ${pct(t.prob)} — ${esc((t.reasons&&t.reasons[0])||'a hot streak the calibration discounts')}${t.reasons&&t.reasons[1]? '; also, '+esc(t.reasons[1]) : ''}. Load it for the full ⚠️ breakdown.</p>`; }
   body.innerHTML=s;
   cap.textContent='auto-generated from the model · at the site’s realistic lines';
   body.querySelectorAll('.wload').forEach(b=>b.onclick=()=>{ const p=byId[b.dataset.id]; if(p) loadStreak({p, sk:b.dataset.sk, line:+b.dataset.line}); });
@@ -2553,8 +2579,8 @@ function weekTopPicks(n){
     stats.forEach(sk=>{ const st=STATMAP[sk]; if(!st) return;
       const vals=p.g.map(st.get), line=seedLine(vals);
       if(line < (sk==='pass_yds'?150 : st.kind==='yards'?30 : 3.5)) return;
-      const cs=contextScale(statFamily(sk,p.p),hist,gamePts,gameSpr,defRatioFor(opp,p.p,sk),usageOf(p.u));
-      const mp=calMp(modelProb(vals,line,st.kind,cs.scale,CAL[sk])); if(!mp||mp.neff<6) return;
+      const fam=statFamily(sk,p.p), usage=usageOf(p.u), cs=contextScale(fam,hist,gamePts,gameSpr,defRatioFor(opp,p.p,sk),usage);
+      const mp=calMp(modelProb(vals,line,st.kind,cs.scale,CAL[sk],gamePer(cs.scale,usage,p.u&&p.u[0],p.g.map(g=>g[20]),fam))); if(!mp||mp.neff<6) return;
       if(!best||mp.over>best.prob) best={p, sk, line, prob:mp.over, label:STATMAP[sk].label, opp, home, date:wg.date};
     });
     if(best) out.push(best);
