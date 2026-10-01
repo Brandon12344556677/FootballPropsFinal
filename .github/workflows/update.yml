@@ -6,12 +6,15 @@ name: Update NFL data
 # blocks the NFL deploy).
 on:
   schedule:
-    # Every 20 minutes (:05, :25, :45), so every start time gets a run within ~20 min
-    # before it: prices, and the closing price each pick's line value is measured
-    # against, are fresh right before games begin. A full run takes ~10 min. No builder
-    # records or changes a pick once its game has started, so a run mid-game is safe.
-    # Off the top of the hour, where GitHub delays scheduled runs the most.
-    - cron: "5,25,45 * * * *"
+    # Every 10 minutes (:05, :15, ... :55): the NBA, NHL and MLB pages show the prices
+    # baked in at build time, and the closing price each pick's line value is measured
+    # against is the last one recorded before the game, so both stay within ~10 min.
+    # (The NFL board also fetches live prices in the browser.) A full run takes ~2 min,
+    # and the concurrency group below queues a run rather than overlapping one. GitHub
+    # starts scheduled runs late (8-10 min lately) and can skip some under load. No
+    # builder records or changes a pick once its game has started, so a run mid-game is
+    # safe. Off the top of the hour, where GitHub delays scheduled runs the most.
+    - cron: "5,15,25,35,45,55 * * * *"
   workflow_dispatch:
     inputs:
       probe:
@@ -133,6 +136,6 @@ jobs:
           fi
 
       # Last, after the site is pushed: turns the run red (so GitHub emails you) when a
-      # problem has lasted 3 runs in a row, then at most once a day while it lasts.
+      # problem has lasted ~3 hours (18 runs in a row), then at most once a day while it lasts.
       - name: Alert if a data source keeps failing
         run: python health.py --gate

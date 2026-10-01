@@ -1338,7 +1338,7 @@ function renderEdges(){ const body=$('edgebody'); if(!body) return;
   updateBoardStatus();
   const all=listRows('T');
   if(!all.length){ body.innerHTML = upcomingPicks().length
-      ? `<p class="mktnote">Nothing makes the list right now. A prop needs a <b>90%+ model chance</b> <i>and</i> a <b>live Polymarket price</b>, and nothing on the upcoming ${SPORT_NAME} slate clears both. It refills as markets post and prices update (every 20 minutes) — some days it stays short or empty on purpose.</p>`
+      ? `<p class="mktnote">Nothing makes the list right now. A prop needs a <b>90%+ model chance</b> <i>and</i> a <b>live Polymarket price</b>, and nothing on the upcoming ${SPORT_NAME} slate clears both. It refills as markets post and prices update (every 10 minutes) — some days it stays short or empty on purpose.</p>`
       : scheduleNote('the Top 25 Surest board'); return; }
   const rows=sortRows(all, edgeSort.key, edgeSort.dir).slice(0,25);
   body.innerHTML=pickTable(rows, edgeSort)+

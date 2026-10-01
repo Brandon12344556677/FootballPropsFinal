@@ -88,12 +88,12 @@ footer a:hover{color:#dfe6ef}
       <p class="lead">Prop Streak Lab turns a player's recent games into a <b>calibrated chance</b> of clearing any line, compares it with what the market charges, and records every pick before the game so the results can be checked in public.</p>
       <div class="meta">
         <span>NFL · NBA · NHL · MLB</span>
-        <span>Rebuilt every 20 minutes</span>
+        <span>Rebuilt every 10 minutes</span>
         <span class="gold">Every pick graded from the box score</span>
       </div>
 
       <h2 id="overview">Overview</h2>
-      <p>Every number on the site comes from one small, published model — the same code runs in your browser and in the job that records picks every 20 minutes. There is no hidden tuning per pick and no human override. The model is backward-looking: it knows a player's game log, the opponent, and (for the NFL) the Vegas line, snap counts and the injury report. It does not know about weather, a coaching change, or who else is out.</p>
+      <p>Every number on the site comes from one small, published model — the same code runs in your browser and in the job that records picks every 10 minutes. There is no hidden tuning per pick and no human override. The model is backward-looking: it knows a player's game log, the opponent, and (for the NFL) the Vegas line, snap counts and the injury report. It does not know about weather, a coaching change, or who else is out.</p>
 
       <h2 id="data">Where the data comes from</h2>
       <table>
@@ -175,7 +175,7 @@ footer a:hover{color:#dfe6ef}
 
       <h2 id="grading">How picks are recorded and graded</h2>
       <ul>
-        <li>An automated job runs <b>every 20 minutes</b>. It records every modeled prop on the Polymarket board — with the model's chance and the price at that moment — <b>before the game starts</b>, and refreshes it until kickoff, tip-off, puck drop or first pitch. After that it is frozen.</li>
+        <li>An automated job runs <b>every 10 minutes</b>. It records every modeled prop on the Polymarket board — with the model's chance and the price at that moment — <b>before the game starts</b>, and refreshes it until kickoff, tip-off, puck drop or first pitch. After that it is frozen.</li>
         <li>Once the game is final and the box score is in, each pick is graded <b>hit, miss or push</b>. A player who doesn't play is marked <b>DNP</b> and left out of the record.</li>
         <li>Profit is counted at the <b>recorded price</b>: 1 unit on every pick, a win at 43¢ returns +1.33 units, a loss is −1.</li>
         <li>The <b>backtest</b> (NFL 2025) shows what the model would have said before each past game using only earlier games. It has no market prices, and it's never mixed into the live record.</li>
@@ -187,7 +187,7 @@ footer a:hover{color:#dfe6ef}
         <li><b>Backward-looking.</b> The model can't know about weather, a coaching change, or a teammate's injury unless it's in the data.</li>
         <li><b>Markets are hard to beat.</b> The market already prices the line and the matchup, so real edges are smaller than they look against the site's own seeded lines.</li>
         <li><b>New players</b> appear in search right away but have no chance until their first box score.</li>
-        <li><b>Prices move.</b> Board prices refresh about once a minute on the NFL board and every 20 minutes elsewhere. Always check the price before you trade.</li>
+        <li><b>Prices move.</b> Board prices refresh about once a minute on the NFL board and every 10 minutes elsewhere. Always check the price before you trade.</li>
         <li><b>Where the price started.</b> Every pick keeps the Polymarket price it was first recorded at. Cards show it under the current price (<i>opened 40¢ ▲5</i>), and <b>Past picks</b> shows first price → last price before the game. A price that rises means the market moved toward the pick. Across many picks, that <b>closing line value</b> is the quickest honest test of whether the model sees anything before the market does, and it's shown next to each list's live record (<i>price moved its way on X of Y</i>). Tracking started September 30, 2026; earlier picks have no first price.</li>
         <li><b>Calibration is measured, not promised.</b> Look at the Past picks tab before trusting a number.</li>
       </ul>
