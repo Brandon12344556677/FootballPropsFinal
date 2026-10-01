@@ -828,7 +828,13 @@ def load_picks():
     except (OSError, ValueError):
         return []
     cols = d.get("cols") or []
-    return [dict(zip(cols, row)) for row in d.get("picks", [])]
+    picks = [dict(zip(cols, row)) for row in d.get("picks", [])]
+    for p in picks:      # season from the game's date (older picks took the player's last game's)
+        try:
+            p["season"] = int(p["date"][:4])
+        except (TypeError, ValueError):
+            pass
+    return picks
 
 
 def side_prob(mp):
@@ -842,7 +848,7 @@ def make_pick(pl, gid, date, team, opp, sk, line, mp, scale, start, prices=None)
     price = None
     if prices and prices.get("tradeable"):
         price = prices["over"] if side == "over" else prices["under"]
-    return {"src": "live", "gid": gid, "season": pl["g"][-1][0], "date": date,
+    return {"src": "live", "gid": gid, "season": int(date[:4]), "date": date,   # MLB seasons are calendar years
             "pid": pl["id"], "player": pl["n"], "pos": pl["p"], "team": team, "opp": opp,
             "stat": sk, "line": line, "side": side,
             "prob": round(prob, 3), "lo": round(lo, 3), "hi": round(hi, 3),

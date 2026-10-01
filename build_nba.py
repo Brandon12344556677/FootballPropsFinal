@@ -397,6 +397,12 @@ def season_year(d):
     return d.year if d.month >= 9 else d.year - 1
 
 
+def pick_season(date_iso):
+    """The season a game on this date belongs to. Picks used to take the season of the
+    player's last game, which before his first game of a new season is last season's."""
+    return season_year(datetime.date.fromisoformat(date_iso))
+
+
 # ---------------------------------------------------------------------------
 # ESPN scoreboard + box scores
 # ---------------------------------------------------------------------------
@@ -925,7 +931,13 @@ def load_picks():
     except (OSError, ValueError):
         return []
     cols = d.get("cols") or []
-    return [dict(zip(cols, row)) for row in d.get("picks", [])]
+    picks = [dict(zip(cols, row)) for row in d.get("picks", [])]
+    for p in picks:      # season from the game's date (older picks took the player's last game's)
+        try:
+            p["season"] = pick_season(p["date"])
+        except (TypeError, ValueError):
+            pass
+    return picks
 
 
 def side_prob(mp):
@@ -980,7 +992,7 @@ def build_market_picks(picks, poly_games, players_by_key, espn_slate, defense, d
             side, prob, lo, hi = side_prob(mp)
             sh = test_prob(vals, pm["line"], sk, side, hp, gpts, dr, rows)
             price = (pm["over"] if side == "over" else pm["under"]) if pm.get("tradeable") else None
-            picks.append({"src": "live", "gid": gid, "season": rows[-1][0], "date": g["date"],
+            picks.append({"src": "live", "gid": gid, "season": pick_season(g["date"]), "date": g["date"],
                           "pid": pl["id"], "player": pl["n"], "pos": pl["p"], "team": team, "opp": opp,
                           "stat": sk, "line": pm["line"], "side": side,
                           "prob": round(prob, 3), "lo": round(lo, 3), "hi": round(hi, 3),
@@ -995,7 +1007,19 @@ def build_market_picks(picks, poly_games, players_by_key, espn_slate, defense, d
 def build_board_picks(picks, slate, players_by_team, defense, defavg):
     """One pick per (player, board stat) for players on teams playing an upcoming
     game — the highest-confidence side. Deduped against already-recorded picks."""
-    have = {(p["pid"], p["date"], p["stat"]) for p in picks}
+    # Same game at any line, a day either way: market picks carry Polymarket's ET date, a
+    # day before the ESPN (UTC) date used here for a late game; an exact-date match
+    # recorded those twice (the NHL page showed it).
+    have = {}
+    for p in picks:
+        m = re.match(r"^(\d{4}-\d{2}-\d{2})-([A-Z]+)-([A-Z]+)$", str(p.get("gid") or ""))
+        if m:
+            have.setdefault((p["pid"], p["stat"], m.group(2), m.group(3)), set()).add(m.group(1))
+
+    def recorded(pid, sk, g):
+        d = datetime.date.fromisoformat(g["date"])
+        return any(abs((datetime.date.fromisoformat(x) - d).days) <= 1
+                   for x in have.get((pid, sk, g["away"], g["home"]), ()))
     now_added = 0
     for g in slate:
         if g.get("final"):
@@ -1012,7 +1036,7 @@ def build_board_picks(picks, slate, players_by_team, defense, defavg):
                     continue
                 hp = hist_context(rows)
                 for sk in BOARD_STATS:
-                    if (pl["id"], g["date"], sk) in have:
+                    if recorded(pl["id"], sk, g):
                         continue
                     vals = [stat_get(r, sk) for r in rows]
                     line = seed_line(vals)
@@ -1023,14 +1047,14 @@ def build_board_picks(picks, slate, players_by_team, defense, defavg):
                         continue
                     side, prob, lo, hi = side_prob(mp)
                     sh = test_prob(vals, line, sk, side, hp, gpts, dr, rows)
-                    picks.append({"src": "live", "gid": gid, "season": rows[-1][0], "date": g["date"],
+                    picks.append({"src": "live", "gid": gid, "season": pick_season(g["date"]), "date": g["date"],
                                   "pid": pl["id"], "player": pl["n"], "pos": pl["p"], "team": team, "opp": opp,
                                   "stat": sk, "line": line, "side": side,
                                   "prob": round(prob, 3), "lo": round(lo, 3), "hi": round(hi, 3),
                                   "neff": round(mp["neff"], 1), "price": None, "lists": "",
                                   "rec": f"{sk} {side} {line}", "actual": None, "res": None,
                                   "adj": round(scale, 3), "sh": sh, "mv": MODEL_V})
-                    have.add((pl["id"], g["date"], sk))
+                    have.setdefault((pl["id"], sk, g["away"], g["home"]), set()).add(g["date"])
                     now_added += 1
     return now_added
 
