@@ -457,6 +457,40 @@ class ListTests(unittest.TestCase):
         self.assertEqual(M.grade_picks([pick], {}, set(), {"2026-10-01"}), (0, 1))   # 8 PM ET Oct 1
         self.assertEqual(pick["res"], "dnp")
 
+    def test_nba_preseason_is_purged_with_its_picks(self):
+        import build_nba as N
+        header = lambda t: {"header": {"season": {"type": t}, "competitions": [{"date": "2025-10-10T23:00Z",
+                            "status": {"type": {"completed": True}}, "competitors": []}]}}
+        self.assertEqual(N.header_meta(header(1))[4], "PRE")
+        self.assertEqual(N.header_meta(header(2))[4], "REG")
+        self.assertEqual(N.header_meta(header(3))[4], "PST")
+        row = lambda gid, date: {"gid": gid, "date": date, "team": "MIA", "opp": "TOR", "home": 0}
+        store = {"rows": [row("1", "2025-10-10"), row("2", "2025-10-24"), row("3", "2026-01-05")]}
+        types = {"1": 1, "2": 2}
+        orig = N.get_json
+        N.get_json = lambda url: {"gamepackageJSON": header(types[url.rsplit("=", 1)[1]])}
+        try:
+            self.assertEqual(N.purge_preseason(store), 1)
+        finally:
+            N.get_json = orig
+        self.assertEqual([r["gid"] for r in store["rows"]], ["2", "3"])   # only October games re-checked
+        self.assertEqual(store["pre"], [["2025-10-10", "MIA", "TOR"]])
+        self.assertTrue(store["pre_purged"])
+        self.assertEqual(N.purge_preseason(store), 0)                      # once only
+        picks = [{"gid": "2025-10-09-MIA-TOR"}, {"gid": "2025-10-24-MIA-TOR"}]
+        self.assertEqual(N.drop_preseason_picks(picks, store["pre"]), 1)  # ET-dated a day early
+        self.assertEqual(picks, [{"gid": "2025-10-24-MIA-TOR"}])
+
+    def test_nhl_pick_graded_on_another_game_is_voided(self):
+        import build_nhl as N
+        games = {("2026-09-30", "VAN", "EDM"), ("2026-09-30", "NYR", "BOS")}
+        pl = {"id": "p1", "g": [[2026, "2026-09-30", "BOS"] + [0] * 13]}    # played NYR vs BOS
+        wrong = {"gid": "2026-09-30-VAN-EDM", "pid": "p1", "start": "2026-09-30T02:00Z", "res": "hit", "actual": 0}
+        right = dict(wrong, gid="2026-09-30-NYR-BOS", start="2026-09-30T23:00Z")
+        self.assertEqual(N.void_misgraded([wrong, right], {"p1": pl}, games), 1)
+        self.assertEqual((wrong["res"], wrong["actual"]), ("dnp", None))
+        self.assertEqual(right["res"], "hit")
+
 
 class SeasonTests(unittest.TestCase):
     def test_season_year(self):

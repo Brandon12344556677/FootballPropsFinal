@@ -321,6 +321,12 @@ def main():
     except Exception as e:   # keep the default
         print(f"  fair weight: default ({e})")
     entries, urls, written, keep = {}, [f"{SITE}/{OUT}/"], 0, set()
+    if update_sitemap_only:
+        # the pages the day's rebuild wrote, not today's top lists, which drift between runs
+        for sport in SPORT_NAME:
+            d = os.path.join(OUT, sport)
+            if os.path.isdir(d):
+                urls += [f"{SITE}/{OUT}/{sport}/{fn}" for fn in sorted(os.listdir(d)) if fn.endswith(".html")]
     for sport, data_file, picks_file, template in T.SPORTS:
         if not all(os.path.exists(f) for f in (data_file, picks_file, template)):
             continue
@@ -339,9 +345,9 @@ def main():
                 keep.add(path)
                 url = f"{SITE}/{OUT}/{sport}/{s}.html"
                 entries.setdefault(sport, []).append((p["n"], f"/{OUT}/{sport}/{s}.html"))
-                urls.append(url)
                 if update_sitemap_only:
                     continue
+                urls.append(url)
                 page, _ = player_page(sport, p, props.get(str(p["id"]), []), getters, labels, built)
                 with open(path, "w", encoding="utf-8") as f:
                     f.write(page)

@@ -21,6 +21,7 @@ Change both or neither. Everything that touches the network is wrapped so a bad
 ESPN response degrades to "no new data" instead of failing the build.
 """
 import json, math, os, re, sys, time, datetime, unicodedata, urllib.request
+from concurrent.futures import ThreadPoolExecutor
 
 import news   # pre-game news feeds, test mode
 
@@ -439,7 +440,8 @@ def header_meta(gpj):
     home = team_code(next((c.get("team", {}).get("abbreviation") for c in cs if c.get("homeAway") == "home"), None))
     away = team_code(next((c.get("team", {}).get("abbreviation") for c in cs if c.get("homeAway") == "away"), None))
     date_g = (comp.get("date") or "")[:10]
-    stype = "PST" if (header.get("season") or {}).get("type") == 3 else "REG"
+    st = (header.get("season") or {}).get("type")
+    stype = "PST" if st == 3 else ("PRE" if st == 1 else "REG")
     return completed, home, away, date_g, stype
 
 
@@ -530,6 +532,10 @@ def fetch_new_games(store):
                     continue
                 if not re.match(r"\d{4}-\d{2}-\d{2}", date_g or ""):
                     date_g = date_iso
+                if stype == "PRE":     # preseason = starters rest, backups play: skip, but remember
+                    store.setdefault("pre", []).append([date_g, away, home])   # it to drop its picks
+                    seen.add(gid)
+                    continue
                 rows = parse_box(gpj.get("boxscore") or {}, season, date_g, stype, home, away)
                 if not rows:
                     continue
@@ -559,6 +565,8 @@ STARTED = set()
 # Every game on the scoreboard, started or not, as (away, home, UTC start). Copied onto
 # its picks by stamp_starts(), since the scoreboard only covers one day.
 SB_GAMES = []
+# Preseason matchups on the scoreboard (frozenset of the two team codes): no pick, board or market.
+PRESEASON = set()
 
 
 def fetch_slate():
@@ -584,6 +592,9 @@ def fetch_slate():
             SB_GAMES.append((away, home, start))
         if status.get("completed") or status.get("state", "pre") != "pre":
             STARTED.add(frozenset((away, home)))
+            continue
+        if (ev.get("season") or {}).get("type") == 1:
+            PRESEASON.add(frozenset((away, home)))
             continue
         total = spread = None
         odds = comp.get("odds") or []
@@ -954,8 +965,8 @@ def build_market_picks(picks, poly_games, players_by_key, espn_slate, defense, d
     added = 0
     for g in poly_games:
         eg = next((x for x in espn_slate if {x["away"], x["home"]} == {g["away"], g["home"]}), None)
-        if frozenset((g["away"], g["home"])) in STARTED:
-            continue            # already started or over: its price is in-game, not pre-game
+        if frozenset((g["away"], g["home"])) in STARTED | PRESEASON:
+            continue            # started or over (its price is in-game, not pre-game), or preseason
         if eg is None and g["date"] < ET_TODAY:
             continue            # an earlier day's game (off today's scoreboard) — long started
         gid = f"{g['date']}-{g['away']}-{g['home']}"
@@ -1208,6 +1219,59 @@ def load_store():
 def prune_store(store, cur_season):
     keep_seasons = {cur_season - i for i in range(CANDIDATE_SEASONS)}
     store["rows"] = [r for r in store["rows"] if r.get("season") in keep_seasons]
+    store["pre"] = [g for g in store.get("pre", []) if pick_season(g[0]) in keep_seasons]
+
+
+def purge_preseason(store):
+    """One-time: drop preseason games stored as regular season before header_meta knew
+    ESPN's preseason type. Each October game's box-score header is re-read; the store is
+    marked done once every check succeeded, else the rest are retried next run. The
+    dropped games go in store['pre'] so their picks are removed too. Returns games dropped."""
+    if store.get("pre_purged"):
+        return 0
+    games = {}
+    for r in store["rows"]:
+        if r.get("date", "")[5:7] == "10":
+            home, away = (r["team"], r["opp"]) if r.get("home") else (r["opp"], r["team"])
+            games[r["gid"]] = [r["date"], away, home]
+
+    def stype(gid):
+        if over_budget():
+            return None
+        try:
+            return header_meta(get_json(ESPN_CDN_BOX.format(gid=gid)).get("gamepackageJSON") or {})[4]
+        except Exception as e:  # noqa: BLE001
+            print(f"    preseason check {gid}: skipped ({e})")
+            return None
+
+    with ThreadPoolExecutor(max_workers=4) as ex:
+        types = dict(zip(games, ex.map(stype, games)))
+    pre = {gid for gid, t in types.items() if t == "PRE"}
+    store["rows"] = [r for r in store["rows"] if r["gid"] not in pre]
+    store.setdefault("pre", []).extend(games[gid] for gid in sorted(pre))
+    if all(types.values()):
+        store["pre_purged"] = True
+    return len(pre)
+
+
+def drop_preseason_picks(picks, pre):
+    """Remove picks recorded on preseason games (before preseason was skipped): same
+    teams as a preseason game, within a day of the pick's gid date (market picks carry
+    Polymarket's ET date). Returns how many were removed."""
+    pre_games = {tuple(g) for g in pre}
+
+    def on_pre(p):
+        m = re.match(r"^(\d{4}-\d{2}-\d{2})-([A-Z]+)-([A-Z]+)$", p.get("gid") or "")
+        if not m:
+            return False
+        d = datetime.date.fromisoformat(m.group(1))
+        return any(((d + datetime.timedelta(days=k)).isoformat(), m.group(2), m.group(3)) in pre_games
+                   for k in (-1, 0, 1))
+
+    keep = [p for p in picks if not on_pre(p)]
+    n = len(picks) - len(keep)
+    picks[:] = keep
+    return n
 
 
 def _keys(d):
@@ -1281,6 +1345,12 @@ def main():
     except Exception as e:  # noqa: BLE001
         print(f"  ESPN ingestion failed ({e}); using existing store only")
         added = 0
+    try:
+        purged = purge_preseason(store)
+        if purged:
+            print(f"  store: dropped {purged} preseason game(s) stored as regular season")
+    except Exception as e:  # noqa: BLE001
+        print(f"  preseason purge: skipped ({e})")
     prune_store(store, cur_season)
     store["gen"] = TODAY.isoformat()
     with open(STATS_FILE, "w", encoding="utf-8") as f:
@@ -1313,6 +1383,9 @@ def main():
         poly_games = []
 
     picks = load_picks()
+    dropped = drop_preseason_picks(picks, store.get("pre", []))
+    if dropped:
+        print(f"  picks: removed {dropped} pick(s) on preseason games")
     graded, dnp = grade_picks(picks, by_pid, box_games(store["rows"]))
     try:
         mkt_added = build_market_picks(picks, poly_games, players_by_key, slate, defense, defavg)
