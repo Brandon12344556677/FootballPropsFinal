@@ -491,6 +491,36 @@ class ListTests(unittest.TestCase):
         self.assertEqual((wrong["res"], wrong["actual"]), ("dnp", None))
         self.assertEqual(right["res"], "hit")
 
+    def test_nhl_polymarket_team_codes_move_to_espn(self):
+        import build_nhl as N
+        self.assertEqual((N.poly_team("was"), N.poly_team("utah")), ("WSH", "UTA"))
+        pk = lambda gid, team, line, **kw: dict({"gid": gid, "pid": "p1", "stat": "g", "line": line, "side": "under",
+                                                 "team": team, "opp": "CAR", "price": None, "lists": "", "res": None}, **kw)
+        graded = pk("2026-10-02-WSH-CAR", "WSH", 0.5, res="hit")
+        priced = pk("2026-10-02-WAS-CAR", "WAS", 0.5, price=0.89, lists="T")   # same prop as graded
+        other = pk("2026-10-02-WAS-CAR", "WAS", 1.5)                           # a different line
+        picks = [graded, priced, other]
+        self.assertEqual(N.fix_team_codes(picks), (2, 1))
+        self.assertEqual(picks, [priced, other])          # the priced, listed copy is kept
+        self.assertEqual((priced["gid"], priced["team"], other["gid"]),
+                         ("2026-10-02-WSH-CAR", "WSH", "2026-10-02-WSH-CAR"))
+        self.assertEqual(N.fix_team_codes(picks), (0, 0))
+
+    def test_nba_preseason_on_the_scoreboard_gets_no_picks(self):
+        import build_nba as N
+        ev = {"date": "2026-10-05T23:00Z", "season": {"type": 1}, "competitions": [{"status": {"type": {"state": "pre"}},
+              "competitors": [{"homeAway": "home", "team": {"abbreviation": "ATL"}},
+                              {"homeAway": "away", "team": {"abbreviation": "MEM"}}]}]}
+        orig, N.PRE_GAMES[:] = N.get_json, []
+        N.get_json = lambda url: {"content": {"sbData": {"events": [ev]}}}
+        try:
+            self.assertEqual(N.fetch_slate(), [])
+        finally:
+            N.get_json = orig
+        self.assertEqual(N.PRE_GAMES, [["2026-10-05", "MEM", "ATL"]])
+        picks = [{"gid": "2026-10-05-MEM-ATL"}, {"gid": "2026-10-05-NY-PHI"}]
+        self.assertEqual(N.drop_preseason_picks(picks, N.PRE_GAMES), 1)
+
 
 class SeasonTests(unittest.TestCase):
     def test_season_year(self):

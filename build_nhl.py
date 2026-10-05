@@ -75,13 +75,15 @@ NHL_TEAMS = {
     "flyers": "PHI", "philadelphia": "PHI", "penguins": "PIT", "pens": "PIT", "pittsburgh": "PIT",
     "sharks": "SJ", "sanjose": "SJ", "kraken": "SEA", "seattle": "SEA",
     "blues": "STL", "stlouis": "STL", "lightning": "TB", "bolts": "TB", "tampabay": "TB", "tampa": "TB",
-    "mapleleafs": "TOR", "leafs": "TOR", "toronto": "TOR", "utah": "UTAH", "mammoth": "UTAH", "hockeyclub": "UTAH",
+    "mapleleafs": "TOR", "leafs": "TOR", "toronto": "TOR", "utah": "UTA", "mammoth": "UTA", "hockeyclub": "UTA",
     "canucks": "VAN", "vancouver": "VAN", "goldenknights": "VGK", "knights": "VGK", "vegas": "VGK", "lasvegas": "VGK",
     "capitals": "WSH", "caps": "WSH", "washington": "WSH", "jets": "WPG", "winnipeg": "WPG",
     # Polymarket's own slug codes that differ from ESPN's (seen 2026-09-28)
     "cal": "CGY", "lak": "LA", "las": "VGK", "mon": "MTL",
-    "veg": "VGK", "nas": "NSH",     # Polymarket US codes
+    "veg": "VGK", "nas": "NSH", "was": "WSH",     # Polymarket US codes
 }
+# Codes that reached saved picks before the map above turned them into ESPN's.
+OLD_CODES = {"WAS": "WSH", "UTAH": "UTA"}
 # ESPN abbreviation -> Polymarket slug code (lowercase ESPN code unless listed).
 POLY_CODE = {"CGY": "cal", "LA": "lak", "VGK": "las", "MTL": "mon"}
 
@@ -1059,6 +1061,34 @@ def drop_same_game_duplicates(picks):
     return len(drop)
 
 
+def fix_team_codes(picks):
+    """Picks saved under a code ESPN doesn't use (Polymarket's WAS for WSH) never matched a
+    box score, so they sat ungraded. Relabel them to ESPN's code. Where that makes one an
+    exact copy of another pick for the same game (player, stat, line, side), keep one, as
+    drop_same_game_duplicates does: the priced copy (its lists), then one already graded;
+    a copy kept over a graded one is graded this run against the same box score.
+    Returns (relabeled, dropped)."""
+    fix = lambda t: OLD_CODES.get(t, t)
+    key = lambda p: (p["gid"], p.get("pid"), p.get("stat"), p.get("line"), p.get("side"))
+    keys = set()
+    for p in picks:
+        m = re.match(r"^(\d{4}-\d{2}-\d{2})-([A-Z]+)-([A-Z]+)$", p.get("gid") or "")
+        if m and (m.group(2) in OLD_CODES or m.group(3) in OLD_CODES):
+            p["gid"] = f"{m.group(1)}-{fix(m.group(2))}-{fix(m.group(3))}"
+            p["team"], p["opp"] = fix(p.get("team")), fix(p.get("opp"))
+            keys.add(key(p))
+    best = {}
+    for p in picks:
+        if key(p) in keys:
+            rank = (p.get("price") is None, not p.get("lists"), p.get("res") is None)
+            if key(p) not in best or rank < best[key(p)][0]:
+                best[key(p)] = (rank, id(p))
+    keep = {i for _, i in best.values()}
+    before = len(picks)
+    picks[:] = [p for p in picks if key(p) not in keys or id(p) in keep]
+    return len(keys), before - len(picks)
+
+
 def build_market_picks(picks, poly_games, players_by_key, espn_slate, defense, defavg):
     """Priced picks from Polymarket NBA markets, matched to players by name. Each
     is modeled at the market's line so Value spots can compare model vs price.
@@ -1462,6 +1492,9 @@ def main():
         print(f"  polymarket US: skipped ({e})")
 
     picks = load_picks()
+    fixed, copies = fix_team_codes(picks)
+    if fixed:
+        print(f"  picks: moved {fixed} pick(s) from Polymarket team codes to ESPN's, {copies} exact copies dropped")
     dup = drop_same_game_duplicates(picks)
     if dup:
         print(f"  picks: dropped {dup} duplicate pick(s) recorded twice for one game")
