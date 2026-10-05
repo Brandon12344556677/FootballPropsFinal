@@ -145,11 +145,11 @@ def messages(picks, is_value, results, today):
         t.append("📊 <b>Yesterday's Value spots:</b> " + html.escape(" · ".join(parts)))
     d.append("")
     d.append(f"Every pick is recorded before the game and graded in public → <{SITE}>")
-    d.append(f"🎁 $50 free on Polymarket with code **PROPSTREAKLAB** → <{REFERRAL}>")
+    d.append(f"🎁 $25 free on Polymarket with code **PROPSTREAKLAB** → <{REFERRAL}>")
     d.append("-# Research, not betting advice. 18+.")
     t.append("")
     t.append(f"Every pick is recorded before the game and graded in public → {SITE}")
-    t.append(f"🎁 $50 free on Polymarket with code <b>PROPSTREAKLAB</b> → {REFERRAL}")
+    t.append(f"🎁 $25 free on Polymarket with code <b>PROPSTREAKLAB</b> → {REFERRAL}")
     t.append("<i>Research, not betting advice. 18+.</i>")
     return "\n".join(d)[:1990], "\n".join(t)[:4000]
 
