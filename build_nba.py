@@ -567,6 +567,8 @@ STARTED = set()
 SB_GAMES = []
 # Preseason matchups on the scoreboard (frozenset of the two team codes): no pick, board or market.
 PRESEASON = set()
+# The same games as [UTC date, away, home], so picks already made on them are removed.
+PRE_GAMES = []
 
 
 def fetch_slate():
@@ -590,11 +592,12 @@ def fetch_slate():
         start = ev.get("date") or ""
         if start:
             SB_GAMES.append((away, home, start))
-        if status.get("completed") or status.get("state", "pre") != "pre":
-            STARTED.add(frozenset((away, home)))
-            continue
         if (ev.get("season") or {}).get("type") == 1:
             PRESEASON.add(frozenset((away, home)))
+            PRE_GAMES.append([start[:10], away, home])
+            continue
+        if status.get("completed") or status.get("state", "pre") != "pre":
+            STARTED.add(frozenset((away, home)))
             continue
         total = spread = None
         odds = comp.get("odds") or []
@@ -1383,7 +1386,7 @@ def main():
         poly_games = []
 
     picks = load_picks()
-    dropped = drop_preseason_picks(picks, store.get("pre", []))
+    dropped = drop_preseason_picks(picks, store.get("pre", []) + PRE_GAMES)
     if dropped:
         print(f"  picks: removed {dropped} pick(s) on preseason games")
     graded, dnp = grade_picks(picks, by_pid, box_games(store["rows"]))
