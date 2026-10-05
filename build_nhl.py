@@ -1229,6 +1229,27 @@ def grade_picks(picks, by_pid, games):
     return n, dnp
 
 
+def void_misgraded(picks, by_pid, games):
+    """Before Sep 30, 2026 a pick was graded from the player's row on its date in any
+    game, so a player who changed teams over the summer was graded on his new team's
+    game. Such a pick (its game's box is in, the player played a different game that day)
+    is voided as 'dnp', like any player who didn't dress. Returns how many."""
+    n = 0
+    for p in picks:
+        if p.get("res") not in ("hit", "miss", "push"):
+            continue
+        g = pick_box_game(p, games)
+        pl = by_pid.get(p["pid"])
+        if g is None or not pl:
+            continue
+        date, away, home = g
+        that_day = [r for r in pl["g"] if r[1] == date]
+        if that_day and not any(r[2] in (away, home) for r in that_day):
+            p["res"], p["actual"] = "dnp", None
+            n += 1
+    return n
+
+
 def assign_lists(picks):
     """T = 'Top 25 Surest': up to 25 props the model gives 90%+ that have a live
     Polymarket price, best line per player-prop, ranked by model chance (so a thin slate
@@ -1445,6 +1466,9 @@ def main():
     if dup:
         print(f"  picks: dropped {dup} duplicate pick(s) recorded twice for one game")
     graded, dnp = grade_picks(picks, by_pid, box_games(store["rows"]))
+    misgraded = void_misgraded(picks, by_pid, box_games(store["rows"]))
+    if misgraded:
+        print(f"  picks: voided {misgraded} pick(s) graded on a game the player wasn't in")
     try:
         mkt_added = build_market_picks(picks, poly_games, players_by_key, slate, defense, defavg)
     except Exception as e:  # noqa: BLE001
