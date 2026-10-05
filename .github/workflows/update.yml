@@ -37,7 +37,9 @@ concurrency:
 
 jobs:
   update:
-    runs-on: ubuntu-latest
+    # The image every run so far has used. On 2026-10-05 two runs on ubuntu-latest were never
+    # given a runner and were cancelled after 15 minutes; pinning skips that label's queue.
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
 
