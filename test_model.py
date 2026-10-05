@@ -446,6 +446,17 @@ class ListTests(unittest.TestCase):
         B.grade_picks([dnp], sched, {"p1": pl}, {"2026_01_A_B"})
         self.assertEqual(dnp["res"], "dnp")
 
+    def test_mlb_pick_for_a_game_never_played_is_voided(self):
+        """A playoff "if necessary" game the series never needed has no box score; once
+        its scoreboard date is settled the pick is voided rather than pending forever."""
+        import build_mlb as M
+        pick = {"src": "live", "gid": "2026-10-02-CHC-SD", "pid": "p1", "stat": "h", "line": 0.5,
+                "side": "over", "start": "2026-10-02T00:00Z", "res": None, "actual": None}
+        self.assertEqual(M.grade_picks([pick], {}, set(), set()), (0, 0))       # date not settled yet
+        self.assertIsNone(pick["res"])
+        self.assertEqual(M.grade_picks([pick], {}, set(), {"2026-10-01"}), (0, 1))   # 8 PM ET Oct 1
+        self.assertEqual(pick["res"], "dnp")
+
 
 class SeasonTests(unittest.TestCase):
     def test_season_year(self):
