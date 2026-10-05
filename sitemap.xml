@@ -2,55 +2,55 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
     <loc>https://propstreaklab.com/</loc>
-    <lastmod>2026-10-04</lastmod>
+    <lastmod>2026-10-05</lastmod>
     <changefreq>daily</changefreq>
     <priority>1.0</priority>
   </url>
   <url>
     <loc>https://propstreaklab.com/nfl.html</loc>
-    <lastmod>2026-10-04</lastmod>
+    <lastmod>2026-10-05</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
     <loc>https://propstreaklab.com/nba.html</loc>
-    <lastmod>2026-10-04</lastmod>
+    <lastmod>2026-10-05</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
     <loc>https://propstreaklab.com/nhl.html</loc>
-    <lastmod>2026-10-04</lastmod>
+    <lastmod>2026-10-05</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
     <loc>https://propstreaklab.com/mlb.html</loc>
-    <lastmod>2026-10-04</lastmod>
+    <lastmod>2026-10-05</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
     <loc>https://propstreaklab.com/methodology.html</loc>
-    <lastmod>2026-10-04</lastmod>
+    <lastmod>2026-10-05</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
     <loc>https://propstreaklab.com/privacy.html</loc>
-    <lastmod>2026-10-04</lastmod>
+    <lastmod>2026-10-05</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.3</priority>
   </url>
   <url>
     <loc>https://propstreaklab.com/terms.html</loc>
-    <lastmod>2026-10-04</lastmod>
+    <lastmod>2026-10-05</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.3</priority>
   </url>
   <url>
     <loc>https://propstreaklab.com/cookies.html</loc>
-    <lastmod>2026-10-04</lastmod>
+    <lastmod>2026-10-05</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.3</priority>
   </url>
@@ -58,64 +58,64 @@
   <url><loc>https://propstreaklab.com/players/</loc><lastmod>2026-10-04</lastmod><changefreq>daily</changefreq><priority>0.5</priority></url>
   <url><loc>https://propstreaklab.com/players/nfl/bo-nix.html</loc><lastmod>2026-10-04</lastmod><changefreq>daily</changefreq><priority>0.5</priority></url>
   <url><loc>https://propstreaklab.com/players/nfl/patrick-mahomes.html</loc><lastmod>2026-10-04</lastmod><changefreq>daily</changefreq><priority>0.5</priority></url>
-  <url><loc>https://propstreaklab.com/players/nfl/lamar-jackson.html</loc><lastmod>2026-10-04</lastmod><changefreq>daily</changefreq><priority>0.5</priority></url>
   <url><loc>https://propstreaklab.com/players/nfl/josh-allen.html</loc><lastmod>2026-10-04</lastmod><changefreq>daily</changefreq><priority>0.5</priority></url>
-  <url><loc>https://propstreaklab.com/players/nfl/justin-herbert.html</loc><lastmod>2026-10-04</lastmod><changefreq>daily</changefreq><priority>0.5</priority></url>
+  <url><loc>https://propstreaklab.com/players/nfl/lamar-jackson.html</loc><lastmod>2026-10-04</lastmod><changefreq>daily</changefreq><priority>0.5</priority></url>
   <url><loc>https://propstreaklab.com/players/nfl/malik-willis.html</loc><lastmod>2026-10-04</lastmod><changefreq>daily</changefreq><priority>0.5</priority></url>
-  <url><loc>https://propstreaklab.com/players/nfl/tyler-shough.html</loc><lastmod>2026-10-04</lastmod><changefreq>daily</changefreq><priority>0.5</priority></url>
-  <url><loc>https://propstreaklab.com/players/nfl/deshaun-watson.html</loc><lastmod>2026-10-04</lastmod><changefreq>daily</changefreq><priority>0.5</priority></url>
-  <url><loc>https://propstreaklab.com/players/nfl/bijan-robinson.html</loc><lastmod>2026-10-04</lastmod><changefreq>daily</changefreq><priority>0.5</priority></url>
-  <url><loc>https://propstreaklab.com/players/nfl/trevor-lawrence.html</loc><lastmod>2026-10-04</lastmod><changefreq>daily</changefreq><priority>0.5</priority></url>
-  <url><loc>https://propstreaklab.com/players/nfl/jahmyr-gibbs.html</loc><lastmod>2026-10-04</lastmod><changefreq>daily</changefreq><priority>0.5</priority></url>
-  <url><loc>https://propstreaklab.com/players/nfl/joe-burrow.html</loc><lastmod>2026-10-04</lastmod><changefreq>daily</changefreq><priority>0.5</priority></url>
-  <url><loc>https://propstreaklab.com/players/nfl/aaron-rodgers.html</loc><lastmod>2026-10-04</lastmod><changefreq>daily</changefreq><priority>0.5</priority></url>
-  <url><loc>https://propstreaklab.com/players/nfl/cam-ward.html</loc><lastmod>2026-10-04</lastmod><changefreq>daily</changefreq><priority>0.5</priority></url>
-  <url><loc>https://propstreaklab.com/players/nfl/bryce-young.html</loc><lastmod>2026-10-04</lastmod><changefreq>daily</changefreq><priority>0.5</priority></url>
   <url><loc>https://propstreaklab.com/players/nfl/drake-maye.html</loc><lastmod>2026-10-04</lastmod><changefreq>daily</changefreq><priority>0.5</priority></url>
+  <url><loc>https://propstreaklab.com/players/nfl/deshaun-watson.html</loc><lastmod>2026-10-04</lastmod><changefreq>daily</changefreq><priority>0.5</priority></url>
+  <url><loc>https://propstreaklab.com/players/nfl/justin-herbert.html</loc><lastmod>2026-10-04</lastmod><changefreq>daily</changefreq><priority>0.5</priority></url>
+  <url><loc>https://propstreaklab.com/players/nfl/tyler-shough.html</loc><lastmod>2026-10-04</lastmod><changefreq>daily</changefreq><priority>0.5</priority></url>
+  <url><loc>https://propstreaklab.com/players/nfl/brock-purdy.html</loc><lastmod>2026-10-04</lastmod><changefreq>daily</changefreq><priority>0.5</priority></url>
+  <url><loc>https://propstreaklab.com/players/nfl/kenneth-walker-iii.html</loc><lastmod>2026-10-04</lastmod><changefreq>daily</changefreq><priority>0.5</priority></url>
+  <url><loc>https://propstreaklab.com/players/nfl/trevor-lawrence.html</loc><lastmod>2026-10-04</lastmod><changefreq>daily</changefreq><priority>0.5</priority></url>
+  <url><loc>https://propstreaklab.com/players/nfl/bijan-robinson.html</loc><lastmod>2026-10-04</lastmod><changefreq>daily</changefreq><priority>0.5</priority></url>
+  <url><loc>https://propstreaklab.com/players/nfl/aaron-rodgers.html</loc><lastmod>2026-10-04</lastmod><changefreq>daily</changefreq><priority>0.5</priority></url>
+  <url><loc>https://propstreaklab.com/players/nfl/c-j-stroud.html</loc><lastmod>2026-10-04</lastmod><changefreq>daily</changefreq><priority>0.5</priority></url>
+  <url><loc>https://propstreaklab.com/players/nfl/cam-ward.html</loc><lastmod>2026-10-04</lastmod><changefreq>daily</changefreq><priority>0.5</priority></url>
+  <url><loc>https://propstreaklab.com/players/nfl/jacoby-brissett.html</loc><lastmod>2026-10-04</lastmod><changefreq>daily</changefreq><priority>0.5</priority></url>
+  <url><loc>https://propstreaklab.com/players/nfl/jaylen-waddle.html</loc><lastmod>2026-10-04</lastmod><changefreq>daily</changefreq><priority>0.5</priority></url>
+  <url><loc>https://propstreaklab.com/players/nfl/joe-burrow.html</loc><lastmod>2026-10-04</lastmod><changefreq>daily</changefreq><priority>0.5</priority></url>
+  <url><loc>https://propstreaklab.com/players/nfl/jordan-love.html</loc><lastmod>2026-10-04</lastmod><changefreq>daily</changefreq><priority>0.5</priority></url>
+  <url><loc>https://propstreaklab.com/players/nfl/kirk-cousins.html</loc><lastmod>2026-10-04</lastmod><changefreq>daily</changefreq><priority>0.5</priority></url>
+  <url><loc>https://propstreaklab.com/players/nfl/bryce-young.html</loc><lastmod>2026-10-04</lastmod><changefreq>daily</changefreq><priority>0.5</priority></url>
   <url><loc>https://propstreaklab.com/players/nfl/jared-goff.html</loc><lastmod>2026-10-04</lastmod><changefreq>daily</changefreq><priority>0.5</priority></url>
   <url><loc>https://propstreaklab.com/players/nfl/jaylen-warren.html</loc><lastmod>2026-10-04</lastmod><changefreq>daily</changefreq><priority>0.5</priority></url>
-  <url><loc>https://propstreaklab.com/players/nfl/c-j-stroud.html</loc><lastmod>2026-10-04</lastmod><changefreq>daily</changefreq><priority>0.5</priority></url>
-  <url><loc>https://propstreaklab.com/players/nfl/jacoby-brissett.html</loc><lastmod>2026-10-04</lastmod><changefreq>daily</changefreq><priority>0.5</priority></url>
-  <url><loc>https://propstreaklab.com/players/nfl/jalen-hurts.html</loc><lastmod>2026-10-04</lastmod><changefreq>daily</changefreq><priority>0.5</priority></url>
-  <url><loc>https://propstreaklab.com/players/nfl/brock-purdy.html</loc><lastmod>2026-10-04</lastmod><changefreq>daily</changefreq><priority>0.5</priority></url>
-  <url><loc>https://propstreaklab.com/players/nfl/jordan-love.html</loc><lastmod>2026-10-04</lastmod><changefreq>daily</changefreq><priority>0.5</priority></url>
-  <url><loc>https://propstreaklab.com/players/nfl/kenneth-walker-iii.html</loc><lastmod>2026-10-04</lastmod><changefreq>daily</changefreq><priority>0.5</priority></url>
+  <url><loc>https://propstreaklab.com/players/nfl/jahmyr-gibbs.html</loc><lastmod>2026-10-04</lastmod><changefreq>daily</changefreq><priority>0.5</priority></url>
   <url><loc>https://propstreaklab.com/players/nfl/kyler-murray.html</loc><lastmod>2026-10-04</lastmod><changefreq>daily</changefreq><priority>0.5</priority></url>
-  <url><loc>https://propstreaklab.com/players/nfl/kirk-cousins.html</loc><lastmod>2026-10-04</lastmod><changefreq>daily</changefreq><priority>0.5</priority></url>
+  <url><loc>https://propstreaklab.com/players/nfl/travis-kelce.html</loc><lastmod>2026-10-04</lastmod><changefreq>daily</changefreq><priority>0.5</priority></url>
+  <url><loc>https://propstreaklab.com/players/nfl/jalen-hurts.html</loc><lastmod>2026-10-04</lastmod><changefreq>daily</changefreq><priority>0.5</priority></url>
+  <url><loc>https://propstreaklab.com/players/nfl/chuba-hubbard.html</loc><lastmod>2026-10-04</lastmod><changefreq>daily</changefreq><priority>0.5</priority></url>
+  <url><loc>https://propstreaklab.com/players/nfl/rashee-rice.html</loc><lastmod>2026-10-04</lastmod><changefreq>daily</changefreq><priority>0.5</priority></url>
+  <url><loc>https://propstreaklab.com/players/nfl/courtland-sutton.html</loc><lastmod>2026-10-04</lastmod><changefreq>daily</changefreq><priority>0.5</priority></url>
+  <url><loc>https://propstreaklab.com/players/nfl/christian-mccaffrey.html</loc><lastmod>2026-10-04</lastmod><changefreq>daily</changefreq><priority>0.5</priority></url>
   <url><loc>https://propstreaklab.com/players/nfl/drake-london.html</loc><lastmod>2026-10-04</lastmod><changefreq>daily</changefreq><priority>0.5</priority></url>
+  <url><loc>https://propstreaklab.com/players/nfl/baker-mayfield.html</loc><lastmod>2026-10-04</lastmod><changefreq>daily</changefreq><priority>0.5</priority></url>
+  <url><loc>https://propstreaklab.com/players/nfl/dak-prescott.html</loc><lastmod>2026-10-04</lastmod><changefreq>daily</changefreq><priority>0.5</priority></url>
+  <url><loc>https://propstreaklab.com/players/nfl/quinshon-judkins.html</loc><lastmod>2026-10-04</lastmod><changefreq>daily</changefreq><priority>0.5</priority></url>
+  <url><loc>https://propstreaklab.com/players/nfl/amon-ra-st-brown.html</loc><lastmod>2026-10-04</lastmod><changefreq>daily</changefreq><priority>0.5</priority></url>
+  <url><loc>https://propstreaklab.com/players/nfl/chris-olave.html</loc><lastmod>2026-10-04</lastmod><changefreq>daily</changefreq><priority>0.5</priority></url>
+  <url><loc>https://propstreaklab.com/players/nfl/jameis-winston.html</loc><lastmod>2026-10-04</lastmod><changefreq>daily</changefreq><priority>0.5</priority></url>
+  <url><loc>https://propstreaklab.com/players/nfl/sam-darnold.html</loc><lastmod>2026-10-04</lastmod><changefreq>daily</changefreq><priority>0.5</priority></url>
+  <url><loc>https://propstreaklab.com/players/nfl/tetairoa-mcmillan.html</loc><lastmod>2026-10-04</lastmod><changefreq>daily</changefreq><priority>0.5</priority></url>
+  <url><loc>https://propstreaklab.com/players/nfl/michael-penix-jr.html</loc><lastmod>2026-10-04</lastmod><changefreq>daily</changefreq><priority>0.5</priority></url>
+  <url><loc>https://propstreaklab.com/players/nfl/ashton-jeanty.html</loc><lastmod>2026-10-04</lastmod><changefreq>daily</changefreq><priority>0.5</priority></url>
   <url><loc>https://propstreaklab.com/players/nfl/cam-skattebo.html</loc><lastmod>2026-10-04</lastmod><changefreq>daily</changefreq><priority>0.5</priority></url>
   <url><loc>https://propstreaklab.com/players/nfl/chase-brown.html</loc><lastmod>2026-10-04</lastmod><changefreq>daily</changefreq><priority>0.5</priority></url>
-  <url><loc>https://propstreaklab.com/players/nfl/amon-ra-st-brown.html</loc><lastmod>2026-10-04</lastmod><changefreq>daily</changefreq><priority>0.5</priority></url>
-  <url><loc>https://propstreaklab.com/players/nfl/baker-mayfield.html</loc><lastmod>2026-10-04</lastmod><changefreq>daily</changefreq><priority>0.5</priority></url>
-  <url><loc>https://propstreaklab.com/players/nfl/chris-olave.html</loc><lastmod>2026-10-04</lastmod><changefreq>daily</changefreq><priority>0.5</priority></url>
-  <url><loc>https://propstreaklab.com/players/nfl/quinshon-judkins.html</loc><lastmod>2026-10-04</lastmod><changefreq>daily</changefreq><priority>0.5</priority></url>
-  <url><loc>https://propstreaklab.com/players/nfl/chuba-hubbard.html</loc><lastmod>2026-10-04</lastmod><changefreq>daily</changefreq><priority>0.5</priority></url>
+  <url><loc>https://propstreaklab.com/players/nfl/xavier-worthy.html</loc><lastmod>2026-10-04</lastmod><changefreq>daily</changefreq><priority>0.5</priority></url>
+  <url><loc>https://propstreaklab.com/players/nfl/christian-watson.html</loc><lastmod>2026-10-04</lastmod><changefreq>daily</changefreq><priority>0.5</priority></url>
   <url><loc>https://propstreaklab.com/players/nfl/ja-marr-chase.html</loc><lastmod>2026-10-04</lastmod><changefreq>daily</changefreq><priority>0.5</priority></url>
-  <url><loc>https://propstreaklab.com/players/nfl/jaylen-waddle.html</loc><lastmod>2026-10-04</lastmod><changefreq>daily</changefreq><priority>0.5</priority></url>
-  <url><loc>https://propstreaklab.com/players/nfl/malik-nabers.html</loc><lastmod>2026-10-04</lastmod><changefreq>daily</changefreq><priority>0.5</priority></url>
+  <url><loc>https://propstreaklab.com/players/nfl/jaxon-smith-njigba.html</loc><lastmod>2026-10-04</lastmod><changefreq>daily</changefreq><priority>0.5</priority></url>
+  <url><loc>https://propstreaklab.com/players/nfl/parker-washington.html</loc><lastmod>2026-10-04</lastmod><changefreq>daily</changefreq><priority>0.5</priority></url>
   <url><loc>https://propstreaklab.com/players/nfl/trey-mcbride.html</loc><lastmod>2026-10-04</lastmod><changefreq>daily</changefreq><priority>0.5</priority></url>
-  <url><loc>https://propstreaklab.com/players/nfl/tetairoa-mcmillan.html</loc><lastmod>2026-10-04</lastmod><changefreq>daily</changefreq><priority>0.5</priority></url>
   <url><loc>https://propstreaklab.com/players/nfl/jaxson-dart.html</loc><lastmod>2026-10-04</lastmod><changefreq>daily</changefreq><priority>0.5</priority></url>
   <url><loc>https://propstreaklab.com/players/nfl/bucky-irving.html</loc><lastmod>2026-10-04</lastmod><changefreq>daily</changefreq><priority>0.5</priority></url>
-  <url><loc>https://propstreaklab.com/players/nfl/dj-moore.html</loc><lastmod>2026-10-04</lastmod><changefreq>daily</changefreq><priority>0.5</priority></url>
-  <url><loc>https://propstreaklab.com/players/nfl/christian-watson.html</loc><lastmod>2026-10-04</lastmod><changefreq>daily</changefreq><priority>0.5</priority></url>
-  <url><loc>https://propstreaklab.com/players/nfl/daniel-jones.html</loc><lastmod>2026-10-04</lastmod><changefreq>daily</changefreq><priority>0.5</priority></url>
-  <url><loc>https://propstreaklab.com/players/nfl/de-von-achane.html</loc><lastmod>2026-10-04</lastmod><changefreq>daily</changefreq><priority>0.5</priority></url>
   <url><loc>https://propstreaklab.com/players/nfl/dk-metcalf.html</loc><lastmod>2026-10-04</lastmod><changefreq>daily</changefreq><priority>0.5</priority></url>
-  <url><loc>https://propstreaklab.com/players/nfl/dak-prescott.html</loc><lastmod>2026-10-04</lastmod><changefreq>daily</changefreq><priority>0.5</priority></url>
-  <url><loc>https://propstreaklab.com/players/nfl/parker-washington.html</loc><lastmod>2026-10-04</lastmod><changefreq>daily</changefreq><priority>0.5</priority></url>
-  <url><loc>https://propstreaklab.com/players/nfl/saquon-barkley.html</loc><lastmod>2026-10-04</lastmod><changefreq>daily</changefreq><priority>0.5</priority></url>
-  <url><loc>https://propstreaklab.com/players/nfl/tee-higgins.html</loc><lastmod>2026-10-04</lastmod><changefreq>daily</changefreq><priority>0.5</priority></url>
-  <url><loc>https://propstreaklab.com/players/nfl/matthew-golden.html</loc><lastmod>2026-10-04</lastmod><changefreq>daily</changefreq><priority>0.5</priority></url>
-  <url><loc>https://propstreaklab.com/players/nfl/jameson-williams.html</loc><lastmod>2026-10-04</lastmod><changefreq>daily</changefreq><priority>0.5</priority></url>
-  <url><loc>https://propstreaklab.com/players/nfl/ceedee-lamb.html</loc><lastmod>2026-10-04</lastmod><changefreq>daily</changefreq><priority>0.5</priority></url>
-  <url><loc>https://propstreaklab.com/players/nfl/james-cook.html</loc><lastmod>2026-10-04</lastmod><changefreq>daily</changefreq><priority>0.5</priority></url>
-  <url><loc>https://propstreaklab.com/players/nfl/omarion-hampton.html</loc><lastmod>2026-10-04</lastmod><changefreq>daily</changefreq><priority>0.5</priority></url>
-  <url><loc>https://propstreaklab.com/players/nfl/travis-kelce.html</loc><lastmod>2026-10-04</lastmod><changefreq>daily</changefreq><priority>0.5</priority></url>
-  <url><loc>https://propstreaklab.com/players/nfl/breece-hall.html</loc><lastmod>2026-10-04</lastmod><changefreq>daily</changefreq><priority>0.5</priority></url>
-  <url><loc>https://propstreaklab.com/players/nfl/kyle-pitts.html</loc><lastmod>2026-10-04</lastmod><changefreq>daily</changefreq><priority>0.5</priority></url>
+  <url><loc>https://propstreaklab.com/players/nfl/daniel-jones.html</loc><lastmod>2026-10-04</lastmod><changefreq>daily</changefreq><priority>0.5</priority></url>
   <url><loc>https://propstreaklab.com/players/nfl/geno-smith.html</loc><lastmod>2026-10-04</lastmod><changefreq>daily</changefreq><priority>0.5</priority></url>
-  <url><loc>https://propstreaklab.com/players/nfl/george-pickens.html</loc><lastmod>2026-10-04</lastmod><changefreq>daily</changefreq><priority>0.5</priority></url>
+  <url><loc>https://propstreaklab.com/players/nfl/george-kittle.html</loc><lastmod>2026-10-04</lastmod><changefreq>daily</changefreq><priority>0.5</priority></url>
+  <url><loc>https://propstreaklab.com/players/nfl/malik-nabers.html</loc><lastmod>2026-10-04</lastmod><changefreq>daily</changefreq><priority>0.5</priority></url>
+  <url><loc>https://propstreaklab.com/players/nfl/matthew-golden.html</loc><lastmod>2026-10-04</lastmod><changefreq>daily</changefreq><priority>0.5</priority></url>
+  <url><loc>https://propstreaklab.com/players/nfl/matthew-stafford.html</loc><lastmod>2026-10-04</lastmod><changefreq>daily</changefreq><priority>0.5</priority></url>
   <url><loc>https://propstreaklab.com/players/nba/trayce-jackson-davis.html</loc><lastmod>2026-10-04</lastmod><changefreq>daily</changefreq><priority>0.5</priority></url>
   <url><loc>https://propstreaklab.com/players/nba/andrew-wiggins.html</loc><lastmod>2026-10-04</lastmod><changefreq>daily</changefreq><priority>0.5</priority></url>
   <url><loc>https://propstreaklab.com/players/nba/bam-adebayo.html</loc><lastmod>2026-10-04</lastmod><changefreq>daily</changefreq><priority>0.5</priority></url>
@@ -232,10 +232,10 @@
   <url><loc>https://propstreaklab.com/players/nhl/owen-tippett.html</loc><lastmod>2026-10-04</lastmod><changefreq>daily</changefreq><priority>0.5</priority></url>
   <url><loc>https://propstreaklab.com/players/nhl/taylor-hall.html</loc><lastmod>2026-10-04</lastmod><changefreq>daily</changefreq><priority>0.5</priority></url>
   <url><loc>https://propstreaklab.com/players/nhl/gabriel-vilardi.html</loc><lastmod>2026-10-04</lastmod><changefreq>daily</changefreq><priority>0.5</priority></url>
+  <url><loc>https://propstreaklab.com/players/nhl/jason-robertson.html</loc><lastmod>2026-10-04</lastmod><changefreq>daily</changefreq><priority>0.5</priority></url>
+  <url><loc>https://propstreaklab.com/players/nhl/macklin-celebrini.html</loc><lastmod>2026-10-04</lastmod><changefreq>daily</changefreq><priority>0.5</priority></url>
+  <url><loc>https://propstreaklab.com/players/nhl/wyatt-johnston.html</loc><lastmod>2026-10-04</lastmod><changefreq>daily</changefreq><priority>0.5</priority></url>
   <url><loc>https://propstreaklab.com/players/nhl/linus-karlsson.html</loc><lastmod>2026-10-04</lastmod><changefreq>daily</changefreq><priority>0.5</priority></url>
-  <url><loc>https://propstreaklab.com/players/nhl/anthony-cirelli.html</loc><lastmod>2026-10-04</lastmod><changefreq>daily</changefreq><priority>0.5</priority></url>
-  <url><loc>https://propstreaklab.com/players/nhl/brayden-point.html</loc><lastmod>2026-10-04</lastmod><changefreq>daily</changefreq><priority>0.5</priority></url>
-  <url><loc>https://propstreaklab.com/players/nhl/jake-debrusk.html</loc><lastmod>2026-10-04</lastmod><changefreq>daily</changefreq><priority>0.5</priority></url>
   <url><loc>https://propstreaklab.com/players/mlb/ronald-acuna-jr.html</loc><lastmod>2026-10-04</lastmod><changefreq>daily</changefreq><priority>0.5</priority></url>
   <url><loc>https://propstreaklab.com/players/mlb/ozzie-albies.html</loc><lastmod>2026-10-04</lastmod><changefreq>daily</changefreq><priority>0.5</priority></url>
   <url><loc>https://propstreaklab.com/players/mlb/michael-harris-ii.html</loc><lastmod>2026-10-04</lastmod><changefreq>daily</changefreq><priority>0.5</priority></url>
