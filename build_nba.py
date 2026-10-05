@@ -599,6 +599,9 @@ def fetch_slate():
         if status.get("completed") or status.get("state", "pre") != "pre":
             STARTED.add(frozenset((away, home)))
             continue
+        if (ev.get("season") or {}).get("type") == 1:
+            PRESEASON.add(frozenset((away, home)))
+            continue
         total = spread = None
         odds = comp.get("odds") or []
         if odds:
