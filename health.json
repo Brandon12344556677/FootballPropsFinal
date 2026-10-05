@@ -2,12 +2,10 @@
  "problems": {
   "NHL: ungraded": {
    "first": "2026-10-05T04:06:14Z",
-   "runs": 18,
+   "runs": 19,
    "alerted": "2026-10-05T08:09:34Z",
    "msg": "NHL: 104 pick(s) still ungraded 2+ days after their game"
   }
  },
- "alert": [
-  "NHL: 104 pick(s) still ungraded 2+ days after their game"
- ]
+ "alert": []
 }
