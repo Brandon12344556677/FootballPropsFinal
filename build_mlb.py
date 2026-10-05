@@ -1025,16 +1025,30 @@ def pick_box_game(p, games):
     return key if key in games else None
 
 
-def grade_picks(picks, by_pid, games):
+def pick_et_date(p):
+    """The pick's game date on ESPN's scoreboard (ET): its start time's ET date, else the gid date."""
+    t = parse_utc(p.get("start"))
+    if t:
+        return (t - datetime.timedelta(hours=4)).date().isoformat()   # UTC -> ET (in-season, ~UTC-4)
+    return (p.get("gid") or "")[:10]
+
+
+def grade_picks(picks, by_pid, games, done=()):
     """Grade pending picks once their game's box score is in the store. A player with no
     row in that game didn't play (bench, scratched starter), so the pick is voided as
-    'dnp' rather than staying pending forever. Returns (graded, dnp)."""
+    'dnp' rather than staying pending forever. So is a pick whose game never took place
+    at that time: its scoreboard date is settled (in store['done']: every game on it
+    final and stored) yet holds no such game — a playoff "if necessary" game the series
+    never needed, or a placeholder start ESPN later moved. Returns (graded, dnp)."""
     n = dnp = 0
     for p in picks:
         if p.get("res") is not None or not pick_started(p):
             continue
         g = pick_box_game(p, games)
         if g is None:
+            if pick_et_date(p) in done:
+                p["res"], p["actual"] = "dnp", None
+                dnp += 1
             continue       # not final yet (or not ingested)
         date, away, home = g
         pl = by_pid.get(p["pid"])
@@ -1208,7 +1222,7 @@ def main():
         poly_games = []
 
     picks = load_picks()
-    graded, dnp = grade_picks(picks, by_pid, box_games(store["rows"]))
+    graded, dnp = grade_picks(picks, by_pid, box_games(store["rows"]), set(store["done"]))
     try:
         mkt_added = build_market_picks(picks, poly_games, players_by_key, slate, defense, defavg)
     except Exception as e:  # noqa: BLE001
