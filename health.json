@@ -2,13 +2,13 @@
  "problems": {
   "build_mlb: polymarket US": {
    "first": "2026-10-06T17:21:27Z",
-   "runs": 1,
+   "runs": 2,
    "alerted": null,
    "msg": "build_mlb.py: polymarket US failed (HTTP Error 403: Forbidden)"
   },
   "build_nhl: polymarket US": {
    "first": "2026-10-06T17:21:27Z",
-   "runs": 1,
+   "runs": 2,
    "alerted": null,
    "msg": "build_nhl.py: polymarket US failed (HTTP Error 403: Forbidden)"
   }
