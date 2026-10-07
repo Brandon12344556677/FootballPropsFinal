@@ -27,6 +27,7 @@ from collections import Counter
 from concurrent.futures import ThreadPoolExecutor
 
 import news   # pre-game news feeds, test mode
+import kalshi  # Kalshi prices, side by side with Polymarket's
 
 TODAY = datetime.date.today()
 ET_TODAY = (datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(hours=4)).date().isoformat()
@@ -834,7 +835,9 @@ PICK_COLS = ["src", "gid", "season", "date", "pid", "player", "pos", "team", "op
              "px0", "pxc",   # px0/pxc: first and last pre-game price (closing line value)
              "mv",           # model version the chance came from (MODEL_V)
              "nw",           # pre-game news, test mode (news.py): {"lu", "roof", "wx"}
-             "lk"]           # when the pick locked (UTC; see lock_picks)
+             "lk",           # when the pick locked (UTC; see lock_picks)
+             "pp", "kp",     # this side's price on Polymarket and on Kalshi (None = not listed there)
+             "vn"]           # which one "price" is, the cheaper: "P" Polymarket, "K" Kalshi
 BAT_BOARD = ["h", "tb", "hrr"]
 PIT_BOARD = ["k", "outs"]
 TOP_N = 25
@@ -884,6 +887,7 @@ def make_pick(pl, gid, date, team, opp, sk, line, mp, scale, start, prices=None)
             "stat": sk, "line": line, "side": side,
             "prob": round(prob, 3), "lo": round(lo, 3), "hi": round(hi, 3),
             "neff": round(mp["neff"], 1), "price": round(price, 3) if price is not None else None,
+            "pp": round(price, 3) if price is not None else None, "vn": "P" if price is not None else None,
             "lists": "", "rec": f"{sk} {side} {line}", "actual": None, "res": None,
             "adj": round(scale, 3), "start": start or None, "mv": MODEL_V}
 
@@ -894,7 +898,8 @@ def refresh_price(p, pm):
     so "has a live market" for Top 25 Surest means now, not when the pick was recorded."""
     if p.get("res") is None and not pick_locked(p):
         px = (pm["over"] if p["side"] == "over" else pm["under"]) if pm.get("tradeable") else None
-        p["price"] = round(px, 3) if px is not None else None
+        p["pp"] = round(px, 3) if px is not None else None
+        p["price"], p["vn"] = kalshi.best(p["pp"], p.get("kp"))   # the cheaper of Polymarket and Kalshi
 
 
 def news_test(picks):
@@ -1258,6 +1263,11 @@ def main():
     except Exception as e:  # noqa: BLE001
         print(f"  polymarket US: skipped ({e})")
         poly_games = []
+    try:
+        kalshi_mkts = kalshi.fetch("mlb", days=4)
+    except Exception as e:  # noqa: BLE001
+        print(f"  kalshi: skipped ({e})")
+        kalshi_mkts = None
 
     picks = load_picks()
     graded, dnp = grade_picks(picks, by_pid, box_games(store["rows"]), set(store["done"]))
@@ -1268,6 +1278,8 @@ def main():
         mkt_added = 0
     added_picks = build_board_picks(picks, slate, players_by_team, by_pid, defense, defavg)
     stamp_starts(picks)
+    nk = kalshi.apply(picks, kalshi_mkts, pkey, lambda p: not pick_locked(p))
+    print(f"  kalshi: {nk} pending pick(s) priced on Kalshi too")
     assign_lists(picks)
     for p in picks:
         if p.get("res") is None and not pick_locked(p):

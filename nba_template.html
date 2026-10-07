@@ -617,8 +617,8 @@ tr.hit td{background:var(--hit-soft)} tr.miss td{background:var(--miss-soft)}
 .panel.collapsed{padding-bottom:14px}
 </style>
 
-<link rel="stylesheet" href="app.css?v=20261007a">
-<script src="app.js?v=20261007a"></script>
+<link rel="stylesheet" href="app.css?v=20261007b">
+<script src="app.js?v=20261007b"></script>
 
 <header class="apptop">
   <div class="apptop-in">
@@ -639,7 +639,7 @@ tr.hit td{background:var(--hit-soft)} tr.miss td{background:var(--miss-soft)}
   <section class="apphero">
     <span class="eyebrow"><span class="dot"></span>NBA player props · real game logs</span>
     <h1>Know who <i>clears</i> the line tonight.</h1>
-    <p class="lede">Every NBA player's box-score history, a calibrated chance for any line — scaled for pace and the opponent — priced against Polymarket, and every pick graded in public.</p>
+    <p class="lede">Every NBA player's box-score history, a calibrated chance for any line — scaled for pace and the opponent — priced against Polymarket and Kalshi, and every pick graded in public.</p>
     <div class="herostats">
       <div><b id="dncount">—</b><span>Players tracked</span></div>
       <div><b id="dnthru">—</b><span>Data through</span></div>
@@ -672,10 +672,10 @@ tr.hit td{background:var(--hit-soft)} tr.miss td{background:var(--miss-soft)}
     <div class="valrules">
       <div class="vrhead">What counts as a value spot — both rules have to be true</div>
       <ol class="vrlist">
-        <li><span class="vrnum">1</span><span class="vrtxt"><b>Polymarket gives it at least a 30% chance.</b> The price you'd pay has to be <b>30¢ or more</b>. <span class="vrwhy">This is the rule that keeps penny longshots off the list — a 6¢ ask against an 11% model chance looks like a huge edge in percentage terms and is still a bad bet.</span></span></li>
+        <li><span class="vrnum">1</span><span class="vrtxt"><b>The market gives it at least a 30% chance.</b> The price you'd pay has to be <b>30¢ or more</b>. <span class="vrwhy">This is the rule that keeps penny longshots off the list — a 6¢ ask against an 11% model chance looks like a huge edge in percentage terms and is still a bad bet.</span></span></li>
         <li><span class="vrnum">2</span><span class="vrtxt"><b>Our model puts it at least 15 points higher.</b> <span class="vreg">30¢ ask → needs 45%</span> · <span class="vreg">50¢ → 65%</span> · <span class="vreg">70¢ → 85%</span>. <span class="vrwhy">The gap between the two, in percentage points, is the <b>edge</b> shown in the Polymarket column.</span></span></li>
       </ol>
-      <div class="vrfoot">Both rules are tested against the <b>Polymarket price for the side the model takes</b> — the price you'd actually pay — and a prop also needs <b>6+ effective games</b> of history behind it. Everything clearing both rules is listed, ranked by that edge. Prices come from Polymarket's NBA player-prop markets, so this list stays empty until those are posted.</div>
+      <div class="vrfoot">Both rules are tested against the <b>cheaper of the Polymarket and Kalshi prices for the side the model takes</b> — the price you'd actually pay — and a prop also needs <b>6+ effective games</b> of history behind it. Everything clearing both rules is listed, ranked by that edge. Prices come from Polymarket's NBA player-prop markets, so this list stays empty until those are posted.</div>
     </div>
     <div id="valuebody"></div>
   </div>
@@ -828,7 +828,7 @@ tr.hit td{background:var(--hit-soft)} tr.miss td{background:var(--miss-soft)}
   </div>
   <div class="panel" id="pfpanel" hidden>
     <h2>Profit — if you'd bet 1 unit on every pick</h2>
-    <p class="hint">Running units for the filtered picks that had a recorded market price, staking 1 unit on each at the price you'd have paid. A win at 60¢ returns +0.67u; a loss is −1u. Picks with no Polymarket price aren't counted here.</p>
+    <p class="hint">Running units for the filtered picks that had a recorded market price, staking 1 unit on each at the price you'd have paid. A win at 60¢ returns +0.67u; a loss is −1u. Picks with no market price aren't counted here.</p>
     <div class="chartwrap"><svg id="pfchart" class="small" viewBox="0 0 520 240" preserveAspectRatio="xMidYMid meet" role="img" aria-label="cumulative units won"></svg></div>
     <div id="pfempty" class="mktnote" hidden>No priced, graded picks match these filters yet — profit tracking fills in once picks with recorded prices are graded.</div>
     <div id="pfnote" class="mktnote" hidden></div>
@@ -845,8 +845,8 @@ tr.hit td{background:var(--hit-soft)} tr.miss td{background:var(--miss-soft)}
     <div class="mkthead"><h2>Picks</h2><span class="mktmuted" id="pkcount"></span></div>
     <div class="mktmuted" style="margin:-4px 0 12px;display:flex;gap:8px 18px;align-items:center;flex-wrap:wrap;font-size:13px;line-height:1.5">
       <span style="text-transform:uppercase;letter-spacing:.6px;font-weight:700;font-family:var(--dispers)">Lists key:</span>
-      <span><span class="listchip T">T</span> = Top 25 Surest — up to 25 props with a 90%+ model chance and a live Polymarket price</span>
-      <span><span class="listchip V">V</span> = Value — Polymarket priced it at 30¢+ and the model was 15+ points higher, over <i>or</i> under</span>
+      <span><span class="listchip T">T</span> = Top 25 Surest — up to 25 props with a 90%+ model chance and a live Polymarket or Kalshi price</span>
+      <span><span class="listchip V">V</span> = Value — the cheaper of Polymarket and Kalshi priced it at 30¢+ and the model was 15+ points higher, over <i>or</i> under</span>
     </div>
     <div class="chartwrap"><table class="edgetbl" id="pktbl"></table></div>
     <div style="margin-top:10px;display:flex;gap:10px;align-items:center;flex-wrap:wrap"><button id="pkmore" class="btn ghost" hidden>Show more</button><button id="pkall" class="btn ghost" hidden>Show all</button><span class="mktmuted" id="pkcountb"></span></div>
@@ -875,8 +875,8 @@ tr.hit td{background:var(--hit-soft)} tr.miss td{background:var(--miss-soft)}
   <footer style="text-align:center;color:var(--muted);font-size:13px;margin-top:40px">
     Prop Streak Lab · model estimates for entertainment, not betting advice · <a href="./">Home</a> · <a href="./nfl.html">NFL</a> · 🏀 NBA · <a href="./nhl.html">NHL</a> · <a href="./mlb.html">MLB</a><br>
     <span style="display:inline-block;margin-top:10px"><a href="players/">Players</a> · <a href="methodology.html">How the model works</a> · <a href="privacy.html">Privacy Policy</a> · <a href="terms.html">Terms &amp; Conditions</a> · <a href="cookies.html">Cookies Policy</a> · <a href="mailto:info@propstreaklab.com">Contact</a></span><br>
-    <span style="display:inline-block;margin-top:6px">Informational and entertainment use only. Some links to Polymarket are affiliate links. © 2026 Prop Streak Lab.</span><br>
-    <span style="display:inline-block;margin-top:6px;font-size:11px;opacity:.8">Data accuracy: stats, lines, injury reports and prices come from third-party sources (ESPN, Polymarket) and may be delayed, incomplete, or occasionally wrong. Model outputs are estimates, not guarantees — verify independently before relying on anything here.</span><br>
+    <span style="display:inline-block;margin-top:6px">Informational and entertainment use only. Some links to Polymarket and Kalshi are affiliate or referral links. © 2026 Prop Streak Lab.</span><br>
+    <span style="display:inline-block;margin-top:6px;font-size:11px;opacity:.8">Data accuracy: stats, lines, injury reports and prices come from third-party sources (ESPN, Polymarket, Kalshi) and may be delayed, incomplete, or occasionally wrong. Model outputs are estimates, not guarantees — verify independently before relying on anything here.</span><br>
     <span style="display:inline-block;margin-top:6px;font-size:11px;opacity:.8">For adults, 18+. If gambling stops being fun, stop — call 1-800-522-4700 (US, National Problem Gambling Helpline) or visit <a href="https://www.ncpgambling.org" rel="noopener" target="_blank">ncpgambling.org</a>. Prop Streak Lab does not accept bets or facilitate wagering.</span>
   </footer>
 </div>
@@ -1130,7 +1130,7 @@ function paintVerdict(){
   const same=mine.find(x=>+x.line===+state.line && (x.side||'over')===state.ou);
   const near=same? null : (mine.find(x=>(x.side||'over')===state.ou) || mine[0]);
   PS.verdict($('verdict'), {prob:v.prob, lo:v.lo, hi:v.hi, neff:v.neff, side:state.ou, line:state.line, statText:statLabel(state.stat),
-    price: same? same.price : null, live:false, marketLine:(near && +near.line!==+state.line)? near.line : null,
+    price: same? same.price : null, vn: same? (same.vn||'P') : null, live:false, marketLine:(near && +near.line!==+state.line)? near.line : null,
     onShare:()=>PS.sharePick(state, statLabel(state.stat)),
     track:trackFor(betFor(p, state.stat, state.line, state.ou, v.prob, same? same.price : null))});
 }
@@ -1261,20 +1261,22 @@ let edgeSort={key:'prob',dir:-1}, valueSort={key:'prob',dir:-1}, goodSort={key:'
 function gameOf(p){ const m=/^\d{4}-\d{2}-\d{2}-([A-Z]+)-([A-Z]+)$/.exec(p.gid||'');
   return m? {away:m[1], home:m[2]} : {away:p.team, home:p.opp}; }
 function normPick(p){ const px=p.price==null? null : p.price;
+  // pp/kp: this side's Polymarket and Kalshi prices; price is the cheaper (vn). Older picks: Polymarket only.
+  const pp=p.pp!=null? p.pp : (p.vn==null && p.kp==null? px : null), kp=p.kp==null? null : p.kp;
   return {pid:p.pid, gid:p.gid, name:p.player, team:p.team, game:gameOf(p), sk:p.stat, statText:statLabel(p.stat),
     line:p.line, side:p.side||'over', prob:p.prob, lo:p.lo, hi:p.hi, n:Math.round(p.neff||0),
-    price:px, px0:p.px0==null? null : p.px0, lk:p.lk||null, edge:(px==null||p.prob==null)? null : p.prob-px}; }
+    price:px, pp, kp, vn:p.vn||(px==null? null : 'P'), px0:p.px0==null? null : p.px0, lk:p.lk||null, edge:(px==null||p.prob==null)? null : p.prob-px}; }
 function listRows(tag){ return upcomingPicks().filter(p=>(p.lists||'').includes(tag) && p.prob!=null).map(normPick); }
 function sortRows(rows, key, dir){ return [...rows].sort((a,b)=>{
   if(key==='matchup') return dir*((a.game.away+a.game.home).localeCompare(b.game.away+b.game.home));
   if(['name','statText','side'].includes(key)) return dir*((''+a[key]).localeCompare(''+b[key]));
   return dir*(((a[key]==null?-Infinity:a[key])-(b[key]==null?-Infinity:b[key]))); }); }
-function liveHead(sort){ return `<th data-k="edge" class="${sort&&sort.key==='edge'?'sorted'+(sort.dir>0?' asc':''):''}" title="Polymarket price for the side listed — what you'd pay, plus the model's edge over it"><span class="livehead"><span class="livedot"></span>Polymarket</span></th>`; }
+function liveHead(sort){ return `<th data-k="edge" class="${sort&&sort.key==='edge'?'sorted'+(sort.dir>0?' asc':''):''}" title="Best price for the side listed — the cheaper of Polymarket and Kalshi, what you'd pay, plus the model's edge over it"><span class="livehead"><span class="livedot"></span>Best price</span></th>`; }
 function priceCell(r){
-  if(r.price==null) return `<span class="pmdim" title="Polymarket hasn't listed ${SPORT_NAME} player props yet — the price appears here automatically once it does">no market yet</span>`;
+  if(r.price==null) return `<span class="pmdim" title="Neither Polymarket nor Kalshi lists this exact prop right now — the price appears here automatically once one does">no market yet</span>`;
   const signed=v=>(v>=0?'+':'−')+Math.abs(Math.round(v*100));
   const cls=r.edge==null? '' : r.edge>=0.04? 'pos' : r.edge<=-0.04? 'neg' : '';
-  return `<span class="pmpx ${cls}">${Math.round(r.price*100)}¢</span> <span class="rng">${r.edge==null?'':signed(r.edge)+' edge · '}${(1/r.price).toFixed(2)}×</span>`+PS.pxMove(r.px0, r.price); }
+  return `<span class="pmpx ${cls}">${Math.round(r.price*100)}¢</span> <span class="rng">${r.edge==null?'':signed(r.edge)+' edge · '}${(1/r.price).toFixed(2)}×</span>`+PS.pxMove(r.px0, r.price)+PS.venues(r.pp, r.kp, r.vn); }
 // Avatar initials for a pick card: "Fernando Tatis Jr." -> "FT".
 const initials=n=>{ const w=String(n||"").replace(/\s+(Jr|Sr|II|III|IV)\.?$/i,"").trim().split(/\s+/); return ((w[0]||"")[0]||"")+(w.length>1? (w[w.length-1][0]||"") : ""); };
 // Pick cards (Top 25 Surest, Value spots): one card per prop — who, the bet in words, the
@@ -1299,7 +1301,7 @@ function pickTable(rows, sort){
 function openPickSheet(r){ const p=byId[r.pid]; if(!p){ loadPick(r); return; }
   const g=r.game||{}, vs=r.team===g.home? 'vs '+g.away : r.team===g.away? '@ '+g.home : '';
   PS.pickSheet({name:r.name, team:r.team, sport:SPORT_KEY, vs, prob:r.prob, lo:r.lo, hi:r.hi, neff:r.n, side:r.side, line:r.line, statText:r.statText,
-    price:r.price, live:false, vals:valuesOf(p, r.sk), onOpen:()=>loadPick(r),
+    price:r.price, vn:r.vn, live:false, vals:valuesOf(p, r.sk), onOpen:()=>loadPick(r),
     track:trackFor(betFor(p, r.sk, r.line, r.side, r.prob, r.price, r.gid)),
     onShare:()=>PS.sharePick({player:p, stat:r.sk, line:r.line, ou:r.side}, r.statText)}); }
 function wireTable(el, rows, sort, rerender){
@@ -1348,10 +1350,10 @@ function generateDigest(){ const panel=$('digestpanel'), body=$('digestbody'), c
   if(safe.length) s+=`<p><b>🎯 Safest that still pay:</b> `+safe.map(r=>`${desc(r)} — ${pct(r.prob)} at ${cents(r)} (${(1/r.price).toFixed(2)}×)`).join(', ')+`.</p>`;
   if(!s){   // no Polymarket prices posted yet: the model's best overs, not the trivial unders
     const pool=up.filter(p=>p.side!=='under'), best=(pool.length? pool : up).slice().sort((a,b)=>b.prob-a.prob).slice(0,3).map(normPick);
-    s=`<p><b>Top model looks:</b> `+best.map(r=>`${desc(r)} (${pct(r.prob)})`).join(', ')+`. <span class="mktmuted">No Polymarket prices posted yet — value picks show here once they are.</span></p>`;
+    s=`<p><b>Top model looks:</b> `+best.map(r=>`${desc(r)} (${pct(r.prob)})`).join(', ')+`. <span class="mktmuted">No Polymarket or Kalshi prices posted yet — value picks show here once they are.</span></p>`;
   }
   if(near.length) s+=`<p><b>Near-locks:</b> ${near.length} pick${near.length===1?'':'s'} above 85% — likely, but they pay little.</p>`;
-  body.innerHTML=s; if(cap) cap.textContent='auto-generated from the model'+(value.length||safe.length? ' · priced on Polymarket' : ''); panel.hidden=false;
+  body.innerHTML=s; if(cap) cap.textContent='auto-generated from the model'+(value.length||safe.length? ' · priced on Polymarket & Kalshi' : ''); panel.hidden=false;
 }
 function pickRow(x){ const cls=x.prob>=0.7?'hi':x.prob>=0.6?'mid':'lo';
   const val=(x.lists||'').includes('V');
@@ -1364,7 +1366,7 @@ function renderValue(){ const panel=$('valuepanel'), body=$('valuebody'); if(!pa
   if(PICKS===null){ panel.hidden=true; return; }
   panel.hidden=false;
   const all=listRows('V');
-  if(!all.length){ body.innerHTML=`<p class="mktnote">No value spots right now — both rules above are tested against a Polymarket price, so this fills in automatically once <b>Polymarket lists ${SPORT_NAME} player props</b>. None are posted yet.</p>`; return; }
+  if(!all.length){ body.innerHTML=`<p class="mktnote">No value spots right now — both rules above are tested against a market price, so this fills in automatically once <b>Polymarket or Kalshi lists ${SPORT_NAME} player props</b>. None are posted yet.</p>`; return; }
   const rows=sortRows(all, valueSort.key, valueSort.dir).slice(0,50);
   const unders=rows.filter(r=>r.side==='under').length, overs=rows.length-unders;
   body.innerHTML=pickTable(rows, valueSort)+`<p class="mktnote" style="margin-top:8px"><b>${rows.length}</b> prop${rows.length===1?'':'s'} clear both rules at the recorded price — ${overs} over${overs===1?'':'s'} and ${unders} under${unders===1?'':'s'}. Picks are recorded before ${TIPOFF} and graded in <b>Past picks</b>. Backward-looking; not advice.</p>`;
@@ -1612,7 +1614,7 @@ function renderPickTable(rows){
   shown.forEach(p=>{
     h+=`<tr><td class="tnum">${esc(dlabel(p.date))}</td><td>${esc(p.player)} <span class="mktmuted">${esc(p.pos)}</span></td><td>${esc(p.team)}</td><td>${esc(p.opp)}</td><td>${esc(statLabel(p.stat))}</td><td class="tnum">${p.line}</td>`+
       `<td><span class="leantag ${esc(p.side)}">${esc(p.side)}</span></td><td class="tnum">${Math.round(p.prob*100)}%${p.lo!=null&&p.hi!=null?` <span class="rng">${Math.round(p.lo*100)}–${Math.round(p.hi*100)}</span>`:''}</td>`+
-      `<td class="tnum">${p.px0!=null&&p.pxc!=null? PS.pxMove(p.px0, p.pxc, true) : p.price!=null? Math.round(p.price*100)+'¢' : '—'}</td>`+
+      `<td class="tnum">${p.px0!=null&&p.pxc!=null? PS.pxMove(p.px0, p.pxc, true) : p.price!=null? Math.round(p.price*100)+'¢' : '—'}${p.vn&&p.price!=null? ' <span class="vtag'+(p.vn==='K'?' k':'')+'" title="The exchange this price is from — the cheaper of Polymarket and Kalshi when it was recorded">'+PS.venueName(p.vn)+'</span>' : ''}</td>`+
       `<td class="tnum">${p.actual!=null? p.actual : '—'}</td><td>${resTag(p)}</td>`+
       `<td>${(p.lists||'').split('').filter(c=>LIST_NAME[c]).map(c=>`<span class="listchip ${c}" title="${LIST_NAME[c]}">${c}</span>`).join('')}</td></tr>`;
   });
@@ -1868,7 +1870,7 @@ function renderValueWeek(){
   el.innerHTML =
     `<span class="lbl">⚡ Value spots</span>`+
     `<span class="big">${live} live now</span>`+
-    `<span class="sub">Props where the model's chance clearly beats the Polymarket price — tap to see them.</span>`;
+    `<span class="sub">Props where the model's chance clearly beats the market price — tap to see them.</span>`;
   el.onclick=()=>{ showTab('week'); const p=$('valuepanel'); if(p) p.scrollIntoView({behavior:'smooth'}); return false; };
   el.hidden=false;
 }

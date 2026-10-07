@@ -24,6 +24,7 @@ import json, math, os, re, sys, time, datetime, unicodedata, urllib.request
 from concurrent.futures import ThreadPoolExecutor
 
 import news   # pre-game news feeds, test mode
+import kalshi  # Kalshi prices, side by side with Polymarket's
 
 TODAY = datetime.date.today()
 ET_TODAY = (datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(hours=4)).date().isoformat()
@@ -695,7 +696,8 @@ def refresh_price(p, pm):
     refresh — so the price shown, and the one closing line value ends on, is current."""
     if p.get("res") is None and not pick_locked(p):
         px = (pm["over"] if p["side"] == "over" else pm["under"]) if pm.get("tradeable") else None
-        p["price"] = round(px, 3) if px is not None else None
+        p["pp"] = round(px, 3) if px is not None else None
+        p["price"], p["vn"] = kalshi.best(p["pp"], p.get("kp"))   # the cheaper of Polymarket and Kalshi
 
 
 def regular_minutes(rows):
@@ -870,7 +872,9 @@ PICK_COLS = ["src", "gid", "season", "date", "pid", "player", "pos", "team", "op
              "px0", "pxc",   # px0/pxc: first and last pre-game price (closing line value)
              "mv",           # model version the chance came from (MODEL_V)
              "nw",           # pre-game news, test mode (news.py): {"st", "om", "p2"}
-             "lk"]           # when the pick locked (UTC; see lock_picks)
+             "lk",           # when the pick locked (UTC; see lock_picks)
+             "pp", "kp",     # this side's price on Polymarket and on Kalshi (None = not listed there)
+             "vn"]           # which one "price" is, the cheaper: "P" Polymarket, "K" Kalshi
 BOARD_STATS = ["pts", "reb", "ast", "tpm", "pra"]
 TOP_N = 25
 VALUE_MIN_NEFF = 6.0
@@ -1044,6 +1048,7 @@ def build_market_picks(picks, poly_games, players_by_key, espn_slate, defense, d
                           "stat": sk, "line": pm["line"], "side": side,
                           "prob": round(prob, 3), "lo": round(lo, 3), "hi": round(hi, 3),
                           "neff": round(mp["neff"], 1), "price": round(price, 3) if price is not None else None,
+                          "pp": round(price, 3) if price is not None else None, "vn": "P" if price is not None else None,
                           "lists": "", "rec": f"{sk} {side} {pm['line']}", "actual": None, "res": None,
                           "adj": round(scale, 3), "sh": sh, "mv": MODEL_V})
             have[key] = picks[-1]
@@ -1433,6 +1438,13 @@ def main():
         mkt_added = 0
     added_picks = build_board_picks(picks, slate, players_by_team, defense, defavg)
     stamp_starts(picks)
+    try:
+        kalshi_mkts = kalshi.fetch("nba", days=3)
+    except Exception as e:  # noqa: BLE001
+        print(f"  kalshi: skipped ({e})")
+        kalshi_mkts = None
+    nk = kalshi.apply(picks, kalshi_mkts, pkey, lambda p: not pick_locked(p))
+    print(f"  kalshi: {nk} pending pick(s) priced on Kalshi too")
     assign_lists(picks)
     for p in picks:
         if p.get("res") is None and not pick_locked(p):

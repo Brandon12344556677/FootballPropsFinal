@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>How the Model Works — Prop Streak Lab</title>
-<meta name="description" content="How Prop Streak Lab turns a player's game log into a calibrated chance for any line, how it is adjusted for the matchup, how picks are priced against Polymarket, and how every pick is graded in public.">
+<meta name="description" content="How Prop Streak Lab turns a player's game log into a calibrated chance for any line, how it is adjusted for the matchup, how picks are priced against Polymarket and Kalshi, and how every pick is graded in public.">
 <link rel="canonical" href="https://propstreaklab.com/methodology.html">
 <link rel="icon" href="/favicon.ico" sizes="48x48">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
@@ -105,7 +105,8 @@ footer a:hover{color:#dfe6ef}
           <tr><td><b>MLB</b></td><td>ESPN public box scores and play-by-play</td><td>ESPN schedule; opposing pitching staff or lineup; postseason flag</td></tr>
         </tbody>
       </table>
-      <p><b>Prices</b> come from <b>Polymarket US</b>, the exchange the site's referral links point to. Polymarket's global book is used only where Polymarket US has no market for that prop at that line.</p>
+      <p><b>Prices</b> come from <b>Polymarket US</b> and <b>Kalshi</b>, side by side. Polymarket's global book is used only where Polymarket US has no market for that prop at that line.</p>
+      <p><b>Polymarket and Kalshi, side by side (since October 7, 2026).</b> Every pick shows what its side costs on both exchanges when either lists that exact prop at that line. The <b>cheaper</b> of the two is the price the edge, Top 25 Surest and Value are judged on, and every pick records which exchange that was, so the record shows it. Kalshi lists props as "N+" too (2+ hits = over 1.5): the over is its Yes ask and the under its No ask. A price on a different line is never substituted. Kalshi prices refresh with every update (about every 10 minutes); on the NFL board, Polymarket US also refreshes live in your browser. Prices shown are before each exchange's trading fees.</p>
 
       <h2 id="model">The model, step by step</h2>
       <ol class="steps">
@@ -162,14 +163,14 @@ footer a:hover{color:#dfe6ef}
       <div class="card rule">
         <h3 style="margin-top:0">Value spots — both rules have to be true</h3>
         <ol>
-          <li><b>Polymarket gives it at least a 30% chance</b> (a price of 30¢ or more). This keeps penny longshots off the list: a 6¢ price against an 11% model chance is a big percentage edge and still a bad bet.</li>
+          <li><b>The market gives it at least a 30% chance</b> (a price of 30¢ or more, the cheaper of Polymarket and Kalshi). This keeps penny longshots off the list: a 6¢ price against an 11% model chance is a big percentage edge and still a bad bet.</li>
           <li><b>The model puts it at least 15 points higher.</b> A 30¢ price needs 45%, 50¢ needs 65%, 70¢ needs 85%.</li>
         </ol>
         <p style="margin-bottom:0">Both sides of every market are tested, so unders qualify as often as overs. A prop also needs <b>6+ effective games</b> of history. Everything that clears both rules is listed, ranked by edge. (Until September 30, 2026 each hourly scan recorded at most 50, which left 27 qualifying NFL picks out of the week 3 record; every one is recorded now, and earlier results stay exactly as they were recorded.) These are the model's biggest disagreements with the market — <b>leads to research, not sure things</b> (see above).</p>
       </div>
       <div class="card">
         <h3 style="margin-top:0">Top 25 Surest</h3>
-        <p style="margin-bottom:0">The props with the highest model chance on the board, whatever they pay — on the NFL and NBA boards, the 25 highest; on the NHL and MLB boards, up to 25 that the model gives 90% or more <i>and</i> that have a live Polymarket price. <b>Likely isn't certain:</b> these still lose sometimes, and at 85–97¢ a single loss wipes out several wins.</p>
+        <p style="margin-bottom:0">The props with the highest model chance on the board, whatever they pay — on the NFL and NBA boards, the 25 highest; on the NHL and MLB boards, up to 25 that the model gives 90% or more <i>and</i> that have a live Polymarket or Kalshi price. <b>Likely isn't certain:</b> these still lose sometimes, and at 85–97¢ a single loss wipes out several wins.</p>
       </div>
       <p>On the Player tab, the verdict card applies the same rules — <b>Value</b> when both value rules pass, <b>Skip</b> when the price is above the model's chance, <b>Fair</b> in between — and shows the fair chance next to them, so you see the realistic edge as well as the model's.</p>
 

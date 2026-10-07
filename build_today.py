@@ -150,8 +150,12 @@ def upcoming(sport, db, picks_doc, labels, getters, now):
         if start is None or start <= now:
             continue
         price, prob = float(p["price"]), float(p["prob"])
-        if sport == "nfl":
-            price /= 100.0      # the NFL builder records prices in cents; the others as fractions
+        cents = 100.0 if sport == "nfl" else 1.0    # the NFL builder records prices in cents; the others as fractions
+        price /= cents
+        venue = {"vn": p.get("vn") or "P"}            # which exchange "price" is (the cheaper), and both prices
+        for k in ("pp", "kp"):
+            if p.get(k) is not None:
+                venue[k] = round(float(p[k]) / cents, 3)
         out.append({
             "sport": sport, "pid": str(p["pid"]), "player": p["player"], "team": p.get("team"),
             "opp": p.get("opp"), "gid": p.get("gid"), "stat": p["stat"],
@@ -161,6 +165,7 @@ def upcoming(sport, db, picks_doc, labels, getters, now):
             "edge": round(prob - price, 3), "value": "V" in (p.get("lists") or ""),
             "start": start.strftime("%Y-%m-%dT%H:%M:%SZ"),
             "lk": p.get("lk"),      # when the pick locked (its game starts within 20 minutes)
+            **venue,
             "l10": last10(sport, players.get(str(p["pid"])), p["stat"], getters),
             # for Bet of the Day (botd.py); not written to today.json
             "neff": p.get("neff"),

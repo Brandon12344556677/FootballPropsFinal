@@ -34,8 +34,8 @@
 <link rel="manifest" href="/site.webmanifest">
 <script data-goatcounter="https://propstreaklive.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
 <link rel="stylesheet" href="fonts.css">
-<link rel="stylesheet" href="app.css?v=20261007a">
-<script src="app.js?v=20261007a"></script>
+<link rel="stylesheet" href="app.css?v=20261007b">
+<script src="app.js?v=20261007b"></script>
 <style>
 :root{
   color-scheme:dark;
@@ -504,7 +504,7 @@ footer .fine a{color:#8394ab}
     <div class="wrap">
       <p class="kicker">Right now · all four sports</p>
       <h2 id="today-h">Today's best <i>value</i>.</h2>
-      <p class="sub">Where the model's chance beats the Polymarket price by the most — NFL, NBA, NHL and MLB in one feed. Tap a pick for the game log, the live price and the full breakdown.</p>
+      <p class="sub">Where the model's chance beats the market price (the cheaper of Polymarket and Kalshi) by the most — NFL, NBA, NHL and MLB in one feed. Tap a pick for the game log, the live price and the full breakdown.</p>
       <div class="app todayfeed"><div class="pickgrid" id="todaygrid"></div><div id="todaylock"></div></div>
       <p class="todaynote" id="todaynote"></p>
     </div>
@@ -569,7 +569,7 @@ footer .fine a{color:#8394ab}
       <div class="tabpanel" role="tabpanel" id="p-mlb" aria-labelledby="t-mlb" hidden>
         <div>
           <h3>MLB player props</h3>
-          <p>Every MLB hitter's and pitcher's game log with a calibrated chance for any line — adjusted for the opposing pitching staff or lineup. Built for the playoffs, priced against Polymarket's live MLB props.</p>
+          <p>Every MLB hitter's and pitcher's game log with a calibrated chance for any line — adjusted for the opposing pitching staff or lineup. Built for the playoffs, priced against Polymarket's and Kalshi's live MLB props.</p>
           <ul class="stats-list"><li>Hits</li><li>Total bases</li><li>Hits + runs + RBIs</li><li>Home runs</li><li>RBIs</li><li>Pitcher strikeouts</li><li>Outs recorded</li></ul>
           <a class="btn btn-go" href="./mlb.html">Open the MLB board →</a>
         </div>
@@ -602,7 +602,7 @@ footer .fine a{color:#8394ab}
         <article class="feat rv d2">
           <div class="ic"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2v20M17 6.5c0-1.9-2.2-3-5-3s-5 1.1-5 3 2.2 2.6 5 3.5 5 1.6 5 3.5-2.2 3-5 3-5-1.1-5-3"/></svg></div>
           <h3>Priced vs. the market</h3>
-          <p>We line the model up against live Polymarket prices so you can see the edge — or see that there isn't one.</p>
+          <p>We line the model up against live Polymarket and Kalshi prices so you can see the edge — or see that there isn't one.</p>
         </article>
         <article class="feat rv d3">
           <div class="ic"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></div>
@@ -718,7 +718,7 @@ footer .fine a{color:#8394ab}
       <a href="https://x.com/propstreaklab" target="_blank" rel="noopener">𝕏 Twitter</a>
     </div>
     <p class="fine">Informational and entertainment use only — not betting or financial advice. Prop Streak Lab does not accept bets or facilitate wagering. Some links to Polymarket are affiliate links. © 2026 Prop Streak Lab.</p>
-    <p class="fine">Data accuracy: stats, lines, injury reports and prices come from third-party sources (nflverse, ESPN, Polymarket) and may be delayed, incomplete, or occasionally wrong. Model outputs are estimates, not guarantees — verify independently before relying on anything here.</p>
+    <p class="fine">Data accuracy: stats, lines, injury reports and prices come from third-party sources (nflverse, ESPN, Polymarket, Kalshi) and may be delayed, incomplete, or occasionally wrong. Model outputs are estimates, not guarantees — verify independently before relying on anything here.</p>
     <p class="fine">For adults, 18+. If gambling stops being fun, stop — call 1-800-522-4700 (US, National Problem Gambling Helpline) or visit <a href="https://www.ncpgambling.org" rel="noopener" target="_blank">ncpgambling.org</a>.</p>
   </div>
 </footer>
@@ -830,7 +830,7 @@ function countUp(el){ const to=+el.dataset.count; if(!to||el.dataset.done) retur
         `<div class="pc-who"><b>${esc(p.player)}</b><span><span class="tbadge">${esc(p.team)}</span>vs ${esc(p.opp)}</span><span>${SPORT[p.sport]||''} · <span class="cd" data-cd="${esc(p.start)}">${PS.until(Date.parse(p.start))}</span></span>${p.lk? PS.lockBadge(p.lk) : ''}</div>`+
         `<div class="pc-prob"><div class="ring" style="--p:${pv}"><b>${pv}<small>%</small></b></div><span>model</span></div></div>`+
       `<div class="pc-bet"><span class="leantag ${esc(p.side)}">${esc(p.side)}</span><b>${esc(p.line)}</b><span>${esc(p.statText)}</span>${PS.spark(p.l10, p.line, p.side)}</div>`+
-      `<div class="pc-foot"><span class="pc-price"><span class="pmpx">${Math.round(p.price*100)}¢</span> <span class="rng">${(1/p.price).toFixed(2)}× payout</span></span>${kind}</div>`+
+      `<div class="pc-foot"><span class="pc-price"><span class="pmpx">${Math.round(p.price*100)}¢</span> <span class="rng">${(1/p.price).toFixed(2)}× payout</span>${PS.venues(p.pp, p.kp, p.vn)}</span>${kind}</div>`+
     `</a>`;
   }
   function renderToday(t){
@@ -845,7 +845,7 @@ function countUp(el){ const to=+el.dataset.count; if(!to||el.dataset.done) retur
     grid.innerHTML=picks.map(card).join('');
     document.getElementById('todaylock').innerHTML=picks.some(p=>p.lk)? PS.lockNote() : '';
     const at=new Date(t.gen); const when=isFinite(at)? at.toLocaleTimeString([], {hour:'numeric', minute:'2-digit'}) : 'the last update';
-    document.getElementById('todaynote').textContent=`Prices as of ${when} — tap a pick for the live Polymarket price. Picks leave this list when their game starts. Research, not betting advice.`;
+    document.getElementById('todaynote').textContent=`Prices as of ${when} — tap a pick for the live price. Picks leave this list when their game starts. Research, not betting advice.`;
     sec.hidden=false;
   }
 
@@ -901,7 +901,7 @@ function countUp(el){ const to=+el.dataset.count; if(!to||el.dataset.done) retur
     let html=`<div class="bs-head"><span class="bs-title">${m.t}</span><span class="bs-rec">${rec}</span></div><p class="bs-blurb">${m.blurb}</p>`;
     if(p){
       const base=h.n>=10? `Picks like this: <b>${h.hit} of ${h.n} hit (${Math.round(100*h.hit/h.n)}%)</b>${h.n<50?' — small sample':''}` : 'Too few graded picks like this yet to quote a hit rate';
-      html+=bsCard(p)+`<p class="bs-facts"><span>Market <b>${Math.round(p.price*100)}%</b> · Model <b>${Math.round(p.prob*100)}%</b></span><span>Posted ${esc(etTime(p.picked))} ET · locked</span><span>${base}</span></p>`;
+      html+=bsCard(p)+`<p class="bs-facts"><span>Market <b>${Math.round(p.price*100)}%</b>${p.vn? ' on '+PS.venueName(p.vn) : ''} · Model <b>${Math.round(p.prob*100)}%</b></span><span>Posted ${esc(etTime(p.picked))} ET · locked</span><span>${base}</span></p>`;
     } else if(!day){
       html+=`<p class="bs-empty">Today’s pick posts at ${esc(b.pickFrom==='11:00'?'11 AM':b.pickFrom||'11 AM')} ET.</p>`;
     } else if(day.closed){
@@ -921,7 +921,7 @@ function countUp(el){ const to=+el.dataset.count; if(!to||el.dataset.done) retur
       : show? `Bet of the Day · yesterday’s results · today’s post at 11 AM ET` : 'Bet of the Day';
     document.getElementById('botd-h').innerHTML = day||!show? 'Today\'s <i>Lock</i> &amp; <i>Value Shot</i>.' : 'Yesterday\'s <i>Lock</i> &amp; <i>Value Shot</i>.';
     ['lock','value'].forEach(s=>{ document.getElementById('botd-'+s).innerHTML=bsSlot(s, show, b); });
-    document.getElementById('botdnote').textContent='Picked from every sport’s upcoming props at the Polymarket price at that moment and never swapped afterward, even if the price moves. A player who doesn’t play is a void. Research, not betting advice — 21+.';
+    document.getElementById('botdnote').textContent='Picked from every sport’s upcoming props at the best price at that moment (the cheaper of Polymarket and Kalshi) and never swapped afterward, even if the price moves. A player who doesn’t play is a void. Research, not betting advice — 21+.';
     sec.hidden=false;
   }
   get('botd.json').then(b=>{ if(!b) return; renderBotd(b);
