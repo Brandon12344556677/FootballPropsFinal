@@ -130,7 +130,8 @@ def messages(picks, is_value, results, today):
     for p in picks:
         bet = f"{p['player']} {p['side']} {p['line']} {p['statText']}"
         fair = FAIR_W * p["prob"] + (1 - FAIR_W) * p["price"]
-        tail = f"model {round(p['prob'] * 100)}% · fair {round(fair * 100)}% · {round(p['price'] * 100)}¢"
+        venue = "Kalshi" if p.get("vn") == "K" else "Polymarket"      # the cheaper of the two
+        tail = f"model {round(p['prob'] * 100)}% · fair {round(fair * 100)}% · {round(p['price'] * 100)}¢ on {venue}"
         tail += f" · {when(p['start'], today)}"
         url = pick_link(p)
         d.append(f"{SPORT[p['sport']]} [**{bet}**](<{url}>) — {tail}")
