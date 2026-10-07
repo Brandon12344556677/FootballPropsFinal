@@ -134,6 +134,11 @@ def record(db):
     return out
 
 
+def cap(p):
+    """No chance above 99% (or below 1%), even on picks recorded before the builders capped it."""
+    return None if p is None else min(0.99, max(0.01, float(p)))
+
+
 def upcoming(sport, db, picks_doc, labels, getters, now):
     cols = picks_doc["cols"]
     players = {str(p.get("id")): p for p in db.get("players") or []}
@@ -149,7 +154,7 @@ def upcoming(sport, db, picks_doc, labels, getters, now):
         start = kick.get(p.get("gid")) if sport == "nfl" else parse_start(p.get("start"))
         if start is None or start <= now:
             continue
-        price, prob = float(p["price"]), float(p["prob"])
+        price, prob = float(p["price"]), cap(p["prob"])
         cents = 100.0 if sport == "nfl" else 1.0    # the NFL builder records prices in cents; the others as fractions
         price /= cents
         venue = {"vn": p.get("vn") or "P"}            # which exchange "price" is (the cheaper), and both prices
@@ -161,7 +166,7 @@ def upcoming(sport, db, picks_doc, labels, getters, now):
             "opp": p.get("opp"), "gid": p.get("gid"), "stat": p["stat"],
             "statText": labels.get(p["stat"], p["stat"]), "line": p["line"],
             "side": p.get("side") or "over", "prob": round(prob, 3),
-            "lo": p.get("lo"), "hi": p.get("hi"), "price": round(price, 3),
+            "lo": cap(p.get("lo")), "hi": cap(p.get("hi")), "price": round(price, 3),
             "edge": round(prob - price, 3), "value": "V" in (p.get("lists") or ""),
             "start": start.strftime("%Y-%m-%dT%H:%M:%SZ"),
             "lk": p.get("lk"),      # when the pick locked (its game starts within 20 minutes)

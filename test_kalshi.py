@@ -185,5 +185,21 @@ class Depth(unittest.TestCase):
         self.assertEqual(skip["kd"], 3.0)
 
 
+class NeverCertain(unittest.TestCase):
+    """No chance above 99% (or below 1%) is ever produced or shown."""
+    def test_models_cap_at_99(self):
+        import build_nhl as NHL, build_nba as NBA
+        sure, boost = [80.0] * 30, (2.0, 2.0)              # 30 games far over the line, calibrated up
+        for mp in (NFL.model_prob(sure, 0.5, "yards", cal=boost), MLB.model_prob(sure, 0.5, 1.0, cal=boost),
+                   NHL.model_prob(sure, 0.5, 1.0, cal=boost), NBA.model_prob(sure, 0.5, 1.0, cal=boost)):
+            self.assertEqual((mp["over"], round(mp["under"], 6)), (0.99, 0.01))
+            self.assertLessEqual(mp["hi"], 0.99)
+            self.assertLessEqual(mp["lo"], 0.99)
+
+    def test_recorded_picks_are_capped_for_display(self):
+        import build_today as T
+        self.assertEqual((T.cap(0.997), T.cap(0.002), T.cap(0.6), T.cap(None)), (0.99, 0.01, 0.6, None))
+
+
 if __name__ == "__main__":
     unittest.main()

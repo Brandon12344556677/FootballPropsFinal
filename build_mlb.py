@@ -137,6 +137,9 @@ def calibrate(p, cal):
     return 1.0 / (1.0 + math.exp(-(cal[0] + cal[1] * math.log(q / (1 - q)))))
 
 
+P_MAX = 0.99    # no chance shown or used above 99% (or below 1%): nothing is certain
+
+
 def model_prob(values, line, floor, scale=1.0, mem=None, cal=None):
     """values oldest -> newest; floor is the per-stat bandwidth floor; scale
     multiplies every value (opponent adjustment); mem is mem_for(stat) (None = MODEL).
@@ -170,12 +173,13 @@ def model_prob(values, line, floor, scale=1.0, mem=None, cal=None):
     p = (neff * pc + k * 0.5) / (neff + k)
     if cal:
         p = calibrate(p, cal)
+    p = min(P_MAX, max(1 - P_MAX, p))      # never 100% (or 0%): the site's ceiling is 99%
     nq = neff + k
     z = MODEL["z"]
     z2 = z * z
     c = (p + z2 / (2 * nq)) / (1 + z2 / nq)
     hw = z * math.sqrt(p * (1 - p) / nq + z2 / (4 * nq * nq)) / (1 + z2 / nq)
-    return {"over": p, "under": 1.0 - p, "push": push, "lo": max(0.0, c - hw), "hi": min(1.0, c + hw),
+    return {"over": p, "under": 1.0 - p, "push": push, "lo": min(P_MAX, max(1 - P_MAX, c - hw)), "hi": max(1 - P_MAX, min(P_MAX, c + hw)),
             "neff": neff, "mean": mean, "sd": sd, "h": h, "n": n, "scale": scale}
 
 

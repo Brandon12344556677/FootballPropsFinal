@@ -987,6 +987,7 @@ function ncdf(x){ return 0.5*(1+erf(x/Math.sqrt(2))); }
 // the walk-forward backtest; only stats where it improved both held-out halves are listed.
 const CAL = {rec_yds:[-0.243, 1.014], rec:[-0.142, 0.98], rec_td:[-0.481, 0.906], tgt:[-0.121, 1.002], scrim_td:[-0.434, 0.914], rush_yds:[-0.147, 1.15], rush_att:[-0.116, 0.954], rush_td:[-0.474, 0.884]};
 function calibrate(p, cal){ const q=Math.min(1-1e-4, Math.max(1e-4, p)); return 1/(1+Math.exp(-(cal[0]+cal[1]*Math.log(q/(1-q))))); }
+const P_MAX=0.99;   // no chance shown or used above 99% (or below 1%): nothing is certain (mirrors P_MAX in the builder)
 function modelProb(values, line, kind, scale, cal, per){
   if(scale==null) scale=1;
   const pr=(per&&per.length===values.length)? per.slice(-MODEL.maxGames) : null;
@@ -1004,10 +1005,10 @@ function modelProb(values, line, kind, scale, cal, per){
   const overRaw=1-F(loE), underRaw=F(hiE);
   const push=Math.max(0,1-overRaw-underRaw), tot=overRaw+underRaw;
   const pc=tot>0? overRaw/tot : 0.5, k=MODEL.priorK;
-  let p=(neff*pc+k*0.5)/(neff+k); if(cal) p=calibrate(p, cal);
+  let p=(neff*pc+k*0.5)/(neff+k); if(cal) p=calibrate(p, cal); p=Math.min(P_MAX, Math.max(1-P_MAX, p));   // never 100% (or 0%)
   const nq=neff+k, z=MODEL.z, z2=z*z;
   const c=(p+z2/(2*nq))/(1+z2/nq), hw=z*Math.sqrt(p*(1-p)/nq+z2/(4*nq*nq))/(1+z2/nq);
-  return {over:p, under:1-p, push, lo:Math.max(0,c-hw), hi:Math.min(1,c+hw), neff, mean, sd, h, n, scale};
+  return {over:p, under:1-p, push, lo:Math.min(P_MAX, Math.max(1-P_MAX, c-hw)), hi:Math.max(1-P_MAX, Math.min(P_MAX, c+hw)), neff, mean, sd, h, n, scale};
 }
 function median(a){ if(!a.length) return 0; const s=[...a].sort((x,y)=>x-y), m=Math.floor(s.length/2); return s.length%2? s[m] : (s[m-1]+s[m])/2; }
 function seedLine(values){ const last=values.slice(-10); if(!last.length) return 0.5; const med=median(last);
@@ -2047,6 +2048,7 @@ function valuePrice(c){
    row, shown as published (its lists, chance and price) and never re-priced live. */
 function lockedRow(lp, g, sg){
   const pl=byId[lp.pid]; if(!pl || lp.prob==null) return null;
+  PS.capPick(lp);       // recorded before the 99% cap
   const price=lp.price==null? null : lp.price/100;     // the builder records NFL prices in cents
   return {pl, name:pl.n, team:lp.team, opp:lp.opp, game:g, sg, statText:statLabel(lp.stat), sk:lp.stat, line:lp.line,
     side:lp.side||'over', prob:lp.prob, lo:lp.lo, hi:lp.hi, neff:lp.neff, n:valuesOf(pl, lp.stat).length, price,
@@ -2823,7 +2825,7 @@ async function initPicks(){
   try{
     const r=await fetch('picks.json',{cache:'no-store'}); if(!r.ok) throw new Error('no picks.json');
     const d=await r.json(); PICKMETA=d;
-    PICKS=d.picks.map(row=>{ const o={}; d.cols.forEach((c,i)=>o[c]=row[i]); return o; });
+    PICKS=d.picks.map(row=>{ const o={}; d.cols.forEach((c,i)=>o[c]=row[i]); return PS.capPick(o); });
     const s=d.summary||{};
     st.textContent=`${s.live||0} 2026 picks (${s.liveGraded||0} graded, ${s.livePending||0} pending) · ${s.backtest||0} from 2025 · updated ${(d.gen||'').slice(0,10)}`;
     buildPickFilters(); renderPicks();

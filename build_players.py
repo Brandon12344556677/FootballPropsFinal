@@ -119,7 +119,7 @@ def upcoming_props(sport, db, picks_doc, labels, now):
             continue
         out.setdefault(str(p["pid"]), []).append({"pid": str(p["pid"]), "player": p["player"], "stat": p["stat"],
             "statText": labels.get(p["stat"], p["stat"]), "line": p["line"], "side": p.get("side") or "over",
-            "prob": float(p["prob"]), "price": None, "edge": None, "start": start.strftime("%Y-%m-%dT%H:%M:%SZ"), "opp": p.get("opp")})
+            "prob": T.cap(p["prob"]), "price": None, "edge": None, "start": start.strftime("%Y-%m-%dT%H:%M:%SZ"), "opp": p.get("opp")})
     for pid, lst in out.items():
         # one line per stat and side: the one closest to a coin flip is the informative one
         best = {}
