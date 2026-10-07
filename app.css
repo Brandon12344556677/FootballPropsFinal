@@ -46,10 +46,17 @@ body{margin:0;background:var(--ps-bg);color:var(--ps-text);font-family:var(--ps-
   background:var(--ps-green);color:var(--ps-green-ink);font-family:var(--ps-body);font-weight:700;letter-spacing:0;text-transform:none;font-size:14px;
   box-shadow:0 6px 16px rgba(34,208,127,0.14)}
 .appcta:hover{box-shadow:0 8px 20px rgba(34,208,127,0.21)}
+/* Both exchanges' sign-up links, side by side (stacked on phones) */
+.appctas{flex:none;display:flex;gap:8px}
+.appcta small{font-size:.82em;font-weight:600;opacity:.85}
+.appcta.pm{background:#2d6bff;color:#fff;box-shadow:0 6px 16px rgba(45,107,255,0.18)}
+.appcta.pm:hover{box-shadow:0 8px 20px rgba(45,107,255,0.28)}
 @media(max-width:760px){
   .apptop-in{height:auto;flex-wrap:wrap;padding:10px 12px 8px;gap:8px 10px}
   .apptop .brand b{font-size:20px}
   .appcta{margin-left:auto;padding:7px 13px;font-size:13px}
+  .appctas{margin-left:auto;flex-direction:column;gap:4px}
+  .appctas .appcta{margin:0;justify-content:space-between;gap:6px;padding:3px 10px;font-size:11.5px;line-height:1.35}
   .sportnav{order:3;width:100%;margin:0}
   .sportnav a{flex:1;justify-content:center;padding:7px 8px;font-size:13px}
 }
