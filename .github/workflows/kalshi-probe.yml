@@ -1,0 +1,21 @@
+name: Kalshi probe (temporary)
+
+# TEMPORARY, working branch only: lists Kalshi's sports player-prop markets into the job log
+# so the builders can be matched to them. Deleted before the Kalshi PR merges.
+on:
+  push:
+    branches: [claude/upbeat-dijkstra-rktnaf]
+    paths: [kalshi_probe.py, .github/workflows/kalshi-probe.yml]
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python kalshi_probe.py || true
