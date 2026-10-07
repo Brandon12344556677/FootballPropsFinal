@@ -641,6 +641,7 @@ table td,table th,thead th,tbody td,.edgetbl td,.edgetbl th,.caltbl td,.caltbl t
 
   <div class="promo">
     <a id="refbanner" class="refbanner" href="#" target="_blank" rel="noopener" hidden></a>
+    <a id="refbannerk" class="refbanner" href="#" target="_blank" rel="noopener sponsored" hidden></a>
     <a id="refbanner2" class="refbanner group" href="#" target="_blank" rel="noopener" hidden></a>
   </div>
 
@@ -955,6 +956,7 @@ const REFERRAL = { url: "https://polymarket.us/join/propstreaklab", text: "🎁 
 // ▲ e.g. url: "https://polymarket.com/@yourhandle" or your invite URL. Leave "" to hide the banner. ▲
 // Second banner: join our Polymarket squad/group. Leave url "" to hide it.
 const REFERRAL2 = { url: "https://polymarket.us/squad/join/CDU9RMD97K7O1G95yAao?referrer=propstreaklab", text: "👥 Join our Polymarket group →" };
+const REFERRAL_KALSHI = { url: "https://kalshi.com/sign-up/?referral=4373e9f9-0304-498c-8ca7-fccd3714b808&m=true&utm_source=mobile_app&utm_medium=share&utm_campaign=referral&utm_content=share_button&utm_term=referrals_pill", text: "🎁 Get $25 FREE on Kalshi — sign up & trade on Kalshi →" };
 // ▼▼▼ SOCIAL FOLLOW LINKS — put your full profile URLs here (placeholders below; replace with your real handles). Leave "" to hide a button. ▼▼▼
 const SOCIAL = { instagram: "https://www.instagram.com/propstreaklab", tiktok: "https://www.tiktok.com/@propstreaklab", x: "https://x.com/propstreaklab" };
 
@@ -1117,6 +1119,7 @@ if(WEEK.week){ $('dnweek').textContent = 'Week '+WEEK.week; $('dnweekbox').hidde
     el.innerHTML=`· <b>live record ${r.hit}/${r.n} (${Math.round(100*r.hit/r.n)}%)</b> — <a href="#picks" onclick="showTab(\'picks\');return false;">details</a>`+(r.clvN? ` · price moved its way on <b>${r.clvUp} of ${r.clvN}</b> (avg ${r.clv>=0?'+':''}${r.clv}¢)<button type="button" class="qhelp hq" data-help="clv" aria-expanded="false" aria-label="What is closing line value?"><span class="qi" aria-hidden="true">?</span></button>` : ''); }); })();
 (function renderRef(){ const b=$('refbanner');
   if(REFERRAL.url){ b.href=REFERRAL.url; b.textContent=REFERRAL.text; b.hidden=false; } else b.hidden=true;
+  const bk=$('refbannerk'); if(bk){ if(REFERRAL_KALSHI.url){ bk.href=REFERRAL_KALSHI.url; bk.textContent=REFERRAL_KALSHI.text; bk.hidden=false; } else bk.hidden=true; }
   const b2=$('refbanner2'); if(REFERRAL2.url){ b2.href=REFERRAL2.url; b2.textContent=REFERRAL2.text; b2.hidden=false; } else b2.hidden=true; })();
 (function renderValueWeek(){
   const el=$('valueweekbar'); if(!el) return;
