@@ -522,6 +522,64 @@ class ListTests(unittest.TestCase):
         self.assertEqual(N.drop_preseason_picks(picks, N.PRE_GAMES), 1)
 
 
+class LockTests(unittest.TestCase):
+    """A pick locks when its game starts within LOCK_MIN (20) minutes; from then on its
+    lists, chance and price stay as published."""
+
+    @staticmethod
+    def at(minutes):
+        import datetime
+        t = datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(minutes=minutes)
+        return t.strftime("%Y-%m-%dT%H:%M:%SZ")
+
+    def pick(self, start_min, **kw):
+        return dict({"src": "live", "gid": "2026-10-07-AAA-BBB", "pid": "p1", "stat": "k", "line": 4.5,
+                     "side": "over", "prob": 0.95, "neff": 20.0, "price": 0.80, "lists": "",
+                     "res": None, "start": self.at(start_min)}, **kw)
+
+    def test_locks_only_inside_the_window(self):
+        import build_mlb as M, build_nhl as H, build_nba as N
+        for mod in (M, H, N):
+            soon, later, started, graded = (self.pick(15), self.pick(25), self.pick(-5),
+                                            self.pick(15, res="hit"))
+            self.assertEqual(mod.lock_picks([soon, later, started, graded]), 1, mod.__name__)
+            self.assertTrue(soon["lk"])
+            self.assertNotIn("lk", later)       # 25 minutes out: the next update still refreshes it
+            self.assertNotIn("lk", started)     # never locked after the start
+            self.assertEqual(mod.lock_picks([soon]), 0)      # once only
+            self.assertTrue(mod.game_locked(self.at(15)) and not mod.game_locked(self.at(25)), mod.__name__)
+
+    def test_a_locked_pick_is_frozen(self):
+        import build_mlb as M
+        p = self.pick(15, lists="TV", lk=self.at(-1))
+        M.refresh_price(p, {"over": 0.50, "under": 0.52, "tradeable": True})
+        self.assertEqual(p["price"], 0.80)                  # price as published
+        M.assign_lists([p])
+        self.assertEqual(p["lists"], "TV")                  # lists as published
+
+    def test_locked_top25_picks_keep_their_slots(self):
+        import build_mlb as M
+        held = [self.pick(15, pid=f"h{i}", gid=f"2026-10-07-H{i}-X", lists="T", lk=self.at(-1)) for i in range(3)]
+        live = [self.pick(120, pid=f"l{i}", gid=f"2026-10-07-L{i}-X") for i in range(30)]
+        M.assign_lists(held + live)
+        shown = [p for p in held + live if "T" in p["lists"]]
+        self.assertEqual(len(shown), M.TOP_N)               # 3 held + 22 live, never more than 25
+        self.assertTrue(all("T" in p["lists"] for p in held))
+
+    def test_nfl_locks_from_the_kickoff_and_writes_slate_rows(self):
+        import datetime
+        t = datetime.datetime.now(B.ET_ZONE) + datetime.timedelta(minutes=15)
+        sched = {"g1": {"date": t.date().isoformat(), "time": t.strftime("%H:%M")}}
+        p = {"src": "live", "gid": "g1", "pid": "p1", "stat": "rec_yds", "line": 60.5, "side": "over",
+             "prob": 0.7, "lo": 0.6, "hi": 0.8, "neff": 9.0, "price": 55, "lists": "V", "res": None}
+        self.assertEqual(B.lock_picks([p], sched), 1)
+        rows = B.locked_rows([p], sched)
+        self.assertEqual((len(rows), rows[0]["price"], rows[0]["lists"]), (1, 55, "V"))
+        top = [{"prob": 0.9 - i / 100, "neff": 9.0, "price": None} for i in range(30)]
+        B.assign_lists(top, held=4)
+        self.assertEqual(sum("T" in x["lists"] for x in top), B.TOP_N - 4)
+
+
 class SeasonTests(unittest.TestCase):
     def test_season_year(self):
         import datetime

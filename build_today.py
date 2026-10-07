@@ -160,6 +160,7 @@ def upcoming(sport, db, picks_doc, labels, getters, now):
             "lo": p.get("lo"), "hi": p.get("hi"), "price": round(price, 3),
             "edge": round(prob - price, 3), "value": "V" in (p.get("lists") or ""),
             "start": start.strftime("%Y-%m-%dT%H:%M:%SZ"),
+            "lk": p.get("lk"),      # when the pick locked (its game starts within 20 minutes)
             "l10": last10(sport, players.get(str(p["pid"])), p["stat"], getters),
             # for Bet of the Day (botd.py); not written to today.json
             "neff": p.get("neff"),

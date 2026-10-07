@@ -432,10 +432,20 @@ window.PS = (function(){
     const o=Math.round(open*100), n=Math.round(now*100), d=n-o;
     const cls=d>=1?'up':d<=-1?'dn':'flat', arrow=d>=1?'\u25b2'+d:d<=-1?'\u25bc'+(-d):'\u00b10';
     const say=d>=1? `the market moved ${d}\u00a2 toward this pick` : d<=-1? `the market moved ${-d}\u00a2 away from this pick` : 'no real move';
-    const title=`Polymarket price when the site first recorded this pick: ${o}\u00a2. ${closed?'Last price before the game':'Now'}: ${n}\u00a2 \u2014 ${say}.`;
+    const title=`Polymarket price when the site first recorded this pick: ${o}\u00a2. ${closed?'Last price before it locked (or, for picks before October 7, 2026, before the game)':'Now'}: ${n}\u00a2 \u2014 ${say}.`;
     return `<span class="pxmove ${cls}${closed?' inl':''}" title="${esc(title)}">${closed? `${o}\u00a2 \u2192 ${n}\u00a2` : `opened ${o}\u00a2`} <b>${arrow}</b></span>`;
   }
 
+  // ---- locked picks: the builders lock a pick when its game starts within 20 minutes (lock_picks) ----
+  // From then on its spot on the lists, its chance and its price stay as published.
+  function lockNote(){
+    return `<p class="mktnote locknote"><span class="lockbadge">\ud83d\udd12 Locked</span><span>The game starts within 20 minutes, so the pick is final: its Top 25 / Value status, its chance and its price won\u2019t change again. The site updates about every 10 minutes, so picks lock at least 10 minutes before the start.</span></p>`;
+  }
+  function lockBadge(lk){
+    const t=Date.parse(lk), at=isFinite(t)? ' at '+new Date(t).toLocaleTimeString([], {hour:'numeric', minute:'2-digit'}) : '';
+    return `<span class="lockbadge" title="${esc(`Locked${at}: the game starts within 20 minutes, so this pick is final \u2014 its Top 25 / Value status, its chance and its price won\u2019t change again.`)}">\ud83d\udd12 Locked</span>`;
+  }
+
   return {teamVars, ticker, until, skeleton, esc, hashFor, pickHash, parsePickHash, syncHash, sharePick, toast, helpBtn, spark, verdict, icon, sheet, closeSheet, pickSheet,
-          isTracked, toggleBet, renderBets, fairOf, setFair, pxMove};
+          isTracked, toggleBet, renderBets, fairOf, setFair, pxMove, lockBadge, lockNote};
 })();

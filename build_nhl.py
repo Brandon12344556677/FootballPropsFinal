@@ -786,6 +786,36 @@ def pick_started(p):
     return (p.get("date") or "") < ET_TODAY
 
 
+# A pick locks when its game starts within LOCK_MIN minutes. The site updates about every
+# 10 minutes, so that's 10-20 minutes before the start; from then on its lists, chance and
+# price stay as published, and no new picks are added for the game.
+LOCK_MIN = 20
+
+
+def game_locked(start):
+    """True when a game starting at `start` (ESPN's UTC time) is inside the lock window."""
+    t = parse_utc(start)
+    return bool(t) and t <= datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(minutes=LOCK_MIN)
+
+
+def pick_locked(p):
+    """Locked or started: either way its lists, chance and price no longer change."""
+    return bool(p.get("lk")) or pick_started(p)
+
+
+def lock_picks(picks):
+    """Lock every pending pick whose game starts within LOCK_MIN minutes, as published this
+    run; "lk" records when (UTC). Returns how many locked."""
+    now = datetime.datetime.now(datetime.timezone.utc)
+    n = 0
+    for p in picks:
+        t = parse_utc(p.get("start"))
+        if p.get("res") is None and not p.get("lk") and t and now < t <= now + datetime.timedelta(minutes=LOCK_MIN):
+            p["lk"] = now.strftime("%Y-%m-%dT%H:%MZ")
+            n += 1
+    return n
+
+
 # ---------------------------------------------------------------------------
 # Build players / defense from the accumulated store
 # ---------------------------------------------------------------------------
@@ -880,7 +910,8 @@ def def_ratio(defense, defavg, opp, sk):
 PICK_COLS = ["src", "gid", "season", "date", "pid", "player", "pos", "team", "opp",
              "stat", "line", "side", "prob", "lo", "hi", "neff", "price", "lists", "rec", "actual", "res", "adj", "start",
              "px0", "pxc",   # px0/pxc: first and last pre-game price (closing line value)
-             "mv"]           # model version the chance came from (MODEL_V)
+             "mv",           # model version the chance came from (MODEL_V)
+             "lk"]           # when the pick locked (UTC; see lock_picks)
 BOARD_STATS = ["pts", "sog", "g"]
 TOP_N = 25
 T_MIN_PROB = 0.90      # Top 25 Surest: the model has to give it 90%+ (and it needs a live price)
@@ -984,7 +1015,7 @@ def refresh_price(p, pm):
     """A pending pick whose game hasn't started keeps the market's current price for its
     side (None once that market stops being tradeable), like NFL's pre-kickoff refresh —
     so "has a live market" for Top 25 Surest means now, not when the pick was recorded."""
-    if p.get("res") is None and not pick_started(p):
+    if p.get("res") is None and not pick_locked(p):
         px = (pm["over"] if p["side"] == "over" else pm["under"]) if pm.get("tradeable") else None
         p["price"] = round(px, 3) if px is not None else None
 
@@ -1101,6 +1132,8 @@ def build_market_picks(picks, poly_games, players_by_key, espn_slate, defense, d
             continue            # already started or over: its price is in-game, not pre-game
         if eg is None and g["date"] < ET_TODAY:
             continue            # an earlier day's game (off today's scoreboard) — long started
+        if eg and game_locked(eg.get("start")):
+            continue            # locked: its picks stay as published
         # grade against ESPN's (UTC) date — slugs use the ET date, which differs for late games
         date = eg["date"] if eg else g["date"]
         gid = f"{date}-{g['away']}-{g['home']}"
@@ -1166,8 +1199,8 @@ def build_board_picks(picks, slate, players_by_team, defense, defavg):
                    for x in have.get((pid, sk, g["away"], g["home"]), ()))
     now_added = 0
     for g in slate:
-        if g.get("final"):
-            continue
+        if g.get("final") or game_locked(g.get("start")):
+            continue            # final, or locked: no new picks
         gid = f"{g['date']}-{g['away']}-{g['home']}"
         for team, opp in ((g["away"], g["home"]), (g["home"], g["away"])):
             gpts = None
@@ -1285,10 +1318,13 @@ def assign_lists(picks):
     Polymarket price, best line per player-prop, ranked by model chance (so a thin slate
     shows fewer, or none). V = 'Value' — the market prices it at 30c or more and the
     model puts it 15+ points higher, ranked by that edge. Prices are fractions here. Only
-    picks whose game hasn't started are (re)tagged: once it starts they keep the lists
+    picks whose game hasn't started or locked are (re)tagged: once it starts they keep the lists
     they had at puck drop until graded, so the live record by list counts exactly what
     the page showed pre-game."""
-    pending = [p for p in picks if p.get("res") is None and not pick_started(p)]
+    pending = [p for p in picks if p.get("res") is None and not pick_locked(p)]
+    # Locked picks keep their Top 25 slots until their game starts, so the board never shows more than 25.
+    held = sum(1 for p in picks if p.get("res") is None and p.get("lk") and not pick_started(p)
+               and "T" in (p.get("lists") or ""))
     for p in pending:
         p["lists"] = ""
     ranked = sorted((p for p in pending if p["prob"] >= T_MIN_PROB and p.get("price") is not None),
@@ -1299,7 +1335,7 @@ def assign_lists(picks):
         if k not in seen:
             seen.add(k)
             top.append(p)
-    for p in top[:TOP_N]:
+    for p in top[:TOP_N - held]:
         p["lists"] += "T"
     vals = [((p["prob"] - p["price"]), p) for p in pending
             if p.get("price") is not None and p["neff"] >= VALUE_MIN_NEFF
@@ -1511,8 +1547,11 @@ def main():
     stamp_starts(picks)
     assign_lists(picks)
     for p in picks:
-        if p.get("res") is None and not pick_started(p):
+        if p.get("res") is None and not pick_locked(p):
             note_price(p)
+    locked = lock_picks(picks)
+    if locked:
+        print(f"  picks: locked {locked} pick(s) whose game starts within {LOCK_MIN} minutes")
     if mkt_added:
         print(f"  market picks: +{mkt_added} priced (Polymarket)")
     print(f"  picks: graded {graded}, {dnp} DNP, added {added_picks} board pick(s)")
