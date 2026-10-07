@@ -1169,6 +1169,42 @@ def kickoff_utc(sg):
         return None
 
 
+# A pick locks when its game kicks off within LOCK_MIN minutes. The site updates about every
+# 10 minutes, so that's 10-20 minutes before kickoff; from then on its lists, chance and price
+# stay as published, and no new picks are added for the game.
+LOCK_MIN = 20
+
+
+def lock_picks(picks, sched):
+    """Lock every pending live pick whose game kicks off within LOCK_MIN minutes, as published
+    this run; "lk" records when (UTC). Returns how many locked."""
+    now = datetime.datetime.now(datetime.timezone.utc)
+    n = 0
+    for p in picks:
+        if p.get("src") != "live" or p.get("res") is not None or p.get("lk"):
+            continue
+        sg = sched.get(p.get("gid"))
+        ko = kickoff_utc(sg) if sg else None
+        if ko and now < ko <= now + datetime.timedelta(minutes=LOCK_MIN):
+            p["lk"] = now.strftime("%Y-%m-%dT%H:%MZ")
+            n += 1
+    return n
+
+
+def locked_rows(picks, sched):
+    """The locked picks still on the board (kickoff ahead), for slate.json: the board shows
+    these as published instead of re-pricing their games live. Prices are in cents."""
+    now = datetime.datetime.now(datetime.timezone.utc)
+    keep = ("gid", "pid", "team", "opp", "stat", "line", "side", "prob", "lo", "hi", "neff", "price", "lists", "lk")
+    out = []
+    for p in picks:
+        if p.get("src") == "live" and p.get("res") is None and p.get("lk"):
+            ko = kickoff_utc(sched.get(p.get("gid")) or {})
+            if ko and now < ko:
+                out.append({k: p.get(k) for k in keep})
+    return out
+
+
 # ---------------------------------------------------------------------------
 # Picks: live (from the Polymarket board, recorded before kickoff, graded after)
 # and backtest (what the model would have picked each past week, graded).
@@ -1177,7 +1213,8 @@ PICK_COLS = ["src", "gid", "season", "week", "date", "pid", "player", "pos", "te
              "stat", "line", "side", "prob", "lo", "hi", "neff", "price", "lists", "rec", "actual", "res", "adj",
              "px0", "pxc",   # px0/pxc: first and last pre-kickoff price, in cents (closing line value)
              "mv",           # model version the chance came from (MODEL_V)
-             "nw"]           # pre-game news, test mode (news.py): {"st", "wx", "roof", "p2"}
+             "nw",           # pre-game news, test mode (news.py): {"st", "wx", "roof", "p2"}
+             "lk"]           # when the pick locked (UTC; see lock_picks)
 VALUE_MIN_NEFF = 6.0
 TOP_N = 25
 VALUE_N = 200           # a safety cap only. At 50 it bound in busy weeks (NFL week 3: 27 picks that
@@ -1236,15 +1273,15 @@ def make_pick(src, gid, season, week, date, pl, opp, sk, line, mp, price, rec, s
             "adj": round(mp.get("scale", 1.0), 3), "mv": MODEL_V}
 
 
-def assign_lists(picks):
+def assign_lists(picks, held=0):
     """T = the 25 highest model chances ('Top 25 Surest'). V = every prop the market
     prices at 30c or more that the model puts 15+ points higher, ranked by that edge.
     V is side-agnostic: an under qualifies whenever its own ask is the cheap one.
-    Operates in place."""
+    `held` Top 25 slots stay with locked picks still on the board. Operates in place."""
     for p in picks:
         p["lists"] = ""
     ranked = sorted((p for p in picks if p["prob"] >= 0.5), key=lambda p: (-p["prob"], -p["neff"]))
-    for p in ranked[:TOP_N]:
+    for p in ranked[:TOP_N - held]:
         p["lists"] += "T"
     vals = []
     for p in picks:
@@ -1267,12 +1304,12 @@ def build_live_picks(picks, slate_games, sched, by_key, snap, pmus=None):
         sg = match_sched_game(g, sched)
         if not sg or sg["final"]:
             continue
-        # Freeze the recorded board at kickoff: once a game has started, stop
-        # refreshing its picks so Past picks holds the last pre-kickoff snapshot
-        # rather than a mid-game or next-morning one. Unparseable kickoff -> old
-        # behavior (keep refreshing until the game is final).
+        # Freeze the recorded board at the lock (once kickoff is within LOCK_MIN minutes):
+        # from then on stop refreshing its picks or adding new ones, so the board and Past picks hold
+        # what was published at the lock. Unparseable kickoff -> old behavior (keep
+        # refreshing until the game is final).
         ko = kickoff_utc(sg)
-        if ko is not None and now_dt >= ko:
+        if ko is not None and now_dt + datetime.timedelta(minutes=LOCK_MIN) >= ko:
             continue
         seen = set()
         for m in g.get("markets", []):
@@ -1332,7 +1369,12 @@ def build_live_picks(picks, slate_games, sched, by_key, snap, pmus=None):
                 if value_qualifies(mp[other], op / 100.0):
                     fresh.append(make_pick("live", sg["id"], sg["season"], sg["week"], sg["date"], pl, opp,
                                            sk, pm["line"], mp, op, now, side=other))
-    assign_lists(fresh)
+    held = 0       # Top 25 slots kept by locked picks whose game hasn't kicked off
+    for p in picks:
+        if p["src"] == "live" and p["res"] is None and p.get("lk") and "T" in (p.get("lists") or ""):
+            ko = kickoff_utc(sched.get(p["gid"]) or {})
+            held += bool(ko and now_dt < ko)
+    assign_lists(fresh, held)
     fresh_markets = {(f["gid"], f["pid"], f["stat"], f["line"]) for f in fresh}
     fresh_keys = {(f["gid"], f["pid"], f["stat"], f["line"], f["side"]) for f in fresh}
     # A market we just re-scanned may have flipped which side we carry. Drop the
@@ -1703,6 +1745,9 @@ def main():
             print(f"  polymarket us: {len(pmus)} prop prices from {pmus_games} game(s)")
         total, added, updated = build_live_picks(picks, slate_games, sched, by_key, snapshot(SEASON), pmus)
         print(f"  slate: {len(slate_games)} games, {total} props modeled ({added} new, {updated} refreshed)")
+        locked = lock_picks(picks, sched)
+        if locked:
+            print(f"  picks: locked {locked} pick(s) whose game kicks off within {LOCK_MIN} minutes")
         names = {}
         for g in slate_games:
             for m in g.get("markets", []):
@@ -1714,7 +1759,8 @@ def main():
                  "games": [{"slug": g["slug"], "away": g["away"], "home": g["home"], "date": g["date"],
                             "start": g["start"], "title": g["title"],
                             "gid": (sg_by_slug[g["slug"]] or {}).get("id")} for g in slate_games],
-                 "players": names}
+                 "players": names,
+                 "locked": locked_rows(picks, sched)}
         with open("slate.json", "w", encoding="utf-8") as f:
             json.dump(slate, f, separators=(",", ":"), ensure_ascii=False)
 

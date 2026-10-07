@@ -599,9 +599,6 @@ def fetch_slate():
         if status.get("completed") or status.get("state", "pre") != "pre":
             STARTED.add(frozenset((away, home)))
             continue
-        if (ev.get("season") or {}).get("type") == 1:
-            PRESEASON.add(frozenset((away, home)))
-            continue
         total = spread = None
         odds = comp.get("odds") or []
         if odds:
@@ -662,11 +659,41 @@ def pick_started(p):
     return (p.get("date") or "") < ET_TODAY
 
 
+# A pick locks when its game starts within LOCK_MIN minutes. The site updates about every
+# 10 minutes, so that's 10-20 minutes before the start; from then on its lists, chance and
+# price stay as published, and no new picks are added for the game.
+LOCK_MIN = 20
+
+
+def game_locked(start):
+    """True when a game starting at `start` (ESPN's UTC time) is inside the lock window."""
+    t = parse_utc(start)
+    return bool(t) and t <= datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(minutes=LOCK_MIN)
+
+
+def pick_locked(p):
+    """Locked or started: either way its lists, chance and price no longer change."""
+    return bool(p.get("lk")) or pick_started(p)
+
+
+def lock_picks(picks):
+    """Lock every pending pick whose game starts within LOCK_MIN minutes, as published this
+    run; "lk" records when (UTC). Returns how many locked."""
+    now = datetime.datetime.now(datetime.timezone.utc)
+    n = 0
+    for p in picks:
+        t = parse_utc(p.get("start"))
+        if p.get("res") is None and not p.get("lk") and t and now < t <= now + datetime.timedelta(minutes=LOCK_MIN):
+            p["lk"] = now.strftime("%Y-%m-%dT%H:%MZ")
+            n += 1
+    return n
+
+
 def refresh_price(p, pm):
     """A pending pick whose game hasn't started keeps the market's current price for its
     side (None once that market stops being tradeable), like the other sports' pre-game
     refresh — so the price shown, and the one closing line value ends on, is current."""
-    if p.get("res") is None and not pick_started(p):
+    if p.get("res") is None and not pick_locked(p):
         px = (pm["over"] if p["side"] == "over" else pm["under"]) if pm.get("tradeable") else None
         p["price"] = round(px, 3) if px is not None else None
 
@@ -842,7 +869,8 @@ PICK_COLS = ["src", "gid", "season", "date", "pid", "player", "pos", "team", "op
              "sh",    # sh: chance with the minutes strength at MIN_TEST, for comparison
              "px0", "pxc",   # px0/pxc: first and last pre-game price (closing line value)
              "mv",           # model version the chance came from (MODEL_V)
-             "nw"]           # pre-game news, test mode (news.py): {"st", "om", "p2"}
+             "nw",           # pre-game news, test mode (news.py): {"st", "om", "p2"}
+             "lk"]           # when the pick locked (UTC; see lock_picks)
 BOARD_STATS = ["pts", "reb", "ast", "tpm", "pra"]
 TOP_N = 25
 VALUE_MIN_NEFF = 6.0
@@ -975,6 +1003,8 @@ def build_market_picks(picks, poly_games, players_by_key, espn_slate, defense, d
             continue            # started or over (its price is in-game, not pre-game), or preseason
         if eg is None and g["date"] < ET_TODAY:
             continue            # an earlier day's game (off today's scoreboard) — long started
+        if eg and game_locked(eg.get("start")):
+            continue            # locked: its picks stay as published
         gid = f"{g['date']}-{g['away']}-{g['home']}"
         for m in g.get("markets", []):
             pm = parse_market(m)
@@ -1039,8 +1069,8 @@ def build_board_picks(picks, slate, players_by_team, defense, defavg):
                    for x in have.get((pid, sk, g["away"], g["home"]), ()))
     now_added = 0
     for g in slate:
-        if g.get("final"):
-            continue
+        if g.get("final") or game_locked(g.get("start")):
+            continue            # final, or locked: no new picks
         gid = f"{g['date']}-{g['away']}-{g['home']}"
         for team, opp in ((g["away"], g["home"]), (g["home"], g["away"])):
             gpts = None
@@ -1135,13 +1165,16 @@ def assign_lists(picks):
     """Mirrors build.py (NFL). T = the 25 highest model chances ('Top 25 Surest').
     V = 'Value' — the market prices it at 30c or more and the model puts it 15+ points
     higher, ranked by that edge. Prices are fractions here. Only picks whose game hasn't
-    started are (re)tagged: once it starts they keep the lists they had at tip-off until
+    started or locked are (re)tagged: once it starts they keep the lists they had at tip-off until
     graded, so the live record by list counts exactly what the page showed pre-game."""
-    pending = [p for p in picks if p.get("res") is None and not pick_started(p)]
+    pending = [p for p in picks if p.get("res") is None and not pick_locked(p)]
+    # Locked picks keep their Top 25 slots until their game starts, so the board never shows more than 25.
+    held = sum(1 for p in picks if p.get("res") is None and p.get("lk") and not pick_started(p)
+               and "T" in (p.get("lists") or ""))
     for p in pending:
         p["lists"] = ""
     ranked = sorted((p for p in pending if p["prob"] >= 0.5), key=lambda p: (-p["prob"], -p["neff"]))
-    for p in ranked[:TOP_N]:
+    for p in ranked[:TOP_N - held]:
         p["lists"] += "T"
     vals = [((p["prob"] - p["price"]), p) for p in pending
             if p.get("price") is not None and p["neff"] >= VALUE_MIN_NEFF
@@ -1402,8 +1435,11 @@ def main():
     stamp_starts(picks)
     assign_lists(picks)
     for p in picks:
-        if p.get("res") is None and not pick_started(p):
+        if p.get("res") is None and not pick_locked(p):
             note_price(p)
+    locked = lock_picks(picks)
+    if locked:
+        print(f"  picks: locked {locked} pick(s) whose game starts within {LOCK_MIN} minutes")
     try:
         news_test(picks, by_pid, store["rows"])
     except Exception as e:  # noqa: BLE001

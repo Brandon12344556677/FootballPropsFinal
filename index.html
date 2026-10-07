@@ -34,8 +34,8 @@
 <link rel="manifest" href="/site.webmanifest">
 <script data-goatcounter="https://propstreaklive.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
 <link rel="stylesheet" href="fonts.css">
-<link rel="stylesheet" href="app.css?v=20261001a">
-<script src="app.js?v=20261001a"></script>
+<link rel="stylesheet" href="app.css?v=20261007a">
+<script src="app.js?v=20261007a"></script>
 <style>
 :root{
   color-scheme:dark;
@@ -504,7 +504,7 @@ footer .fine a{color:#8394ab}
       <p class="kicker">Right now · all four sports</p>
       <h2 id="today-h">Today's best <i>value</i>.</h2>
       <p class="sub">Where the model's chance beats the Polymarket price by the most — NFL, NBA, NHL and MLB in one feed. Tap a pick for the game log, the live price and the full breakdown.</p>
-      <div class="app todayfeed"><div class="pickgrid" id="todaygrid"></div></div>
+      <div class="app todayfeed"><div class="pickgrid" id="todaygrid"></div><div id="todaylock"></div></div>
       <p class="todaynote" id="todaynote"></p>
     </div>
   </section>
@@ -823,9 +823,9 @@ function countUp(el){ const to=+el.dataset.count; if(!to||el.dataset.done) retur
     const fair=Math.round(100*(FAIRW*p.prob+(1-FAIRW)*p.price));
     const kind=p.kind==='value'? `<span class="pc-kind">⚡ Value · fair ${fair}%</span>`
                                : `<span class="pc-kind safe">🎯 Safe bet that pays</span>`;
-    return `<a class="pickcard ${tier}" href="${esc(href)}" style="${PS.teamVars(p.sport, p.team)}">`+
+    return `<a class="pickcard ${tier}${p.lk?' locked':''}" href="${esc(href)}" style="${PS.teamVars(p.sport, p.team)}">`+
       `<div class="pc-top"><span class="av">${esc(initials(p.player))}</span>`+
-        `<div class="pc-who"><b>${esc(p.player)}</b><span><span class="tbadge">${esc(p.team)}</span>vs ${esc(p.opp)}</span><span>${SPORT[p.sport]||''} · <span class="cd" data-cd="${esc(p.start)}">${PS.until(Date.parse(p.start))}</span></span></div>`+
+        `<div class="pc-who"><b>${esc(p.player)}</b><span><span class="tbadge">${esc(p.team)}</span>vs ${esc(p.opp)}</span><span>${SPORT[p.sport]||''} · <span class="cd" data-cd="${esc(p.start)}">${PS.until(Date.parse(p.start))}</span></span>${p.lk? PS.lockBadge(p.lk) : ''}</div>`+
         `<div class="pc-prob"><div class="ring" style="--p:${pv}"><b>${pv}<small>%</small></b></div><span>model</span></div></div>`+
       `<div class="pc-bet"><span class="leantag ${esc(p.side)}">${esc(p.side)}</span><b>${esc(p.line)}</b><span>${esc(p.statText)}</span>${PS.spark(p.l10, p.line, p.side)}</div>`+
       `<div class="pc-foot"><span class="pc-price"><span class="pmpx">${Math.round(p.price*100)}¢</span> <span class="rng">${(1/p.price).toFixed(2)}× payout</span></span>${kind}</div>`+
@@ -834,13 +834,14 @@ function countUp(el){ const to=+el.dataset.count; if(!to||el.dataset.done) retur
   function renderToday(t){
     const sec=document.getElementById('today'), grid=document.getElementById('todaygrid'); if(!sec||!grid) return;
     const picks=((t&&t.picks)||[]).filter(ahead).slice(0,6);
-    const sig=picks.map(p=>[p.sport,p.pid,p.stat,p.line,p.side].join('|')).join(',');
+    const sig=picks.map(p=>[p.sport,p.pid,p.stat,p.line,p.side,p.lk||''].join('|')).join(',');
     if(grid.dataset.sig===sig) return;       // unchanged: don't restart the ring animations
     grid.dataset.sig=sig;
     if(!picks.length){ sec.hidden=true; return; }
     const anyValue=picks.some(p=>p.kind==='value');
     document.getElementById('today-h').innerHTML= anyValue? 'Today\'s best <i>value</i>.' : 'Today\'s <i>surest</i> bets that pay.';
     grid.innerHTML=picks.map(card).join('');
+    document.getElementById('todaylock').innerHTML=picks.some(p=>p.lk)? PS.lockNote() : '';
     const at=new Date(t.gen); const when=isFinite(at)? at.toLocaleTimeString([], {hour:'numeric', minute:'2-digit'}) : 'the last update';
     document.getElementById('todaynote').textContent=`Prices as of ${when} — tap a pick for the live Polymarket price. Picks leave this list when their game starts. Research, not betting advice.`;
     sec.hidden=false;

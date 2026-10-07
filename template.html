@@ -608,8 +608,8 @@ table td,table th,thead th,tbody td,.edgetbl td,.edgetbl th,.caltbl td,.caltbl t
 .valrules .vrfoot b{color:#fff}
 </style>
 
-<link rel="stylesheet" href="app.css?v=20261001a">
-<script src="app.js?v=20261001a"></script>
+<link rel="stylesheet" href="app.css?v=20261007a">
+<script src="app.js?v=20261007a"></script>
 
 <header class="apptop">
   <div class="apptop-in">
@@ -1911,17 +1911,18 @@ function trackLive(key, rows){
 function liveTick(){
   liveTimer=null;
   const all=new Map(); liveWant.forEach(list=>list.forEach(it=>all.set(it.mk,it)));
-  if(!all.size) return;
+  if(!all.size && !lockedRows.length) return;
   const wk=$('page-week');
   if(document.hidden || (wk && wk.hidden)){ scheduleLive(); return; }
   // A game that just kicked off leaves both boards now, not at the next hourly rescan.
   const gone=r=>r.sg? gameHappened(r.sg) : !!(r.game && r.game.date && r.game.date<new Date().toISOString().slice(0,10));
-  if(edgeRows.some(gone) || valueCands.some(gone)){
-    edgeRows=edgeRows.filter(r=>!gone(r)); valueCands=valueCands.filter(r=>!gone(r));
+  if(edgeRows.some(gone) || valueCands.some(gone) || lockedRows.some(gone)){
+    edgeRows=edgeRows.filter(r=>!gone(r)); valueCands=valueCands.filter(r=>!gone(r)); lockedRows=lockedRows.filter(r=>!gone(r));
     valueRows=computeValueRows();
-    if(edgeRows.length){ renderEdges(); renderValue(); }
+    if(edgeRows.length || lockedRows.length){ renderEdges(); renderValue(); }
     else { $('edgebody').innerHTML=KICKED_MSG; $('valuebody').innerHTML=KICKED_MSG; liveWant.delete('T'); liveWant.delete('V'); }
   }
+  if(!all.size){ if(lockedRows.length) scheduleLive(); return; }   // only locked rows left: watch for their kickoff
   const gen=++liveGen;
   fillLive([...all.values()], true)
     .then(()=>{ if(gen!==liveGen) return;
@@ -1952,7 +1953,7 @@ function valueQualifies(prob, price){
   if(price==null) return false;
   return price>=VALUE_MIN_PRICE && prob-price>=VALUE_MIN_EDGE;
 }
-let edgeRows=[], valueRows=[], valueCands=[], edgeSort={key:'prob',dir:-1};
+let edgeRows=[], valueRows=[], valueCands=[], lockedRows=[], edgeSort={key:'prob',dir:-1};
 const KICKED_MSG=`<p class="mktnote">🔒 Every game on the board has kicked off. Those picks are locked in as recorded before kickoff and get graded into <b>Past picks</b> once the final box score is in — the board fills back in when the next games' props post.</p>`;
 
 /* The price a Value row is judged on: the live Polymarket US ask when there is one,
@@ -1962,6 +1963,15 @@ function valuePrice(c){
   const L=livePx.get(mkOf(c));
   if(L && L.open && L.exact){ const px = c.side==='over'? L.over : L.under; if(px!=null) return {px, live:true}; }
   return c.price!=null? {px:c.price, live:false} : null;
+}
+/* A locked pick from slate.json (build.py's lock_picks: kickoff within 20 minutes) as a board
+   row, shown as published (its lists, chance and price) and never re-priced live. */
+function lockedRow(lp, g, sg){
+  const pl=byId[lp.pid]; if(!pl || lp.prob==null) return null;
+  const price=lp.price==null? null : lp.price/100;     // the builder records NFL prices in cents
+  return {pl, name:pl.n, team:lp.team, opp:lp.opp, game:g, sg, statText:statLabel(lp.stat), sk:lp.stat, line:lp.line,
+    side:lp.side||'over', prob:lp.prob, lo:lp.lo, hi:lp.hi, neff:lp.neff, n:valuesOf(pl, lp.stat).length, price,
+    lists:lp.lists||'', lk:lp.lk, locked:true, vprice:price, vlive:false, vedge:price==null? null : lp.prob-price};
 }
 function computeValueRows(){
   const out=[];
@@ -1991,10 +2001,15 @@ async function scanBoard(force){
     if(gamesL.length && events.every(e=>!e)) throw new Error('polymarket unreachable');
     const rows=[]; const seen=new Set(); let kicked=0;
     const todayStr=new Date().toISOString().slice(0,10);
-    gamesL.forEach((g,gi)=>{ const ev=events[gi]; if(!ev) return;
+    // Games the builder has locked (kickoff within 20 minutes) show their picks as published.
+    const lockedBy={}; (slate.locked||[]).forEach(lp=>{ (lockedBy[lp.gid]=lockedBy[lp.gid]||[]).push(lp); });
+    lockedRows=[];
+    gamesL.forEach((g,gi)=>{ const ev=events[gi];
       const sg=(WEEK.games||[]).find(x=>(x.away===g.away&&x.home===g.home)||(x.away===g.home&&x.home===g.away));
       // Don't show props for games that have already kicked off or finished.
       if(sg? gameHappened(sg) : (g.date && g.date < todayStr)){ kicked++; return; }
+      if(lockedBy[g.gid]){ lockedBy[g.gid].forEach(lp=>{ const r=lockedRow(lp, g, sg); if(r) lockedRows.push(r); }); return; }
+      if(!ev) return;
       (ev.markets||[]).forEach(mk=>{
         const pm=parseMarket(mk); if(!pm) return;
         const sk=mktStatKey(pm.statText); if(!sk) return;
@@ -2040,7 +2055,7 @@ async function scanBoard(force){
     const nohist=rows.filter(r=>r.nohist).length;
     const vU=valueRows.filter(r=>r.side==='under').length;
     status.textContent=`${modeled.length} props modeled · ${valueRows.length} value (${valueRows.length-vU} over / ${vU} under) · ${gamesL.length} games${nohist?` · ${nohist} skipped (no game log)`:''}`;
-    if(!modeled.length){
+    if(!modeled.length && !lockedRows.length){
       const msg = gamesL.length && kicked===gamesL.length ? KICKED_MSG
         : gamesL.length
         ? `<p class="mktnote">No props matched players yet — early in the week the board is thin. Check back closer to game day.</p>`
@@ -2074,21 +2089,26 @@ function pickTable(rows, opts){
     const tier=r.prob>=0.9?'hi':r.prob>=0.7?'mid':'lo', g=r.game||{};
     const vs=r.team===g.home? 'vs '+esc(g.away) : r.team===g.away? '@ '+esc(g.home) : esc(g.away)+' @ '+esc(g.home);
     const pv=Math.round(r.prob*100);
-    h+=`<article class="pickcard ${tier}" style="${PS.teamVars('nfl', r.team)}">`+
+    h+=`<article class="pickcard ${tier}${r.locked?' locked':''}" style="${PS.teamVars('nfl', r.team)}">`+
       `<div class="pc-top"><span class="av">${esc(initials(r.name))}</span>`+
         `<div class="pc-who"><b>${esc(r.name)}</b><span><span class="tbadge">${esc(r.team)}</span>${vs}</span></div>`+
         `<div class="pc-prob"><div class="ring" style="--p:${pv}"><b>${pv}<small>%</small></b></div><span>${Math.round(r.lo*100)}–${Math.round(r.hi*100)} · ${r.n}g</span></div></div>`+
       `<div class="pc-bet"><span class="leantag ${r.side}">${r.side}</span><b>${r.line}</b><span>${esc(r.statText)}</span>${r.pl? PS.spark(valuesOf(r.pl, r.sk), r.line, r.side) : ''}</div>`+
-      `<div class="pc-foot">${liveSpan(r)}<button class="edgeload" type="button" data-i="${idx}">Details</button></div>`+
+      `<div class="pc-foot">${r.locked? lockedPrice(r)+PS.lockBadge(r.lk) : liveSpan(r)}<button class="edgeload" type="button" data-i="${idx}">Details</button></div>`+
     `</article>`;
   });
-  return h+`</div>`;
+  return h+`</div>`+(rows.some(r=>r.locked)? PS.lockNote() : '');
+}
+// A locked card's price: the one recorded at the lock, not repainted each minute.
+function lockedPrice(r){
+  if(r.price==null) return `<span class="pc-price"><span class="pmdim">no price at the lock</span></span>`;
+  return `<span class="pc-price"><span class="pmpx">${Math.round(r.price*100)}¢</span> <span class="rng">${(1/r.price).toFixed(2)}×</span></span>`;
 }
 // Tapping a pick card opens its details — the verdict at the live price and the last 10 games —
 // in a sheet; "Full breakdown" there loads it on the Player tab, as the old Load button did.
 function openPickSheet(r){ if(!r.pl){ loadEdge(r); return; }
   const g=r.game||{}, vs=r.team===g.home? 'vs '+g.away : r.team===g.away? '@ '+g.home : '';
-  const live=livePriceFor(r), px= live!=null? live : (r.vprice!=null? r.vprice : null);
+  const live=r.locked? null : livePriceFor(r), px= live!=null? live : (r.vprice!=null? r.vprice : null);
   PS.pickSheet({name:r.name, team:r.team, sport:'nfl', vs, prob:r.prob, lo:r.lo, hi:r.hi, neff:r.n, side:r.side, line:r.line, statText:r.statText,
     price:px, live:live!=null, vals:valuesOf(r.pl, r.sk), onOpen:()=>loadEdge(r),
     track:trackFor(betFor(r.pl, r.sk, r.line, r.side, r.prob, px)),
@@ -2101,25 +2121,32 @@ function sortRows(rows, key, dir){ return [...rows].sort((a,b)=>{
   if(key==='matchup'){ return dir*((a.game.away+a.game.home).localeCompare(b.game.away+b.game.home)); }
   if(['name','statText','side'].includes(key)) return dir*((''+a[key]).localeCompare(''+b[key]));
   return dir*(((a[key]==null?-Infinity:a[key])-(b[key]==null?-Infinity:b[key]))); }); }
+// The 25 surest props: locked Top 25 picks keep their slots and live props fill the rest by model
+// chance. The sort pills only reorder those 25 (sorting first used to pick a different 25).
+function topRows(){
+  const held=lockedRows.filter(r=>r.lists.includes('T'));
+  return held.concat(edgeRows.slice().sort((a,b)=>(b.prob-a.prob)||(b.neff-a.neff)).slice(0, Math.max(0, 25-held.length)));
+}
 function renderEdges(){
-  const rows=sortRows(edgeRows, edgeSort.key, edgeSort.dir).slice(0,25);
+  const rows=sortRows(topRows(), edgeSort.key, edgeSort.dir);
   $('edgebody').innerHTML=pickTable(rows,{sort:edgeSort})+
     `<p class="mktnote" style="margin-top:8px">The 25 props with the highest <b>model chance</b> on this week's board, regardless of payout — best if you're holding <b>credits you can't withdraw without trading</b>, since these are the props most likely to win and let you cash out. <b>Model</b> = the chance the Bet side hits, with its 80% range and the games it's based on. <b>Polymarket</b> is the live price on Polymarket US for that exact side — what you'd pay right now, the model's edge over it, and the payout multiplier; it refreshes about once a minute. Use the pills to sort. These picks are recorded before kickoff and graded in <b>Past picks</b>.</p>`;
   $('edgebody').querySelectorAll('.sortpill').forEach(t=>t.onclick=()=>{ const k=t.dataset.k; if(!k) return;
     if(edgeSort.key===k) edgeSort.dir*=-1; else { edgeSort.key=k; edgeSort.dir=['name','statText','side','matchup'].includes(k)?1:-1; } renderEdges(); });
   wireLoad($('edgebody'), rows);
-  trackLive('T', rows);
+  trackLive('T', rows.filter(r=>!r.locked));
 }
 function renderValue(){
   PS.ticker(tickerItems()); digestValue();
   const body=$('valuebody');
-  if(!valueRows.length){ body.innerHTML=`<p class="mktnote">No value spots right now — nothing on the board, over <i>or</i> under, clears <b>both</b> rules above. That's normal when markets are thin or efficient; the list fills back in as prices move.</p>`; liveWant.delete('V'); return; }
-  const rows=sortRows(valueRows,'vedge',-1);
+  const lockedV=lockedRows.filter(r=>r.lists.includes('V'));
+  if(!valueRows.length && !lockedV.length){ body.innerHTML=`<p class="mktnote">No value spots right now — nothing on the board, over <i>or</i> under, clears <b>both</b> rules above. That's normal when markets are thin or efficient; the list fills back in as prices move.</p>`; liveWant.delete('V'); return; }
+  const rows=sortRows(lockedV.concat(valueRows),'vedge',-1);
   const unders=rows.filter(r=>r.side==='under').length, overs=rows.length-unders;
-  const stale=rows.filter(r=>!r.vlive).length;
+  const stale=rows.filter(r=>!r.vlive && !r.locked).length;
   body.innerHTML=pickTable(rows,{})+`<p class="mktnote" style="margin-top:8px"><b>${rows.length}</b> prop${rows.length===1?'':'s'} clear both rules at the price you'd pay right now — ${overs} over${overs===1?'':'s'} and ${unders} under${unders===1?'':'s'}${stale?`, ${stale} judged on the global book because Polymarket US has no market for them`:''}. Rechecked about once a minute, so a row leaves as soon as its price moves against it. Picks are recorded before kickoff and graded in <b>Past picks</b> — that record is taken from the global book at record time, so it can differ slightly from this list. Backward-looking; not advice.</p>`;
   wireLoad(body, rows);
-  trackLive('V', rows);
+  trackLive('V', rows.filter(r=>!r.locked));
 }
 function loadEdge(r){
   setPlayer(r.pl,{keepStat:true,keepLine:true});
@@ -2127,7 +2154,7 @@ function loadEdge(r){
   $('line').value=r.line;
   $('over').setAttribute('aria-pressed', state.ou==='over'); $('under').setAttribute('aria-pressed', state.ou==='under');
   syncChips(); render(); save();
-  const px = livePriceFor(r) ?? r.price;
+  const px = (r.locked? null : livePriceFor(r)) ?? r.price;
   if(px!=null){ const yo=$('yourodds'); if(yo){ yo.value=Math.round(px*100); updateCalc(); } }
   $('headline').scrollIntoView({behavior:'smooth',block:'start'});
 }
