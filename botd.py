@@ -53,7 +53,7 @@ RULES = {   # inclusive bounds
     "value": {"price": [0.30, 0.50], "prob": [0.70, 0.80]},
 }
 KEEP = ("sport", "pid", "player", "team", "opp", "gid", "stat", "statText", "line", "side",
-        "prob", "lo", "hi", "price", "start", "l10")
+        "prob", "lo", "hi", "price", "vn", "start", "l10")    # vn: the exchange the price is from
 PRACTICE_FLAGS = ("DNP", "LP")
 
 

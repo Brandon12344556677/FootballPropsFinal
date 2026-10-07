@@ -258,7 +258,7 @@ window.PS = (function(){
   // the price is above the model's chance; FAIR is everything between.
   function verdictOf(prob, price){
     const pv=Math.round(prob*100);
-    if(price==null) return {k:'none', label:'No price', say:"No Polymarket price for this exact line right now — the model's chance stands on its own. Check the price before you bet."};
+    if(price==null) return {k:'none', label:'No price', say:"No Polymarket or Kalshi price for this exact line right now — the model's chance stands on its own. Check the price before you bet."};
     const c=Math.round(price*100), e=Math.round((prob-price)*100), sg=v=>(v>=0?'+':'−')+Math.abs(v);
     const fv=Math.round(100*fairOf(prob, price)), fe=fv-c;
     if(price>=0.30 && prob-price>=0.15) return {k:'value', label:'Value', say:`Clears the value rules: the model says ${pv}% against a ${c}¢ price. The market usually knows more, though — blended, the fair chance is ${fv}%, an expected edge of ${sg(fe)}. A lead to check, not a lock.`};
@@ -268,7 +268,8 @@ window.PS = (function(){
     if(e>=15) return {k:'fair', label:'Fair', say:`Right on the value bar (${sg(e)}) but not clearly over it. Fair chance ${fv}% against ${c}¢.`};
     return {k:'fair', label:'Fair', say:`Fair chance ${fv}% against a ${c}¢ price — about what it costs. The model alone says ${pv}%.`};
   }
-  // o: {prob, lo, hi, neff, side, line, statText, price, live, marketLine, onShare} — or null to hide.
+  // o: {prob, lo, hi, neff, side, line, statText, price, vn, live, marketLine, onShare} — or null to hide.
+  // vn: which exchange the price is from ("P" Polymarket, "K" Kalshi), when known.
   function verdict(el, o){
     if(!el) return;
     if(!o || o.prob==null){ el.hidden=true; return; }       // keep the markup, so re-showing it doesn't replay the ring
@@ -277,15 +278,15 @@ window.PS = (function(){
     const c=o.price!=null? Math.round(o.price*100) : null, e=c!=null? Math.round((o.prob-o.price)*100) : null;
     const tier=o.prob>=0.9?'hi':o.prob>=0.7?'mid':'lo';
     const fv=c!=null? Math.round(100*fairOf(o.prob, o.price)) : null;
-    const sig=[pv,o.side,o.line,o.statText,c,v.k,o.live,o.marketLine,fv].join('|');
+    const sig=[pv,o.side,o.line,o.statText,c,v.k,o.live,o.marketLine,fv,o.vn].join('|');
     if(el.dataset.sig!==sig){
       el.dataset.sig=sig;
       el.className=`verdict v-${v.k} t-${tier}`;
       const stats = c!=null
-        ? `<div class="vd-stats"><span><b>${c}¢</b>${o.live? '<i class="vd-live">● live price</i>' : 'price · last update'}</span>`+
+        ? `<div class="vd-stats"><span><b>${c}¢</b>${o.live? '<i class="vd-live">● live price</i>' : 'price · last update'}${o.vn? ' · '+venueName(o.vn) : ''}</span>`+
           `<span><b>${(1/o.price).toFixed(2)}×</b>payout</span><span><b class="${e>=0?'pos':'neg'}">${e>=0?'+':'−'}${Math.abs(e)}</b>model edge</span>`+
           `<span class="vd-fair"><b>${fv}%</b><span>fair chance <button type="button" class="qhelp hq" data-help="fair" aria-expanded="false" aria-label="What is the fair chance?"><span class="qi" aria-hidden="true">?</span></button></span></span></div>`
-        : (o.marketLine!=null? `<div class="vd-stats"><span class="vd-note">Polymarket lists this prop at <b>${esc(o.marketLine)}</b> — set the line to ${esc(o.marketLine)} to compare.</span></div>` : '');
+        : (o.marketLine!=null? `<div class="vd-stats"><span class="vd-note">The market lists this prop at <b>${esc(o.marketLine)}</b> — set the line to ${esc(o.marketLine)} to compare.</span></div>` : '');
       const range=o.lo!=null? `${Math.round(o.lo*100)}–${Math.round(o.hi*100)}% range` : '';
       const games=o.neff? `${Math.round(o.neff)} games` : '';
       el.innerHTML=`<div class="ring" style="--p:${pv}"><b>${pv}<small>%</small></b></div>`+
@@ -354,7 +355,7 @@ window.PS = (function(){
     const g=document.createElement('div'); g.className='psgate'; g.setAttribute('role','dialog'); g.setAttribute('aria-modal','true'); g.setAttribute('aria-labelledby','psgate-h');
     g.innerHTML=`<div class="psgate-card"><svg class="psgate-logo" viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" rx="14" fill="#0f2038"/><path d="M32,6 Q32,32 54,32 Q32,32 32,58 Q32,32 10,32 Q32,32 32,6 Z" fill="#22d07f"/></svg>`+
       `<h2 id="psgate-h">Are you 18 or older?</h2>`+
-      `<p>Prop Streak Lab is player-prop research for adults. It isn't a sportsbook and takes no bets. Some links go to Polymarket, which has its own age and location rules.</p>`+
+      `<p>Prop Streak Lab is player-prop research for adults. It isn't a sportsbook and takes no bets. Some links go to Polymarket and Kalshi, which have their own age and location rules.</p>`+
       `<div class="psgate-btns"><button type="button" class="btn" id="psgate-ok">Yes, I'm 18 or older</button><a class="btn ghost" href="https://www.google.com" rel="noopener">No, leave</a></div>`+
       `<p class="psgate-fine">We use only essential local storage for your preferences and cookieless analytics — no ads, no cross-site tracking. <a href="cookies.html">Cookie Policy</a> · <a href="privacy.html">Privacy</a><br>Gambling problem? Call 1-800-522-4700 or visit <a href="https://www.ncpgambling.org" rel="noopener" target="_blank">ncpgambling.org</a>.</p></div>`;
     document.body.appendChild(g); document.documentElement.classList.add('ps-lock');
@@ -432,8 +433,21 @@ window.PS = (function(){
     const o=Math.round(open*100), n=Math.round(now*100), d=n-o;
     const cls=d>=1?'up':d<=-1?'dn':'flat', arrow=d>=1?'\u25b2'+d:d<=-1?'\u25bc'+(-d):'\u00b10';
     const say=d>=1? `the market moved ${d}\u00a2 toward this pick` : d<=-1? `the market moved ${-d}\u00a2 away from this pick` : 'no real move';
-    const title=`Polymarket price when the site first recorded this pick: ${o}\u00a2. ${closed?'Last price before it locked (or, for picks before October 7, 2026, before the game)':'Now'}: ${n}\u00a2 \u2014 ${say}.`;
+    const title=`Price (the cheaper of Polymarket and Kalshi) when the site first recorded this pick: ${o}\u00a2. ${closed?'Last price before it locked (or, for picks before October 7, 2026, before the game)':'Now'}: ${n}\u00a2 \u2014 ${say}.`;
     return `<span class="pxmove ${cls}${closed?' inl':''}" title="${esc(title)}">${closed? `${o}\u00a2 \u2192 ${n}\u00a2` : `opened ${o}\u00a2`} <b>${arrow}</b></span>`;
+  }
+
+  // ---- Polymarket and Kalshi side by side (kalshi.py) ----
+  // pp/kp: what you'd pay for the pick's side on each exchange, as fractions (null = that
+  // exchange doesn't list this exact prop at this line). vn: the one the pick is judged on —
+  // the cheaper — "P" or "K". Picks recorded before Kalshi was added have only a Polymarket price.
+  function venueName(vn){ return vn==='K'? 'Kalshi' : 'Polymarket'; }
+  // thinP/thinK: under $25 is offered within 2\u00a2 of that price (depth.py), so a bet would move it.
+  function venues(pp, kp, vn, thinP, thinK){
+    if(pp==null && kp==null) return '';
+    const one=(name, v, on, thin)=>`<span class="vq${on?' best':''}${thin && v!=null?' thin':''}">${name} <b>${v==null? '\u2014' : Math.round(v*100)+'\u00a2'}</b>${thin && v!=null? ' <i>thin</i>' : ''}</span>`;
+    const title=`What you'd pay for this side on each exchange (\u2014 = not listed at this line). The highlighted one is the price the edge, Top 25 Surest and Value use: the cheaper exchange with $25+ offered within 2\u00a2 of its price. \u201cthin\u201d = less than that is offered, so a bet would move the price.`;
+    return `<span class="venues" title="${esc(title)}">${one('Polymarket', pp, vn!=='K' && pp!=null, thinP)}${one('Kalshi', kp, vn==='K', thinK)}</span>`;
   }
 
   // ---- locked picks: the builders lock a pick when its game starts within 20 minutes (lock_picks) ----
@@ -447,5 +461,5 @@ window.PS = (function(){
   }
 
   return {teamVars, ticker, until, skeleton, esc, hashFor, pickHash, parsePickHash, syncHash, sharePick, toast, helpBtn, spark, verdict, icon, sheet, closeSheet, pickSheet,
-          isTracked, toggleBet, renderBets, fairOf, setFair, pxMove, lockBadge, lockNote};
+          isTracked, toggleBet, renderBets, fairOf, setFair, pxMove, lockBadge, lockNote, venues, venueName};
 })();

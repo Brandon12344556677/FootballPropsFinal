@@ -381,18 +381,57 @@ class ListTests(unittest.TestCase):
                   "markets": [self._slate_market("Test Player: Receiving Yards O/U 59.5", 59.5, bid, ask)]}]
         return slate, sched, {B.pkey("Test Player"): pl}
 
+    def _with_books(self, usd, fn, *args):
+        """Run fn with every Polymarket US order book offering `usd` dollars near the price."""
+        real = B.depth.fetch_pmus
+        B.depth.fetch_pmus = lambda slug: {"over": usd, "under": usd}
+        try:
+            return fn(*args)
+        finally:
+            B.depth.fetch_pmus = real
+
     def test_live_picks_record_the_value_side_as_well(self):
         # The model leans over (53%), but the over costs 71c. The under costs
         # 1 - 0.69 = 31c against a 47% model chance — 16 points of edge on a 31c ask —
-        # so the under is recorded alongside the favored side.
+        # so the under is recorded alongside the favored side, on Value when Polymarket US
+        # has $25+ offered at that price.
         slate, sched, by_key = self._live_fixture(bid=0.69, ask=0.71)
+        us = {(B.pkey("Test Player"), "rec_yds", 59.5): {"over": 71, "under": 31, "slug": "s"}}
         picks = []
-        B.build_live_picks(picks, slate, sched, by_key, {"teams": {}, "avg": {}})
+        self._with_books(40.0, B.build_live_picks, picks, slate, sched, by_key, {"teams": {}, "avg": {}}, us)
         sides = sorted(p["side"] for p in picks)
         self.assertEqual(sides, ["over", "under"])
         under = next(p for p in picks if p["side"] == "under")
         self.assertIn("V", under["lists"])
+        self.assertEqual((under["price"], under["vn"], under["pd"], under.get("th")), (31, "P", 40.0, None))
+
+    def test_live_picks_keep_thin_markets_off_value(self):
+        """Under $25 offered near the price: a bet would move it, so it isn't a value spot."""
+        slate, sched, by_key = self._live_fixture(bid=0.69, ask=0.71)
+        us = {(B.pkey("Test Player"), "rec_yds", 59.5): {"over": 71, "under": 31, "slug": "s"}}
+        picks = []
+        self._with_books(8.0, B.build_live_picks, picks, slate, sched, by_key, {"teams": {}, "avg": {}}, us)
+        under = next(p for p in picks if p["side"] == "under")
+        self.assertNotIn("V", under["lists"])
+        self.assertEqual((under["price"], under["th"]), (31, 1))
+
+    def test_live_picks_global_book_alone_is_never_value(self):
+        """Only the global book quotes it: its depth isn't read and US users can't trade it."""
+        slate, sched, by_key = self._live_fixture(bid=0.69, ask=0.71)
+        picks = []
+        B.build_live_picks(picks, slate, sched, by_key, {"teams": {}, "avg": {}})
+        under = next(p for p in picks if p["side"] == "under")
+        self.assertNotIn("V", under["lists"])
         self.assertEqual(under["price"], 31)
+
+    def test_live_picks_use_a_us_price_when_the_global_book_is_dead(self):
+        """The global book not trading must not hide Polymarket US's price (it hid nearly all of them)."""
+        slate, sched, by_key = self._live_fixture(bid=0.01, ask=0.93)
+        us = {(B.pkey("Test Player"), "rec_yds", 59.5): {"over": 41, "under": 60, "slug": "s"}}
+        picks = []
+        B.build_live_picks(picks, slate, sched, by_key, {"teams": {}, "avg": {}}, us)
+        over = next(p for p in picks if p["side"] == "over")
+        self.assertEqual((over["price"], over["pp"]), (41, 41))
 
     def test_live_picks_prune_a_flipped_side_instead_of_duplicating(self):
         """A pending row on a side we no longer carry is dropped, not left to grade."""
@@ -626,7 +665,8 @@ class PolymarketUSTests(unittest.TestCase):
         """Over = best ask; Under = 1 - best bid. An "N+" market is the O/U line N-0.5."""
         out, n, _ = self._run([self._market()])
         self.assertEqual(n, 1)
-        self.assertEqual(out[(B.pkey("Test Player"), "rec_yds", 59.5)], {"over": 42, "under": 60})
+        q = out[(B.pkey("Test Player"), "rec_yds", 59.5)]
+        self.assertEqual((q["over"], q["under"]), (42, 60))
 
     def test_skips_closed_and_unpriced_markets(self):
         for bad in ({"closed": True}, {"active": False}, {"status": "MARKET_STATUS_HALTED"},

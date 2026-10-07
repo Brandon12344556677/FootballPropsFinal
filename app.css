@@ -46,10 +46,17 @@ body{margin:0;background:var(--ps-bg);color:var(--ps-text);font-family:var(--ps-
   background:var(--ps-green);color:var(--ps-green-ink);font-family:var(--ps-body);font-weight:700;letter-spacing:0;text-transform:none;font-size:14px;
   box-shadow:0 6px 16px rgba(34,208,127,0.14)}
 .appcta:hover{box-shadow:0 8px 20px rgba(34,208,127,0.21)}
+/* Both exchanges' sign-up links, side by side (stacked on phones) */
+.appctas{flex:none;display:flex;gap:8px}
+.appcta small{font-size:.82em;font-weight:600;opacity:.85}
+.appcta.pm{background:#2d6bff;color:#fff;box-shadow:0 6px 16px rgba(45,107,255,0.18)}
+.appcta.pm:hover{box-shadow:0 8px 20px rgba(45,107,255,0.28)}
 @media(max-width:760px){
   .apptop-in{height:auto;flex-wrap:wrap;padding:10px 12px 8px;gap:8px 10px}
   .apptop .brand b{font-size:20px}
   .appcta{margin-left:auto;padding:7px 13px;font-size:13px}
+  .appctas{margin-left:auto;flex-direction:column;gap:4px}
+  .appctas .appcta{margin:0;justify-content:space-between;gap:6px;padding:3px 10px;font-size:11.5px;line-height:1.35}
   .sportnav{order:3;width:100%;margin:0}
   .sportnav a{flex:1;justify-content:center;padding:7px 8px;font-size:13px}
 }
@@ -544,3 +551,12 @@ html body .pslcookie button{padding:7px 14px;font-size:13px;border-radius:999px;
 .app .pc-who .lockbadge{display:inline-flex;width:auto;overflow:visible;margin-top:4px;color:#eb6f7d;font-size:11px}   /* beats .app .pc-who span */
 .locknote{display:flex;align-items:flex-start;gap:8px;margin-top:8px}
 .locknote .lockbadge{flex:none;margin-top:1px}
+/* Polymarket and Kalshi side by side (PS.venues): the cheaper one, highlighted, is the price the pick is judged on */
+.venues{display:flex;flex-wrap:wrap;gap:3px 5px;margin-top:4px;font-size:11px;line-height:1.6;color:var(--ps-muted);white-space:nowrap}
+.venues .vq{padding:0 6px;border:1px solid var(--ps-line-soft);border-radius:999px}
+.venues .vq b{font-weight:700;font-variant-numeric:tabular-nums}
+.venues .vq.best{color:var(--ps-green);border-color:currentColor}
+.venues .vq.thin{opacity:.7;border-style:dashed}
+.venues .vq i{font-style:normal;font-weight:700;color:#e8b04b}
+.vtag{display:inline-block;padding:0 5px;border:1px solid var(--ps-line-soft);border-radius:999px;font-size:10.5px;line-height:1.5;color:var(--ps-muted);white-space:nowrap}
+.vtag.k{color:var(--ps-green);border-color:currentColor}

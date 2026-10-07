@@ -27,6 +27,8 @@ from collections import Counter
 from concurrent.futures import ThreadPoolExecutor
 
 import news   # pre-game news feeds, test mode
+import kalshi  # Kalshi prices, side by side with Polymarket's
+import depth   # enough money at the price? (thin-market filter)
 
 TODAY = datetime.date.today()
 ET_TODAY = (datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(hours=4)).date().isoformat()
@@ -608,7 +610,7 @@ def lock_picks(picks):
 POLYUS_EVENTS = ("https://gateway.polymarket.us/v1/events?tagSlug=mlb&active=true&closed=false"
                  "&startDateMin={a}T00:00:00Z&startDateMax={b}T00:00:00Z&limit=100")
 POLYUS_EVENT = "https://gateway.polymarket.us/v1/events/slug/{slug}"
-POLYUS_BBO = "https://gateway.polymarket.us/v1/markets/{slug}/bbo"
+POLYUS_BOOK = "https://gateway.polymarket.us/v1/markets/{slug}/book"   # best prices + depth (depth.py)
 US_SLUG = re.compile(r"^mlb-([a-z]+)-([a-z]+)-(\d{4}-\d{2}-\d{2})$")
 US_Q = re.compile(r"^Will (.+?) record at least (\d+) ", re.I)
 # sportsMarketType suffix (after "baseball_player_") -> our stat key
@@ -681,7 +683,7 @@ def fetch_markets_us(players_by_key):
     def bbo(item):
         time.sleep(0.35)          # 6 workers x ~3/s stays under the 20 req/s limit
         try:
-            return item, json.loads(http_get(POLYUS_BBO.format(slug=item[1]))).get("marketData") or {}
+            return item, depth.pmus_book(json.loads(http_get(POLYUS_BOOK.format(slug=item[1]))).get("marketData") or {})
         except Exception:  # noqa: BLE001
             return item, None
 
@@ -692,13 +694,14 @@ def fetch_markets_us(players_by_key):
         for (g, _slug, name, sk, line), md in ex.map(bbo, todo):
             if not md:
                 continue
-            ask, bid = _px(md.get("bestAsk")), _px(md.get("bestBid"))
+            ask, bid = md["ask"], md["bid"]
             over = ask if ok(ask) else None                     # buy Yes = over
             under = (1 - bid) if bid is not None and ok(1 - bid) else None   # buy No = under
             spread = (ask - bid) if ask is not None and bid is not None else None
             tradeable = (over is not None or under is not None) and (spread is None or spread <= 0.15)
             g["markets"].append({"pm": {"player": name, "sk": sk, "line": line,
-                                        "over": over, "under": under, "tradeable": tradeable}})
+                                        "over": over, "under": under, "tradeable": tradeable,
+                                        "od": md["over"], "ud": md["under"]}})
     games = [g for g in games if g["markets"]]
     print(f"  polymarket US: {len(games)} MLB game(s), {sum(len(g['markets']) for g in games)} priced player props")
     return games
@@ -834,7 +837,11 @@ PICK_COLS = ["src", "gid", "season", "date", "pid", "player", "pos", "team", "op
              "px0", "pxc",   # px0/pxc: first and last pre-game price (closing line value)
              "mv",           # model version the chance came from (MODEL_V)
              "nw",           # pre-game news, test mode (news.py): {"lu", "roof", "wx"}
-             "lk"]           # when the pick locked (UTC; see lock_picks)
+             "lk",           # when the pick locked (UTC; see lock_picks)
+             "pp", "kp",     # this side's price on Polymarket and on Kalshi (None = not listed there)
+             "pd", "kd",     # dollars offered within 2c of each (depth.py)
+             "vn",           # which one "price" is: the cheaper with $25+ offered, "P" Polymarket, "K" Kalshi
+             "th"]           # 1 = thin: neither has $25 offered near its price, so no Top 25 / Value
 BAT_BOARD = ["h", "tb", "hrr"]
 PIT_BOARD = ["k", "outs"]
 TOP_N = 25
@@ -845,6 +852,16 @@ VALUE_N = 200           # a safety cap only. At 50 it bound in busy weeks (NFL w
                         # cleared the rule went unrecorded), so the record now holds every pick that clears it
 VALUE_MIN_PRICE = 0.30  # the market has to give it at least 30%
 VALUE_MIN_EDGE = 0.15   # and the model has to be 15+ points higher
+
+
+def could_list(p):
+    """A pending pick that a price could put on Top 25 Surest or Value, but whose depth isn't yet
+    known to be enough (depth.verify reads the full book for these)."""
+    if p.get("res") is not None or pick_locked(p) or not p.get("th"):
+        return False
+    return any(px is not None and (p["prob"] >= T_MIN_PROB or
+                                   (p["neff"] >= VALUE_MIN_NEFF and value_qualifies(p["prob"], px)))
+               for px in (p.get("pp"), p.get("kp")))
 
 
 def value_qualifies(prob, price):
@@ -879,13 +896,17 @@ def make_pick(pl, gid, date, team, opp, sk, line, mp, scale, start, prices=None)
     price = None
     if prices and prices.get("tradeable"):
         price = prices["over"] if side == "over" else prices["under"]
-    return {"src": "live", "gid": gid, "season": int(date[:4]), "date": date,   # MLB seasons are calendar years
-            "pid": pl["id"], "player": pl["n"], "pos": pl["p"], "team": team, "opp": opp,
-            "stat": sk, "line": line, "side": side,
-            "prob": round(prob, 3), "lo": round(lo, 3), "hi": round(hi, 3),
-            "neff": round(mp["neff"], 1), "price": round(price, 3) if price is not None else None,
-            "lists": "", "rec": f"{sk} {side} {line}", "actual": None, "res": None,
-            "adj": round(scale, 3), "start": start or None, "mv": MODEL_V}
+    p = {"src": "live", "gid": gid, "season": int(date[:4]), "date": date,   # MLB seasons are calendar years
+         "pid": pl["id"], "player": pl["n"], "pos": pl["p"], "team": team, "opp": opp,
+         "stat": sk, "line": line, "side": side,
+         "prob": round(prob, 3), "lo": round(lo, 3), "hi": round(hi, 3),
+         "neff": round(mp["neff"], 1), "price": round(price, 3) if price is not None else None,
+         "pp": round(price, 3) if price is not None else None, "vn": "P" if price is not None else None,
+         "lists": "", "rec": f"{sk} {side} {line}", "actual": None, "res": None,
+         "adj": round(scale, 3), "start": start or None, "mv": MODEL_V}
+    if prices:
+        refresh_price(p, prices)     # pp/pd for its side, then the cheaper exchange with enough money (depth.py)
+    return p
 
 
 def refresh_price(p, pm):
@@ -894,7 +915,10 @@ def refresh_price(p, pm):
     so "has a live market" for Top 25 Surest means now, not when the pick was recorded."""
     if p.get("res") is None and not pick_locked(p):
         px = (pm["over"] if p["side"] == "over" else pm["under"]) if pm.get("tradeable") else None
-        p["price"] = round(px, 3) if px is not None else None
+        p["pp"] = round(px, 3) if px is not None else None
+        p["pd"] = pm.get("od" if p["side"] == "over" else "ud") if px is not None else None
+        p["_pt"] = (pm.get("tok") or {}).get(p["side"]) if px is not None else None   # global book token (depth.verify)
+        depth.choose(p)        # the cheaper of Polymarket and Kalshi with $25+ offered
 
 
 def news_test(picks):
@@ -1126,12 +1150,12 @@ def assign_lists(picks):
 
     # Top 25 Surest: only props the model gives 90%+ that have a live Polymarket price,
     # up to 25 — so a thin slate shows fewer, or none.
-    ranked = one_per_prop(sorted((p for p in pending if p["prob"] >= T_MIN_PROB and p.get("price") is not None),
+    ranked = one_per_prop(sorted((p for p in pending if p["prob"] >= T_MIN_PROB and p.get("price") is not None and not p.get("th")),
                                  key=lambda p: (-p["prob"], -p["neff"])))
     for p in ranked[:TOP_N - held]:
         p["lists"] += "T"
     vals = [p for p in pending
-            if p.get("price") is not None and p["neff"] >= VALUE_MIN_NEFF
+            if p.get("price") is not None and not p.get("th") and p["neff"] >= VALUE_MIN_NEFF
             and value_qualifies(p["prob"], p["price"])]
     for p in one_per_prop(sorted(vals, key=lambda p: -(p["prob"] - p["price"])))[:VALUE_N]:
         p["lists"] += "V"
@@ -1258,6 +1282,11 @@ def main():
     except Exception as e:  # noqa: BLE001
         print(f"  polymarket US: skipped ({e})")
         poly_games = []
+    try:
+        kalshi_mkts = kalshi.fetch("mlb", days=4)
+    except Exception as e:  # noqa: BLE001
+        print(f"  kalshi: skipped ({e})")
+        kalshi_mkts = None
 
     picks = load_picks()
     graded, dnp = grade_picks(picks, by_pid, box_games(store["rows"]), set(store["done"]))
@@ -1268,6 +1297,12 @@ def main():
         mkt_added = 0
     added_picks = build_board_picks(picks, slate, players_by_team, by_pid, defense, defavg)
     stamp_starts(picks)
+    nk = kalshi.apply(picks, kalshi_mkts, pkey, lambda p: not pick_locked(p))
+    print(f"  kalshi: {nk} pending pick(s) priced on Kalshi too")
+    nb = depth.verify(picks, lambda p: could_list(p))
+    thin = sum(1 for p in picks if p.get("res") is None and not pick_locked(p) and p.get("th"))
+    print(f"  depth: read {nb} more order book(s); {thin} pending pick(s) too thin for Top 25 / Value "
+          f"(under ${depth.MIN_USD:.0f} offered within 2c)")
     assign_lists(picks)
     for p in picks:
         if p.get("res") is None and not pick_locked(p):

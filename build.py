@@ -21,6 +21,8 @@ import csv, io, json, math, os, re, sys, time, datetime, unicodedata, urllib.par
 from zoneinfo import ZoneInfo
 
 import news   # pre-game news feeds, test mode
+import kalshi  # Kalshi prices, side by side with Polymarket's
+import depth   # enough money at the price? (thin-market filter)
 
 TODAY = datetime.date.today()
 
@@ -1102,7 +1104,8 @@ def fetch_pmus_prices(slate_games, sched=None):
                 continue
             out[(pkey(who), sk, round(n - 0.5, 1))] = {
                 "over": int(round(over * 100)) if over is not None else None,
-                "under": int(round(under * 100)) if under is not None else None}
+                "under": int(round(under * 100)) if under is not None else None,
+                "slug": m.get("slug")}      # for its order book (depth.verify)
     return out, games
 
 
@@ -1195,7 +1198,8 @@ def locked_rows(picks, sched):
     """The locked picks still on the board (kickoff ahead), for slate.json: the board shows
     these as published instead of re-pricing their games live. Prices are in cents."""
     now = datetime.datetime.now(datetime.timezone.utc)
-    keep = ("gid", "pid", "team", "opp", "stat", "line", "side", "prob", "lo", "hi", "neff", "price", "lists", "lk")
+    keep = ("gid", "pid", "team", "opp", "stat", "line", "side", "prob", "lo", "hi", "neff", "price", "lists", "lk",
+            "pp", "kp", "vn")
     out = []
     for p in picks:
         if p.get("src") == "live" and p.get("res") is None and p.get("lk"):
@@ -1214,7 +1218,11 @@ PICK_COLS = ["src", "gid", "season", "week", "date", "pid", "player", "pos", "te
              "px0", "pxc",   # px0/pxc: first and last pre-kickoff price, in cents (closing line value)
              "mv",           # model version the chance came from (MODEL_V)
              "nw",           # pre-game news, test mode (news.py): {"st", "wx", "roof", "p2"}
-             "lk"]           # when the pick locked (UTC; see lock_picks)
+             "lk",           # when the pick locked (UTC; see lock_picks)
+             "pp", "kp",     # this side's price on Polymarket and on Kalshi, in cents (None = not listed there)
+             "pd", "kd",     # dollars offered within 2c of each (depth.py)
+             "vn",           # which one "price" is: the cheaper with $25+ offered, "P" Polymarket, "K" Kalshi
+             "th"]           # 1 = thin: neither has $25 offered near its price, so no Value
 VALUE_MIN_NEFF = 6.0
 TOP_N = 25
 VALUE_N = 200           # a safety cap only. At 50 it bound in busy weeks (NFL week 3: 27 picks that
@@ -1257,9 +1265,13 @@ def side_prob(mp):
     return side, mp["under"], 1 - mp["hi"], 1 - mp["lo"]
 
 
-def make_pick(src, gid, season, week, date, pl, opp, sk, line, mp, price, rec, side=None):
+def make_pick(src, gid, season, week, date, pl, opp, sk, line, mp, price, rec, side=None, pp=None, kp=None,
+              kd=None, refs=None):
     """side=None records the side the model leans; pass it explicitly to record the
-    other side of the same market (a value spot can sit on either one)."""
+    other side of the same market (a value spot can sit on either one). pp/kp are that
+    side's Polymarket and Kalshi prices (cents), kd the dollars offered at Kalshi's, refs the
+    books to read for depth ({"_ps": Polymarket US slug, "_kt": Kalshi ticker}); price is the
+    cheaper of the two with enough money offered (depth.choose)."""
     fav, prob, lo, hi = side_prob(mp)
     if side is None:
         side = fav
@@ -1270,7 +1282,8 @@ def make_pick(src, gid, season, week, date, pl, opp, sk, line, mp, price, rec, s
             "stat": sk, "line": line, "side": side,
             "prob": round(prob, 3), "lo": round(lo, 3), "hi": round(hi, 3), "neff": round(mp["neff"], 1),
             "price": price, "lists": "", "rec": rec, "actual": None, "res": None,
-            "adj": round(mp.get("scale", 1.0), 3), "mv": MODEL_V}
+            "adj": round(mp.get("scale", 1.0), 3), "mv": MODEL_V,
+            "pp": pp, "kp": kp, "pd": None, "kd": kd, "vn": kalshi.best(pp, kp)[1], **(refs or {})}
 
 
 def assign_lists(picks, held=0):
@@ -1286,7 +1299,7 @@ def assign_lists(picks, held=0):
     vals = []
     for p in picks:
         pr = p.get("price")
-        if pr is None or p["neff"] < VALUE_MIN_NEFF:
+        if pr is None or p.get("th") or p["neff"] < VALUE_MIN_NEFF:
             continue
         price = pr / 100.0
         if value_qualifies(p["prob"], price):
@@ -1296,7 +1309,32 @@ def assign_lists(picks, held=0):
         p["lists"] += "V"
 
 
-def build_live_picks(picks, slate_games, sched, by_key, snap, pmus=None):
+def kalshi_board(markets, names, sg_by_slug, picks=(), props=None):
+    """For slate.json: "player key|stat|line" -> [over, under, over $, under $]: Kalshi prices in
+    cents (None = no ask) and the dollars offered within 2c of each (the best level's, or the
+    full book's where depth.verify read it for a pick), for the slate's players, in their game
+    this week only — the board prices its props live off Polymarket US in the browser and
+    shows these beside them. props: the (player key, stat, line) the board lists; only those."""
+    read = {(pkey(p["player"]), p["stat"], float(p["line"]), p["side"]): p["kd"] for p in picks
+            if p.get("src") == "live" and p.get("res") is None and p.get("kd") is not None}
+    out = {}
+    for k in markets or []:
+        if not k.get("tradeable"):
+            continue
+        key = pkey(k["player"])
+        if props is not None and (key, k["sk"], k["line"]) not in props:
+            continue
+        sg = sg_by_slug.get(names.get(key))
+        if not sg or sg.get("date") != k["date"]:
+            continue
+        out[f"{key}|{k['sk']}|{k['line']}"] = (
+            [int(round(k[sd] * 100)) if k[sd] is not None else None for sd in ("over", "under")]
+            + [max(k["od" if sd == "over" else "ud"] or 0, read.get((key, k["sk"], k["line"], sd)) or 0)
+               for sd in ("over", "under")])
+    return out
+
+
+def build_live_picks(picks, slate_games, sched, by_key, snap, pmus=None, kal=None):
     now_dt = datetime.datetime.now(datetime.timezone.utc)
     now = now_dt.strftime("%Y-%m-%dT%H:%M:%SZ")
     fresh = []
@@ -1344,21 +1382,37 @@ def build_live_picks(picks, slate_games, sched, by_key, snap, pmus=None):
             if not mp:
                 continue
             fav = "over" if mp["over"] >= 0.5 else "under"
-            cents = {"over": None, "under": None}
+            pmc = {"over": None, "under": None}     # Polymarket
             if pm["tradeable"]:
                 for sd in ("over", "under"):
                     pr = pm[sd]
-                    cents[sd] = int(round(pr * 100)) if pr is not None else None
-                # Prefer the Polymarket US quote for the same prop at the same line --
-                # the price the site shows and the one you would actually pay. An
-                # inexact line is a different bet, so it is never substituted.
-                us = (pmus or {}).get((pkey(pm["player"]), sk, round(float(pm["line"]), 1)))
-                if us:
-                    for sd in ("over", "under"):
-                        if us[sd] is not None:
-                            cents[sd] = us[sd]
+                    pmc[sd] = int(round(pr * 100)) if pr is not None else None
+            # Prefer the Polymarket US quote for the same prop at the same line -- the price
+            # the site shows and the one you would actually pay -- whether or not the global
+            # book is trading (on NFL props it mostly isn't, and gating on it hid nearly every
+            # US price). An inexact line is a different bet, so it is never substituted.
+            us = (pmus or {}).get((pkey(pm["player"]), sk, round(float(pm["line"]), 1)))
+            if us:
+                for sd in ("over", "under"):
+                    if us[sd] is not None:
+                        pmc[sd] = us[sd]
+            # Kalshi, side by side: the same exact prop at the same line in this game, and the
+            # cheaper of the two is the price the pick is judged on.
+            ks = kalshi.find(kal, pkey(pm["player"]), sk, pm["line"], [sg["date"]]) if kal else None
+            kc, kd, cents = {}, {}, {}
+            for sd in ("over", "under"):
+                kp = kalshi.side_price(ks, sd)
+                kc[sd] = int(round(kp * 100)) if kp is not None else None
+                kd[sd] = ks["od" if sd == "over" else "ud"] if kp is not None else None
+                cents[sd] = kalshi.best(pmc[sd], kc[sd])[0]
+            # Depth is read only for picks that could make Value (depth.verify, below): a US
+            # price's book by its slug, Kalshi's by its ticker. The global book's isn't read, so
+            # a price only it quotes never counts for Value (nor can US users trade there).
+            refs = lambda sd: {"_ps": us.get("slug") if us and us[sd] is not None and us[sd] == pmc[sd] else None,
+                               "_kt": ks["ticker"] if kc[sd] is not None else None}
             fresh.append(make_pick("live", sg["id"], sg["season"], sg["week"], sg["date"], pl, opp,
-                                   sk, pm["line"], mp, cents[fav], now, side=fav))
+                                   sk, pm["line"], mp, cents[fav], now, side=fav, pp=pmc[fav], kp=kc[fav],
+                                   kd=kd[fav], refs=refs(fav)))
             # The other side is recorded too when it's a plausible value play, so an
             # under can reach the Value list even though the model leans over (and
             # vice-versa). Only one side can ever clear: the two asks sum to at least
@@ -1368,12 +1422,21 @@ def build_live_picks(picks, slate_games, sched, by_key, snap, pmus=None):
             if op is not None and mp["neff"] >= VALUE_MIN_NEFF:
                 if value_qualifies(mp[other], op / 100.0):
                     fresh.append(make_pick("live", sg["id"], sg["season"], sg["week"], sg["date"], pl, opp,
-                                           sk, pm["line"], mp, op, now, side=other))
+                                           sk, pm["line"], mp, op, now, side=other, pp=pmc[other], kp=kc[other],
+                                           kd=kd[other], refs=refs(other)))
     held = 0       # Top 25 slots kept by locked picks whose game hasn't kicked off
     for p in picks:
         if p["src"] == "live" and p["res"] is None and p.get("lk") and "T" in (p.get("lists") or ""):
             ko = kickoff_utc(sched.get(p["gid"]) or {})
             held += bool(ko and now_dt < ko)
+    # Enough money at the price? Every fresh pick's price is its cheaper exchange that has $25+
+    # offered within 2c (depth.choose); the books of the ones that could make Value are read.
+    for f in fresh:
+        depth.choose(f)
+    nb = depth.verify(fresh, lambda f: f.get("th") and f["neff"] >= VALUE_MIN_NEFF and any(
+        px is not None and value_qualifies(f["prob"], px / 100.0) for px in (f.get("pp"), f.get("kp"))))
+    print(f"  depth: read {nb} order book(s); {sum(1 for f in fresh if f.get('th'))} of {len(fresh)} props "
+          f"too thin for Value (under ${depth.MIN_USD:.0f} offered within 2c)")
     assign_lists(fresh, held)
     fresh_markets = {(f["gid"], f["pid"], f["stat"], f["line"]) for f in fresh}
     fresh_keys = {(f["gid"], f["pid"], f["stat"], f["line"], f["side"]) for f in fresh}
@@ -1393,7 +1456,8 @@ def build_live_picks(picks, slate_games, sched, by_key, snap, pmus=None):
             note_price(f)
             added += 1
         elif ex["res"] is None:      # still pending: refresh to the latest pre-kickoff snapshot
-            for k in ("side", "prob", "lo", "hi", "neff", "price", "lists", "rec", "team", "opp", "adj"):
+            for k in ("side", "prob", "lo", "hi", "neff", "price", "lists", "rec", "team", "opp", "adj",
+                      "pp", "kp", "pd", "kd", "vn", "th"):
                 ex[k] = f[k]
             note_price(ex)
             updated += 1
@@ -1743,24 +1807,32 @@ def main():
             print(f"  polymarket us: skipped ({e}) — pricing picks off the global book")
         if pmus_games:
             print(f"  polymarket us: {len(pmus)} prop prices from {pmus_games} game(s)")
-        total, added, updated = build_live_picks(picks, slate_games, sched, by_key, snapshot(SEASON), pmus)
+        try:
+            kal_mkts = kalshi.fetch("nfl", days=8)
+        except Exception as e:  # noqa: BLE001
+            print(f"  kalshi: skipped ({e})")
+            kal_mkts = None
+        kal = kalshi.index(kal_mkts, pkey) if kal_mkts else None
+        total, added, updated = build_live_picks(picks, slate_games, sched, by_key, snapshot(SEASON), pmus, kal)
         print(f"  slate: {len(slate_games)} games, {total} props modeled ({added} new, {updated} refreshed)")
         locked = lock_picks(picks, sched)
         if locked:
             print(f"  picks: locked {locked} pick(s) whose game kicks off within {LOCK_MIN} minutes")
-        names = {}
+        names, props = {}, set()
         for g in slate_games:
             for m in g.get("markets", []):
                 pm = parse_market(m)
                 if pm:
                     names.setdefault(pkey(pm["player"]), g["slug"])
+                    props.add((pkey(pm["player"]), mkt_stat_key(pm["statText"]), round(float(pm["line"]), 1)))
         sg_by_slug = {g["slug"]: match_sched_game(g, sched) for g in slate_games}
         slate = {"gen": datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
                  "games": [{"slug": g["slug"], "away": g["away"], "home": g["home"], "date": g["date"],
                             "start": g["start"], "title": g["title"],
                             "gid": (sg_by_slug[g["slug"]] or {}).get("id")} for g in slate_games],
                  "players": names,
-                 "locked": locked_rows(picks, sched)}
+                 "locked": locked_rows(picks, sched),
+                 "kalshi": kalshi_board(kal_mkts, names, sg_by_slug, picks, props)}
         with open("slate.json", "w", encoding="utf-8") as f:
             json.dump(slate, f, separators=(",", ":"), ensure_ascii=False)
 
