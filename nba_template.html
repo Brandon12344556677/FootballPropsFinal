@@ -649,6 +649,7 @@ tr.hit td{background:var(--hit-soft)} tr.miss td{background:var(--miss-soft)}
 
   <div class="promo">
     <a id="refbanner" class="refbanner" href="#" target="_blank" rel="noopener" hidden></a>
+    <a id="refbannerk" class="refbanner" href="#" target="_blank" rel="noopener sponsored" hidden></a>
     <a id="refbanner2" class="refbanner group" href="#" target="_blank" rel="noopener" hidden></a>
   </div>
 
@@ -1802,9 +1803,11 @@ async function scanSlip(blob){
 // ▼▼▼ Polymarket referral banners + social follow links — same as the NFL page. Leave a url "" to hide it. ▼▼▼
 const REFERRAL = { url: "https://polymarket.us/join/propstreaklab", text: "🎁 Get $25 FREE with code PROPSTREAKLAB — sign up & trade on Polymarket →" };
 const REFERRAL2 = { url: "https://polymarket.us/squad/join/CDU9RMD97K7O1G95yAao?referrer=propstreaklab", text: "👥 Join our Polymarket group →" };
+const REFERRAL_KALSHI = { url: "https://kalshi.com/sign-up/?referral=4373e9f9-0304-498c-8ca7-fccd3714b808&m=true&utm_source=mobile_app&utm_medium=share&utm_campaign=referral&utm_content=share_button&utm_term=referrals_pill", text: "🎁 Get $25 FREE on Kalshi — sign up & trade on Kalshi →" };
 const SOCIAL = { instagram: "https://www.instagram.com/propstreaklab", tiktok: "https://www.tiktok.com/@propstreaklab", x: "https://x.com/propstreaklab" };
 (function renderRef(){ const b=$('refbanner'); if(!b) return;
   if(REFERRAL.url){ b.href=REFERRAL.url; b.textContent=REFERRAL.text; b.hidden=false; } else b.hidden=true;
+  const bk=$('refbannerk'); if(bk){ if(REFERRAL_KALSHI.url){ bk.href=REFERRAL_KALSHI.url; bk.textContent=REFERRAL_KALSHI.text; bk.hidden=false; } else bk.hidden=true; }
   const b2=$('refbanner2'); if(b2){ if(REFERRAL2.url){ b2.href=REFERRAL2.url; b2.textContent=REFERRAL2.text; b2.hidden=false; } else b2.hidden=true; } })();
 (function renderSocial(){ const ig=$('social_ig'), tt=$('social_tt'), xa=$('social_x'), bar=$('socialbar'); if(!bar) return;
   if(SOCIAL.instagram){ ig.href=SOCIAL.instagram; ig.hidden=false; } else ig.hidden=true;

@@ -28,6 +28,7 @@ from zoneinfo import ZoneInfo
 
 SITE = "https://propstreaklab.com"
 REFERRAL = "https://polymarket.us/join/propstreaklab"
+REFERRAL_KALSHI = "https://kalshi.com/sign-up/?referral=4373e9f9-0304-498c-8ca7-fccd3714b808&m=true&utm_source=mobile_app&utm_medium=share&utm_campaign=referral&utm_content=share_button&utm_term=referrals_pill"
 STATE = "posted.json"
 POST_HOUR_ET = 11           # late morning: after the overnight grading, before the early games
 MAX_PICKS = 5
@@ -146,10 +147,12 @@ def messages(picks, is_value, results, today):
     d.append("")
     d.append(f"Every pick is recorded before the game and graded in public → <{SITE}>")
     d.append(f"🎁 $25 free on Polymarket with code **PROPSTREAKLAB** → <{REFERRAL}>")
+    d.append(f"🎁 $25 free on Kalshi → <{REFERRAL_KALSHI}>")
     d.append("-# Research, not betting advice. 18+.")
     t.append("")
     t.append(f"Every pick is recorded before the game and graded in public → {SITE}")
     t.append(f"🎁 $25 free on Polymarket with code <b>PROPSTREAKLAB</b> → {REFERRAL}")
+    t.append(f"🎁 $25 free on Kalshi → {html.escape(REFERRAL_KALSHI)}")
     t.append("<i>Research, not betting advice. 18+.</i>")
     return "\n".join(d)[:1990], "\n".join(t)[:4000]
 
