@@ -617,8 +617,8 @@ tr.hit td{background:var(--hit-soft)} tr.miss td{background:var(--miss-soft)}
 .panel.collapsed{padding-bottom:14px}
 </style>
 
-<link rel="stylesheet" href="app.css?v=20261001a">
-<script src="app.js?v=20261001a"></script>
+<link rel="stylesheet" href="app.css?v=20261007a">
+<script src="app.js?v=20261007a"></script>
 
 <header class="apptop">
   <div class="apptop-in">
@@ -1262,7 +1262,7 @@ function gameOf(p){ const m=/^\d{4}-\d{2}-\d{2}-([A-Z]+)-([A-Z]+)$/.exec(p.gid||
 function normPick(p){ const px=p.price==null? null : p.price;
   return {pid:p.pid, gid:p.gid, name:p.player, team:p.team, game:gameOf(p), sk:p.stat, statText:statLabel(p.stat),
     line:p.line, side:p.side||'over', prob:p.prob, lo:p.lo, hi:p.hi, n:Math.round(p.neff||0),
-    price:px, px0:p.px0==null? null : p.px0, edge:(px==null||p.prob==null)? null : p.prob-px}; }
+    price:px, px0:p.px0==null? null : p.px0, lk:p.lk||null, edge:(px==null||p.prob==null)? null : p.prob-px}; }
 function listRows(tag){ return upcomingPicks().filter(p=>(p.lists||'').includes(tag) && p.prob!=null).map(normPick); }
 function sortRows(rows, key, dir){ return [...rows].sort((a,b)=>{
   if(key==='matchup') return dir*((a.game.away+a.game.home).localeCompare(b.game.away+b.game.home));
@@ -1284,15 +1284,15 @@ function pickTable(rows, sort){
   let h=`<div class="sortbar"><span class="sortlab">Sort</span>${pills}</div><div class="pickgrid">`;
   rows.forEach((r,idx)=>{
     const tier=r.prob>=0.9?'hi':r.prob>=0.7?'mid':'lo', pv=Math.round(r.prob*100);
-    h+=`<article class="pickcard ${tier}" style="${PS.teamVars(SPORT_KEY, r.team)}">`+
+    h+=`<article class="pickcard ${tier}${r.lk?' locked':''}" style="${PS.teamVars(SPORT_KEY, r.team)}">`+
       `<div class="pc-top"><span class="av">${esc(initials(r.name))}</span>`+
         `<div class="pc-who"><b>${esc(r.name)}</b><span><span class="tbadge">${esc(r.team)}</span>${r.team===r.game.home? "vs "+esc(r.game.away) : r.team===r.game.away? "@ "+esc(r.game.home) : esc(r.game.away)+" @ "+esc(r.game.home)}</span></div>`+
         `<div class="pc-prob"><div class="ring" style="--p:${pv}"><b>${pv}<small>%</small></b></div><span>${Math.round(r.lo*100)}–${Math.round(r.hi*100)} · ${r.n}g</span></div></div>`+
       `<div class="pc-bet"><span class="leantag ${esc(r.side)}">${esc(r.side)}</span><b>${r.line}</b><span>${esc(r.statText)}</span>${byId[r.pid]? PS.spark(valuesOf(byId[r.pid], r.sk), r.line, r.side) : ''}</div>`+
-      `<div class="pc-foot"><span class="pc-price livecell">${priceCell(r)}</span><button class="edgeload" type="button" data-i="${idx}">Details</button></div>`+
+      `<div class="pc-foot"><span class="pc-price livecell">${priceCell(r)}</span>${r.lk? PS.lockBadge(r.lk) : ''}<button class="edgeload" type="button" data-i="${idx}">Details</button></div>`+
     `</article>`;
   });
-  return h+`</div>`; }
+  return h+`</div>`+(rows.some(r=>r.lk)? PS.lockNote() : ''); }
 // Tapping a pick card opens its details — the verdict and the last 10 games — in a sheet;
 // "Full breakdown" there loads it on the Player tab, as the old Load button did.
 function openPickSheet(r){ const p=byId[r.pid]; if(!p){ loadPick(r); return; }
