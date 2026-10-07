@@ -437,6 +437,12 @@ window.PS = (function(){
     return `<span class="pxmove ${cls}${closed?' inl':''}" title="${esc(title)}">${closed? `${o}\u00a2 \u2192 ${n}\u00a2` : `opened ${o}\u00a2`} <b>${arrow}</b></span>`;
   }
 
+  // ---- nothing is certain: no chance above 99% (or below 1%) is shown, even on picks recorded before
+  // the builders capped it (P_MAX in each model) ----
+  const P_MAX=0.99;
+  function cap(p){ return p==null? p : Math.min(P_MAX, Math.max(1-P_MAX, +p)); }
+  function capPick(o){ if(o) ['prob','lo','hi'].forEach(k=>{ if(o[k]!=null) o[k]=cap(o[k]); }); return o; }
+
   // ---- Polymarket and Kalshi side by side (kalshi.py) ----
   // pp/kp: what you'd pay for the pick's side on each exchange, as fractions (null = that
   // exchange doesn't list this exact prop at this line). vn: the one the pick is judged on —
@@ -461,5 +467,5 @@ window.PS = (function(){
   }
 
   return {teamVars, ticker, until, skeleton, esc, hashFor, pickHash, parsePickHash, syncHash, sharePick, toast, helpBtn, spark, verdict, icon, sheet, closeSheet, pickSheet,
-          isTracked, toggleBet, renderBets, fairOf, setFair, pxMove, lockBadge, lockNote, venues, venueName};
+          isTracked, toggleBet, renderBets, fairOf, setFair, pxMove, lockBadge, lockNote, venues, venueName, cap, capPick};
 })();

@@ -617,8 +617,8 @@ tr.hit td{background:var(--hit-soft)} tr.miss td{background:var(--miss-soft)}
 .panel.collapsed{padding-bottom:14px}
 </style>
 
-<link rel="stylesheet" href="app.css?v=20261007c">
-<script src="app.js?v=20261007c"></script>
+<link rel="stylesheet" href="app.css?v=20261007d">
+<script src="app.js?v=20261007d"></script>
 
 <header class="apptop">
   <div class="apptop-in">
@@ -926,6 +926,7 @@ function ncdf(x){ return 0.5*(1+erf(x/Math.sqrt(2))); }
 // the walk-forward backtest; only stats where it improved both held-out halves are listed.
 const CAL = {pts:[-0.226, 0.921], g:[-0.37, 0.934], a:[-0.321, 0.928], sog:[-0.123, 1.24]};
 function calibrate(p, cal){ const q=Math.min(1-1e-4, Math.max(1e-4, p)); return 1/(1+Math.exp(-(cal[0]+cal[1]*Math.log(q/(1-q))))); }
+const P_MAX=0.99;   // no chance shown or used above 99% (or below 1%): nothing is certain (mirrors P_MAX in the builder)
 function modelProb(values, line, floor, scale, cal){
   if(scale==null) scale=1;
   const v=values.slice(-MODEL.maxGames).map(x=>x*scale), n=v.length; if(!n) return null;
@@ -941,10 +942,10 @@ function modelProb(values, line, floor, scale, cal){
   const overRaw=1-F(loE), underRaw=F(hiE);
   const push=Math.max(0,1-overRaw-underRaw), tot=overRaw+underRaw;
   const pc=tot>0? overRaw/tot : 0.5, k=MODEL.priorK;
-  let p=(neff*pc+k*0.5)/(neff+k); if(cal) p=calibrate(p, cal);
+  let p=(neff*pc+k*0.5)/(neff+k); if(cal) p=calibrate(p, cal); p=Math.min(P_MAX, Math.max(1-P_MAX, p));   // never 100% (or 0%)
   const nq=neff+k, z=MODEL.z, z2=z*z;
   const c=(p+z2/(2*nq))/(1+z2/nq), hw=z*Math.sqrt(p*(1-p)/nq+z2/(4*nq*nq))/(1+z2/nq);
-  return {over:p, under:1-p, push, lo:Math.max(0,c-hw), hi:Math.min(1,c+hw), neff, mean, sd, h, n, scale};
+  return {over:p, under:1-p, push, lo:Math.min(P_MAX, Math.max(1-P_MAX, c-hw)), hi:Math.max(1-P_MAX, Math.min(P_MAX, c+hw)), neff, mean, sd, h, n, scale};
 }
 function median(a){ if(!a.length) return 0; const s=[...a].sort((x,y)=>x-y), m=Math.floor(s.length/2); return s.length%2? s[m] : (s[m-1]+s[m])/2; }
 function seedLine(values){ const last=values.slice(-10); if(!last.length) return 0.5; const med=median(last);
@@ -1438,7 +1439,7 @@ function tickerItems(){
 let PICKS=null;
 function loadPicks(){
   fetch('./nhl_picks.json',{cache:'no-store'}).then(r=>r.ok?r.json():null).then(d=>{
-    if(!d||!d.picks){ PICKS=[]; } else { const cols=d.cols; PICKS=d.picks.map(row=>Object.fromEntries(cols.map((c,i)=>[c,row[i]]))); }
+    if(!d||!d.picks){ PICKS=[]; } else { const cols=d.cols; PICKS=d.picks.map(row=>PS.capPick(Object.fromEntries(cols.map((c,i)=>[c,row[i]])))); }
     renderPickViews();
   }).catch(()=>{ PICKS=[]; renderPickViews(); });
 }

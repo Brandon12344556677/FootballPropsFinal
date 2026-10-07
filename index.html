@@ -34,8 +34,8 @@
 <link rel="manifest" href="/site.webmanifest">
 <script data-goatcounter="https://propstreaklive.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
 <link rel="stylesheet" href="fonts.css">
-<link rel="stylesheet" href="app.css?v=20261007c">
-<script src="app.js?v=20261007c"></script>
+<link rel="stylesheet" href="app.css?v=20261007d">
+<script src="app.js?v=20261007d"></script>
 <style>
 :root{
   color-scheme:dark;
@@ -924,12 +924,15 @@ function countUp(el){ const to=+el.dataset.count; if(!to||el.dataset.done) retur
     document.getElementById('botdnote').textContent='Picked from every sport’s upcoming props at the best price at that moment (the cheaper of Polymarket and Kalshi) and never swapped afterward, even if the price moves. A player who doesn’t play is a void. Research, not betting advice — 21+.';
     sec.hidden=false;
   }
-  get('botd.json').then(b=>{ if(!b) return; renderBotd(b);
-    setInterval(()=>{ if(!document.hidden) get('botd.json').then(n=>{ if(n){ b=n; renderBotd(b); } }); }, 300000); });
+  // Nothing is certain: picks recorded before the 99% cap still show 99% at most.
+  const capBotd=b=>{ (b&&b.days||[]).forEach(d=>{ PS.capPick(d.lock); PS.capPick(d.value); }); return b; };
+  get('botd.json').then(b=>{ if(!b) return; renderBotd(capBotd(b));
+    setInterval(()=>{ if(!document.hidden) get('botd.json').then(n=>{ if(n){ b=capBotd(n); renderBotd(b); } }); }, 300000); });
 
   Promise.all([get('today.json'), get('weekly.json')]).then(([t,w])=>{
     PS.ticker(tickerItems(t, w));
     if(!t) return;
+    (t.picks||[]).forEach(PS.capPick);
     if(t.fair && t.fair.w>=0) FAIRW=t.fair.w;
     liveDemo(t);
     renderToday(t);
