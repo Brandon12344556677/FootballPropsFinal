@@ -1,47 +1,59 @@
 """TEMPORARY (kalshi-probe workflow, working branch only): what Kalshi's public API lists for
-NFL/NBA/NHL/MLB player props, and what one market looks like, so the builders can be
-matched to it. Prints compact lines to the job log; capped at ~90 s; never fails the job."""
-import json, re, sys, time, urllib.request
+NFL/NBA/NHL/MLB per-game player props, and what one market looks like, so the builders can be
+matched to it. Paced to stay under Kalshi's rate limit; capped; never fails the job."""
+import json, sys, time, urllib.error, urllib.request
 
 API = "https://api.elections.kalshi.com/trade-api/v2"
 T0 = time.time()
-PROP = re.compile(r"yard|touchdown|reception|pass|rush|point|rebound|assist|three|strikeout|hits?\b|home run|"
-                  r"rbi|base|goal|shot|save|player|prop|outs", re.I)
+CAP = 250
+TARGETS = [
+    "KXMLBKS", "KXMLBHIT", "KXMLBHRR", "KXMLBTB", "KXMLBHR", "KXMLBRBI", "KXMLBOUTS", "KXMLBSB",
+    "KXMLBHA", "KXMLBERA", "KXMLBWA", "KXMLBRUNS", "KXMLBBB",
+    "KXNFLRECYDS", "KXNFLRSHYDS", "KXNFLPASSYDS", "KXNFLREC", "KXNFLPASSTDS", "KXNFLANYTD", "KXNFLTD",
+    "KXNHLPTS", "KXNHLAST", "KXNHLGOAL", "KXNHLANYGOAL", "KXNHLSAVE", "KXNHLSOG", "KXNHLSHOTS",
+    "KXNBAPTS", "KXNBAREB", "KXNBAAST", "KXNBA3PT", "KXNBAPRA", "KXNBASTL", "KXNBABLK",
+]
+FIELDS = ("ticker", "event_ticker", "title", "subtitle", "yes_sub_title", "no_sub_title", "floor_strike",
+          "strike_type", "yes_bid_dollars", "yes_ask_dollars", "no_bid_dollars", "no_ask_dollars",
+          "last_price_dollars", "volume_fp", "open_interest_fp", "liquidity_dollars", "occurrence_datetime",
+          "expected_expiration_time", "custom_strike", "status")
 
 
-def get(path):
-    req = urllib.request.Request(API + path, headers={"Accept": "application/json", "User-Agent": "propstreaklab-probe"})
-    with urllib.request.urlopen(req, timeout=15) as r:
-        return json.loads(r.read())
+def get(path, tries=3):
+    for i in range(tries):
+        req = urllib.request.Request(API + path, headers={"Accept": "application/json",
+                                                          "User-Agent": "propstreaklab-probe"})
+        try:
+            with urllib.request.urlopen(req, timeout=15) as r:
+                return json.loads(r.read())
+        except urllib.error.HTTPError as e:
+            if e.code == 429 and i < tries - 1:
+                time.sleep(4 * (i + 1)); continue
+            raise
 
 
 def main():
     series = get("/series?category=Sports").get("series") or []
-    print(f"SPORTS SERIES: {len(series)}", flush=True)
-    keys = ("NFL", "NBA", "NHL", "MLB")
-    hits = [s for s in series if any(k in ((s.get("ticker") or "") + " " + (s.get("title") or "")).upper() for k in keys)]
-    print(f"MATCHING SERIES: {len(hits)}", flush=True)
-    for s in hits:
-        print("S", s.get("ticker"), "|", (s.get("title") or "")[:90], flush=True)
-    props = [s for s in hits if PROP.search((s.get("title") or "") + " " + (s.get("ticker") or ""))]
-    print(f"PROP-LIKE SERIES: {len(props)}", flush=True)
-    shown = 0
-    for s in props:
-        if time.time() - T0 > 90:
+    mine = sorted(s.get("ticker") or "" for s in series
+                  if (s.get("ticker") or "").startswith(("KXMLB", "KXNFL", "KXNHL", "KXNBA")))
+    print(f"SERIES {len(mine)}:", " ".join(mine), flush=True)
+    have = set(mine)
+    for t in TARGETS:
+        if time.time() - T0 > CAP:
             print("time cap reached", flush=True); break
-        t = s.get("ticker")
+        if t not in have:
+            print("X", t, "not a series", flush=True); continue
+        time.sleep(1.2)
         try:
-            evs = get(f"/events?series_ticker={t}&status=open&with_nested_markets=true&limit=2").get("events") or []
+            ms = get(f"/markets?series_ticker={t}&status=open&limit=1000").get("markets") or []
         except Exception as e:
-            print("E", t, "failed", e, flush=True); continue
-        nm = sum(len(e.get("markets") or []) for e in evs)
-        print("E", t, f"open events {len(evs)}, markets {nm}", "|", " / ".join((e.get("title") or "")[:60] for e in evs), flush=True)
-        if evs and evs[0].get("markets") and shown < 8:
-            e = evs[0]
-            print("  EVENT", json.dumps({k: e.get(k) for k in ("event_ticker", "title", "sub_title", "strike_date")}), flush=True)
-            for m in e["markets"][:3]:
-                print("  MKT", json.dumps({k: m.get(k) for k in m if k not in ("rules_secondary",)}, default=str)[:1500], flush=True)
-            shown += 1
+            print("X", t, "failed", e, flush=True); continue
+        evs = sorted({m.get("event_ticker") for m in ms})
+        print("M", t, f"open markets {len(ms)}, events {len(evs)}:", " ".join(evs[:12]), flush=True)
+        for m in ms[:2]:
+            print("  MKT", json.dumps({k: m.get(k) for k in FIELDS}, default=str), flush=True)
+        if ms:
+            print("  NAMES", " | ".join(sorted({m.get("yes_sub_title") or "" for m in ms})[:15]), flush=True)
 
 
 try:
