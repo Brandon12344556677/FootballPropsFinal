@@ -1309,12 +1309,12 @@ def assign_lists(picks, held=0):
         p["lists"] += "V"
 
 
-def kalshi_board(markets, names, sg_by_slug, picks=()):
+def kalshi_board(markets, names, sg_by_slug, picks=(), props=None):
     """For slate.json: "player key|stat|line" -> [over, under, over $, under $]: Kalshi prices in
     cents (None = no ask) and the dollars offered within 2c of each (the best level's, or the
     full book's where depth.verify read it for a pick), for the slate's players, in their game
     this week only — the board prices its props live off Polymarket US in the browser and
-    shows these beside them."""
+    shows these beside them. props: the (player key, stat, line) the board lists; only those."""
     read = {(pkey(p["player"]), p["stat"], float(p["line"]), p["side"]): p["kd"] for p in picks
             if p.get("src") == "live" and p.get("res") is None and p.get("kd") is not None}
     out = {}
@@ -1322,6 +1322,8 @@ def kalshi_board(markets, names, sg_by_slug, picks=()):
         if not k.get("tradeable"):
             continue
         key = pkey(k["player"])
+        if props is not None and (key, k["sk"], k["line"]) not in props:
+            continue
         sg = sg_by_slug.get(names.get(key))
         if not sg or sg.get("date") != k["date"]:
             continue
@@ -1816,12 +1818,13 @@ def main():
         locked = lock_picks(picks, sched)
         if locked:
             print(f"  picks: locked {locked} pick(s) whose game kicks off within {LOCK_MIN} minutes")
-        names = {}
+        names, props = {}, set()
         for g in slate_games:
             for m in g.get("markets", []):
                 pm = parse_market(m)
                 if pm:
                     names.setdefault(pkey(pm["player"]), g["slug"])
+                    props.add((pkey(pm["player"]), mkt_stat_key(pm["statText"]), round(float(pm["line"]), 1)))
         sg_by_slug = {g["slug"]: match_sched_game(g, sched) for g in slate_games}
         slate = {"gen": datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
                  "games": [{"slug": g["slug"], "away": g["away"], "home": g["home"], "date": g["date"],
@@ -1829,7 +1832,7 @@ def main():
                             "gid": (sg_by_slug[g["slug"]] or {}).get("id")} for g in slate_games],
                  "players": names,
                  "locked": locked_rows(picks, sched),
-                 "kalshi": kalshi_board(kal_mkts, names, sg_by_slug, picks)}
+                 "kalshi": kalshi_board(kal_mkts, names, sg_by_slug, picks, props)}
         with open("slate.json", "w", encoding="utf-8") as f:
             json.dump(slate, f, separators=(",", ":"), ensure_ascii=False)
 
