@@ -617,8 +617,8 @@ tr.hit td{background:var(--hit-soft)} tr.miss td{background:var(--miss-soft)}
 .panel.collapsed{padding-bottom:14px}
 </style>
 
-<link rel="stylesheet" href="app.css?v=20261007b">
-<script src="app.js?v=20261007b"></script>
+<link rel="stylesheet" href="app.css?v=20261007c">
+<script src="app.js?v=20261007c"></script>
 
 <header class="apptop">
   <div class="apptop-in">
@@ -678,7 +678,7 @@ tr.hit td{background:var(--hit-soft)} tr.miss td{background:var(--miss-soft)}
         <li><span class="vrnum">1</span><span class="vrtxt"><b>The market gives it at least a 30% chance.</b> The price you'd pay has to be <b>30¢ or more</b>. <span class="vrwhy">This is the rule that keeps penny longshots off the list — a 6¢ ask against an 11% model chance looks like a huge edge in percentage terms and is still a bad bet.</span></span></li>
         <li><span class="vrnum">2</span><span class="vrtxt"><b>Our model puts it at least 15 points higher.</b> <span class="vreg">30¢ ask → needs 45%</span> · <span class="vreg">50¢ → 65%</span> · <span class="vreg">70¢ → 85%</span>. <span class="vrwhy">The gap between the two, in percentage points, is the <b>edge</b> shown in the Polymarket column.</span></span></li>
       </ol>
-      <div class="vrfoot">Both rules are tested against the <b>cheaper of the Polymarket and Kalshi prices for the side the model takes</b> — the price you'd actually pay — and a prop also needs <b>6+ effective games</b> of history behind it. Everything clearing both rules is listed, ranked by that edge. Prices come from Polymarket's NHL player-prop markets, so this list stays empty until those are posted.</div>
+      <div class="vrfoot">Both rules are tested against the <b>cheaper of the Polymarket and Kalshi prices for the side the model takes</b> that has at least <b>$25</b> offered at it (or within 2¢) — a thinner price would move when you bet — — the price you'd actually pay — and a prop also needs <b>6+ effective games</b> of history behind it. Everything clearing both rules is listed, ranked by that edge. Prices come from Polymarket's NHL player-prop markets, so this list stays empty until those are posted.</div>
     </div>
     <div id="valuebody"></div>
   </div>
@@ -1279,7 +1279,7 @@ function normPick(p){ const px=p.price==null? null : p.price;
   const pp=p.pp!=null? p.pp : (p.vn==null && p.kp==null? px : null), kp=p.kp==null? null : p.kp;
   return {pid:p.pid, gid:p.gid, name:p.player, team:p.team, game:gameOf(p), sk:p.stat, statText:statLabel(p.stat),
     line:p.line, side:p.side||'over', prob:p.prob, lo:p.lo, hi:p.hi, n:Math.round(p.neff||0),
-    price:px, pp, kp, vn:p.vn||(px==null? null : 'P'), px0:p.px0==null? null : p.px0, lk:p.lk||null, edge:(px==null||p.prob==null)? null : p.prob-px}; }
+    price:px, pp, kp, vn:p.vn||(px==null? null : 'P'), pd:p.pd, kd:p.kd, px0:p.px0==null? null : p.px0, lk:p.lk||null, edge:(px==null||p.prob==null)? null : p.prob-px}; }
 function listRows(tag){ return upcomingPicks().filter(p=>(p.lists||'').includes(tag) && p.prob!=null).map(normPick); }
 function sortRows(rows, key, dir){ return [...rows].sort((a,b)=>{
   if(key==='matchup') return dir*((a.game.away+a.game.home).localeCompare(b.game.away+b.game.home));
@@ -1290,7 +1290,7 @@ function priceCell(r){
   if(r.price==null) return `<span class="pmdim" title="Neither Polymarket nor Kalshi lists this exact prop right now — the price appears here automatically once one does">no market yet</span>`;
   const signed=v=>(v>=0?'+':'−')+Math.abs(Math.round(v*100));
   const cls=r.edge==null? '' : r.edge>=0.04? 'pos' : r.edge<=-0.04? 'neg' : '';
-  return `<span class="pmpx ${cls}">${Math.round(r.price*100)}¢</span> <span class="rng">${r.edge==null?'':signed(r.edge)+' edge · '}${(1/r.price).toFixed(2)}×</span>`+PS.pxMove(r.px0, r.price)+PS.venues(r.pp, r.kp, r.vn); }
+  return `<span class="pmpx ${cls}">${Math.round(r.price*100)}¢</span> <span class="rng">${r.edge==null?'':signed(r.edge)+' edge · '}${(1/r.price).toFixed(2)}×</span>`+PS.pxMove(r.px0, r.price)+PS.venues(r.pp, r.kp, r.vn, r.pd!=null && r.pd<25, r.kd!=null && r.kd<25); }
 // Avatar initials for a pick card: "Fernando Tatis Jr." -> "FT".
 const initials=n=>{ const w=String(n||"").replace(/\s+(Jr|Sr|II|III|IV)\.?$/i,"").trim().split(/\s+/); return ((w[0]||"")[0]||"")+(w.length>1? (w[w.length-1][0]||"") : ""); };
 // Pick cards (Top 25 Surest, Value spots): one card per prop — who, the bet in words, the

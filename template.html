@@ -608,8 +608,8 @@ table td,table th,thead th,tbody td,.edgetbl td,.edgetbl th,.caltbl td,.caltbl t
 .valrules .vrfoot b{color:#fff}
 </style>
 
-<link rel="stylesheet" href="app.css?v=20261007b">
-<script src="app.js?v=20261007b"></script>
+<link rel="stylesheet" href="app.css?v=20261007c">
+<script src="app.js?v=20261007c"></script>
 
 <header class="apptop">
   <div class="apptop-in">
@@ -671,7 +671,7 @@ table td,table th,thead th,tbody td,.edgetbl td,.edgetbl th,.caltbl td,.caltbl t
         <li><span class="vrnum">1</span><span class="vrtxt"><b>The market gives it at least a 30% chance.</b> The price you'd pay has to be <b>30¢ or more</b>. <span class="vrwhy">This is the rule that keeps penny longshots off the list — a 6¢ ask against an 11% model chance looks like a huge edge in percentage terms and is still a bad bet.</span></span></li>
         <li><span class="vrnum">2</span><span class="vrtxt"><b>Our model puts it at least 15 points higher.</b> <span class="vreg">30¢ ask → needs 45%</span> · <span class="vreg">50¢ → 65%</span> · <span class="vreg">70¢ → 85%</span>. <span class="vrwhy">The gap between the two, in percentage points, is the <b>edge</b> shown in the Best price column.</span></span></li>
       </ol>
-      <div class="vrfoot">Both rules are tested against the <b>best price in the row</b> — the cheaper of the live Polymarket US price and Kalshi's, the price you'd actually pay — so the edge shown is always the edge it qualified on, and a prop drops off the list as soon as the price moves against it. Where Polymarket US has no market for a prop, the global book's ask is used instead and shown as <span class="pmdim">board 46¢ · +15 edge</span>. Both rules are checked on the <b>over</b> and the <b>under</b> of every market separately, so either side can qualify, and a prop also needs <b>6+ effective games</b> of history behind it. Everything clearing both rules is listed — no fixed top 25 — ranked by that edge, and the list re-checks itself about once a minute.</div>
+      <div class="vrfoot">Both rules are tested against the <b>best price in the row</b> — the cheaper of the live Polymarket US price and Kalshi's, the price you'd actually pay — so the edge shown is always the edge it qualified on, and a prop drops off the list as soon as the price moves against it. A price only counts when at least <b>$25</b> is offered at it (or within 2¢) — in a near-empty market your bet would move the price — so a thin price is skipped for the other exchange's, or the prop is left off. Polymarket's global book (shown as <span class="pmdim">board 46¢</span>) doesn't count: US users can't trade it. Both rules are checked on the <b>over</b> and the <b>under</b> of every market separately, so either side can qualify, and a prop also needs <b>6+ effective games</b> of history behind it. Everything clearing both rules is listed — no fixed top 25 — ranked by that edge, and the list re-checks itself about once a minute.</div>
     </div>
     <div id="valuebody"><p class="mktnote">The board scan fills this in. <span class="mktmuted">Needs the hosted website (the Polymarket API can't be reached from a local file).</span></p></div>
   </div>
@@ -1836,6 +1836,39 @@ function kalOf(kk, side){
   const q=((SLATE&&SLATE.kalshi)||{})[kk]; if(!q) return null;
   const c=q[side==='under'? 1 : 0]; return c==null? null : c/100;
 }
+/* Enough money at the price? (build.py / depth.py) A price only counts for Value when $25+ is
+   offered to buy that side within 2¢ of it — in a near-empty book a bet moves the price.
+   Kalshi: slate.json carries the dollars offered at each price. Polymarket US: its order book,
+   read for the rows whose price would qualify, cached for 2 minutes. */
+const DEPTH_MIN=25, DEPTH_WITHIN=0.02, DEPTH_MS=120000;
+const pmDepth=new Map();    // Polymarket US market slug -> {over, under, at}: dollars within 2¢
+function usdWithin(levels){
+  const lv=levels.filter(([p,q])=>p>0 && p<1 && q>0); if(!lv.length) return 0;
+  const b=Math.min(...lv.map(l=>l[0]));
+  return lv.reduce((a,[p,q])=>a+(p<=b+DEPTH_WITHIN+1e-9? p*q : 0), 0);
+}
+async function pmBook(slug){
+  const c=pmDepth.get(slug); if(c && Date.now()-c.at<DEPTH_MS) return c;
+  const r=await fetch(PMUS+'/v1/markets/'+encodeURIComponent(slug)+'/book', {cache:'no-store'});
+  if(!r.ok) throw new Error('polymarket us book '+r.status);
+  const md=(await r.json()).marketData||{}, n=v=>parseFloat(v && v.value!=null? v.value : v);
+  const offers=(md.offers||[]).map(o=>[n(o.px), n(o.qty)]), bids=(md.bids||[]).map(b=>[n(b.px), n(b.qty)]);
+  const d={over:usdWithin(offers), under:usdWithin(bids.map(([p,q])=>[1-p, q])), at:Date.now()};
+  pmDepth.set(slug, d); return d;
+}
+function pmUsd(slug, side){ const d=slug && pmDepth.get(slug); return d? d[side] : null; }
+function kalUsd(kk, side){ const q=((SLATE&&SLATE.kalshi)||{})[kk]; const v=q? q[side==='under'? 3 : 2] : null; return v==null? null : v; }
+const isThin=usd=>usd!=null && usd<DEPTH_MIN;
+/* Read the Polymarket US books of the candidates whose live US price would clear the Value rules. */
+async function fillDepth(cands){
+  const need=new Set();
+  cands.forEach(c=>{
+    const L=livePx.get(mkOf(c)); if(!L || !L.slug || !L.open || !L.exact) return;
+    const us=c.side==='over'? L.over : L.under; if(us==null || !valueQualifies(c.prob, us)) return;
+    const d=pmDepth.get(L.slug); if(!d || Date.now()-d.at>=DEPTH_MS) need.add(L.slug);
+  });
+  await mapLimit([...need].slice(0,150), 4, async slug=>{ try{ await pmBook(slug); }catch(e){} });
+}
 
 async function fillLive(items, force){
   const byEvent=new Map();
@@ -1869,16 +1902,20 @@ async function fillLive(items, force){
 // Kalshi wins the cell when it's cheaper than Polymarket (live US quote, else the global ask).
 function liveCell(d){
   const L=livePx.get(d.mk), k=kalOf(d.kk, d.side);
-  if(k==null) return pmCell(d);
   const us=(L && !L.err && !L.none && L.open && L.exact!==false)? (d.side==='over'? L.over : L.under) : null;
+  const pmThin=us!=null && isThin(pmUsd(L.slug, d.side));
+  if(k==null) return pmCell(d)+(pmThin? PS.venues(us, null, 'P', true, false) : '');
+  const kThin=isThin(kalUsd(d.kk, d.side));
   const pm=us!=null? us : d.ask;
-  if(pm!=null && pm<=k) return pmCell(d)+PS.venues(pm, k, 'P');
+  // The cheaper exchange that has $25+ offered near its price; the cheaper one when neither has.
+  const useK = pm==null || (pmThin && !kThin) || (!(kThin && !pmThin) && k<pm);
+  if(!useK) return pmCell(d)+PS.venues(pm, k, 'P', pmThin, kThin);
   const signed = v => (v>=0?'+':'\u2212')+Math.abs(Math.round(v*100));
   const edge = d.prob==null? null : d.prob-k;
   const cls = edge==null? '' : edge>=0.04? 'pos' : edge<=-0.04? 'neg' : '';
   const sub = edge==null? (1/k).toFixed(2)+'\u00d7' : signed(edge)+' edge \u00b7 '+(1/k).toFixed(2)+'\u00d7';
   const open = (DB.open||{})[d.mk+'|'+d.side];
-  return '<span class="pmpx '+cls+'">'+Math.round(k*100)+'\u00a2</span> <span class="rng">'+sub+'</span>'+(open!=null? PS.pxMove(open/100, k) : '')+PS.venues(pm, k, 'K');
+  return '<span class="pmpx '+cls+'">'+Math.round(k*100)+'\u00a2</span> <span class="rng">'+sub+'</span>'+(open!=null? PS.pxMove(open/100, k) : '')+PS.venues(pm, k, 'K', pmThin, kThin);
 }
 function pmCell(d){
   const signed = v => (v>=0?'+':'\u2212')+Math.abs(Math.round(v*100));
@@ -1953,6 +1990,7 @@ function liveTick(){
   if(!all.size){ if(lockedRows.length) scheduleLive(); return; }   // only locked rows left: watch for their kickoff
   const gen=++liveGen;
   fillLive([...all.values()], true)
+    .then(()=>fillDepth(valueCands).catch(()=>{}))
     .then(()=>{ if(gen!==liveGen) return;
       // Prices moved, so who counts as a value spot may have moved with them.
       const rows=computeValueRows();
@@ -1994,12 +2032,16 @@ const KICKED_MSG=`<p class="mktnote">🔒 Every game on the board has kicked off
    since that is what you'd actually pay, falling back to the global book's ask when
    Polymarket US has no market for the prop. */
 function valuePrice(c){
-  const L=livePx.get(mkOf(c)), k=kalOf(kalKey(c), c.side);
-  let pm=null, live=false;
-  if(L && L.open && L.exact){ const px = c.side==='over'? L.over : L.under; if(px!=null){ pm=px; live=true; } }
-  if(pm==null && c.price!=null) pm=c.price;
-  if(k!=null && (pm==null || k<pm)) return {px:k, live:true, vn:'K'};    // Kalshi is cheaper: judged on it
-  return pm!=null? {px:pm, live, vn:'P'} : null;
+  const L=livePx.get(mkOf(c)), kk=kalKey(c), k=kalOf(kk, c.side), opts=[];
+  const us=(L && L.open && L.exact)? (c.side==='over'? L.over : L.under) : null;
+  if(us!=null) opts.push({px:us, vn:'P', usd:pmUsd(L.slug, c.side)});
+  if(k!=null) opts.push({px:k, vn:'K', usd:kalUsd(kk, c.side)});
+  if(!opts.length) return null;
+  // The cheaper exchange with $25+ offered within 2¢ of its price; "thin" when neither has
+  // (Polymarket US depth is read by fillDepth() for the prices that would qualify).
+  const ok=opts.filter(o=>o.usd!=null && o.usd>=DEPTH_MIN), pool=ok.length? ok : opts;
+  const b=pool.reduce((a,o)=>(o.px<a.px || (o.px===a.px && o.vn==='P'))? o : a);
+  return {px:b.px, live:true, vn:b.vn, thin:!ok.length};
 }
 /* A locked pick from slate.json (build.py's lock_picks: kickoff within 20 minutes) as a board
    row, shown as published (its lists, chance and price) and never re-priced live. */
@@ -2014,7 +2056,7 @@ function lockedRow(lp, g, sg){
 function computeValueRows(){
   const out=[];
   valueCands.forEach(c=>{
-    const e=valuePrice(c); if(!e) return;
+    const e=valuePrice(c); if(!e || e.thin) return;      // thin: under $25 offered near the price
     if(!valueQualifies(c.prob, e.px)) return;
     out.push(Object.assign({}, c, {vprice:e.px, vlive:e.live, vvn:e.vn, vedge:c.prob-e.px, ev:c.prob/e.px-1}));
   });
@@ -2080,7 +2122,7 @@ async function scanBoard(force){
     modeled.forEach(r=>{
       if(!(r.neff>=6) || !r.sides) return;
       ['over','under'].forEach(sd=>{
-        const c=r.sides[sd]; if(!c || (c.price==null && kalOf(kalKey(r), sd)==null)) return;
+        const c=r.sides[sd]; if(!c) return;     // priced live below (Polymarket US, Kalshi), whatever the global book shows
         valueCands.push(Object.assign({}, r, {side:sd, prob:c.prob, lo:c.lo, hi:c.hi, price:c.price, base:r}));
       });
     });
@@ -2088,6 +2130,7 @@ async function scanBoard(force){
     const seedMk=new Map();
     valueCands.forEach(c=>{ const k=mkOf(c); if(!seedMk.has(k)) seedMk.set(k,{mk:k, pl:c.pl, sk:c.sk, line:c.line}); });
     try{ await fillLive([...seedMk.values()], false); }catch(e){}
+    try{ await fillDepth(valueCands); }catch(e){}
     valueRows=computeValueRows();
     edgeRows=modeled;
     const nohist=rows.filter(r=>r.nohist).length;
@@ -2182,7 +2225,7 @@ function renderValue(){
   const rows=sortRows(lockedV.concat(valueRows),'vedge',-1);
   const unders=rows.filter(r=>r.side==='under').length, overs=rows.length-unders;
   const stale=rows.filter(r=>!r.vlive && !r.locked).length;
-  body.innerHTML=pickTable(rows,{})+`<p class="mktnote" style="margin-top:8px"><b>${rows.length}</b> prop${rows.length===1?'':'s'} clear both rules at the price you'd pay right now — ${overs} over${overs===1?'':'s'} and ${unders} under${unders===1?'':'s'}${stale?`, ${stale} judged on the global book because neither Polymarket US nor Kalshi has a market for them`:''}. Rechecked about once a minute, so a row leaves as soon as its price moves against it. Picks are recorded before kickoff and graded in <b>Past picks</b> — that record is taken from the global book at record time, so it can differ slightly from this list. Backward-looking; not advice.</p>`;
+  body.innerHTML=pickTable(rows,{})+`<p class="mktnote" style="margin-top:8px"><b>${rows.length}</b> prop${rows.length===1?'':'s'} clear both rules at the price you'd pay right now — ${overs} over${overs===1?'':'s'} and ${unders} under${unders===1?'':'s'}${stale?`, ${stale} judged on the global book`:''}. Rechecked about once a minute, so a row leaves as soon as its price moves against it. Picks are recorded before kickoff and graded in <b>Past picks</b> — that record is taken from the global book at record time, so it can differ slightly from this list. Backward-looking; not advice.</p>`;
   wireLoad(body, rows);
   trackLive('V', rows.filter(r=>!r.locked));
 }

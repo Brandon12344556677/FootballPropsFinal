@@ -1,4 +1,4 @@
-name: Kalshi probe (temporary)
+name: Kalshi dry run (temporary)
 
 # TEMPORARY, working branch only: runs every builder with the Kalshi code on a runner (which can
 # reach Kalshi) and logs what it priced. Commits nothing. Deleted before the Kalshi PR merges.
@@ -18,4 +18,14 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+      - name: Builders (nothing is committed)
+        run: |
+          set +e
+          for b in build.py build_nhl.py build_mlb.py build_nba.py build_today.py; do
+            echo "===== $b"
+            start=$(date +%s)
+            timeout 10m python $b > /tmp/$b.log 2>&1; echo "exit $? in $(( $(date +%s) - start ))s"
+            grep -iE "kalshi|polymarket|depth|picks:|slate|Traceback|Error" /tmp/$b.log | tail -25
+            if grep -q Traceback /tmp/$b.log; then tail -30 /tmp/$b.log; fi
+          done
       - run: python kalshi_probe.py || true

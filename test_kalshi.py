@@ -5,6 +5,7 @@ Run:  python -m unittest test_kalshi -v
 """
 import unittest
 
+import depth
 import kalshi
 import build as NFL
 import build_mlb as MLB
@@ -27,9 +28,11 @@ def pick(**kw):
 
 class Parse(unittest.TestCase):
     def test_rung(self):
-        k = kalshi.parse(market(), "h")
+        k = kalshi.parse(market(yes_ask_size_fp="300.00", yes_bid_size_fp="20.00"), "h")
         self.assertEqual(k, {"player": "Trent Grisham", "sk": "h", "line": 1.5, "date": "2026-10-07",
-                             "over": 0.2, "under": 0.82, "tradeable": True})
+                             "over": 0.2, "under": 0.82, "tradeable": True,
+                             "ticker": "KXMLBHIT-26OCT072000TBNYY-NYYTGRISHAM12-2",
+                             "od": 60.0, "ud": 16.4})      # 300 x 20c offered to buy the over, 20 x 82c the under
 
     def test_nfl_event_has_no_time(self):
         k = kalshi.parse(market(event="KXNFLRECYDS-26OCT11HOUTEN", sub="Calvin Ridley: 50+", strike=49.5), "rec_yds")
@@ -124,13 +127,62 @@ class NFLBoard(unittest.TestCase):
               kalshi.parse(market(event="KXNFLRECYDS-26OCT18HOUTEN", sub="Calvin Ridley: 60+", strike=59.5), "rec_yds")]
         names = {"calvin ridley": "nfl-hou-ten-2026-10-11"}
         sgs = {"nfl-hou-ten-2026-10-11": {"date": "2026-10-11"}}
-        self.assertEqual(NFL.kalshi_board(mk, names, sgs), {"calvin ridley|rec_yds|49.5": [47, 55]})
+        self.assertEqual(NFL.kalshi_board(mk, names, sgs), {"calvin ridley|rec_yds|49.5": [47, 55, 0, 0]})
 
     def test_make_pick_records_venue(self):
         mp = {"over": 0.6, "under": 0.4, "lo": 0.5, "hi": 0.7, "neff": 8.0}
         pl = {"id": "1", "n": "Calvin Ridley", "p": "WR", "t": "TEN"}
         p = NFL.make_pick("live", "g", 2026, 6, "2026-10-11", pl, "HOU", "rec_yds", 49.5, mp, 47, "r", pp=49, kp=47)
         self.assertEqual((p["price"], p["pp"], p["kp"], p["vn"]), (47, 49, 47, "K"))
+
+
+class Depth(unittest.TestCase):
+    def test_usd_within_two_cents(self):
+        # 26 @ 85c and 51 @ 87c count; 545 @ 88c is 3c worse than the best and doesn't
+        self.assertEqual(depth.usd_within([(0.85, 26), (0.87, 51), (0.88, 545)]), round(0.85 * 26 + 0.87 * 51, 2))
+        self.assertEqual(depth.usd_within([]), 0.0)
+
+    def test_pmus_book_sides(self):
+        md = {"offers": [{"px": {"value": "0.8500"}, "qty": "26"}, {"px": {"value": "0.8700"}, "qty": "51"}],
+              "bids": [{"px": {"value": "0.8100"}, "qty": "26"}, {"px": {"value": "0.0100"}, "qty": "8206"}]}
+        b = depth.pmus_book(md)
+        self.assertEqual((b["ask"], b["bid"]), (0.85, 0.81))
+        self.assertEqual(b["over"], round(0.85 * 26 + 0.87 * 51, 2))
+        self.assertEqual(b["under"], round(0.19 * 26, 2))        # buy the under at 1 - 81c; the 1c bid is far off
+
+    def test_kalshi_book_sides(self):
+        ob = {"orderbook_fp": {"no_dollars": [["0.9400", "100"], ["0.9500", "10"]], "yes_dollars": [["0.0400", "500"]]}}
+        b = depth.kalshi_book(ob)
+        self.assertEqual(b["over"], round(0.05 * 10 + 0.06 * 100, 2))   # over at 1 - No bid: 5c x 10, 6c x 100
+        self.assertEqual(b["under"], round(0.96 * 500, 2))
+
+    def test_choose_cheaper_with_enough_money(self):
+        p = {"pp": 0.50, "pd": 100.0, "kp": 0.47, "kd": 10.0}
+        depth.choose(p)                                    # Kalshi is cheaper but thin: Polymarket
+        self.assertEqual((p["price"], p["vn"], p["th"]), (0.50, "P", None))
+        p = {"pp": 0.50, "pd": 100.0, "kp": 0.47, "kd": 30.0}
+        depth.choose(p)
+        self.assertEqual((p["price"], p["vn"], p["th"]), (0.47, "K", None))
+        p = {"pp": 0.50, "pd": 5.0, "kp": 0.47, "kd": None}
+        depth.choose(p)                                    # neither known to be deep: cheaper, marked thin
+        self.assertEqual((p["price"], p["vn"], p["th"]), (0.47, "K", 1))
+        p = {"pp": None, "kp": None}
+        depth.choose(p)
+        self.assertEqual((p["price"], p["vn"], p["th"]), (None, None, None))
+
+    def test_verify_reads_books_only_for_candidates(self):
+        real = depth.fetch_kalshi
+        calls = []
+        depth.fetch_kalshi = lambda t: calls.append(t) or {"over": 80.0, "under": 0.0}
+        try:
+            want, skip = {"kp": 0.4, "kd": 3.0, "_kt": "T1", "side": "over", "th": 1}, \
+                         {"kp": 0.4, "kd": 3.0, "_kt": "T2", "side": "over", "th": 1}
+            n = depth.verify([want, skip], lambda p: p is want)
+        finally:
+            depth.fetch_kalshi = real
+        self.assertEqual((n, calls), (1, ["T1"]))
+        self.assertEqual((want["kd"], want["price"], want["th"]), (80.0, 0.4, None))
+        self.assertEqual(skip["kd"], 3.0)
 
 
 if __name__ == "__main__":

@@ -12,7 +12,8 @@ request per series prices a whole slate. One market is one rung for one player i
 
 "2+" is over 1.5. What you'd PAY: Over = buy Yes at the Yes ask, Under = buy No at the No
 ask — the same convention as the Polymarket prices. A pick shows both venues' prices for
-its side and is judged (Top 25 Surest, Value) on the cheaper one; "vn" records which.
+its side and is judged (Top 25 Surest, Value) on the cheaper one that has enough money offered
+at it (depth.py); "vn" records which.
 
 Standard library only. Never fatal: a series that can't be fetched prints
 "    kalshi <series>: skipped (...)" and is left out; if every series fails, fetch() returns
@@ -24,6 +25,8 @@ import re
 import time
 import urllib.error
 import urllib.request
+
+import depth
 
 API = "https://api.elections.kalshi.com/trade-api/v2"
 UA = {"Accept": "application/json", "User-Agent": "prop-streak-lab/2.0 (+https://propstreaklab.com)"}
@@ -75,8 +78,9 @@ def _ok(p):
 
 
 def parse(m, sk):
-    """One Kalshi market -> {"player", "sk", "line", "date", "over", "under", "tradeable"}, or
-    None if it isn't a plain "Player: N+" rung. date is the game's US Eastern date (ISO)."""
+    """One Kalshi market -> {"player", "sk", "line", "date", "over", "under", "tradeable",
+    "ticker", "od", "ud"}, or None if it isn't a plain "Player: N+" rung. date is the game's US
+    Eastern date (ISO); od/ud are the dollars offered at the best over / under price."""
     if m.get("status") not in (None, "active", "open") or m.get("strike_type") != "greater":
         return None
     rm = RUNG.match(m.get("yes_sub_title") or "")
@@ -93,8 +97,11 @@ def parse(m, sk):
     under = na if _ok(na) else None                 # buy No = under
     spread = (ya - yb) if ya is not None and yb is not None else None
     tradeable = (over is not None or under is not None) and (spread is None or spread <= 0.15)
+    ys, bs = _f(m.get("yes_ask_size_fp")), _f(m.get("yes_bid_size_fp"))
     return {"player": rm.group(1).strip(), "sk": sk, "line": round(line, 1), "date": date.isoformat(),
-            "over": over, "under": under, "tradeable": tradeable}
+            "over": over, "under": under, "tradeable": tradeable, "ticker": m.get("ticker"),
+            "od": round(over * ys, 2) if over is not None and ys is not None else None,     # Yes ask x its size
+            "ud": round(under * bs, 2) if under is not None and bs is not None else None}   # No ask = 1 - Yes bid
 
 
 def fetch(sport, days=8):
@@ -187,10 +194,11 @@ def best(pp, kp):
 def apply(picks, markets, keyfn, is_open):
     """Kalshi side by side with Polymarket on every pending pick is_open(p) allows (its game
     hasn't locked): pp = Polymarket's price for the pick's side, kp = Kalshi's (None when
-    Kalshi doesn't list that exact prop at that line), price/vn = the cheaper of the two —
-    the price Top 25 Surest and Value are judged on. Prices are fractions (MLB/NHL/NBA).
-    markets None (Kalshi unreachable this run) keeps each pick's last Kalshi price.
-    Returns how many picks have a Kalshi price."""
+    Kalshi doesn't list that exact prop at that line), kd = dollars offered at Kalshi's price,
+    price/vn = the cheaper of the two with enough money offered (depth.choose) — the price
+    Top 25 Surest and Value are judged on. Prices are fractions (MLB/NHL/NBA). markets None
+    (Kalshi unreachable this run) keeps each pick's last Kalshi price. Returns how many picks
+    have a Kalshi price."""
     idx = index(markets, keyfn) if markets is not None else None
     n = 0
     for p in picks:
@@ -204,8 +212,11 @@ def apply(picks, markets, keyfn, is_open):
             else:                       # ESPN's UTC date, or the day before for a late game
                 d = datetime.date.fromisoformat(p["date"])
                 dates = [d.isoformat(), (d - datetime.timedelta(days=1)).isoformat()]
-            kp = side_price(find(idx, keyfn(p["player"]), p["stat"], p["line"], dates), p["side"])
+            k = find(idx, keyfn(p["player"]), p["stat"], p["line"], dates)
+            kp = side_price(k, p["side"])
             p["kp"] = round(kp, 3) if kp is not None else None
-        p["price"], p["vn"] = best(p.get("pp"), p.get("kp"))
+            p["kd"] = k["od" if p["side"] == "over" else "ud"] if kp is not None else None
+            p["_kt"] = k["ticker"] if kp is not None else None     # for depth.verify (not saved)
+        depth.choose(p)
         n += p.get("kp") is not None
     return n

@@ -556,5 +556,7 @@ html body .pslcookie button{padding:7px 14px;font-size:13px;border-radius:999px;
 .venues .vq{padding:0 6px;border:1px solid var(--ps-line-soft);border-radius:999px}
 .venues .vq b{font-weight:700;font-variant-numeric:tabular-nums}
 .venues .vq.best{color:var(--ps-green);border-color:currentColor}
+.venues .vq.thin{opacity:.7;border-style:dashed}
+.venues .vq i{font-style:normal;font-weight:700;color:#e8b04b}
 .vtag{display:inline-block;padding:0 5px;border:1px solid var(--ps-line-soft);border-radius:999px;font-size:10.5px;line-height:1.5;color:var(--ps-muted);white-space:nowrap}
 .vtag.k{color:var(--ps-green);border-color:currentColor}

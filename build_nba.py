@@ -25,6 +25,7 @@ from concurrent.futures import ThreadPoolExecutor
 
 import news   # pre-game news feeds, test mode
 import kalshi  # Kalshi prices, side by side with Polymarket's
+import depth   # enough money at the price? (thin-market filter)
 
 TODAY = datetime.date.today()
 ET_TODAY = (datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(hours=4)).date().isoformat()
@@ -318,6 +319,14 @@ def mkt_stat_key(txt):
     return None
 
 
+def _tokens(m, io_):
+    """The over and under outcome tokens of a global-book market, for its CLOB book (depth.py)."""
+    toks = _jsonish(m.get("clobTokenIds")) or []
+    if io_ not in (0, 1) or len(toks) != 2:
+        return {}
+    return {"over": toks[io_], "under": toks[1 - io_]}
+
+
 def parse_market(m):
     """One Polymarket O/U market -> dict, or None. Prices are what you'd PAY per side."""
     q = m.get("question") or m.get("groupItemTitle") or ""
@@ -357,7 +366,7 @@ def parse_market(m):
         line = float(mm.group(3))
     return {"player": player, "statText": stat_text, "line": line,
             "over": over_buy if ok(over_buy) else None, "under": under_buy if ok(under_buy) else None,
-            "tradeable": tradeable}
+            "tradeable": tradeable, "tok": _tokens(m, io_)}
 
 
 def fetch_markets():
@@ -697,7 +706,9 @@ def refresh_price(p, pm):
     if p.get("res") is None and not pick_locked(p):
         px = (pm["over"] if p["side"] == "over" else pm["under"]) if pm.get("tradeable") else None
         p["pp"] = round(px, 3) if px is not None else None
-        p["price"], p["vn"] = kalshi.best(p["pp"], p.get("kp"))   # the cheaper of Polymarket and Kalshi
+        p["pd"] = pm.get("od" if p["side"] == "over" else "ud") if px is not None else None
+        p["_pt"] = (pm.get("tok") or {}).get(p["side"]) if px is not None else None   # global book token (depth.verify)
+        depth.choose(p)        # the cheaper of Polymarket and Kalshi with $25+ offered
 
 
 def regular_minutes(rows):
@@ -874,7 +885,9 @@ PICK_COLS = ["src", "gid", "season", "date", "pid", "player", "pos", "team", "op
              "nw",           # pre-game news, test mode (news.py): {"st", "om", "p2"}
              "lk",           # when the pick locked (UTC; see lock_picks)
              "pp", "kp",     # this side's price on Polymarket and on Kalshi (None = not listed there)
-             "vn"]           # which one "price" is, the cheaper: "P" Polymarket, "K" Kalshi
+             "pd", "kd",     # dollars offered within 2c of each (depth.py)
+             "vn",           # which one "price" is: the cheaper with $25+ offered, "P" Polymarket, "K" Kalshi
+             "th"]           # 1 = thin: neither has $25 offered near its price, so no Value
 BOARD_STATS = ["pts", "reb", "ast", "tpm", "pra"]
 TOP_N = 25
 VALUE_MIN_NEFF = 6.0
@@ -883,6 +896,14 @@ VALUE_N = 200           # a safety cap only. At 50 it bound in busy weeks (NFL w
                         # cleared the rule went unrecorded), so the record now holds every pick that clears it
 VALUE_MIN_PRICE = 0.30  # the market has to give it at least 30%
 VALUE_MIN_EDGE = 0.15   # and the model has to be 15+ points higher
+
+
+def could_list(p):
+    """A pending pick that a price could put on Value (Top 25 needs no price here), but whose
+    depth isn't yet known to be enough (depth.verify reads the full book for these)."""
+    if p.get("res") is not None or pick_locked(p) or not p.get("th") or p["neff"] < VALUE_MIN_NEFF:
+        return False
+    return any(px is not None and value_qualifies(p["prob"], px) for px in (p.get("pp"), p.get("kp")))
 
 
 def value_qualifies(prob, price):
@@ -1051,6 +1072,7 @@ def build_market_picks(picks, poly_games, players_by_key, espn_slate, defense, d
                           "pp": round(price, 3) if price is not None else None, "vn": "P" if price is not None else None,
                           "lists": "", "rec": f"{sk} {side} {pm['line']}", "actual": None, "res": None,
                           "adj": round(scale, 3), "sh": sh, "mv": MODEL_V})
+            refresh_price(picks[-1], pm)     # pp/pd for its side, then the cheaper exchange with enough money
             have[key] = picks[-1]
             added += 1
     return added
@@ -1182,7 +1204,7 @@ def assign_lists(picks):
     for p in ranked[:TOP_N - held]:
         p["lists"] += "T"
     vals = [((p["prob"] - p["price"]), p) for p in pending
-            if p.get("price") is not None and p["neff"] >= VALUE_MIN_NEFF
+            if p.get("price") is not None and not p.get("th") and p["neff"] >= VALUE_MIN_NEFF
             and value_qualifies(p["prob"], p["price"])]
     vals.sort(key=lambda x: -x[0])
     for _, p in vals[:VALUE_N]:
@@ -1445,6 +1467,10 @@ def main():
         kalshi_mkts = None
     nk = kalshi.apply(picks, kalshi_mkts, pkey, lambda p: not pick_locked(p))
     print(f"  kalshi: {nk} pending pick(s) priced on Kalshi too")
+    nb = depth.verify(picks, could_list)
+    thin = sum(1 for p in picks if p.get("res") is None and not pick_locked(p) and p.get("th"))
+    print(f"  depth: read {nb} more order book(s); {thin} pending pick(s) too thin for Value "
+          f"(under ${depth.MIN_USD:.0f} offered within 2c)")
     assign_lists(picks)
     for p in picks:
         if p.get("res") is None and not pick_locked(p):

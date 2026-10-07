@@ -442,11 +442,12 @@ window.PS = (function(){
   // exchange doesn't list this exact prop at this line). vn: the one the pick is judged on —
   // the cheaper — "P" or "K". Picks recorded before Kalshi was added have only a Polymarket price.
   function venueName(vn){ return vn==='K'? 'Kalshi' : 'Polymarket'; }
-  function venues(pp, kp, vn){
+  // thinP/thinK: under $25 is offered within 2\u00a2 of that price (depth.py), so a bet would move it.
+  function venues(pp, kp, vn, thinP, thinK){
     if(pp==null && kp==null) return '';
-    const one=(name, v, on)=>`<span class="vq${on?' best':''}">${name} <b>${v==null? '\u2014' : Math.round(v*100)+'\u00a2'}</b></span>`;
-    const title=`What you'd pay for this side on each exchange (\u2014 = not listed at this line). The cheaper one, highlighted, is the price the edge, Top 25 Surest and Value use.`;
-    return `<span class="venues" title="${esc(title)}">${one('Polymarket', pp, vn!=='K' && pp!=null)}${one('Kalshi', kp, vn==='K')}</span>`;
+    const one=(name, v, on, thin)=>`<span class="vq${on?' best':''}${thin && v!=null?' thin':''}">${name} <b>${v==null? '\u2014' : Math.round(v*100)+'\u00a2'}</b>${thin && v!=null? ' <i>thin</i>' : ''}</span>`;
+    const title=`What you'd pay for this side on each exchange (\u2014 = not listed at this line). The highlighted one is the price the edge, Top 25 Surest and Value use: the cheaper exchange with $25+ offered within 2\u00a2 of its price. \u201cthin\u201d = less than that is offered, so a bet would move the price.`;
+    return `<span class="venues" title="${esc(title)}">${one('Polymarket', pp, vn!=='K' && pp!=null, thinP)}${one('Kalshi', kp, vn==='K', thinK)}</span>`;
   }
 
   // ---- locked picks: the builders lock a pick when its game starts within 20 minutes (lock_picks) ----
