@@ -616,8 +616,8 @@ tr.hit td{background:var(--hit-soft)} tr.miss td{background:var(--miss-soft)}
 .panel.collapsed > *:not(:first-child){display:none!important}
 .panel.collapsed{padding-bottom:14px}
 </style>
-<link rel="stylesheet" href="app.css?v=20261007d">
-<script src="app.js?v=20261007d"></script>
+<link rel="stylesheet" href="app.css?v=20261008a">
+<script src="app.js?v=20261008a"></script>
 
 <header class="apptop">
   <div class="apptop-in">
@@ -1445,7 +1445,8 @@ function tickerItems(){
 let PICKS=null;
 function loadPicks(){
   fetch('./mlb_picks.json',{cache:'no-store'}).then(r=>r.ok?r.json():null).then(d=>{
-    if(!d||!d.picks){ PICKS=[]; } else { const cols=d.cols; PICKS=d.picks.map(row=>PS.capPick(Object.fromEntries(cols.map((c,i)=>[c,row[i]])))); }
+    if(!d||!d.picks){ PICKS=[]; } else { const cols=d.cols; PICKS=d.picks.map(row=>PS.capPick(Object.fromEntries(cols.map((c,i)=>[c,row[i]]))))
+      .filter(p=>!PS.thinOut(p, {tMin:0.90})); }      // ruled out only for a thin market: never recommended
     renderPickViews();
   }).catch(()=>{ PICKS=[]; renderPickViews(); });
 }

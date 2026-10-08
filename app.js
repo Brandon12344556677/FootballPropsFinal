@@ -443,6 +443,17 @@ window.PS = (function(){
   function cap(p){ return p==null? p : Math.min(P_MAX, Math.max(1-P_MAX, +p)); }
   function capPick(o){ if(o) ['prob','lo','hi'].forEach(k=>{ if(o[k]!=null) o[k]=cap(o[k]); }); return o; }
 
+  // ---- ruled out for a thin market: a pick that would have made Value (or Top 25 Surest, where that
+  // needs a price) but had under $25 offered near its price on both exchanges (depth.py "th").
+  // It was never recommended, so Past picks leaves it out. opt: {cents: 100 for NFL prices,
+  // tMin: the Top 25 chance floor where Top 25 needs a price (MLB, NHL)} ----
+  function thinOut(p, opt){
+    if(!p || !p.th || p.lists || p.price==null || p.prob==null) return false;   // on a list = it was recommended
+    const o=opt||{}, px=p.price/(o.cents||1), q=+p.prob;
+    const value=(p.neff==null || p.neff>=6) && px>=0.30 && q-px>=0.15;
+    return value || (o.tMin!=null && q>=o.tMin);
+  }
+
   // ---- Polymarket and Kalshi side by side (kalshi.py) ----
   // pp/kp: what you'd pay for the pick's side on each exchange, as fractions (null = that
   // exchange doesn't list this exact prop at this line). vn: the one the pick is judged on —
@@ -467,5 +478,5 @@ window.PS = (function(){
   }
 
   return {teamVars, ticker, until, skeleton, esc, hashFor, pickHash, parsePickHash, syncHash, sharePick, toast, helpBtn, spark, verdict, icon, sheet, closeSheet, pickSheet,
-          isTracked, toggleBet, renderBets, fairOf, setFair, pxMove, lockBadge, lockNote, venues, venueName, cap, capPick};
+          isTracked, toggleBet, renderBets, fairOf, setFair, pxMove, lockBadge, lockNote, venues, venueName, cap, capPick, thinOut};
 })();

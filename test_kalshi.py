@@ -115,7 +115,7 @@ class Pricing(unittest.TestCase):
         self.assertEqual((p["pp"], p["price"], p["vn"]), (0.30, 0.30, "P"))
 
     def test_mlb_refresh_keeps_kalshi_when_cheaper(self):
-        p = pick(kp=0.19, price=0.19, vn="K")
+        p = pick(kp=0.19, price=0.19, vn="K", start="2099-10-08T00:05Z")   # a game still ahead (not locked)
         MLB.refresh_price(p, {"over": 0.25, "under": 0.77, "tradeable": True})
         self.assertEqual((p["pp"], p["price"], p["vn"]), (0.25, 0.19, "K"))
 

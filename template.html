@@ -608,8 +608,8 @@ table td,table th,thead th,tbody td,.edgetbl td,.edgetbl th,.caltbl td,.caltbl t
 .valrules .vrfoot b{color:#fff}
 </style>
 
-<link rel="stylesheet" href="app.css?v=20261007d">
-<script src="app.js?v=20261007d"></script>
+<link rel="stylesheet" href="app.css?v=20261008a">
+<script src="app.js?v=20261008a"></script>
 
 <header class="apptop">
   <div class="apptop-in">
@@ -1905,9 +1905,10 @@ function liveCell(d){
   const L=livePx.get(d.mk), k=kalOf(d.kk, d.side);
   const us=(L && !L.err && !L.none && L.open && L.exact!==false)? (d.side==='over'? L.over : L.under) : null;
   const pmThin=us!=null && isThin(pmUsd(L.slug, d.side));
-  if(k==null) return pmCell(d)+(pmThin? PS.venues(us, null, 'P', true, false) : '');
+  // Both exchanges' prices sit under every row that either one prices (— = not at this line).
+  if(k==null) return pmCell(d)+PS.venues(us, null, 'P', pmThin, false);
   const kThin=isThin(kalUsd(d.kk, d.side));
-  const pm=us!=null? us : d.ask;
+  const pm=us;            // the global book is shown as "board", but never chosen over Kalshi
   // The cheaper exchange that has $25+ offered near its price; the cheaper one when neither has.
   const useK = pm==null || (pmThin && !kThin) || (!(kThin && !pmThin) && k<pm);
   if(!useK) return pmCell(d)+PS.venues(pm, k, 'P', pmThin, kThin);
@@ -1929,7 +1930,7 @@ function pmCell(d){
   const L=livePx.get(d.mk);
   if(!L) return '<span class="pmdim">\u2026</span>'+boardBare;
   if(L.err) return '<span class="pmdim" title="Couldn\u2019t reach Polymarket US just now \u2014 retrying">\u2014</span>'+boardFull;
-  if(L.none) return '<span class="pmdim" title="Polymarket US has no market for this prop right now">no US market</span>'+boardFull;
+  if(L.none) return '<span class="pmdim" title="Neither Polymarket US nor Kalshi lists this prop at this line right now">not on Polymarket US or Kalshi</span>'+boardFull;
   if(!L.open) return '<span class="pmdim" title="Not open for trading on Polymarket US right now">closed</span>'+boardFull;
   if(L.exact===false){
     // Polymarket US lists this player/stat, but at a different number. That price is
@@ -2825,7 +2826,8 @@ async function initPicks(){
   try{
     const r=await fetch('picks.json',{cache:'no-store'}); if(!r.ok) throw new Error('no picks.json');
     const d=await r.json(); PICKMETA=d;
-    PICKS=d.picks.map(row=>{ const o={}; d.cols.forEach((c,i)=>o[c]=row[i]); return PS.capPick(o); });
+    PICKS=d.picks.map(row=>{ const o={}; d.cols.forEach((c,i)=>o[c]=row[i]); return PS.capPick(o); })
+      .filter(p=>!PS.thinOut(p, {cents:100}));      // ruled out only for a thin market: never recommended
     const s=d.summary||{};
     st.textContent=`${s.live||0} 2026 picks (${s.liveGraded||0} graded, ${s.livePending||0} pending) · ${s.backtest||0} from 2025 · updated ${(d.gen||'').slice(0,10)}`;
     buildPickFilters(); renderPicks();
