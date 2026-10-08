@@ -1473,6 +1473,7 @@ PICK_COLS = ["src", "gid", "season", "week", "date", "pid", "player", "pos", "te
              "hd"]           # what it waits on: injury news not settled yet (holds.py), so no lists
 VALUE_MIN_NEFF = 6.0
 TOP_N = 25
+TOP_VERIFY = 80         # the surest priced props whose order books are read for Top 25 (it needs $25+ near the price)
 VALUE_N = 200           # a safety cap only. At 50 it bound in busy weeks (NFL week 3: 27 picks that
                         # cleared the rule went unrecorded), so the record now holds every pick that clears it
 # The Value bar, applied to each side of a market separately: the market itself has
@@ -1548,7 +1549,9 @@ def assign_lists(picks, held=0):
         p["lists"] = ""
     # waiting on injury news (a questionable teammate in his position group, or himself): no lists
     picks = [p for p in picks if not p.get("hd")]
-    ranked = sorted((p for p in picks if p["prob"] >= 0.5), key=lambda p: (-p["prob"], -p["neff"]))
+    # Top 25: only props you can bet -- a live price with $25+ offered near it (depth.py; not thin)
+    ranked = sorted((p for p in picks if p["prob"] >= 0.5 and p.get("price") is not None and not p.get("th")),
+                    key=lambda p: (-p["prob"], -p["neff"]))
     for p in ranked[:TOP_N - held]:
         p["lists"] += "T"
     # The model's widest gap over the price on any rung of a player-prop (one side): over
@@ -1705,8 +1708,11 @@ def build_live_picks(picks, slate_games, sched, by_key, snap, pmus=None, kal=Non
     # offered within 2c (depth.choose); the books of the ones that could make Value are read.
     for f in fresh:
         depth.choose(f)
-    nb = depth.verify(fresh, lambda f: f.get("th") and f["neff"] >= VALUE_MIN_NEFF and any(
-        px is not None and value_qualifies(f["prob"], px / 100.0) for px in (f.get("pp"), f.get("kp"))))
+    # ...and of the surest priced ones, which could make Top 25 (it needs $25+ near the price too)
+    surest = {id(f) for f in sorted((f for f in fresh if f.get("price") is not None and not f.get("hd") and f["prob"] >= 0.5),
+                                    key=lambda f: -f["prob"])[:TOP_VERIFY]}
+    nb = depth.verify(fresh, lambda f: f.get("th") and (id(f) in surest or f["neff"] >= VALUE_MIN_NEFF and any(
+        px is not None and value_qualifies(f["prob"], px / 100.0) for px in (f.get("pp"), f.get("kp")))))
     print(f"  depth: read {nb} order book(s); {sum(1 for f in fresh if f.get('th'))} of {len(fresh)} props "
           f"too thin for Value (under ${depth.MIN_USD:.0f} offered within 2c)")
     assign_lists(fresh, held)

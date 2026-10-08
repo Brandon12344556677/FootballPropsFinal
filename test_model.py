@@ -639,9 +639,16 @@ class LockTests(unittest.TestCase):
         self.assertEqual(B.lock_picks([p], sched), 1)
         rows = B.locked_rows([p], sched)
         self.assertEqual((len(rows), rows[0]["price"], rows[0]["lists"]), (1, 55, "V"))
-        top = [{"prob": 0.9 - i / 100, "neff": 9.0, "price": None} for i in range(30)]
+        top = [{"prob": 0.9 - i / 100, "neff": 9.0, "price": 50, "gid": "g", "pid": f"p{i}", "stat": "rec"} for i in range(30)]
         B.assign_lists(top, held=4)
         self.assertEqual(sum("T" in x["lists"] for x in top), B.TOP_N - 4)
+
+    def test_nfl_top25_needs_a_price_with_money_behind_it(self):
+        mk = lambda prob, price, th=None: {"prob": prob, "neff": 9.0, "price": price, "th": th, "lists": "",
+                                           "gid": "g", "pid": f"p{prob}", "stat": "rec"}
+        no_price, thin, ok = mk(0.99, None), mk(0.97, 90, th=1), mk(0.95, 90)
+        B.assign_lists([no_price, thin, ok])
+        self.assertEqual([p["lists"] for p in (no_price, thin, ok)], ["", "", "T"])
 
 
 class SeasonTests(unittest.TestCase):

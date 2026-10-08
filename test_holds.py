@@ -105,6 +105,12 @@ class Builders(unittest.TestCase):
         build_nhl.assign_lists(ps)
         self.assertEqual([p["lists"] for p in ps], ["", "TV"])
 
+    def test_nba_top25_needs_a_price_with_money_behind_it(self):
+        ps = [pick("a", "A", "G", "BOS", prob=0.99, price=None), pick("b", "B", "G", "BOS", prob=0.97, price=0.9, th=1),
+              pick("c", "C", "G", "BOS", prob=0.95, price=0.9)]
+        build_nba.assign_lists(ps)
+        self.assertEqual([p["lists"] for p in ps], ["", "", "T"])
+
     def test_feed_down_keeps_last_holds(self):
         ps = [pick("b", "Other Guard", "G", "BOS", hd="Star Guard (day-to-day)")]
         with mock.patch.object(build_nba.news, "espn_injuries", return_value=None):

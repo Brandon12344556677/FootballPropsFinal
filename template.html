@@ -683,7 +683,7 @@ table td,table th,thead th,tbody td,.edgetbl td,.edgetbl th,.caltbl td,.caltbl t
       <span id="edgestatus"></span>
       <span class="mktmuted" id="recT"></span>
     </div>
-    <div id="edgebody"><p class="mktnote">Scans every player prop on this week's Polymarket board and shows the <b>25 highest model chances</b>, each next to its <b>best price on Polymarket US or Kalshi</b> — the surest plays by the numbers, regardless of payout. Especially handy if you're holding <b>credits you can't withdraw without trading</b>: these are the props most likely to resolve as wins, so clearing that requirement lets you cash out your balance. Each pick is recorded before kickoff and graded in the <b>Past picks</b> tab. <span class="mktmuted">Needs the hosted website (the Polymarket API can't be reached from a local file).</span></p></div>
+    <div id="edgebody"><p class="mktnote">Scans every player prop on this week's Polymarket board and shows the <b>25 highest model chances</b> you can bet (a live price with $25+ offered near it), each next to its <b>best price on Polymarket US or Kalshi</b> — the surest plays by the numbers, regardless of payout. Especially handy if you're holding <b>credits you can't withdraw without trading</b>: these are the props most likely to resolve as wins, so clearing that requirement lets you cash out your balance. Each pick is recorded before kickoff and graded in the <b>Past picks</b> tab. <span class="mktmuted">Needs the hosted website (the Polymarket API can't be reached from a local file).</span></p></div>
   </div>
 
   <div class="panel" id="lbpanel">
@@ -893,7 +893,7 @@ table td,table th,thead th,tbody td,.edgetbl td,.edgetbl th,.caltbl td,.caltbl t
     <div class="mkthead"><h2>Picks</h2><span class="mktmuted" id="pkcount"></span></div>
     <div class="mktmuted" style="margin:-4px 0 12px;display:flex;gap:8px 18px;align-items:center;flex-wrap:wrap;font-size:13px;line-height:1.5">
       <span style="text-transform:uppercase;letter-spacing:.6px;font-weight:700;font-family:var(--dispers)">Lists key:</span>
-      <span><span class="listchip T">T</span> = Top 25 Surest — the week's 25 highest-confidence model picks</span>
+      <span><span class="listchip T">T</span> = Top 25 Surest — the week's 25 highest-confidence model picks (since October 8, 2026: with a live price and $25+ offered near it)</span>
       <span><span class="listchip V">V</span> = Value — the cheaper of Polymarket and Kalshi priced it at 30¢+ and the model was 15+ points higher (15–20 since October 8, 2026), over <i>or</i> under</span>
     </div>
     <div class="chartwrap"><table class="edgetbl" id="pktbl"></table></div>
@@ -1871,12 +1871,13 @@ async function pmBook(slug){
 function pmUsd(slug, side){ const d=slug && pmDepth.get(slug); return d? d[side] : null; }
 function kalUsd(kk, side){ const q=((SLATE&&SLATE.kalshi)||{})[kk]; const v=q? q[side==='under'? 3 : 2] : null; return v==null? null : v; }
 const isThin=usd=>usd!=null && usd<DEPTH_MIN;
-/* Read the Polymarket US books of the candidates whose live US price would clear the Value rules. */
-async function fillDepth(cands){
+/* Read the Polymarket US books of the candidates whose live US price would clear the Value rules
+   (want: another test, e.g. any price for the Top 25 candidates). */
+async function fillDepth(cands, want){
   const need=new Set();
   cands.forEach(c=>{
     const L=livePx.get(mkOf(c)); if(!L || !L.slug || !L.open || !L.exact) return;
-    const us=c.side==='over'? L.over : L.under; if(us==null || !valueQualifies(c.prob, us)) return;
+    const us=c.side==='over'? L.over : L.under; if(us==null || !(want? want(c, us) : valueQualifies(c.prob, us))) return;
     const d=pmDepth.get(L.slug); if(!d || Date.now()-d.at>=DEPTH_MS) need.add(L.slug);
   });
   await mapLimit([...need].slice(0,150), 4, async slug=>{ try{ await pmBook(slug); }catch(e){} });
@@ -2137,7 +2138,10 @@ async function scanBoard(force){
       });
     });
     const modeled=rows.filter(r=>!r.nohist);
-    modeled.filter(r=>!held(r.pl, r.sk)).sort((a,b)=>(b.prob-a.prob)||(b.neff-a.neff)).slice(0,25).forEach(r=>r.lists+='T');
+    // Top 25 Surest: the surest props (the side the model takes) that you can actually bet: a live
+    // Polymarket US or Kalshi price with $25+ offered near it (valuePrice), decided once prices are
+    // in below. The 80 surest are priced, so 25 with enough money behind them are found.
+    const topCands=modeled.filter(r=>!held(r.pl, r.sk)).sort((a,b)=>(b.prob-a.prob)||(b.neff-a.neff)).slice(0,80);
     // Value candidates: the over AND the under of every tradeable market. Which of
     // them actually clears the two rules is decided in computeValueRows(), against
     // the live Polymarket US price where there is one — the price you would really
@@ -2152,9 +2156,12 @@ async function scanBoard(force){
     });
     // One request per game prices every candidate, so this is ~13 calls, not ~260.
     const seedMk=new Map();
-    valueCands.forEach(c=>{ const k=mkOf(c); if(!seedMk.has(k)) seedMk.set(k,{mk:k, pl:c.pl, sk:c.sk, line:c.line}); });
+    valueCands.concat(topCands).forEach(c=>{ const k=mkOf(c); if(!seedMk.has(k)) seedMk.set(k,{mk:k, pl:c.pl, sk:c.sk, line:c.line}); });
     try{ await fillLive([...seedMk.values()], false); }catch(e){}
+    try{ await fillDepth(topCands, ()=>true); }catch(e){}
     try{ await fillDepth(valueCands); }catch(e){}
+    let nT=0;
+    for(const r of topCands){ const e=valuePrice(r); if(!e || e.thin) continue; r.lists+='T'; if(++nT>=25) break; }
     valueRows=computeValueRows();
     edgeRows=modeled;
     const nohist=rows.filter(r=>r.nohist).length;
@@ -2230,12 +2237,13 @@ function sortRows(rows, key, dir){ return [...rows].sort((a,b)=>{
 // chance. The sort pills only reorder those 25 (sorting first used to pick a different 25).
 function topRows(){
   const held=lockedRows.filter(r=>r.lists.includes('T'));
-  return held.concat(edgeRows.slice().sort((a,b)=>(b.prob-a.prob)||(b.neff-a.neff)).slice(0, Math.max(0, 25-held.length)));
+  // the rows scanBoard marked T: surest first, betable ($25+ near a live price), not waiting on injury news
+  return held.concat(edgeRows.filter(r=>r.lists.includes('T')).sort((a,b)=>(b.prob-a.prob)||(b.neff-a.neff)).slice(0, Math.max(0, 25-held.length)));
 }
 function renderEdges(){
   const rows=sortRows(topRows(), edgeSort.key, edgeSort.dir);
   $('edgebody').innerHTML=pickTable(rows,{sort:edgeSort})+
-    `<p class="mktnote" style="margin-top:8px">The 25 props with the highest <b>model chance</b> on this week's board, regardless of payout — best if you're holding <b>credits you can't withdraw without trading</b>, since these are the props most likely to win and let you cash out. <b>Model</b> = the chance the Bet side hits, with its 80% range and the games it's based on. <b>Best price</b> is the cheaper of Polymarket US (live, refreshed about once a minute) and Kalshi for that exact side — what you'd pay right now, the model's edge over it, and the payout multiplier — with both exchanges' prices underneath. Use the pills to sort. These picks are recorded before kickoff and graded in <b>Past picks</b>.</p>`;
+    `<p class="mktnote" style="margin-top:8px">The 25 props with the highest <b>model chance</b> on this week's board that you can actually bet — a live Polymarket US or Kalshi price with at least <b>$25</b> offered near it — regardless of payout. Props waiting on injury news are left off. Best if you're holding <b>credits you can't withdraw without trading</b>, since these are the props most likely to win and let you cash out. <b>Model</b> = the chance the Bet side hits, with its 80% range and the games it's based on. <b>Best price</b> is the cheaper of Polymarket US (live, refreshed about once a minute) and Kalshi for that exact side — what you'd pay right now, the model's edge over it, and the payout multiplier — with both exchanges' prices underneath. Use the pills to sort. These picks are recorded before kickoff and graded in <b>Past picks</b>.</p>`;
   $('edgebody').querySelectorAll('.sortpill').forEach(t=>t.onclick=()=>{ const k=t.dataset.k; if(!k) return;
     if(edgeSort.key===k) edgeSort.dir*=-1; else { edgeSort.key=k; edgeSort.dir=['name','statText','side','matchup'].includes(k)?1:-1; } renderEdges(); });
   wireLoad($('edgebody'), rows);
