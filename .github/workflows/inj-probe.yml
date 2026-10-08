@@ -1,4 +1,4 @@
-name: Injury feed check (temporary)
+name: Next man up check (temporary)
 on:
   push:
     branches: [claude/upbeat-dijkstra-rktnaf]
@@ -14,18 +14,22 @@ jobs:
         with:
           python-version: "3.12"
       - run: |
+          timeout 10m python build.py > /tmp/b.log 2>&1; echo "exit $?"
+          grep -iE "next man up|Traceback|Error" /tmp/b.log | tail -5
           python - <<'PY'
-          import collections, news, build as B
-          inj = news.espn_injuries("football/nfl") or []
-          print("ESPN entries:", len(inj), collections.Counter(x["status"] for x in inj).most_common(12))
-          for x in inj:
-              if "smith" in x["name"].lower() or "goedert" in x["name"].lower() or "wicks" in x["name"].lower():
-                  print("  ESPN", x)
-          rows = B.fetch_csv(B.INJ_URL.format(year=B.SEASON), "injuries") or []
-          wk = max(int(r["week"]) for r in rows if (r.get("week") or "").isdigit()) if rows else None
-          print("nflverse injuries rows", len(rows), "latest week", wk)
-          for r in rows:
-              if (r.get("full_name") or "").lower() in ("devonta smith", "dallas goedert") and r.get("week") == str(wk):
-                  print("  NFLVERSE", {k: r.get(k) for k in ("full_name", "team", "week", "report_status", "practice_status", "report_primary_injury", "date_modified")})
-          print("nflverse latest-week report statuses:", collections.Counter(r.get("report_status") or "(none)" for r in rows if r.get("week") == str(wk)).most_common(), "| practice:", collections.Counter(r.get("practice_status") or "(none)" for r in rows if r.get("week") == str(wk)).most_common())
+          import json
+          d = json.load(open("data.json"))
+          adj = [p for p in d["players"] if p.get("inj_boost")]
+          print("adjusted:", len(adj), "| role changes:", sum(1 for p in adj if p["inj_boost"].get("role")))
+          for p in adj:
+              if p["t"] == "PHI":
+                  print("  PHI", p["n"], p["p"], p["inj_boost"])
+          pk = json.load(open("picks.json")); c = pk["cols"]
+          pend = [dict(zip(c, r)) for r in pk["picks"]]
+          pend = [p for p in pend if p["src"] == "live" and p["res"] is None]
+          print("pending", len(pend), "| role-change picks", sum(1 for p in pend if p.get("rc")),
+                "| T", sum("T" in (p["lists"] or "") for p in pend), "| V", sum("V" in (p["lists"] or "") for p in pend))
+          for p in pend:
+              if p["player"] in ("Dontayvion Wicks", "Braelon Allen") and p.get("lists") is not None:
+                  print("   ", p["player"], p["stat"], p["side"], p["line"], p["prob"], "lists", p["lists"] or "-", "rc", p.get("rc"))
           PY

@@ -73,8 +73,8 @@ class Rebuild(unittest.TestCase):
         self.assertTrue(all((k[0], k[1]) < (2026, 3) for k in adds["allen"]))
 
     def test_end_to_end_moves_the_under(self):
-        n_out, n_adj = B.compute_injury_boosts(self.players, [{"name": "Breece Hall", "status": "Out"}])
-        self.assertEqual((n_out, n_adj), (1, 1))
+        n_out, n_q, n_adj = B.compute_injury_boosts(self.players, [{"name": "Breece Hall", "status": "Out"}])
+        self.assertEqual((n_out, n_q, n_adj), (1, 0, 1))
         self.assertIn("Breece Hall", self.allen["inj_boost"]["why"])
         self.assertTrue(B.inj_on(self.allen, "rush_yds"))
         self.assertFalse(B.inj_on(self.allen, "pass_yds"))
@@ -93,8 +93,8 @@ class Rebuild(unittest.TestCase):
     def test_long_absence_is_not_new(self):
         hall, allen, davis = backfield()
         hall["g"] = hall["g"][:10]                                  # last played in 2025 week 10
-        n_out, n_adj = B.compute_injury_boosts([hall, allen, davis], [{"name": "Breece Hall", "status": "Injured Reserve"}])
-        self.assertEqual((n_out, n_adj), (1, 0))
+        n_out, n_q, n_adj = B.compute_injury_boosts([hall, allen, davis], [{"name": "Breece Hall", "status": "Injured Reserve"}])
+        self.assertEqual((n_out, n_q, n_adj), (1, 0, 0))     # out since 2025 week 10: the log already shows it
 
     def test_model_rows_leave_the_log_alone(self):
         B.compute_injury_boosts(self.players, [{"name": "Breece Hall", "status": "Out"}])
@@ -104,8 +104,35 @@ class Rebuild(unittest.TestCase):
         self.assertEqual(rebuilt[-1], self.allen["g"][-1])
 
     def test_nobody_out_changes_nothing(self):
-        self.assertEqual(B.compute_injury_boosts(self.players, []), (0, 0))
+        self.assertEqual(B.compute_injury_boosts(self.players, []), (0, 0, 0))
         self.assertIs(B.model_rows(self.allen), self.allen["g"])
+
+
+class Questionable(unittest.TestCase):
+    def receivers(self):
+        wr1 = {"id": "wr1", "n": "DeVonta Smith", "p": "WR", "t": "PHI",
+               "g": [row(s, w, o, 0, 0, 9, 6, 80) for s, w, o in WEEKS[:-1]]}
+        wr3 = {"id": "wr3", "n": "Dontayvion Wicks", "p": "WR", "t": "PHI",
+               "g": [row(s, w, o, 0, 0, 4, 3, 35) for s, w, o in WEEKS]}
+        te = {"id": "te", "n": "A Tight End", "p": "TE", "t": "PHI",
+              "g": [row(s, w, o, 0, 0, 5, 4, 40) for s, w, o in WEEKS]}
+        return wr1, wr3, te
+
+    def test_questionable_starter_makes_heirs_a_role_change(self):
+        wr1, wr3, te = self.receivers()
+        res = B.compute_injury_boosts([wr1, wr3, te], [{"name": "DeVonta Smith", "status": "Questionable"}])
+        self.assertEqual(res, (0, 1, 2))
+        self.assertTrue(B.role_change(wr3, "rec"))
+        self.assertTrue(B.role_change(te, "rec_yds"))
+        self.assertIn("DeVonta Smith (questionable)", wr3["inj_boost"]["why"])
+        self.assertNotIn("inj_add", wr3)            # no hand-off: he may still play
+        self.assertFalse(B.inj_on(wr3, "rec"))       # so the usage adjustment stays on
+
+    def test_starter_out_a_few_weeks_still_counts(self):
+        hall, allen, davis = backfield()
+        hall["g"] = hall["g"][:-2]                   # last played two games before the latest
+        B.compute_injury_boosts([hall, allen, davis], [{"name": "Breece Hall", "status": "Out"}])
+        self.assertTrue(B.role_change(allen, "rush_yds"))   # most of Allen's log is still from games with Hall
 
 
 if __name__ == "__main__":

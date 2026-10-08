@@ -780,6 +780,7 @@ NMU_MIN_SHARE = 0.10  # an heir needs this share of his group's work in his last
 NMU_HEIRS = {"rush": {"RB": ("RB",), "FB": ("RB",)},
              "rec": {"WR": ("WR", "TE"), "TE": ("TE", "WR"), "RB": ("RB",), "FB": ("RB",)}}
 OUT_RE = re.compile(r"\bout\b|doubtful|injured reserve|suspen|physically unable|\bpup\b|non-football", re.I)
+DOUBT_RE = re.compile(r"questionable", re.I)   # may not play: enough to make his heirs' roles uncertain
 OUT_ROSTER = {"RES", "PUP", "NFI", "SUS"}
 
 
@@ -792,14 +793,18 @@ def _gkey(r):
     return (r[0], r[1], r[2])          # season, week, opponent: one game of one team
 
 
-def injury_outs(players, espn=None):
-    """ids of the backs and receivers out this week (see above)."""
+def injury_outs(players, espn=None, pattern=OUT_RE):
+    """ids of the backs and receivers out this week (see above); pattern=DOUBT_RE: the ones
+    questionable (ESPN or the official report), who may not play."""
     byname = {}
     for e in players:
         byname.setdefault(pkey(e["n"]), []).append(e)
-    out = {e["id"] for e in players if _inj_out(e) or e.get("st") in OUT_ROSTER}
+    if pattern is OUT_RE:
+        out = {e["id"] for e in players if _inj_out(e) or e.get("st") in OUT_ROSTER}
+    else:
+        out = {e["id"] for e in players if e.get("inj") and pattern.search(e["inj"][0] or "")}
     for x in espn or []:
-        if OUT_RE.search(x.get("status") or ""):
+        if pattern.search(x.get("status") or ""):
             c = byname.get(pkey(x.get("name") or ""), [])
             if len(c) == 1:            # a name two players share is left alone
                 out.add(c[0]["id"])
@@ -895,37 +900,47 @@ def nmu_adds(members, out_ids, pos_eff, before=None, lam=None, w_emp=None):
     return adds
 
 
-def role_changes(members, out_ids):
+def role_changes(members, out_ids, doubt_ids=()):
     """{player id: {fam, ...}}: the heirs (NMU_HEIRS, NMU_MIN_SHARE+ of the work) of a starter
-    (NMU_STARTER+ of his group's work in his last 3 games) newly out (in one of the team's last 3
-    games). Their props in that family are a role change the game log can't size: they stay off
-    Top 25 Surest and Value."""
+    (NMU_STARTER+ of his group's work in his last 3 games with the team) who is out, or questionable
+    and may not play. Their props in that family are a role change the game log can't size, so they
+    stay off Top 25 Surest and Value — for as long as most of the heir's game log, as the model
+    weighs it (recent games count most), comes from games the starter played: a backup who has
+    started for a game or two still looks like a backup to the model."""
     out = {}
     for fam, cfg in NMU.items():
         vi = cfg["vol"]
         grp = [m for m in members if m["p"] in cfg["pos"]]
         rows = {m["id"]: {_gkey(r): r for r in m["g"]} for m in grp}
-        recent = set(sorted({k for m in grp for k in rows[m["id"]]})[-3:])
 
         def share(m):
             keys = sorted(rows[m["id"]])[-3:]
             den = sum(rows[b["id"]][k][vi] for k in keys for b in grp if k in rows[b["id"]])
             return sum(rows[m["id"]][k][vi] for k in keys) / den if den > 0 else 0.0
 
-        starters = [m for m in grp if m["id"] in out_ids and recent & set(rows[m["id"]]) and share(m) >= NMU_STARTER[fam]]
-        for o in starters:
+        def with_him(a, s):
+            """Share of a's model weight from games s played."""
+            keys = sorted(rows[a["id"]])[-MODEL["maxGames"]:]
+            w = [0.5 ** ((len(keys) - 1 - i) / MODEL["halfLife"]) for i in range(len(keys))]
+            return sum(wi for wi, k in zip(w, keys) if k in rows[s["id"]]) / sum(w) if w else 0.0
+
+        starters = [m for m in grp if (m["id"] in out_ids or m["id"] in doubt_ids)
+                    and m["g"] and share(m) >= NMU_STARTER[fam]]
+        for s in starters:
             for a in grp:
-                if (a["id"] not in out_ids and a["p"] in NMU_HEIRS[fam].get(o["p"], ())
-                        and share(a) >= NMU_MIN_SHARE):
+                if (a["id"] not in out_ids and a["id"] != s["id"] and a["p"] in NMU_HEIRS[fam].get(s["p"], ())
+                        and share(a) >= NMU_MIN_SHARE and with_him(a, s) >= 0.5):
                     out.setdefault(a["id"], set()).add(fam)
     return out
 
 
 def compute_injury_boosts(players, espn=None):
     """Next man up for this week (see above): entry['inj_add'] with the per-game additions and
-    entry['inj_boost'] = {"rush"/"rec": recent volume with / without them, "why": who's out}
-    on the teammates of anyone out. In place. Returns (players out, players adjusted)."""
+    entry['inj_boost'] = {"rush"/"rec": recent volume with / without them, "role": [families a
+    starter's absence or doubtful status leaves to him], "why": who} on the teammates of anyone out
+    or questionable. In place. Returns (players out, players questionable, teammates adjusted)."""
     outs = injury_outs(players, espn)
+    doubts = injury_outs(players, espn, DOUBT_RE) - outs
     pos_eff = position_eff(players)
     teams = {}
     for e in players:
@@ -934,10 +949,11 @@ def compute_injury_boosts(players, espn=None):
     adjusted = 0
     for members in teams.values():
         out_ids = {m["id"] for m in members if m["id"] in outs and m["p"] in ("RB", "FB", "WR", "TE")}
-        if not out_ids:
+        doubt_ids = {m["id"] for m in members if m["id"] in doubts and m["p"] in ("RB", "FB", "WR", "TE")}
+        if not out_ids and not doubt_ids:
             continue
-        adds = nmu_adds(members, out_ids, pos_eff)
-        roles = role_changes(members, out_ids)
+        adds = nmu_adds(members, out_ids, pos_eff) if out_ids else {}
+        roles = role_changes(members, out_ids, doubt_ids)
         info = {m["id"]: (m["n"], m["p"]) for m in members}
         for m in members:
             a, rc = adds.get(m["id"]) or {}, roles.get(m["id"]) or set()
@@ -956,11 +972,12 @@ def compute_injury_boosts(players, espn=None):
             if rc:
                 b["role"] = sorted(rc)
             fams = set(b) & set(NMU) | rc
-            b["why"] = ", ".join(f"{info[o][0]} (out)" for o in sorted(out_ids, key=lambda x: info[x][0])
+            b["why"] = ", ".join(f"{info[o][0]} ({'out' if o in out_ids else 'questionable'})"
+                                 for o in sorted(out_ids | doubt_ids, key=lambda x: info[x][0])
                                  if any(info[o][1] in NMU[f]["pos"] for f in fams))[:90]
             m["inj_boost"] = b
             adjusted += 1
-    return len(outs), adjusted
+    return len(outs), len(doubts), adjusted
 
 
 def model_rows(pl):
@@ -1942,8 +1959,8 @@ def main():
     players = build_players(all_rows, roster, injuries, sched)
     try:
         espn_inj = news.espn_injuries("football/nfl")     # lists Out / IR all week, ahead of nflverse
-        n_out, n_adj = compute_injury_boosts(players, espn_inj)
-        print(f"  next man up: {n_out} back(s)/receiver(s) out"
+        n_out, n_q, n_adj = compute_injury_boosts(players, espn_inj)
+        print(f"  next man up: {n_out} back(s)/receiver(s) out, {n_q} questionable"
               f"{'' if espn_inj is not None else ' (ESPN report unavailable: nflverse and rosters only)'},"
               f" {n_adj} teammate(s) adjusted")
     except Exception as e:  # noqa: BLE001
