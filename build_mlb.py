@@ -29,6 +29,7 @@ from concurrent.futures import ThreadPoolExecutor
 import news   # pre-game news feeds, test mode
 import kalshi  # Kalshi prices, side by side with Polymarket's
 import depth   # enough money at the price? (thin-market filter)
+import holds   # props that wait for injury news
 
 TODAY = datetime.date.today()
 ET_TODAY = (datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(hours=4)).date().isoformat()
@@ -845,7 +846,8 @@ PICK_COLS = ["src", "gid", "season", "date", "pid", "player", "pos", "team", "op
              "pp", "kp",     # this side's price on Polymarket and on Kalshi (None = not listed there)
              "pd", "kd",     # dollars offered within 2c of each (depth.py)
              "vn",           # which one "price" is: the cheaper with $25+ offered, "P" Polymarket, "K" Kalshi
-             "th"]           # 1 = thin: neither has $25 offered near its price, so no Top 25 / Value
+             "th",           # 1 = thin: neither has $25 offered near its price, so no Top 25 / Value
+             "hd"]           # what it waits on: injury news not settled yet (holds.py), so no lists
 BAT_BOARD = ["h", "tb", "hrr"]
 PIT_BOARD = ["k", "outs"]
 TOP_N = 25
@@ -1127,6 +1129,47 @@ def grade_picks(picks, by_pid, games, done=()):
     return n, dnp
 
 
+PITCHERS = {"SP", "RP", "P"}
+
+
+def injury_holds(picks, by_pid, rows):
+    """Props that wait for news (holds.py): off Top 25 Surest and Value while the hitter, or a
+    regular in his team's lineup, is day-to-day on ESPN's report, until it's settled for that game:
+    his team's lineup is posted (in it, or not: then his own props are out too), or ESPN rules him
+    out or drops the tag. A pitcher's status touches only his own props. A real role: started 3+
+    of his last 5 games for his team. ESPN unreachable: the last run's holds stand."""
+    inj = news.espn_injuries("baseball/mlb")
+    if inj is None:
+        print("  holds: ESPN injury report unavailable, last run's holds kept")
+        return
+    people = {pid: (p["n"], p["t"], p["p"]) for pid, p in by_pid.items()}
+    report = holds.match(inj, people, pkey)
+    last = holds.last_games(rows)
+    is_open = lambda p: p.get("res") is None and not pick_locked(p)
+    day = lambda d, k: (datetime.date.fromisoformat(d) - datetime.timedelta(days=k)).isoformat()
+    pend = [p for p in picks if is_open(p)]
+    # the pick's date is ESPN's UTC one; MLB dates a game by its local day (a day earlier for a late game)
+    lineups = (news.mlb_lineups([day(p["date"], k) for p in pend for k in (0, 1)], pkey) if pend else None) or {}
+
+    def settled(pid, p):
+        pos = p.get("pos") if pid == p["pid"] else (people.get(pid) or ("", "", ""))[2]
+        if pos in PITCHERS:
+            return None
+        lu = (lineups.get(p["date"]) or {}).get(p["team"]) or (lineups.get(day(p["date"], 1)) or {}).get(p["team"])
+        if not lu:
+            return None
+        name = p["player"] if pid == p["pid"] else people[pid][0]
+        return "in" if pkey(name) in lu else "not in the lineup"
+
+    def role(pid):
+        g = last.get(pid, (None, []))[1]
+        return sum(1 for r in g if r.get("bat") == 2) >= 3
+
+    n = holds.apply(picks, report, people, lambda pos: set() if pos in PITCHERS else {"H"}, role, is_open, settled)
+    print(f"  holds: {n} pending pick(s) waiting on news (no Top 25 / Value); "
+          f"{sum(1 for s in report.values() if holds.status(s) == 'unsure')} player(s) day-to-day")
+
+
 def assign_lists(picks):
     """T = 'Top 25 Surest': up to 25 props the model gives 90%+ that have a live
     Polymarket price, ranked by model chance. V = 'Value' — the market prices it at 30c
@@ -1140,6 +1183,7 @@ def assign_lists(picks):
                and "T" in (p.get("lists") or ""))
     for p in pending:
         p["lists"] = ""
+    pending = [p for p in pending if not p.get("hd")]     # waiting on injury news (holds.py): no lists
 
     def one_per_prop(items):
         """Best line only per player, stat and game: Polymarket lists 1+/2+/3+ ladders,
@@ -1308,6 +1352,10 @@ def main():
     thin = sum(1 for p in picks if p.get("res") is None and not pick_locked(p) and p.get("th"))
     print(f"  depth: read {nb} more order book(s); {thin} pending pick(s) too thin for Top 25 / Value "
           f"(under ${depth.MIN_USD:.0f} offered within 2c)")
+    try:
+        injury_holds(picks, by_pid, store["rows"])
+    except Exception as e:  # noqa: BLE001
+        print(f"  holds: skipped ({e})")
     assign_lists(picks)
     for p in picks:
         if p.get("res") is None and not pick_locked(p):

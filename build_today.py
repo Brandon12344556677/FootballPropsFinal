@@ -149,8 +149,8 @@ def upcoming(sport, db, picks_doc, labels, getters, now):
         p = dict(zip(cols, row))
         if p.get("src") != "live" or p.get("res") is not None:
             continue
-        if p.get("prob") is None or p.get("price") is None or p.get("th"):
-            continue        # no price, or too little money offered at it (depth.py)
+        if p.get("prob") is None or p.get("price") is None or p.get("th") or p.get("hd"):
+            continue        # no price, too little money offered at it (depth.py), or waiting on injury news (holds.py)
         start = kick.get(p.get("gid")) if sport == "nfl" else parse_start(p.get("start"))
         if start is None or start <= now:
             continue

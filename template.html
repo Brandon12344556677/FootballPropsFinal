@@ -608,8 +608,8 @@ table td,table th,thead th,tbody td,.edgetbl td,.edgetbl th,.caltbl td,.caltbl t
 .valrules .vrfoot b{color:#fff}
 </style>
 
-<link rel="stylesheet" href="app.css?v=20261008b">
-<script src="app.js?v=20261008b"></script>
+<link rel="stylesheet" href="app.css?v=20261008c">
+<script src="app.js?v=20261008c"></script>
 
 <header class="apptop">
   <div class="apptop-in">
@@ -671,7 +671,7 @@ table td,table th,thead th,tbody td,.edgetbl td,.edgetbl th,.caltbl td,.caltbl t
         <li><span class="vrnum">1</span><span class="vrtxt"><b>The market gives it at least a 30% chance.</b> The price you'd pay has to be <b>30¢ or more</b>. <span class="vrwhy">This is the rule that keeps penny longshots off the list — a 6¢ ask against an 11% model chance looks like a huge edge in percentage terms and is still a bad bet.</span></span></li>
         <li><span class="vrnum">2</span><span class="vrtxt"><b>Our model puts it at least 15 points higher.</b> <span class="vreg">30¢ ask → needs 45%</span> · <span class="vreg">50¢ → 65%</span> · <span class="vreg">70¢ → 85%</span>. <span class="vrwhy">The gap between the two, in percentage points, is the <b>edge</b> shown in the Best price column.</span></span></li>
       </ol>
-      <div class="vrfoot">Both rules are tested against the <b>best price in the row</b> — the cheaper of the live Polymarket US price and Kalshi's, the price you'd actually pay — so the edge shown is always the edge it qualified on, and a prop drops off the list as soon as the price moves against it. A price only counts when at least <b>$25</b> is offered at it (or within 2¢) — in a near-empty market your bet would move the price — so a thin price is skipped for the other exchange's, or the prop is left off. Polymarket's global book (shown as <span class="pmdim">board 46¢</span>) doesn't count: US users can't trade it. Both rules are checked on the <b>over</b> and the <b>under</b> of every market separately, so either side can qualify, and a prop also needs <b>6+ effective games</b> of history behind it. Everything clearing both rules is listed — no fixed top 25 — ranked by that edge, and the list re-checks itself about once a minute.</div>
+      <div class="vrfoot">Both rules are tested against the <b>best price in the row</b> — the cheaper of the live Polymarket US price and Kalshi's, the price you'd actually pay — so the edge shown is always the edge it qualified on, and a prop drops off the list as soon as the price moves against it. A price only counts when at least <b>$25</b> is offered at it (or within 2¢) — in a near-empty market your bet would move the price — so a thin price is skipped for the other exchange's, or the prop is left off. Polymarket's global book (shown as <span class="pmdim">board 46¢</span>) doesn't count: US users can't trade it. Both rules are checked on the <b>over</b> and the <b>under</b> of every market separately, so either side can qualify, and a prop also needs <b>6+ effective games</b> of history behind it. Everything clearing both rules is listed — no fixed top 25 — ranked by that edge, and the list re-checks itself about once a minute. Props <b>waiting on injury news</b> stay off this list and Top 25 Surest: when the player, or a teammate whose snaps decide his role (a quarterback for the whole passing game), is questionable or doubtful — until ESPN shows him active or out (on game day, the inactives 90 minutes before kickoff). Ruled out: his teammates' props come back, with the model's numbers.</div>
     </div>
     <div id="valuebody"><p class="mktnote">The board scan fills this in. <span class="mktmuted">Needs the hosted website (the Polymarket API can't be reached from a local file).</span></p></div>
   </div>
@@ -1209,7 +1209,8 @@ function withInj(p, rows){ const a=p&&p.inj_add; if(!a) return rows;
 function injOn(p, sk){ const b=p&&p.inj_boost; if(!b) return false; const f=statFamily(sk,p.p); return !!(f==='rec'?b.rec:f==='rush'?b.rush:0); }
 /* A starter at his position is out or questionable (build.py role_changes): the game log can't size
    the new role (who takes over is often a surprise), so the prop stays off Top 25 Surest and Value. */
-function roleChange(p, sk){ const b=p&&p.inj_boost; return !!(b && (b.role||[]).includes(statFamily(sk,p.p))); }
+// waiting on injury news (holds.py / build.py team_holds): off Top 25 Surest and Value until it settles
+function held(p, sk){ const b=p&&p.inj_boost; return !!(b && (b.hold||[]).includes(statFamily(sk,p.p))); }
 function modelFor(p, sk, line, ctx){ const st=STATMAP[sk]; if(!st) return null; const c=ctx||contextFor(p,sk,p===state.player?currentOpp():null); return calMp(modelProb(withInj(p, gamesOf(p)).map(st.get), line, st.kind, c.scale, CAL[sk], c.per)); }
 function probFor(p, sk, line, side, ctx){ const mp=modelFor(p,sk,line,ctx); if(!mp) return null;
   return side==='over'? {prob:mp.over, lo:mp.lo, hi:mp.hi, mp} : {prob:mp.under, lo:1-mp.hi, hi:1-mp.lo, mp}; }
@@ -1488,7 +1489,7 @@ function renderMeta(){
       `<span>${esc(kickoff(wg))}</span>`+(vegas(wg)?`<span><span class="lab">Vegas</span> ${esc(vegas(wg))}</span>`:'')+
       (tp?`<span title="average offensive time of possession per game this season, from ESPN box scores"><span class="lab">Poss/gm</span> <b>${esc(p.t)} ${tp}</b>${to?` · ${esc(opp)} ${to}`:''}</span>`:'')+
       (p.inj_boost&&(p.inj_boost.rec||p.inj_boost.rush)?`<span title="a teammate newly ruled out frees up carries — the model hands this player a share of them (recent volume, with vs. without)"><span class="lab">Volume ▲</span> <b>+${Math.round((Math.max(p.inj_boost.rec||1,p.inj_boost.rush||1)-1)*100)}%</b> · ${esc(p.inj_boost.why||'teammate out')}</span>`:'')+
-      (p.inj_boost&&(p.inj_boost.role||[]).length?`<span title="a starter at his position is out or questionable, so his role this week may be bigger than his game log shows, and nobody can say by how much from history alone. His ${esc(p.inj_boost.role.map(f=>f==='rush'?'rushing':'receiving').join(' and '))} props are left off Top 25 Surest and Value; the market's price knows more here."><span class="lab">Role change</span> <b>${esc(p.inj_boost.why||'starter out')}</b> · not recommended</span>`:'')+score;
+      (p.inj_boost&&(p.inj_boost.hold||[]).length?`<span title="he, or a teammate whose snaps decide his role, is out, questionable or doubtful. His ${esc(p.inj_boost.hold.map(f=>f==='rush'?'rushing':f==='pass'?'passing':'receiving').join(', '))} props stay off Top 25 Surest and Value until that's settled (ESPN shows the player active or out; on game day, the inactives 90 minutes before kickoff)."><span class="lab">Waiting on news</span> <b>${esc(p.inj_boost.hw||'injury report')}</b> · not recommended yet</span>`:'')+score;
     ws.hidden=false;
   } else if(WEEK.week){
     ws.innerHTML=`<span><span class="lab">Week ${WEEK.week}</span> ${esc(p.t)} has no game on the schedule this week${p.t?'':' (team unknown)'}.</span>`; ws.hidden=false;
@@ -2126,14 +2127,14 @@ async function scanBoard(force){
       });
     });
     const modeled=rows.filter(r=>!r.nohist);
-    modeled.filter(r=>!roleChange(r.pl, r.sk)).sort((a,b)=>(b.prob-a.prob)||(b.neff-a.neff)).slice(0,25).forEach(r=>r.lists+='T');
+    modeled.filter(r=>!held(r.pl, r.sk)).sort((a,b)=>(b.prob-a.prob)||(b.neff-a.neff)).slice(0,25).forEach(r=>r.lists+='T');
     // Value candidates: the over AND the under of every tradeable market. Which of
     // them actually clears the two rules is decided in computeValueRows(), against
     // the live Polymarket US price where there is one — the price you would really
     // pay — so the edge printed in each row is the edge the rules were tested on.
     valueCands=[];
     modeled.forEach(r=>{
-      if(!(r.neff>=6) || !r.sides || roleChange(r.pl, r.sk)) return;     // a role change is never a value spot
+      if(!(r.neff>=6) || !r.sides || held(r.pl, r.sk)) return;     // waiting on injury news: never a value spot
       ['over','under'].forEach(sd=>{
         const c=r.sides[sd]; if(!c) return;     // priced live below (Polymarket US, Kalshi), whatever the global book shows
         valueCands.push(Object.assign({}, r, {side:sd, prob:c.prob, lo:c.lo, hi:c.hi, price:c.price, base:r}));

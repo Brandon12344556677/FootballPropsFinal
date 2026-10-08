@@ -1,0 +1,39 @@
+name: Holds check (temporary)
+on:
+  push:
+    branches: [claude/upbeat-dijkstra-rktnaf]
+    paths: [.github/workflows/holds-check.yml]
+permissions:
+  contents: read
+jobs:
+  check:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: |
+          for b in build.py build_nhl.py build_mlb.py build_nba.py; do
+            timeout 15m python $b > /tmp/$b.log 2>&1; echo "== $b exit $?"
+            grep -E "next man up|holds:|Traceback|Error" /tmp/$b.log | tail -4
+          done
+          python - <<'PY'
+          import json, collections
+          for f, cents in (("picks.json", 100), ("nhl_picks.json", 1), ("mlb_picks.json", 1), ("nba_picks.json", 1)):
+              d = json.load(open(f)); c = d["cols"]
+              ps = [dict(zip(c, r)) for r in d["picks"]]
+              pend = [p for p in ps if p["res"] is None and p.get("src") == "live" and not p.get("lk")]
+              held = [p for p in pend if p.get("hd")]
+              print(f"\n== {f}: pending {len(pend)} | held {len(held)} | T {sum('T' in (p['lists'] or '') for p in pend)} | V {sum('V' in (p['lists'] or '') for p in pend)} | held+listed {sum(1 for p in held if p['lists'])}")
+              why = collections.Counter(p["hd"] for p in held)
+              for w, n in why.most_common(8):
+                  print(f"   {n:4d}  {w}")
+              for p in held:
+                  if p["player"] in ("Dontayvion Wicks", "Braelon Allen", "DeVonta Smith", "Saquon Barkley"):
+                      print("    ", p["player"], p["stat"], p["side"], p["line"], p["prob"], "| hd:", p["hd"])
+          d = json.load(open("data.json"))
+          for p in d["players"]:
+              if p["n"] in ("Braelon Allen", "Dontayvion Wicks", "Breece Hall") and p.get("inj_boost"):
+                  print("  NFL", p["n"], p["inj_boost"])
+          PY
