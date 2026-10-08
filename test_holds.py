@@ -87,7 +87,7 @@ class Builders(unittest.TestCase):
         by_pid = {"a": {"n": "Star Guard", "t": "BOS", "p": "G"}, "b": {"n": "Other Guard", "t": "BOS", "p": "G"},
                   "c": {"n": "Big Man", "t": "BOS", "p": "C"}}
         box = rows("a", "BOS", 5, min=34) + rows("b", "BOS", 5, min=25) + rows("c", "BOS", 5, min=28)
-        ps = [pick("b", "Other Guard", "G", "BOS"), pick("c", "Big Man", "C", "BOS")]
+        ps = [pick("b", "Other Guard", "G", "BOS", price=0.78), pick("c", "Big Man", "C", "BOS", price=0.78)]
         with mock.patch.object(build_nba.news, "espn_injuries", return_value=[{"id": "a", "name": "Star Guard", "status": "Day-To-Day"}]):
             build_nba.injury_holds(ps, by_pid, box)
         self.assertEqual([p["hd"] for p in ps], ["Star Guard (day-to-day)", None])
@@ -110,6 +110,13 @@ class Builders(unittest.TestCase):
               pick("c", "C", "G", "BOS", prob=0.95, price=0.9)]
         build_nba.assign_lists(ps)
         self.assertEqual([p["lists"] for p in ps], ["", "", "T"])
+
+    def test_nba_top25_one_line_per_prop_and_no_wide_gaps(self):
+        mk = lambda pid, line, prob, price: pick(pid, pid, "G", "BOS", stat="pts", line=line, side="under", prob=prob, price=price)
+        a1, a2, a3 = mk("a", 30.5, 0.98, 0.90), mk("a", 25.5, 0.95, 0.85), mk("a", 15.5, 0.70, 0.40)   # 30 points off on 15.5
+        b1, b2 = mk("b", 30.5, 0.97, 0.92), mk("b", 28.5, 0.96, 0.90)
+        build_nba.assign_lists([a1, a2, a3, b1, b2])
+        self.assertEqual([("T" in p["lists"]) for p in (a1, a2, a3, b1, b2)], [False, False, False, True, False])
 
     def test_feed_down_keeps_last_holds(self):
         ps = [pick("b", "Other Guard", "G", "BOS", hd="Star Guard (day-to-day)")]
