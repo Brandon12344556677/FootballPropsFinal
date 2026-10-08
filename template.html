@@ -1194,14 +1194,20 @@ function contextFor(p, sk, oppOverride, gameOverride){
     if(g.spread!=null&&g.total!=null){ gameSpr=home?g.spread:-g.spread; gamePts=g.total/2+gameSpr/2; } }
   if(oppOverride) opp=oppOverride;
   const defRatio=defRatioFor(opp, p.p, sk);
-  const usage=injMult(p, sk)===1? usageOf(p.u) : null, fam=statFamily(sk,p.p);
+  const usage=injOn(p, sk)? null : usageOf(p.u), fam=statFamily(sk,p.p);
   const cs=contextScale(fam, hist, gamePts, gameSpr, defRatio, usage);
   return Object.assign(cs, {opp, gamePts, gameSpr, defRatio, usage, on:true,
     per:gamePer(cs.scale, usage, p.u&&p.u[0], gamesOf(p).map(g=>g[20]), fam)});
 }
 function currentOpp(){ return oppTouched? ($('oppsel').value||null) : null; }
-function injMult(p, sk){ const b=p&&p.inj_boost; if(!b) return 1; const f=statFamily(sk,p.p); return (f==='rec'?b.rec:f==='rush'?b.rush:1)||1; }
-function modelFor(p, sk, line, ctx){ const st=STATMAP[sk]; if(!st) return null; const c=ctx||contextFor(p,sk,p===state.player?currentOpp():null); return calMp(modelProb(valuesOf(p,sk), line, st.kind, c.scale * injMult(p, sk), CAL[sk], c.per)); }
+/* Next man up (build.py compute_injury_boosts): a back or receiver ruled out leaves his carries and
+   targets to the teammates who play. The builder rebuilds each of their past games as if he had sat
+   it too and ships the additions per game (p.inj_add: "season-week" -> {game-row index: amount});
+   the model reads those rebuilt games, and the snap-share usage adjustment stays off where they apply. */
+function withInj(p, rows){ const a=p&&p.inj_add; if(!a) return rows;
+  return rows.map(r=>{ const d=a[r[0]+'-'+r[1]]; if(!d) return r; const x=r.slice(); for(const k in d) x[+k]+=d[k]; return x; }); }
+function injOn(p, sk){ const b=p&&p.inj_boost; if(!b) return false; const f=statFamily(sk,p.p); return !!(f==='rec'?b.rec:f==='rush'?b.rush:0); }
+function modelFor(p, sk, line, ctx){ const st=STATMAP[sk]; if(!st) return null; const c=ctx||contextFor(p,sk,p===state.player?currentOpp():null); return calMp(modelProb(withInj(p, gamesOf(p)).map(st.get), line, st.kind, c.scale, CAL[sk], c.per)); }
 function probFor(p, sk, line, side, ctx){ const mp=modelFor(p,sk,line,ctx); if(!mp) return null;
   return side==='over'? {prob:mp.over, lo:mp.lo, hi:mp.hi, mp} : {prob:mp.under, lo:1-mp.hi, hi:1-mp.lo, mp}; }
 function reseedLine(){
@@ -1307,10 +1313,10 @@ function clearWhy(){ const b=$('whybox'); if(b){ b.hidden=true; b.innerHTML=''; 
 function whyDefLabel(sk, pos){ const ds=defStatFor(sk,pos); return (ds&&STATMAP[ds])? STATMAP[ds].label.toLowerCase() : 'this stat'; }
 
 function buildWhy(p, sk, line, side, mp, ctx){
-  const st=STATMAP[sk], g=gamesOf(p), vals=g.map(st.get);
+  const st=STATMAP[sk], g=gamesOf(p), vals=g.map(st.get), mv=withInj(p, g).map(st.get);
   if(!st || !vals.length) return null;
-  const hist=modelProb(vals, line, st.kind, 1);            // history only
-  const adj =modelProb(vals, line, st.kind, ctx.scale, null, ctx.per);   // + this game's context, pre-calibration
+  const hist=modelProb(mv, line, st.kind, 1);              // history only (with next man up's rebuilt games)
+  const adj =modelProb(mv, line, st.kind, ctx.scale, null, ctx.per);   // + this game's context, pre-calibration
   if(!hist || !adj) return null;
   const S = v => side==='over'? v : 1-v;                   // read a two-sided number off the chosen side
   const k=MODEL.priorK, neff=adj.neff, used=Math.min(MODEL.maxGames, vals.length);
@@ -1478,7 +1484,7 @@ function renderMeta(){
     ws.innerHTML=`<span><span class="lab">Week ${WEEK.week}</span> <b>${home?'vs':'@'} ${esc(opp)}</b></span>`+
       `<span>${esc(kickoff(wg))}</span>`+(vegas(wg)?`<span><span class="lab">Vegas</span> ${esc(vegas(wg))}</span>`:'')+
       (tp?`<span title="average offensive time of possession per game this season, from ESPN box scores"><span class="lab">Poss/gm</span> <b>${esc(p.t)} ${tp}</b>${to?` · ${esc(opp)} ${to}`:''}</span>`:'')+
-      (p.inj_boost?`<span title="teammates ruled out this week free up targets/carries — the model bumps this player's projected volume accordingly"><span class="lab">Volume ▲</span> <b>+${Math.round((Math.max(p.inj_boost.rec||1,p.inj_boost.rush||1)-1)*100)}%</b> · ${esc(p.inj_boost.why||'teammate out')}</span>`:'')+score;
+      (p.inj_boost?`<span title="teammates ruled out this week free up carries/targets — the model rebuilds this player's past games with his share of them (recent volume, with vs. without)"><span class="lab">Volume ▲</span> <b>+${Math.round((Math.max(p.inj_boost.rec||1,p.inj_boost.rush||1)-1)*100)}%</b> · ${esc(p.inj_boost.why||'teammate out')}</span>`:'')+score;
     ws.hidden=false;
   } else if(WEEK.week){
     ws.innerHTML=`<span><span class="lab">Week ${WEEK.week}</span> ${esc(p.t)} has no game on the schedule this week${p.t?'':' (team unknown)'}.</span>`; ws.hidden=false;
@@ -2317,8 +2323,8 @@ function apCandidates(teamsSet){
     stats.forEach(sk=>{ const st=STATMAP[sk]; if(!st) return;
       const vals=p.g.map(st.get), line=seedLine(vals);
       if(line < (sk==='pass_yds'?150 : st.kind==='yards'?30 : 3.5)) return;
-      const fam=statFamily(sk,p.p), usage=usageOf(p.u), cs=contextScale(fam,hist,gamePts,gameSpr,defRatioFor(opp,p.p,sk),usage);
-      const mp=calMp(modelProb(vals,line,st.kind,cs.scale,CAL[sk],gamePer(cs.scale,usage,p.u&&p.u[0],p.g.map(g=>g[20]),fam))); if(!mp||mp.neff<5) return;
+      const fam=statFamily(sk,p.p), usage=injOn(p,sk)? null : usageOf(p.u), cs=contextScale(fam,hist,gamePts,gameSpr,defRatioFor(opp,p.p,sk),usage);
+      const mp=calMp(modelProb(withInj(p,p.g).map(st.get),line,st.kind,cs.scale,CAL[sk],gamePer(cs.scale,usage,p.u&&p.u[0],p.g.map(g=>g[20]),fam))); if(!mp||mp.neff<5) return;
       out.push({p, sk, line, side:'over', prob:mp.over, neff:mp.neff, gid:(wg.id||wg.away+'@'+wg.home)});
     });
   });
@@ -2585,7 +2591,7 @@ function trapCheck(p, sk, line, side, mp, ctx, rows){
     // Split the gap between the tally and the model into what each step takes off — the record
     // itself (history only), the snap-share change, this week's matchup + Vegas script — and
     // list the reasons biggest first, so the note leads with what actually moves the number.
-    const st=STATMAP[sk], vals=(rows||g).map(st.get), on=!!(ctx&&ctx.on);
+    const st=STATMAP[sk], vals=withInj(p, rows||g).map(st.get), on=!!(ctx&&ctx.on);
     const at=(scale, per)=>{ const m=calMp(modelProb(vals, line, st.kind, scale, CAL[sk], per)); return m? (side==='over'? m.over : m.under) : null; };
     const pAll=on? at(ctx.scale, ctx.per) : model, pNoSnap=on? at(ctx.base!=null? ctx.base : ctx.scale, null) : model, pNone=at(1, null);
     const parts=[], histGap=raw-(pNone!=null? pNone : model);
@@ -2631,9 +2637,9 @@ function generateDigest(){
       if(line < (sk==='pass_yds'?150 : st.kind==='yards'?30 : 3.5)) return;
       substantive=true;
       if(out) return;
-      const fam=statFamily(sk,p.p), usage=usageOf(p.u), cs=contextScale(fam, hist, gamePts, gameSpr, defRatioFor(opp,p.p,sk), usage);
+      const fam=statFamily(sk,p.p), usage=injOn(p,sk)? null : usageOf(p.u), cs=contextScale(fam, hist, gamePts, gameSpr, defRatioFor(opp,p.p,sk), usage);
       const per=gamePer(cs.scale, usage, p.u&&p.u[0], p.g.map(g=>g[20]), fam);
-      const mp=calMp(modelProb(vals, line, st.kind, cs.scale, CAL[sk], per)); if(!mp) return;
+      const mp=calMp(modelProb(withInj(p,p.g).map(st.get), line, st.kind, cs.scale, CAL[sk], per)); if(!mp) return;
       const tc=trapCheck(p, sk, line, 'over', mp, Object.assign(cs, {on:true, opp, usage, per}), p.g);
       cands.push({p, sk, line, prob:mp.over, neff:mp.neff, opp, trap:tc.trap, raw:tc.raw, reasons:tc.reasons});
     });
@@ -2693,8 +2699,8 @@ function weekTopPicks(n){
     stats.forEach(sk=>{ const st=STATMAP[sk]; if(!st) return;
       const vals=p.g.map(st.get), line=seedLine(vals);
       if(line < (sk==='pass_yds'?150 : st.kind==='yards'?30 : 3.5)) return;
-      const fam=statFamily(sk,p.p), usage=usageOf(p.u), cs=contextScale(fam,hist,gamePts,gameSpr,defRatioFor(opp,p.p,sk),usage);
-      const mp=calMp(modelProb(vals,line,st.kind,cs.scale,CAL[sk],gamePer(cs.scale,usage,p.u&&p.u[0],p.g.map(g=>g[20]),fam))); if(!mp||mp.neff<6) return;
+      const fam=statFamily(sk,p.p), usage=injOn(p,sk)? null : usageOf(p.u), cs=contextScale(fam,hist,gamePts,gameSpr,defRatioFor(opp,p.p,sk),usage);
+      const mp=calMp(modelProb(withInj(p,p.g).map(st.get),line,st.kind,cs.scale,CAL[sk],gamePer(cs.scale,usage,p.u&&p.u[0],p.g.map(g=>g[20]),fam))); if(!mp||mp.neff<6) return;
       if(!best||mp.over>best.prob) best={p, sk, line, prob:mp.over, label:STATMAP[sk].label, opp, home, date:wg.date};
     });
     if(best) out.push(best);

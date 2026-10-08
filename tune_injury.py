@@ -23,8 +23,9 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import build as B  # noqa: E402
 
 STATS = {"rush": ("rush_yds", "rush_att"), "rec": ("rec", "rec_yds")}
-GRID_LAM = (0.5, 0.75, 1.0, 1.25)
-GRID_EMP = (0.0, 1.0, 2.0)
+GRID_LAM = (0.25, 0.5, 0.75, 1.0)
+GRID_EMP = (0.0, 1.0)
+STARTER = 0.40       # "a starter out": he had 40%+ of the group's work the game before
 OUT_SHARE = 0.20
 
 
@@ -54,7 +55,7 @@ def main():
             by_key[B._gkey(r)].append((pl, r))
     start = seasons[1] if len(seasons) > 1 else seasons[0]
 
-    # score[(config, line choice, fam, half)] = [sum, n]
+    # score[(config, line choice, fam, half, stratum)] = [sum, n]
     score = collections.defaultdict(lambda: [0.0, 0])
     n_cases = collections.Counter()
     examples = []
@@ -78,6 +79,7 @@ def main():
                         and r[vi] / tot >= OUT_SHARE]
                 if not outs:
                     continue
+                top_out = max(r[vi] / tot for q, r in grp_prev if q in outs)
                 acts = [q for q, _ in by_key[key] if q["p"] in cfg["pos"]]
                 members = outs + acts
                 out_ids = {o["id"] for o in outs}
@@ -100,7 +102,10 @@ def main():
                                     r[i] += v
                             rr.append(r)
                         rebuilt[(lam, w)] = rr
-                n_cases[fam] += 1
+                heir = bool(B.nmu_adds(members, out_ids, pos_eff, before=(row[0], row[1]), lam=1.0).get(pl["id"]))
+                strata = ["all"] + (["heirs"] if heir else []) + (["heirs, starter out"] if heir and top_out >= STARTER else [])
+                for st_ in strata:
+                    n_cases[(fam, st_)] += 1
                 for sk in STATS[fam]:
                     kind = B.stat_kind(sk)
                     vals = [B.stat_value(sk, r) for r in prior]
@@ -122,10 +127,11 @@ def main():
                             if ll is None:
                                 continue
                             for h in (half, "all"):
-                                s = score[(name, lc, fam, h)]
-                                s[0] += ll
-                                s[1] += 1
-                    if sk in ("rush_yds", "rec_yds") and len(examples) < 12 and row[0] == seasons[-1]:
+                                for st_ in strata:
+                                    s = score[(name, lc, fam, h, st_)]
+                                    s[0] += ll
+                                    s[1] += 1
+                    if sk in ("rush_yds", "rec_yds") and heir and top_out >= STARTER and len(examples) < 14 and row[0] == seasons[-1]:
                         line = B.seed_line(vals)
                         examples.append(f"{pl['n']} {row[0]} wk{row[1]} {sk}: actual {actual}, line {line} | "
                                         f"over: plain {B.model_prob(vals, line, kind, 1.0)['over']:.2f}, "
@@ -134,16 +140,17 @@ def main():
 
     print(f"cases: {dict(n_cases)}")
     for fam in B.NMU:
-        for lc in ("plain line", "rebuilt line"):
-            print(f"\n[{fam} | {lc}]  mean log loss (lower is better): all / odd weeks / even weeks")
-            names = sorted({k[0] for k in score if k[2] == fam and k[1] == lc},
-                           key=lambda nm: score[(nm, lc, fam, "all")][0] / max(1, score[(nm, lc, fam, "all")][1]))
-            for nm in names:
-                cells = []
-                for h in ("all", "odd", "even"):
-                    s, c = score[(nm, lc, fam, h)]
-                    cells.append(f"{s / c:.4f} (n={c})" if c else "-")
-                print(f"  {nm:24s} " + "  ".join(cells))
+        for st_ in ("all", "heirs", "heirs, starter out"):
+            for lc in ("plain line", "rebuilt line"):
+                print(f"\n[{fam} | {st_} | {lc}]  mean log loss (lower is better): all / odd weeks / even weeks")
+                names = sorted({k[0] for k in score if k[2] == fam and k[1] == lc and k[4] == st_},
+                               key=lambda nm: score[(nm, lc, fam, "all", st_)][0] / max(1, score[(nm, lc, fam, "all", st_)][1]))
+                for nm in names:
+                    cells = []
+                    for h in ("all", "odd", "even"):
+                        s, c = score[(nm, lc, fam, h, st_)]
+                        cells.append(f"{s / c:.4f} (n={c})" if c else "-")
+                    print(f"  {nm:24s} " + "  ".join(cells))
     print("\nexamples (latest season):")
     for e in examples:
         print("  " + e)

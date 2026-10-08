@@ -768,6 +768,10 @@ NMU_LAMBDA = 1.0      # share of the out players' volume handed to the active te
 NMU_EMP = 1.0         # weight of each game the out player missed, against the same-game split
 NMU_EMP_GAMES = 4     # at most this many such games count
 NMU_EFF_K = 20.0      # carries / targets of the position's average mixed into a player's per-carry rates
+NMU_MIN_SHARE = 0.10  # an heir needs this share of his group's work in his last 3 games (no fullback takes a starter's carries)
+# who inherits whose work: a back's carries go to backs; a receiver's targets to receivers and tight ends
+NMU_HEIRS = {"rush": {"RB": ("RB",), "FB": ("RB",)},
+             "rec": {"WR": ("WR", "TE"), "TE": ("TE", "WR"), "RB": ("RB",), "FB": ("RB",)}}
 OUT_RE = re.compile(r"\bout\b|doubtful|injured reserve|suspen|physically unable|\bpup\b|non-football", re.I)
 OUT_ROSTER = {"RES", "PUP", "NFI", "SUS"}
 
@@ -827,27 +831,16 @@ def nmu_adds(members, out_ids, pos_eff, before=None, lam=None, w_emp=None):
             continue
         rows = {m["id"]: {_gkey(r): r for r in m["g"] if before is None or (r[0], r[1]) < before}
                 for m in outs + acts}
-        with_out = set()
-        for o in outs:
-            with_out |= {k for k, r in rows[o["id"]].items() if r[vi] > 0}
-        # how the active players split the work in the latest games none of the out players played
-        emp, n_emp = {}, {}
-        for a in acts:
-            num = den = 0.0
-            n = 0
-            for k in sorted(rows[a["id"]], reverse=True):
-                if k in with_out:
-                    continue
-                d = sum(rows[b["id"]][k][vi] for b in acts if k in rows[b["id"]])
-                if d <= 0:
-                    continue
-                num += rows[a["id"]][k][vi]
-                den += d
-                n += 1
-                if n >= NMU_EMP_GAMES:
-                    break
-            if den > 0:
-                emp[a["id"]], n_emp[a["id"]] = num / den, n
+        everyone = outs + acts
+
+        def share(a, keys):
+            """a's share of the group's volume over these games."""
+            num = sum(rows[a["id"]][k][vi] for k in keys if k in rows[a["id"]])
+            den = sum(rows[b["id"]][k][vi] for k in keys for b in everyone if k in rows[b["id"]])
+            return num / den if den > 0 else 0.0
+
+        # only players with a real role inherit: NMU_MIN_SHARE+ of the work in their last 3 games
+        role = {a["id"]: share(a, sorted(rows[a["id"]])[-3:]) for a in acts}
         # each active player's own rates per carry / target, shrunk toward his position's
         eff = {}
         for a in acts:
@@ -856,26 +849,36 @@ def nmu_adds(members, out_ids, pos_eff, before=None, lam=None, w_emp=None):
             prior = pos_eff.get((a["p"], fam), {})
             eff[a["id"]] = {k: (sum(r[k] for r in g) + NMU_EFF_K * prior.get(k, 0.0)) / (v + NMU_EFF_K)
                             for k in cfg["stats"]}
-        for k in with_out:
-            vac = sum(rows[o["id"]][k][vi] for o in outs if k in rows[o["id"]])
-            here = [a for a in acts if k in rows[a["id"]]]
-            if vac <= 0 or not here:
+        for o in outs:
+            heirs = [a for a in acts if a["p"] in NMU_HEIRS[fam].get(o["p"], ()) and role[a["id"]] >= NMU_MIN_SHARE]
+            if not heirs:
                 continue
-            tot = sum(rows[a["id"]][k][vi] + 0.5 for a in here)
-            raw = {}
-            for a in here:
-                prop = (rows[a["id"]][k][vi] + 0.5) / tot
-                wn = w_emp * n_emp.get(a["id"], 0)
-                raw[a["id"]] = (prop + wn * emp.get(a["id"], 0.0)) / (1.0 + wn)
-            z = sum(raw.values()) or 1.0
-            for a in here:
-                dv = lam * vac * raw[a["id"]] / z
-                if dv <= 0:
+            played = {k for k, r in rows[o["id"]].items() if r[vi] > 0}
+            # how the heirs split the work in their latest games without him (empirical)
+            emp, n_emp = {}, 0
+            gone = sorted({k for a in heirs for k in rows[a["id"]]} - set(rows[o["id"]]), reverse=True)[:NMU_EMP_GAMES]
+            tot = sum(rows[a["id"]][k][vi] for k in gone for a in heirs if k in rows[a["id"]])
+            if tot > 0:
+                n_emp = len(gone)
+                emp = {a["id"]: sum(rows[a["id"]][k][vi] for k in gone if k in rows[a["id"]]) / tot for a in heirs}
+            for k in played:
+                here = [a for a in heirs if k in rows[a["id"]]]
+                if not here:
                     continue
-                add = adds.setdefault(a["id"], {}).setdefault(k, {})
-                add[vi] = add.get(vi, 0.0) + dv
-                for st, rate in eff[a["id"]].items():
-                    add[st] = add.get(st, 0.0) + dv * rate
+                vac = rows[o["id"]][k][vi]
+                tv = sum(rows[a["id"]][k][vi] for a in here)
+                wn = w_emp * n_emp
+                raw = {a["id"]: ((rows[a["id"]][k][vi] / tv if tv > 0 else 1.0 / len(here))
+                                 + wn * emp.get(a["id"], 0.0)) / (1.0 + wn) for a in here}
+                z = sum(raw.values()) or 1.0
+                for a in here:
+                    dv = lam * vac * raw[a["id"]] / z
+                    if dv <= 0:
+                        continue
+                    add = adds.setdefault(a["id"], {}).setdefault(k, {})
+                    add[vi] = add.get(vi, 0.0) + dv
+                    for st, rate in eff[a["id"]].items():
+                        add[st] = add.get(st, 0.0) + dv * rate
     return adds
 
 

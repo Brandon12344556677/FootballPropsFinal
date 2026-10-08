@@ -19,7 +19,7 @@ jobs:
         with:
           python-version: "3.12"
       - name: Backtest
-        run: timeout 25m python tune_injury.py 2>&1 | grep -v "^  stats\|^  snaps\|Downloading" | tail -80 || true
+        run: timeout 25m python tune_injury.py 2>&1 | grep -v "^  stats\|^  snaps\|Downloading" | tail -150 || true
       - name: NFL build with next man up (not committed)
         run: |
           timeout 10m python build.py > /tmp/b.log 2>&1; echo "exit $?"
