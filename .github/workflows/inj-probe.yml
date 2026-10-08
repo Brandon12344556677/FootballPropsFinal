@@ -1,0 +1,31 @@
+name: Injury feed check (temporary)
+on:
+  push:
+    branches: [claude/upbeat-dijkstra-rktnaf]
+    paths: [.github/workflows/inj-probe.yml]
+permissions:
+  contents: read
+jobs:
+  check:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: |
+          python - <<'PY'
+          import collections, news, build as B
+          inj = news.espn_injuries("football/nfl") or []
+          print("ESPN entries:", len(inj), collections.Counter(x["status"] for x in inj).most_common(12))
+          for x in inj:
+              if "smith" in x["name"].lower() or "goedert" in x["name"].lower() or "wicks" in x["name"].lower():
+                  print("  ESPN", x)
+          rows = B.fetch_csv(B.INJ_URL.format(year=B.SEASON), "injuries") or []
+          wk = max(int(r["week"]) for r in rows if (r.get("week") or "").isdigit()) if rows else None
+          print("nflverse injuries rows", len(rows), "latest week", wk)
+          for r in rows:
+              if (r.get("full_name") or "").lower() in ("devonta smith", "dallas goedert") and r.get("week") == str(wk):
+                  print("  NFLVERSE", {k: r.get(k) for k in ("full_name", "team", "week", "report_status", "practice_status", "report_primary_injury", "date_modified")})
+          print("nflverse latest-week report statuses:", collections.Counter(r.get("report_status") or "(none)" for r in rows if r.get("week") == str(wk)).most_common(), "| practice:", collections.Counter(r.get("practice_status") or "(none)" for r in rows if r.get("week") == str(wk)).most_common())
+          PY
