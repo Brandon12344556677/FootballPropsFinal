@@ -85,8 +85,8 @@ class Rebuild(unittest.TestCase):
         self.assertEqual(B.hold_reason(self.hall, "rush_yds"), "Breece Hall (out)")   # he isn't playing
 
     def test_held_props_stay_off_the_lists(self):
-        mk = lambda prob, hd: {"prob": prob, "neff": 9, "price": 40, "hd": hd, "lists": ""}
-        picks = [mk(0.97, "X (questionable)"), mk(0.80, None), mk(0.75, "Y (doubtful)")]
+        mk = lambda prob, hd, pid: {"prob": prob, "neff": 9, "price": 60, "hd": hd, "lists": "", "gid": "g", "pid": pid, "stat": "rec"}
+        picks = [mk(0.97, "X (questionable)", "a"), mk(0.78, None, "b"), mk(0.77, "Y (doubtful)", "c")]
         B.assign_lists(picks)
         self.assertEqual([p["lists"] for p in picks], ["", "TV", ""])
 

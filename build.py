@@ -1479,15 +1479,20 @@ VALUE_N = 200           # a safety cap only. At 50 it bound in busy weeks (NFL w
 # to give the prop at least a 30% chance (an ask of 30c or more) AND the model has to
 # be at least 15 points above that -- so a 30c ask needs a 45% model chance, a 50c ask
 # needs 65%. The price floor is what keeps penny longshots off the list.
+# And no more than 20 points above: on the NFL record (97 graded Value picks to week 4,
+# 2026) picks 15-20 points up hit 56% (+7.3 units, n=43) while bigger gaps hit 42%
+# (-6.5 units, n=54) -- a gap that big has more often been the model missing a role change
+# the market already priced than a real edge.
 VALUE_MIN_PRICE = 0.30
 VALUE_MIN_EDGE = 0.15
+VALUE_MAX_EDGE = 0.20
 
 
 def value_qualifies(prob, price):
     """prob and price are fractions. price is what you'd pay for this side."""
     if price is None:
         return False
-    return price >= VALUE_MIN_PRICE and prob - price >= VALUE_MIN_EDGE
+    return price >= VALUE_MIN_PRICE and VALUE_MIN_EDGE <= prob - price <= VALUE_MAX_EDGE + 1e-9
 
 
 BT_STATS = {"QB": ["pass_yds", "pass_td", "pass_cmp"], "RB": ["rush_yds", "rush_rec_yds", "rec"],
@@ -1546,17 +1551,31 @@ def assign_lists(picks, held=0):
     ranked = sorted((p for p in picks if p["prob"] >= 0.5), key=lambda p: (-p["prob"], -p["neff"]))
     for p in ranked[:TOP_N - held]:
         p["lists"] += "T"
+    # The model's widest gap over the price on any rung of a player-prop (one side): over
+    # VALUE_MAX_EDGE on one rung, it's likely missing something about him this week, so no rung
+    # of that prop makes Value (on the record, 15-20 point rungs of such props didn't pay either).
+    widest = {}
+    for p in picks:
+        if p.get("price") is not None:
+            k = (p["gid"], p["pid"], p["stat"], p.get("side"))
+            widest[k] = max(widest.get(k, -1.0), p["prob"] - p["price"] / 100.0)
     vals = []
     for p in picks:
         pr = p.get("price")
         if pr is None or p.get("th") or p["neff"] < VALUE_MIN_NEFF:
             continue
         price = pr / 100.0
-        if value_qualifies(p["prob"], price):
+        if value_qualifies(p["prob"], price) and widest[(p["gid"], p["pid"], p["stat"], p.get("side"))] <= VALUE_MAX_EDGE + 1e-9:
             vals.append((p["prob"] - price, p))
     vals.sort(key=lambda x: -x[0])
-    for _, p in vals[:VALUE_N]:
+    seen, n = set(), 0          # one line per player-prop: a ladder's rungs are one opinion, not four picks
+    for _, p in vals:
+        k = (p["gid"], p["pid"], p["stat"])
+        if k in seen or n >= VALUE_N:
+            continue
+        seen.add(k)
         p["lists"] += "V"
+        n += 1
 
 
 def kalshi_board(markets, names, sg_by_slug, picks=(), props=None):

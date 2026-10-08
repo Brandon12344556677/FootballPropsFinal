@@ -669,9 +669,9 @@ table td,table th,thead th,tbody td,.edgetbl td,.edgetbl th,.caltbl td,.caltbl t
       <div class="vrhead">What counts as a value spot — both rules have to be true</div>
       <ol class="vrlist">
         <li><span class="vrnum">1</span><span class="vrtxt"><b>The market gives it at least a 30% chance.</b> The price you'd pay has to be <b>30¢ or more</b>. <span class="vrwhy">This is the rule that keeps penny longshots off the list — a 6¢ ask against an 11% model chance looks like a huge edge in percentage terms and is still a bad bet.</span></span></li>
-        <li><span class="vrnum">2</span><span class="vrtxt"><b>Our model puts it at least 15 points higher.</b> <span class="vreg">30¢ ask → needs 45%</span> · <span class="vreg">50¢ → 65%</span> · <span class="vreg">70¢ → 85%</span>. <span class="vrwhy">The gap between the two, in percentage points, is the <b>edge</b> shown in the Best price column.</span></span></li>
+        <li><span class="vrnum">2</span><span class="vrtxt"><b>Our model puts it 15 to 20 points higher.</b> <span class="vreg">30¢ ask → needs 45–50%</span> · <span class="vreg">50¢ → 65–70%</span> · <span class="vreg">70¢ → 85–90%</span>. <span class="vrwhy">Not more: on the record so far, NFL picks 15–20 points up hit 56% while bigger gaps hit 42% — a gap that big has more often been the model missing a role change the market already knew. So if any line of a prop is more than 20 points up, that whole prop is left off.</span> <span class="vrwhy">The gap between the two, in percentage points, is the <b>edge</b> shown in the Best price column.</span></span></li>
       </ol>
-      <div class="vrfoot">Both rules are tested against the <b>best price in the row</b> — the cheaper of the live Polymarket US price and Kalshi's, the price you'd actually pay — so the edge shown is always the edge it qualified on, and a prop drops off the list as soon as the price moves against it. A price only counts when at least <b>$25</b> is offered at it (or within 2¢) — in a near-empty market your bet would move the price — so a thin price is skipped for the other exchange's, or the prop is left off. Polymarket's global book (shown as <span class="pmdim">board 46¢</span>) doesn't count: US users can't trade it. Both rules are checked on the <b>over</b> and the <b>under</b> of every market separately, so either side can qualify, and a prop also needs <b>6+ effective games</b> of history behind it. Everything clearing both rules is listed — no fixed top 25 — ranked by that edge, and the list re-checks itself about once a minute. Props <b>waiting on injury news</b> stay off this list and Top 25 Surest: when the player, or a teammate whose snaps decide his role (a quarterback for the whole passing game), is questionable or doubtful — until ESPN shows him active or out (on game day, the inactives 90 minutes before kickoff). Ruled out: his teammates' props come back, with the model's numbers.</div>
+      <div class="vrfoot">Both rules are tested against the <b>best price in the row</b> — the cheaper of the live Polymarket US price and Kalshi's, the price you'd actually pay — so the edge shown is always the edge it qualified on, and a prop drops off the list as soon as the price moves against it. A price only counts when at least <b>$25</b> is offered at it (or within 2¢) — in a near-empty market your bet would move the price — so a thin price is skipped for the other exchange's, or the prop is left off. Polymarket's global book (shown as <span class="pmdim">board 46¢</span>) doesn't count: US users can't trade it. One line per player-prop (the rung with the biggest edge). Both rules are checked on the <b>over</b> and the <b>under</b> of every market separately, so either side can qualify, and a prop also needs <b>6+ effective games</b> of history behind it. Everything clearing both rules is listed — no fixed top 25 — ranked by that edge, and the list re-checks itself about once a minute. Props <b>waiting on injury news</b> stay off this list and Top 25 Surest: when the player, or a teammate whose snaps decide his role (a quarterback for the whole passing game), is questionable or doubtful — until ESPN shows him active or out (on game day, the inactives 90 minutes before kickoff). Ruled out: his teammates' props come back, with the model's numbers.</div>
     </div>
     <div id="valuebody"><p class="mktnote">The board scan fills this in. <span class="mktmuted">Needs the hosted website (the Polymarket API can't be reached from a local file).</span></p></div>
   </div>
@@ -894,7 +894,7 @@ table td,table th,thead th,tbody td,.edgetbl td,.edgetbl th,.caltbl td,.caltbl t
     <div class="mktmuted" style="margin:-4px 0 12px;display:flex;gap:8px 18px;align-items:center;flex-wrap:wrap;font-size:13px;line-height:1.5">
       <span style="text-transform:uppercase;letter-spacing:.6px;font-weight:700;font-family:var(--dispers)">Lists key:</span>
       <span><span class="listchip T">T</span> = Top 25 Surest — the week's 25 highest-confidence model picks</span>
-      <span><span class="listchip V">V</span> = Value — the cheaper of Polymarket and Kalshi priced it at 30¢+ and the model was 15+ points higher, over <i>or</i> under</span>
+      <span><span class="listchip V">V</span> = Value — the cheaper of Polymarket and Kalshi priced it at 30¢+ and the model was 15+ points higher (15–20 since October 8, 2026), over <i>or</i> under</span>
     </div>
     <div class="chartwrap"><table class="edgetbl" id="pktbl"></table></div>
     <div style="margin-top:10px;display:flex;gap:10px;align-items:center;flex-wrap:wrap"><button id="pkmore" class="btn ghost" hidden>Show more</button><button id="pkall" class="btn ghost" hidden>Show all</button><span class="mktmuted" id="pkcountb"></span></div>
@@ -2031,12 +2031,15 @@ function liveVenueFor(r){
 /* The Value bar, tested on each side of a market separately: the market itself has to
    give the prop at least a 30% chance (an ask of 30¢ or more) AND the model has to be
    at least 15 points above that — a 30¢ ask needs a 45% model chance, a 50¢ ask needs
-   65%. The price floor is what keeps penny longshots off the list.
+   65%. The price floor is what keeps penny longshots off the list. And no more than 20 points
+   above: on the NFL record a bigger gap has more often been the model missing a role change
+   the market already priced (VALUE_MAX_EDGE in build.py).
    Mirrored in build.py's value_qualifies() so the recorded picks match the board. */
-const VALUE_MIN_PRICE=0.30, VALUE_MIN_EDGE=0.15, VALUE_MAX=200;   // matches VALUE_N in build.py
+const VALUE_MIN_PRICE=0.30, VALUE_MIN_EDGE=0.15, VALUE_MAX_EDGE=0.20, VALUE_MAX=200;   // matches VALUE_N in build.py
 function valueQualifies(prob, price){
   if(price==null) return false;
-  return price>=VALUE_MIN_PRICE && prob-price>=VALUE_MIN_EDGE;
+  const e=prob-price;
+  return price>=VALUE_MIN_PRICE && e>=VALUE_MIN_EDGE && e<=VALUE_MAX_EDGE+1e-9;
 }
 let edgeRows=[], valueRows=[], valueCands=[], lockedRows=[], edgeSort={key:'prob',dir:-1};
 const KICKED_MSG=`<p class="mktnote">🔒 Every game on the board has kicked off. Those picks are locked in as recorded before kickoff and get graded into <b>Past picks</b> once the final box score is in — the board fills back in when the next games' props post.</p>`;
@@ -2068,16 +2071,23 @@ function lockedRow(lp, g, sg){
     pp:lp.pp==null? null : lp.pp/100, kp:lp.kp==null? null : lp.kp/100, vn:lp.vn||null};
 }
 function computeValueRows(){
-  const out=[];
+  const out=[], priced=[], widest=new Map();
+  // The model's widest gap on any rung of a player-prop (one side): over VALUE_MAX_EDGE on one
+  // rung, it's likely missing something about him this week, so no rung of that prop qualifies.
+  const pk=c=>c.pl.id+'|'+c.sk+'|'+c.side;
   valueCands.forEach(c=>{
-    const e=valuePrice(c); if(!e || e.thin) return;      // thin: under $25 offered near the price
-    if(!valueQualifies(c.prob, e.px)) return;
+    const e=valuePrice(c); if(!e) return; priced.push([c, e]);
+    widest.set(pk(c), Math.max(widest.has(pk(c))? widest.get(pk(c)) : -1, c.prob-e.px));
+  });
+  priced.forEach(([c, e])=>{
+    if(e.thin) return;      // thin: under $25 offered near the price
+    if(!valueQualifies(c.prob, e.px) || widest.get(pk(c))>VALUE_MAX_EDGE+1e-9) return;
     out.push(Object.assign({}, c, {vprice:e.px, vlive:e.live, vvn:e.vn, vedge:c.prob-e.px, ev:c.prob/e.px-1}));
   });
   out.sort((a,b)=>b.vedge-a.vedge);
   const rows=[], seen=new Set();
   for(const r of out){
-    const k=mkOf(r); if(seen.has(k)) continue; seen.add(k);   // one side per market
+    const k=r.pl.id+'|'+r.sk; if(seen.has(k)) continue; seen.add(k);   // one line per player-prop: a ladder's rungs are one opinion
     rows.push(r); if(rows.length>=VALUE_MAX) break;
   }
   return rows;

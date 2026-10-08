@@ -312,8 +312,33 @@ class ListTests(unittest.TestCase):
     def tearDown(self):
         B.CAL = self._cal
 
-    def _pick(self, prob, lo, price=None, neff=12.0):
-        return {"prob": prob, "lo": lo, "hi": min(1, prob + 0.1), "neff": neff, "price": price, "lists": ""}
+    def _pick(self, prob, lo, price=None, neff=12.0, pid=None):
+        self._n = getattr(self, "_n", 0) + 1         # each fixture is its own player-prop unless told otherwise
+        return {"prob": prob, "lo": lo, "hi": min(1, prob + 0.1), "neff": neff, "price": price, "lists": "",
+                "gid": "g", "pid": pid or f"p{self._n}", "stat": "rec_yds"}
+
+    def test_value_caps_the_edge_at_20_points(self):
+        """A gap over 20 points has more often been the model missing what the market knows."""
+        ok = self._pick(0.70, 0.6, 50)               # 20 points up
+        too_big = self._pick(0.75, 0.65, 50)         # 25 points up
+        B.assign_lists([ok, too_big])
+        self.assertIn("V", ok["lists"])
+        self.assertNotIn("V", too_big["lists"])
+
+    def test_a_rung_over_20_points_takes_the_whole_prop_off(self):
+        """Over 20 points on one rung, the model is likely missing something about him: no rung lists."""
+        far = self._pick(0.80, 0.7, 55, pid="same")       # 25 points up
+        near = self._pick(0.68, 0.6, 50, pid="same")      # 18 points up, same player-prop
+        other = self._pick(0.68, 0.6, 50, pid="other")
+        B.assign_lists([far, near, other])
+        self.assertEqual([("V" in p["lists"]) for p in (far, near, other)], [False, False, True])
+
+    def test_value_takes_one_line_per_player_prop(self):
+        """A ladder's rungs (rec yards over 39.5, 49.5, 59.5) are one opinion: the biggest edge stays."""
+        rungs = [self._pick(0.66, 0.6, 50, pid="same"), self._pick(0.68, 0.6, 50, pid="same"),
+                 self._pick(0.67, 0.6, 50, pid="same")]
+        B.assign_lists(rungs)
+        self.assertEqual([("V" in p["lists"]) for p in rungs], [False, True, False])
 
     def test_assign_lists(self):
         picks = [self._pick(0.9, 0.8, 70), self._pick(0.7, 0.6, 65), self._pick(0.55, 0.45, 50),
