@@ -23,6 +23,7 @@ from zoneinfo import ZoneInfo
 import news   # pre-game news feeds, test mode
 import kalshi  # Kalshi prices, side by side with Polymarket's
 import depth   # enough money at the price? (thin-market filter)
+import holds   # props that wait for injury news
 
 TODAY = datetime.date.today()
 
@@ -747,9 +748,9 @@ def build_players(all_rows, roster, injuries, sched):
 # Next man up: a back or receiver ruled out this week leaves his carries (rushing) and
 # targets (receiving) to the teammates who play.
 #
-# Who's out: ESPN's injury report (Out / Doubtful / injured reserve, listed all week),
-# nflverse's official report (Out / Doubtful, posted late in the week) and the roster's
-# reserve lists (injured reserve, PUP, NFI, suspended).
+# Who's out: ESPN's injury report (Out / injured reserve, listed all week), nflverse's official
+# report (Out, posted late in the week) and the roster's reserve lists (injured reserve, PUP,
+# NFI, suspended). Questionable and doubtful players aren't settled yet: see holds below.
 #
 # How: each active teammate's past games are rebuilt as if the out player had sat them too.
 # In every game the out player played, the teammate gets a share of his volume: that game's
@@ -768,10 +769,8 @@ NMU = {"rush": {"pos": ("RB", "FB"), "vol": 9, "stats": (10, 11)},              
 # who takes over is often a surprise, so a confident full hand-off scored worse than ignoring the
 # injury. A quarter of a back's carries to his real backups scored best at realistic lines (heirs
 # of a starter out, log loss 0.480 -> 0.472, both halves of the season); for receivers no hand-off
-# helped (targets scatter), so it's off there. What matters most is the next rule: a starter newly
-# out makes his heirs' props a role change the model can't size, so they stay off Top 25 and Value.
+# helped (targets scatter), so it's off there.
 NMU_LAMBDA = {"rush": 0.25, "rec": 0.0}   # share of a newly-out player's work handed to his heirs
-NMU_STARTER = {"rush": 0.40, "rec": 0.25}  # "a starter": this share of the group's work in his last 3 games
 NMU_EMP = 1.0         # weight of each game the out player missed, against the same-game split
 NMU_EMP_GAMES = 4     # at most this many such games count
 NMU_EFF_K = 20.0      # carries / targets of the position's average mixed into a player's per-carry rates
@@ -779,35 +778,66 @@ NMU_MIN_SHARE = 0.10  # an heir needs this share of his group's work in his last
 # who inherits whose work: a back's carries go to backs; a receiver's targets to receivers and tight ends
 NMU_HEIRS = {"rush": {"RB": ("RB",), "FB": ("RB",)},
              "rec": {"WR": ("WR", "TE"), "TE": ("TE", "WR"), "RB": ("RB",), "FB": ("RB",)}}
-OUT_RE = re.compile(r"\bout\b|doubtful|injured reserve|suspen|physically unable|\bpup\b|non-football", re.I)
-DOUBT_RE = re.compile(r"questionable", re.I)   # may not play: enough to make his heirs' roles uncertain
+OUT_RE = re.compile(r"\bout\b|injured reserve|suspen|physically unable|\bpup\b|non-football", re.I)
 OUT_ROSTER = {"RES", "PUP", "NFI", "SUS"}
+
+# Holds (holds.py): until a questionable or doubtful player is settled (ESPN shows him Active or
+# Out; on game day that's the inactives, 90 minutes before kickoff), every prop of his, and these
+# props of his teammates, stay off Top 25 Surest and Value: his position -> {teammate's position:
+# stat families that wait}. A quarterback's status moves the whole passing game.
+HOLD_GROUP = {"QB": {"QB": ("pass", "rush", "rec"), "WR": ("rec",), "TE": ("rec",), "RB": ("rec",), "FB": ("rec",)},
+              "RB": {"RB": ("rush", "rec"), "FB": ("rush", "rec")},
+              "FB": {"RB": ("rush", "rec"), "FB": ("rush", "rec")},
+              "WR": {"WR": ("rec",), "TE": ("rec",), "RB": ("rec",), "FB": ("rec",)},
+              "TE": {"WR": ("rec",), "TE": ("rec",), "RB": ("rec",), "FB": ("rec",)}}
+# A teammate holds others only with a real role: NMU_MIN_SHARE+ of his group's volume (pass
+# attempts among quarterbacks, carries among backs, targets among receivers) in his last 3 games.
+ROLE_VOL = {"QB": (6, ("QB",)), "RB": (9, ("RB", "FB")), "FB": (9, ("RB", "FB")),
+            "WR": (13, ("WR", "TE", "RB", "FB")), "TE": (13, ("WR", "TE", "RB", "FB"))}
+FAMILIES = ("pass", "rush", "rec")
 
 
 def _inj_out(entry):
     inj = entry.get("inj")
-    return bool(inj and re.search(r"out|doubtful", (inj[0] or ""), re.I))
+    return bool(inj and OUT_RE.search(inj[0] or ""))
 
 
 def _gkey(r):
     return (r[0], r[1], r[2])          # season, week, opponent: one game of one team
 
 
-def injury_outs(players, espn=None, pattern=OUT_RE):
-    """ids of the backs and receivers out this week (see above); pattern=DOUBT_RE: the ones
-    questionable (ESPN or the official report), who may not play."""
+def _by_name(players):
     byname = {}
     for e in players:
         byname.setdefault(pkey(e["n"]), []).append(e)
-    if pattern is OUT_RE:
-        out = {e["id"] for e in players if _inj_out(e) or e.get("st") in OUT_ROSTER}
-    else:
-        out = {e["id"] for e in players if e.get("inj") and pattern.search(e["inj"][0] or "")}
+    return byname
+
+
+def injury_outs(players, espn=None):
+    """ids of the players out this week (see above)."""
+    byname = _by_name(players)
+    out = {e["id"] for e in players if _inj_out(e) or e.get("st") in OUT_ROSTER}
     for x in espn or []:
-        if pattern.search(x.get("status") or ""):
+        if OUT_RE.search(x.get("status") or ""):
             c = byname.get(pkey(x.get("name") or ""), [])
             if len(c) == 1:            # a name two players share is left alone
                 out.add(c[0]["id"])
+    return out
+
+
+def injury_unsure(players, espn=None):
+    """{id: "questionable" / "doubtful"}: the players who may not play. ESPN's report decides
+    when it's available: it keeps updating through game day (Active once cleared, Out once ruled
+    out). The official report (nflverse) only when ESPN can't be read."""
+    if espn is None:
+        return {e["id"]: holds.label(e["inj"][0]) for e in players
+                if e.get("inj") and holds.status(e["inj"][0]) == "unsure"}
+    byname, out = _by_name(players), {}
+    for x in espn:
+        if holds.status(x.get("status")) == "unsure":
+            c = byname.get(pkey(x.get("name") or ""), [])
+            if len(c) == 1:
+                out[c[0]["id"]] = holds.label(x["status"])
     return out
 
 
@@ -909,71 +939,71 @@ def team_games(sched):
     return out
 
 
-def role_changes(members, out_ids, doubt_ids=(), games=None):
-    """{player id: {fam, ...}}: the heirs (NMU_HEIRS, NMU_MIN_SHARE+ of the work) of a starter
-    (NMU_STARTER+ of his group's work in his last 3 games with the team) who is out, or questionable
-    and may not play. Their props in that family are a role change the game log can't size, so they
-    stay off Top 25 Surest and Value — until most of the heir's game log, as the model weighs it
-    (recent games count most), comes from weeks the starter didn't play: a backup who has started
-    for a game or two still looks like a backup to the model, and so does one who just joined the
-    team (his games for another team say nothing about this role). games: the team's games
-    (team_games); shares of the work count only those, so a player who hasn't played for the team
-    has no role in it yet (None: every game counts)."""
+def team_holds(members, unsure, out_ids, games=None):
+    """{player id: {family: [why, ...]}} for one team's players (see HOLD_GROUP): every family of
+    a player who is out (he isn't playing) or unsure ({id: label}), and the HOLD_GROUP families of
+    the teammates of an unsure player with a real role (ROLE_VOL). games: the team's games
+    (team_games); shares count only those, so a player who hasn't played for the team yet has no
+    role in it (None: every game counts)."""
+    rows = {m["id"]: {_gkey(r): r for r in m["g"]} for m in members}
+
+    def share(m):
+        vi, pos = ROLE_VOL[m["p"]]
+        grp = [b for b in members if b["p"] in pos]
+        keys = sorted(k for k in rows[m["id"]] if games is None or k in games)[-3:]
+        den = sum(rows[b["id"]][k][vi] for k in keys for b in grp if k in rows[b["id"]])
+        return sum(rows[m["id"]][k][vi] for k in keys) / den if den > 0 else 0.0
+
     out = {}
-    for fam, cfg in NMU.items():
-        vi = cfg["vol"]
-        grp = [m for m in members if m["p"] in cfg["pos"]]
-        rows = {m["id"]: {_gkey(r): r for r in m["g"]} for m in grp}
 
-        def share(m):
-            keys = sorted(k for k in rows[m["id"]] if games is None or k in games)[-3:]
-            den = sum(rows[b["id"]][k][vi] for k in keys for b in grp if k in rows[b["id"]])
-            return sum(rows[m["id"]][k][vi] for k in keys) / den if den > 0 else 0.0
+    def hold(pid, fams, why):
+        for f in fams:
+            w = out.setdefault(pid, {}).setdefault(f, [])
+            if why not in w:
+                w.append(why)
 
-        def without_him(a, s):
-            """Share of a's model weight from weeks s didn't play at all (the absence already in
-            a's log). A week s played, a was with him or on another team: neither shows it."""
-            weeks = {k[:2] for k in rows[s["id"]]}
-            keys = sorted(rows[a["id"]])[-MODEL["maxGames"]:]
-            w = [0.5 ** ((len(keys) - 1 - i) / MODEL["halfLife"]) for i in range(len(keys))]
-            return sum(wi for wi, k in zip(w, keys) if k[:2] not in weeks) / sum(w) if w else 1.0
-
-        starters = [m for m in grp if (m["id"] in out_ids or m["id"] in doubt_ids)
-                    and m["g"] and share(m) >= NMU_STARTER[fam]]
-        for s in starters:
-            for a in grp:
-                if (a["id"] not in out_ids and a["id"] != s["id"] and a["p"] in NMU_HEIRS[fam].get(s["p"], ())
-                        and share(a) >= NMU_MIN_SHARE and without_him(a, s) < 0.5):
-                    out.setdefault(a["id"], set()).add(fam)
+    for m in members:
+        if m["id"] in out_ids:
+            hold(m["id"], FAMILIES, f"{m['n']} (out)")
+        elif m["id"] in unsure:
+            hold(m["id"], FAMILIES, f"{m['n']} ({unsure[m['id']]})")
+    for u in members:
+        if u["id"] not in unsure or u["p"] not in HOLD_GROUP or share(u) < NMU_MIN_SHARE:
+            continue
+        for a in members:
+            fams = HOLD_GROUP[u["p"]].get(a["p"])
+            if fams and a["id"] != u["id"] and a["id"] not in out_ids:
+                hold(a["id"], fams, f"{u['n']} ({unsure[u['id']]})")
     return out
 
 
 def compute_injury_boosts(players, espn=None, sched=None):
-    """Next man up for this week (see above): entry['inj_add'] with the per-game additions and
-    entry['inj_boost'] = {"rush"/"rec": recent volume with / without them, "role": [families a
-    starter's absence or doubtful status leaves to him], "why": who} on the teammates of anyone out
-    or questionable. sched: load_schedule's games, to tell a team's games from a newcomer's games
-    elsewhere. In place. Returns (players out, players questionable, teammates adjusted)."""
+    """Next man up and holds for this week (see above), in place: entry['inj_add'] with the
+    per-game additions and entry['inj_boost'] = {"rush"/"rec": recent volume with / without
+    them, "why": who's out; "hold": [stat families waiting on news], "hw": on whom}. sched:
+    load_schedule's games, to tell a team's games from a newcomer's games elsewhere. Returns
+    (players out, players questionable or doubtful, teammates handed work, players held)."""
     outs = injury_outs(players, espn)
-    doubts = injury_outs(players, espn, DOUBT_RE) - outs
+    unsure = {k: v for k, v in injury_unsure(players, espn).items() if k not in outs}
     pos_eff = position_eff(players)
     tg = team_games(sched)
     teams = {}
     for e in players:
         if e.get("t"):
             teams.setdefault(e["t"], []).append(e)
-    adjusted = 0
+    adjusted = held = 0
     for team, members in teams.items():
-        out_ids = {m["id"] for m in members if m["id"] in outs and m["p"] in ("RB", "FB", "WR", "TE")}
-        doubt_ids = {m["id"] for m in members if m["id"] in doubts and m["p"] in ("RB", "FB", "WR", "TE")}
-        if not out_ids and not doubt_ids:
+        team_out = {m["id"] for m in members if m["id"] in outs}
+        team_unsure = {m["id"]: unsure[m["id"]] for m in members if m["id"] in unsure}
+        if not team_out and not team_unsure:
             continue
+        out_ids = {m["id"] for m in members if m["id"] in team_out and m["p"] in ("RB", "FB", "WR", "TE")}
         adds = nmu_adds(members, out_ids, pos_eff) if out_ids else {}
-        roles = role_changes(members, out_ids, doubt_ids, tg.get(team))
+        hl = team_holds(members, team_unsure, team_out, tg.get(team))
         info = {m["id"]: (m["n"], m["p"]) for m in members}
         for m in members:
-            a, rc = adds.get(m["id"]) or {}, roles.get(m["id"]) or set()
-            if not a and not rc:
+            a, h = adds.get(m["id"]) or {}, hl.get(m["id"]) or {}
+            if not a and not h:
                 continue
             b = {}
             if a:
@@ -985,15 +1015,16 @@ def compute_injury_boosts(players, espn=None, sched=None):
                     base = sum(r[cfg["vol"]] for r in recent)
                     extra = sum(a.get(_gkey(r), {}).get(cfg["vol"], 0.0) for r in recent)
                     b[fam] = round(1.0 + extra / base, 2) if base > 0 else 1.0   # set either way: inj_on reads it
-            if rc:
-                b["role"] = sorted(rc)
-            fams = set(b) & set(NMU) | rc
-            b["why"] = ", ".join(f"{info[o][0]} ({'out' if o in out_ids else 'questionable'})"
-                                 for o in sorted(out_ids | doubt_ids, key=lambda x: info[x][0])
-                                 if any(info[o][1] in NMU[f]["pos"] for f in fams))[:90]
+                fams = set(b) & set(NMU)
+                b["why"] = ", ".join(f"{info[o][0]} (out)" for o in sorted(out_ids, key=lambda x: info[x][0])
+                                     if any(info[o][1] in NMU[f]["pos"] for f in fams))[:90]
+                adjusted += 1
+            if h:
+                b["hold"] = sorted(h)
+                b["hw"] = ", ".join(dict.fromkeys(w for f in sorted(h) for w in h[f]))[:120]
+                held += 1
             m["inj_boost"] = b
-            adjusted += 1
-    return len(outs), len(doubts), adjusted
+    return len(outs), len(unsure), adjusted, held
 
 
 def model_rows(pl):
@@ -1019,10 +1050,10 @@ def inj_on(pl, sk):
     return bool(b and b.get(stat_family(sk, pl["p"])))
 
 
-def role_change(pl, sk):
-    """A starter at his position is out or questionable (role_changes): this prop stays off the lists."""
+def hold_reason(pl, sk):
+    """What this prop waits on (team_holds), or None: a held prop stays off the lists."""
     b = pl.get("inj_boost")
-    return bool(b and stat_family(sk, pl["p"]) in (b.get("role") or ()))
+    return b.get("hw") or "injury news" if b and stat_family(sk, pl["p"]) in (b.get("hold") or ()) else None
 
 
 # ---------------------------------------------------------------------------
@@ -1439,7 +1470,7 @@ PICK_COLS = ["src", "gid", "season", "week", "date", "pid", "player", "pos", "te
              "pd", "kd",     # dollars offered within 2c of each (depth.py)
              "vn",           # which one "price" is: the cheaper with $25+ offered, "P" Polymarket, "K" Kalshi
              "th",           # 1 = thin: neither has $25 offered near its price, so no Value
-             "rc"]           # 1 = role change: a starter at his position is newly out (next man up), so no lists
+             "hd"]           # what it waits on: injury news not settled yet (holds.py), so no lists
 VALUE_MIN_NEFF = 6.0
 TOP_N = 25
 VALUE_N = 200           # a safety cap only. At 50 it bound in busy weeks (NFL week 3: 27 picks that
@@ -1510,8 +1541,8 @@ def assign_lists(picks, held=0):
     `held` Top 25 slots stay with locked picks still on the board. Operates in place."""
     for p in picks:
         p["lists"] = ""
-    # a role change (a starter at his position newly out) is a number the game log can't size: no lists
-    picks = [p for p in picks if not p.get("rc")]
+    # waiting on injury news (a questionable teammate in his position group, or himself): no lists
+    picks = [p for p in picks if not p.get("hd")]
     ranked = sorted((p for p in picks if p["prob"] >= 0.5), key=lambda p: (-p["prob"], -p["neff"]))
     for p in ranked[:TOP_N - held]:
         p["lists"] += "T"
@@ -1629,11 +1660,11 @@ def build_live_picks(picks, slate_games, sched, by_key, snap, pmus=None, kal=Non
             # a price only it quotes never counts for Value (nor can US users trade there).
             refs = lambda sd: {"_ps": us.get("slug") if us and us[sd] is not None and us[sd] == pmc[sd] else None,
                                "_kt": ks["ticker"] if kc[sd] is not None else None}
-            rc = 1 if role_change(pl, sk) else None
+            hd = hold_reason(pl, sk)
             fresh.append(make_pick("live", sg["id"], sg["season"], sg["week"], sg["date"], pl, opp,
                                    sk, pm["line"], mp, cents[fav], now, side=fav, pp=pmc[fav], kp=kc[fav],
                                    kd=kd[fav], refs=refs(fav)))
-            fresh[-1]["rc"] = rc
+            fresh[-1]["hd"] = hd
             # The other side is recorded too when it's a plausible value play, so an
             # under can reach the Value list even though the model leans over (and
             # vice-versa). Only one side can ever clear: the two asks sum to at least
@@ -1645,7 +1676,7 @@ def build_live_picks(picks, slate_games, sched, by_key, snap, pmus=None, kal=Non
                     fresh.append(make_pick("live", sg["id"], sg["season"], sg["week"], sg["date"], pl, opp,
                                            sk, pm["line"], mp, op, now, side=other, pp=pmc[other], kp=kc[other],
                                            kd=kd[other], refs=refs(other)))
-                    fresh[-1]["rc"] = rc
+                    fresh[-1]["hd"] = hd
     held = 0       # Top 25 slots kept by locked picks whose game hasn't kicked off
     for p in picks:
         if p["src"] == "live" and p["res"] is None and p.get("lk") and "T" in (p.get("lists") or ""):
@@ -1679,7 +1710,7 @@ def build_live_picks(picks, slate_games, sched, by_key, snap, pmus=None, kal=Non
             added += 1
         elif ex["res"] is None:      # still pending: refresh to the latest pre-kickoff snapshot
             for k in ("side", "prob", "lo", "hi", "neff", "price", "lists", "rec", "team", "opp", "adj",
-                      "pp", "kp", "pd", "kd", "vn", "th", "rc"):
+                      "pp", "kp", "pd", "kd", "vn", "th", "hd"):
                 ex[k] = f[k]
             note_price(ex)
             updated += 1
@@ -1975,10 +2006,10 @@ def main():
     players = build_players(all_rows, roster, injuries, sched)
     try:
         espn_inj = news.espn_injuries("football/nfl")     # lists Out / IR all week, ahead of nflverse
-        n_out, n_q, n_adj = compute_injury_boosts(players, espn_inj, sched)
-        print(f"  next man up: {n_out} back(s)/receiver(s) out, {n_q} questionable"
+        n_out, n_q, n_adj, n_hold = compute_injury_boosts(players, espn_inj, sched)
+        print(f"  next man up: {n_out} out, {n_q} questionable or doubtful"
               f"{'' if espn_inj is not None else ' (ESPN report unavailable: nflverse and rosters only)'},"
-              f" {n_adj} teammate(s) adjusted")
+              f" {n_adj} teammate(s) handed work, {n_hold} player(s) waiting on news (no Top 25 / Value)")
     except Exception as e:  # noqa: BLE001
         print(f"  next man up: skipped ({e})")
     try:

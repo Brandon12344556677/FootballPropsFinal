@@ -26,6 +26,7 @@ from concurrent.futures import ThreadPoolExecutor
 import news   # pre-game news feeds, test mode
 import kalshi  # Kalshi prices, side by side with Polymarket's
 import depth   # enough money at the price? (thin-market filter)
+import holds   # props that wait for injury news
 
 TODAY = datetime.date.today()
 ET_TODAY = (datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(hours=4)).date().isoformat()
@@ -891,7 +892,8 @@ PICK_COLS = ["src", "gid", "season", "date", "pid", "player", "pos", "team", "op
              "pp", "kp",     # this side's price on Polymarket and on Kalshi (None = not listed there)
              "pd", "kd",     # dollars offered within 2c of each (depth.py)
              "vn",           # which one "price" is: the cheaper with $25+ offered, "P" Polymarket, "K" Kalshi
-             "th"]           # 1 = thin: neither has $25 offered near its price, so no Value
+             "th",           # 1 = thin: neither has $25 offered near its price, so no Value
+             "hd"]           # what it waits on: injury news not settled yet (holds.py), so no lists
 BOARD_STATS = ["pts", "reb", "ast", "tpm", "pra"]
 TOP_N = 25
 VALUE_MIN_NEFF = 6.0
@@ -1192,6 +1194,30 @@ def grade_picks(picks, by_pid, games):
     return n, dnp
 
 
+def injury_holds(picks, by_pid, rows):
+    """Props that wait for injury news (holds.py): off Top 25 Surest and Value while the player,
+    or a teammate in his position group with a real role, is day-to-day on ESPN's report, until
+    ESPN rules him out or drops the tag. Groups: guards, forwards, centers (a G-F is both). A real
+    role: 20+ minutes a game over his last 5 games for his team. ESPN unreachable: the last run's
+    holds stand."""
+    inj = news.espn_injuries("basketball/nba")
+    if inj is None:
+        print("  holds: ESPN injury report unavailable, last run's holds kept")
+        return
+    people = {pid: (p["n"], p["t"], p["p"]) for pid, p in by_pid.items()}
+    report = holds.match(inj, people, pkey)
+    last = holds.last_games(rows)
+
+    def role(pid):
+        g = last.get(pid, (None, []))[1]
+        return bool(g) and sum(r.get("min") or 0 for r in g) / len(g) >= 20
+
+    n = holds.apply(picks, report, people, lambda pos: {c for c in "GFC" if c in (pos or "").upper()}, role,
+                    lambda p: p.get("res") is None and not pick_locked(p))
+    print(f"  holds: {n} pending pick(s) waiting on injury news (no Top 25 / Value); "
+          f"{sum(1 for s in report.values() if holds.status(s) == 'unsure')} player(s) day-to-day")
+
+
 def assign_lists(picks):
     """Mirrors build.py (NFL). T = the 25 highest model chances ('Top 25 Surest').
     V = 'Value' — the market prices it at 30c or more and the model puts it 15+ points
@@ -1204,6 +1230,7 @@ def assign_lists(picks):
                and "T" in (p.get("lists") or ""))
     for p in pending:
         p["lists"] = ""
+    pending = [p for p in pending if not p.get("hd")]     # waiting on injury news (holds.py): no lists
     ranked = sorted((p for p in pending if p["prob"] >= 0.5), key=lambda p: (-p["prob"], -p["neff"]))
     for p in ranked[:TOP_N - held]:
         p["lists"] += "T"
@@ -1475,6 +1502,10 @@ def main():
     thin = sum(1 for p in picks if p.get("res") is None and not pick_locked(p) and p.get("th"))
     print(f"  depth: read {nb} more order book(s); {thin} pending pick(s) too thin for Value "
           f"(under ${depth.MIN_USD:.0f} offered within 2c)")
+    try:
+        injury_holds(picks, by_pid, store["rows"])
+    except Exception as e:  # noqa: BLE001
+        print(f"  holds: skipped ({e})")
     assign_lists(picks)
     for p in picks:
         if p.get("res") is None and not pick_locked(p):
