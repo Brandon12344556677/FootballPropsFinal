@@ -905,6 +905,7 @@ VALUE_MIN_EDGE = 0.15   # and the model has to be 15+ points higher
 
 
 TOP_VERIFY = 80         # the surest priced props whose order books are read for Top 25
+T_MAX_GAP = 0.20        # Top 25 skips a prop the model is 20+ points above the market on (NFL record: such gaps were mostly misses)
 
 
 def could_list(p, t_floor=1.01):
@@ -1225,7 +1226,7 @@ def injury_holds(picks, by_pid, rows):
 
 
 def assign_lists(picks):
-    """Mirrors build.py (NFL). T = the 25 highest model chances ('Top 25 Surest').
+    """Mirrors build.py (NFL). T = the 25 highest model chances you can bet ('Top 25 Surest'), one line per player-prop.
     V = 'Value' — the market prices it at 30c or more and the model puts it 15+ points
     higher, ranked by that edge. Prices are fractions here. Only picks whose game hasn't
     started or locked are (re)tagged: once it starts they keep the lists they had at tip-off until
@@ -1237,10 +1238,27 @@ def assign_lists(picks):
     for p in pending:
         p["lists"] = ""
     pending = [p for p in pending if not p.get("hd")]     # waiting on injury news (holds.py): no lists
-    # Top 25: only props you can bet -- a live price with $25+ offered near it (depth.py; not thin)
-    ranked = sorted((p for p in pending if p["prob"] >= 0.5 and p.get("price") is not None and not p.get("th")),
+    # The model's widest gap over the price on any rung of a player-prop (one side), as on the NFL
+    # board: over T_MAX_GAP on one rung, it's likely missing something about him (a role change the
+    # market already priced), so no rung of that prop makes Top 25.
+    widest = {}
+    for p in pending:
+        if p.get("price") is not None:
+            k = (p["gid"], p["pid"], p["stat"], p.get("side"))
+            widest[k] = max(widest.get(k, -1.0), p["prob"] - p["price"])
+    # Top 25: only props you can bet -- a live price with $25+ offered near it (depth.py; not
+    # thin) -- one line per player-prop (its surest rung), none the model is that far off on
+    ranked = sorted((p for p in pending if p["prob"] >= 0.5 and p.get("price") is not None and not p.get("th")
+                     and widest[(p["gid"], p["pid"], p["stat"], p.get("side"))] <= T_MAX_GAP + 1e-9),
                     key=lambda p: (-p["prob"], -p["neff"]))
-    for p in ranked[:TOP_N - held]:
+    seen = set()
+    for p in ranked:
+        k = (p["gid"], p["pid"], p["stat"])
+        if k in seen:
+            continue
+        if len(seen) >= TOP_N - held:
+            break
+        seen.add(k)
         p["lists"] += "T"
     vals = [((p["prob"] - p["price"]), p) for p in pending
             if p.get("price") is not None and not p.get("th") and p["neff"] >= VALUE_MIN_NEFF
