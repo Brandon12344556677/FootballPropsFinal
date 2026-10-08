@@ -80,8 +80,21 @@ class Rebuild(unittest.TestCase):
         self.assertFalse(B.inj_on(self.allen, "pass_yds"))
         before = B.model_prob([B.stat_value("rush_yds", r) for r in self.allen["g"]], 49.5, "yards")
         after = B.model_prob([B.stat_value("rush_yds", r) for r in B.model_rows(self.allen)], 49.5, "yards")
-        self.assertGreater(before["under"], 0.8)
-        self.assertLess(after["under"], 0.5)
+        self.assertLess(after["under"], before["under"])          # a nudge (the backtest's strength)...
+        self.assertTrue(B.role_change(self.allen, "rush_yds"))     # ...and the starter's heir is a role change:
+        self.assertFalse(B.role_change(self.davis, "rush_yds"))    # off the lists (Davis has no real role)
+
+    def test_role_change_keeps_props_off_the_lists(self):
+        mk = lambda prob, rc: {"prob": prob, "neff": 9, "price": 40, "rc": rc, "lists": ""}
+        picks = [mk(0.97, 1), mk(0.80, None), mk(0.75, 1)]
+        B.assign_lists(picks)
+        self.assertEqual([p["lists"] for p in picks], ["", "TV", ""])
+
+    def test_long_absence_is_not_new(self):
+        hall, allen, davis = backfield()
+        hall["g"] = hall["g"][:10]                                  # last played in 2025 week 10
+        n_out, n_adj = B.compute_injury_boosts([hall, allen, davis], [{"name": "Breece Hall", "status": "Injured Reserve"}])
+        self.assertEqual((n_out, n_adj), (1, 0))
 
     def test_model_rows_leave_the_log_alone(self):
         B.compute_injury_boosts(self.players, [{"name": "Breece Hall", "status": "Out"}])

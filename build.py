@@ -764,7 +764,14 @@ def build_players(all_rows, roster, injuries, sched):
 # ---------------------------------------------------------------------------
 NMU = {"rush": {"pos": ("RB", "FB"), "vol": 9, "stats": (10, 11)},               # carries -> rush yds, rush TDs
        "rec": {"pos": ("WR", "TE", "RB", "FB"), "vol": 13, "stats": (12, 14, 15)}}  # targets -> catches, rec yds, rec TDs
-NMU_LAMBDA = 1.0      # share of the out players' volume handed to the active teammates listed
+# Backtest (tune_injury.py, 2025-26: every game a regular missed after playing the week before):
+# who takes over is often a surprise, so a confident full hand-off scored worse than ignoring the
+# injury. A quarter of a back's carries to his real backups scored best at realistic lines (heirs
+# of a starter out, log loss 0.480 -> 0.472, both halves of the season); for receivers no hand-off
+# helped (targets scatter), so it's off there. What matters most is the next rule: a starter newly
+# out makes his heirs' props a role change the model can't size, so they stay off Top 25 and Value.
+NMU_LAMBDA = {"rush": 0.25, "rec": 0.0}   # share of a newly-out player's work handed to his heirs
+NMU_STARTER = {"rush": 0.40, "rec": 0.25}  # "a starter": this share of the group's work in his last 3 games
 NMU_EMP = 1.0         # weight of each game the out player missed, against the same-game split
 NMU_EMP_GAMES = 4     # at most this many such games count
 NMU_EFF_K = 20.0      # carries / targets of the position's average mixed into a player's per-carry rates
@@ -820,10 +827,10 @@ def nmu_adds(members, out_ids, pos_eff, before=None, lam=None, w_emp=None):
     """members: one team's players ({"id", "p", "g"}); out_ids: the ones out. Returns
     {player id: {(season, week, opp): {row index: amount}}} for the active ones. before:
     (season, week) — only earlier games count (the backtest). lam / w_emp default to the fitted."""
-    lam = NMU_LAMBDA if lam is None else lam
     w_emp = NMU_EMP if w_emp is None else w_emp
     adds = {}
     for fam, cfg in NMU.items():
+        fl = NMU_LAMBDA[fam] if lam is None else lam
         vi = cfg["vol"]
         outs = [m for m in members if m["id"] in out_ids and m["p"] in cfg["pos"]]
         acts = [m for m in members if m["id"] not in out_ids and m["p"] in cfg["pos"]]
@@ -831,6 +838,12 @@ def nmu_adds(members, out_ids, pos_eff, before=None, lam=None, w_emp=None):
             continue
         rows = {m["id"]: {_gkey(r): r for r in m["g"] if before is None or (r[0], r[1]) < before}
                 for m in outs + acts}
+        # only players newly out (in one of the team's last 3 games): a longer absence is already
+        # in his teammates' recent games
+        recent = set(sorted({k for m in outs + acts for k in rows[m["id"]]})[-3:])
+        outs = [o for o in outs if recent & set(rows[o["id"]])]
+        if not outs or fl <= 0:
+            continue
         everyone = outs + acts
 
         def share(a, keys):
@@ -872,7 +885,7 @@ def nmu_adds(members, out_ids, pos_eff, before=None, lam=None, w_emp=None):
                                  + wn * emp.get(a["id"], 0.0)) / (1.0 + wn) for a in here}
                 z = sum(raw.values()) or 1.0
                 for a in here:
-                    dv = lam * vac * raw[a["id"]] / z
+                    dv = fl * vac * raw[a["id"]] / z
                     if dv <= 0:
                         continue
                     add = adds.setdefault(a["id"], {}).setdefault(k, {})
@@ -880,6 +893,32 @@ def nmu_adds(members, out_ids, pos_eff, before=None, lam=None, w_emp=None):
                     for st, rate in eff[a["id"]].items():
                         add[st] = add.get(st, 0.0) + dv * rate
     return adds
+
+
+def role_changes(members, out_ids):
+    """{player id: {fam, ...}}: the heirs (NMU_HEIRS, NMU_MIN_SHARE+ of the work) of a starter
+    (NMU_STARTER+ of his group's work in his last 3 games) newly out (in one of the team's last 3
+    games). Their props in that family are a role change the game log can't size: they stay off
+    Top 25 Surest and Value."""
+    out = {}
+    for fam, cfg in NMU.items():
+        vi = cfg["vol"]
+        grp = [m for m in members if m["p"] in cfg["pos"]]
+        rows = {m["id"]: {_gkey(r): r for r in m["g"]} for m in grp}
+        recent = set(sorted({k for m in grp for k in rows[m["id"]]})[-3:])
+
+        def share(m):
+            keys = sorted(rows[m["id"]])[-3:]
+            den = sum(rows[b["id"]][k][vi] for k in keys for b in grp if k in rows[b["id"]])
+            return sum(rows[m["id"]][k][vi] for k in keys) / den if den > 0 else 0.0
+
+        starters = [m for m in grp if m["id"] in out_ids and recent & set(rows[m["id"]]) and share(m) >= NMU_STARTER[fam]]
+        for o in starters:
+            for a in grp:
+                if (a["id"] not in out_ids and a["p"] in NMU_HEIRS[fam].get(o["p"], ())
+                        and share(a) >= NMU_MIN_SHARE):
+                    out.setdefault(a["id"], set()).add(fam)
+    return out
 
 
 def compute_injury_boosts(players, espn=None):
@@ -898,23 +937,27 @@ def compute_injury_boosts(players, espn=None):
         if not out_ids:
             continue
         adds = nmu_adds(members, out_ids, pos_eff)
+        roles = role_changes(members, out_ids)
         info = {m["id"]: (m["n"], m["p"]) for m in members}
         for m in members:
-            a = adds.get(m["id"])
-            if not a:
+            a, rc = adds.get(m["id"]) or {}, roles.get(m["id"]) or set()
+            if not a and not rc:
                 continue
-            m["inj_add"] = {f"{k[0]}-{k[1]}": {str(i): round(v, 2) for i, v in d.items()} for k, d in a.items()}
             b = {}
-            recent = sorted(m["g"], key=lambda r: (r[0], r[1]))[-8:]
-            for fam, cfg in NMU.items():
-                base = sum(r[cfg["vol"]] for r in recent)
-                extra = sum(a.get(_gkey(r), {}).get(cfg["vol"], 0.0) for r in recent)
-                if extra > 0 and base > 0:
-                    b[fam] = round(1.0 + extra / base, 2)
-            if b:
-                b["why"] = ", ".join(f"{info[o][0]} (out)" for o in sorted(out_ids, key=lambda x: info[x][0])
-                                     if any(info[o][1] in NMU[f]["pos"] for f in b))[:90]
-                m["inj_boost"] = b
+            if a:
+                m["inj_add"] = {f"{k[0]}-{k[1]}": {str(i): round(v, 2) for i, v in d.items()} for k, d in a.items()}
+                recent = sorted(m["g"], key=lambda r: (r[0], r[1]))[-8:]
+                for fam, cfg in NMU.items():
+                    base = sum(r[cfg["vol"]] for r in recent)
+                    extra = sum(a.get(_gkey(r), {}).get(cfg["vol"], 0.0) for r in recent)
+                    if extra > 0 and base > 0:
+                        b[fam] = round(1.0 + extra / base, 2)
+            if rc:
+                b["role"] = sorted(rc)
+            fams = set(b) & set(NMU) | rc
+            b["why"] = ", ".join(f"{info[o][0]} (out)" for o in sorted(out_ids, key=lambda x: info[x][0])
+                                 if any(info[o][1] in NMU[f]["pos"] for f in fams))[:90]
+            m["inj_boost"] = b
             adjusted += 1
     return len(outs), adjusted
 
@@ -940,6 +983,12 @@ def inj_on(pl, sk):
     adjustment stays off: the rebuilt games already carry the new role.)"""
     b = pl.get("inj_boost")
     return bool(b and b.get(stat_family(sk, pl["p"])))
+
+
+def role_change(pl, sk):
+    """A starter at his position is newly out (role_changes): this prop stays off the lists."""
+    b = pl.get("inj_boost")
+    return bool(b and stat_family(sk, pl["p"]) in (b.get("role") or ()))
 
 
 # ---------------------------------------------------------------------------
@@ -1355,7 +1404,8 @@ PICK_COLS = ["src", "gid", "season", "week", "date", "pid", "player", "pos", "te
              "pp", "kp",     # this side's price on Polymarket and on Kalshi, in cents (None = not listed there)
              "pd", "kd",     # dollars offered within 2c of each (depth.py)
              "vn",           # which one "price" is: the cheaper with $25+ offered, "P" Polymarket, "K" Kalshi
-             "th"]           # 1 = thin: neither has $25 offered near its price, so no Value
+             "th",           # 1 = thin: neither has $25 offered near its price, so no Value
+             "rc"]           # 1 = role change: a starter at his position is newly out (next man up), so no lists
 VALUE_MIN_NEFF = 6.0
 TOP_N = 25
 VALUE_N = 200           # a safety cap only. At 50 it bound in busy weeks (NFL week 3: 27 picks that
@@ -1426,6 +1476,8 @@ def assign_lists(picks, held=0):
     `held` Top 25 slots stay with locked picks still on the board. Operates in place."""
     for p in picks:
         p["lists"] = ""
+    # a role change (a starter at his position newly out) is a number the game log can't size: no lists
+    picks = [p for p in picks if not p.get("rc")]
     ranked = sorted((p for p in picks if p["prob"] >= 0.5), key=lambda p: (-p["prob"], -p["neff"]))
     for p in ranked[:TOP_N - held]:
         p["lists"] += "T"
@@ -1543,9 +1595,11 @@ def build_live_picks(picks, slate_games, sched, by_key, snap, pmus=None, kal=Non
             # a price only it quotes never counts for Value (nor can US users trade there).
             refs = lambda sd: {"_ps": us.get("slug") if us and us[sd] is not None and us[sd] == pmc[sd] else None,
                                "_kt": ks["ticker"] if kc[sd] is not None else None}
+            rc = 1 if role_change(pl, sk) else None
             fresh.append(make_pick("live", sg["id"], sg["season"], sg["week"], sg["date"], pl, opp,
                                    sk, pm["line"], mp, cents[fav], now, side=fav, pp=pmc[fav], kp=kc[fav],
                                    kd=kd[fav], refs=refs(fav)))
+            fresh[-1]["rc"] = rc
             # The other side is recorded too when it's a plausible value play, so an
             # under can reach the Value list even though the model leans over (and
             # vice-versa). Only one side can ever clear: the two asks sum to at least
@@ -1557,6 +1611,7 @@ def build_live_picks(picks, slate_games, sched, by_key, snap, pmus=None, kal=Non
                     fresh.append(make_pick("live", sg["id"], sg["season"], sg["week"], sg["date"], pl, opp,
                                            sk, pm["line"], mp, op, now, side=other, pp=pmc[other], kp=kc[other],
                                            kd=kd[other], refs=refs(other)))
+                    fresh[-1]["rc"] = rc
     held = 0       # Top 25 slots kept by locked picks whose game hasn't kicked off
     for p in picks:
         if p["src"] == "live" and p["res"] is None and p.get("lk") and "T" in (p.get("lists") or ""):
@@ -1590,7 +1645,7 @@ def build_live_picks(picks, slate_games, sched, by_key, snap, pmus=None, kal=Non
             added += 1
         elif ex["res"] is None:      # still pending: refresh to the latest pre-kickoff snapshot
             for k in ("side", "prob", "lo", "hi", "neff", "price", "lists", "rec", "team", "opp", "adj",
-                      "pp", "kp", "pd", "kd", "vn", "th"):
+                      "pp", "kp", "pd", "kd", "vn", "th", "rc"):
                 ex[k] = f[k]
             note_price(ex)
             updated += 1

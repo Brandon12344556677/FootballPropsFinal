@@ -1207,6 +1207,9 @@ function currentOpp(){ return oppTouched? ($('oppsel').value||null) : null; }
 function withInj(p, rows){ const a=p&&p.inj_add; if(!a) return rows;
   return rows.map(r=>{ const d=a[r[0]+'-'+r[1]]; if(!d) return r; const x=r.slice(); for(const k in d) x[+k]+=d[k]; return x; }); }
 function injOn(p, sk){ const b=p&&p.inj_boost; if(!b) return false; const f=statFamily(sk,p.p); return !!(f==='rec'?b.rec:f==='rush'?b.rush:0); }
+/* A starter at his position is newly out (build.py role_changes): the game log can't size the new
+   role (who takes over is often a surprise), so the prop stays off Top 25 Surest and Value. */
+function roleChange(p, sk){ const b=p&&p.inj_boost; return !!(b && (b.role||[]).includes(statFamily(sk,p.p))); }
 function modelFor(p, sk, line, ctx){ const st=STATMAP[sk]; if(!st) return null; const c=ctx||contextFor(p,sk,p===state.player?currentOpp():null); return calMp(modelProb(withInj(p, gamesOf(p)).map(st.get), line, st.kind, c.scale, CAL[sk], c.per)); }
 function probFor(p, sk, line, side, ctx){ const mp=modelFor(p,sk,line,ctx); if(!mp) return null;
   return side==='over'? {prob:mp.over, lo:mp.lo, hi:mp.hi, mp} : {prob:mp.under, lo:1-mp.hi, hi:1-mp.lo, mp}; }
@@ -1484,7 +1487,8 @@ function renderMeta(){
     ws.innerHTML=`<span><span class="lab">Week ${WEEK.week}</span> <b>${home?'vs':'@'} ${esc(opp)}</b></span>`+
       `<span>${esc(kickoff(wg))}</span>`+(vegas(wg)?`<span><span class="lab">Vegas</span> ${esc(vegas(wg))}</span>`:'')+
       (tp?`<span title="average offensive time of possession per game this season, from ESPN box scores"><span class="lab">Poss/gm</span> <b>${esc(p.t)} ${tp}</b>${to?` · ${esc(opp)} ${to}`:''}</span>`:'')+
-      (p.inj_boost?`<span title="teammates ruled out this week free up carries/targets — the model rebuilds this player's past games with his share of them (recent volume, with vs. without)"><span class="lab">Volume ▲</span> <b>+${Math.round((Math.max(p.inj_boost.rec||1,p.inj_boost.rush||1)-1)*100)}%</b> · ${esc(p.inj_boost.why||'teammate out')}</span>`:'')+score;
+      (p.inj_boost&&(p.inj_boost.rec||p.inj_boost.rush)?`<span title="a teammate newly ruled out frees up carries — the model hands this player a share of them (recent volume, with vs. without)"><span class="lab">Volume ▲</span> <b>+${Math.round((Math.max(p.inj_boost.rec||1,p.inj_boost.rush||1)-1)*100)}%</b> · ${esc(p.inj_boost.why||'teammate out')}</span>`:'')+
+      (p.inj_boost&&(p.inj_boost.role||[]).length?`<span title="a starter at his position is newly out, so his role this week is bigger than his game log shows and nobody can say by how much from history alone. His ${esc(p.inj_boost.role.map(f=>f==='rush'?'rushing':'receiving').join(' and '))} props are left off Top 25 Surest and Value; the market's price knows more here."><span class="lab">Role change</span> <b>${esc(p.inj_boost.why||'starter out')}</b> · not recommended</span>`:'')+score;
     ws.hidden=false;
   } else if(WEEK.week){
     ws.innerHTML=`<span><span class="lab">Week ${WEEK.week}</span> ${esc(p.t)} has no game on the schedule this week${p.t?'':' (team unknown)'}.</span>`; ws.hidden=false;
@@ -2122,14 +2126,14 @@ async function scanBoard(force){
       });
     });
     const modeled=rows.filter(r=>!r.nohist);
-    modeled.slice().sort((a,b)=>(b.prob-a.prob)||(b.neff-a.neff)).slice(0,25).forEach(r=>r.lists+='T');
+    modeled.filter(r=>!roleChange(r.pl, r.sk)).sort((a,b)=>(b.prob-a.prob)||(b.neff-a.neff)).slice(0,25).forEach(r=>r.lists+='T');
     // Value candidates: the over AND the under of every tradeable market. Which of
     // them actually clears the two rules is decided in computeValueRows(), against
     // the live Polymarket US price where there is one — the price you would really
     // pay — so the edge printed in each row is the edge the rules were tested on.
     valueCands=[];
     modeled.forEach(r=>{
-      if(!(r.neff>=6) || !r.sides) return;
+      if(!(r.neff>=6) || !r.sides || roleChange(r.pl, r.sk)) return;     // a role change is never a value spot
       ['over','under'].forEach(sd=>{
         const c=r.sides[sd]; if(!c) return;     // priced live below (Polymarket US, Kalshi), whatever the global book shows
         valueCands.push(Object.assign({}, r, {side:sd, prob:c.prob, lo:c.lo, hi:c.hi, price:c.price, base:r}));

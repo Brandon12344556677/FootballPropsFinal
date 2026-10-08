@@ -28,10 +28,14 @@ jobs:
           import json
           d = json.load(open("data.json"))
           adj = [p for p in d["players"] if p.get("inj_boost")]
-          print("adjusted players:", len(adj))
-          for p in sorted(adj, key=lambda p: -max(v for k, v in p["inj_boost"].items() if k != "why"))[:15]:
+          print("adjusted players:", len(adj), "| role changes:", sum(1 for p in adj if p["inj_boost"].get("role")))
+          for p in adj[:40]:
               print("  ", p["n"], p["t"], p["p"], p["inj_boost"])
           pk = json.load(open("picks.json")); c = pk["cols"]
+          pend = [dict(zip(c, r)) for r in pk["picks"]]
+          pend = [p for p in pend if p["src"] == "live" and p["res"] is None]
+          print("pending", len(pend), "| role-change picks", sum(1 for p in pend if p.get("rc")),
+                "| T", sum("T" in (p["lists"] or "") for p in pend), "| V", sum("V" in (p["lists"] or "") for p in pend))
           for r in pk["picks"]:
               p = dict(zip(c, r))
               if p["src"] == "live" and p["res"] is None and p["player"] in ("Braelon Allen", "Isaiah Davis") and p["stat"] == "rush_yds":
