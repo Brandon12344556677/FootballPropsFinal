@@ -128,6 +128,23 @@ class Questionable(unittest.TestCase):
         self.assertNotIn("inj_add", wr3)            # no hand-off: he may still play
         self.assertFalse(B.inj_on(wr3, "rec"))       # so the usage adjustment stays on
 
+    def test_newcomer_backup_counts(self):
+        wr1, wr3, te = self.receivers()
+        wr1["g"] = wr1["g"][:-1]                     # the starter missed the latest game
+        for r in wr3["g"][:-4]:
+            r[2] = "X" + r[2]                        # the backup's older games were for another team
+        B.compute_injury_boosts([wr1, wr3, te], [{"name": "DeVonta Smith", "status": "Questionable"}])
+        self.assertTrue(B.role_change(wr3, "rec"))  # 3 games with the starter, 1 without, the rest elsewhere
+
+    def test_player_who_never_played_for_the_team_has_no_role(self):
+        wr1, wr3, te = self.receivers()
+        new = {"id": "new", "n": "Just Signed", "p": "WR", "t": "PHI",
+               "g": [row(s, w, "X" + o, 0, 0, 9, 6, 80) for s, w, o in WEEKS[:-2]]}    # all for another team
+        sched = {i: {"home": "PHI", "away": o, "season": s, "week": w} for i, (s, w, o) in enumerate(WEEKS)}
+        B.compute_injury_boosts([wr1, wr3, te, new], [{"name": "DeVonta Smith", "status": "Questionable"}], sched)
+        self.assertTrue(B.role_change(wr3, "rec"))
+        self.assertFalse(B.role_change(new, "rec"))  # without the schedule, his old team's games read as 100% of the work
+
     def test_starter_out_a_few_weeks_still_counts(self):
         hall, allen, davis = backfield()
         hall["g"] = hall["g"][:-2]                   # last played two games before the latest

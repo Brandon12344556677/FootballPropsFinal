@@ -1,4 +1,4 @@
-name: Next man up check (temporary)
+name: Next man up check (temporary) # rerun 2
 on:
   push:
     branches: [claude/upbeat-dijkstra-rktnaf]

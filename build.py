@@ -900,13 +900,25 @@ def nmu_adds(members, out_ids, pos_eff, before=None, lam=None, w_emp=None):
     return adds
 
 
-def role_changes(members, out_ids, doubt_ids=()):
+def team_games(sched):
+    """team -> {(season, week, opponent)}: its games from the schedule, keyed like _gkey."""
+    out = {}
+    for g in (sched or {}).values():
+        out.setdefault(g["home"], set()).add((g["season"], g["week"], g["away"]))
+        out.setdefault(g["away"], set()).add((g["season"], g["week"], g["home"]))
+    return out
+
+
+def role_changes(members, out_ids, doubt_ids=(), games=None):
     """{player id: {fam, ...}}: the heirs (NMU_HEIRS, NMU_MIN_SHARE+ of the work) of a starter
     (NMU_STARTER+ of his group's work in his last 3 games with the team) who is out, or questionable
     and may not play. Their props in that family are a role change the game log can't size, so they
-    stay off Top 25 Surest and Value — for as long as most of the heir's game log, as the model
-    weighs it (recent games count most), comes from games the starter played: a backup who has
-    started for a game or two still looks like a backup to the model."""
+    stay off Top 25 Surest and Value — until most of the heir's game log, as the model weighs it
+    (recent games count most), comes from weeks the starter didn't play: a backup who has started
+    for a game or two still looks like a backup to the model, and so does one who just joined the
+    team (his games for another team say nothing about this role). games: the team's games
+    (team_games); shares of the work count only those, so a player who hasn't played for the team
+    has no role in it yet (None: every game counts)."""
     out = {}
     for fam, cfg in NMU.items():
         vi = cfg["vol"]
@@ -914,46 +926,50 @@ def role_changes(members, out_ids, doubt_ids=()):
         rows = {m["id"]: {_gkey(r): r for r in m["g"]} for m in grp}
 
         def share(m):
-            keys = sorted(rows[m["id"]])[-3:]
+            keys = sorted(k for k in rows[m["id"]] if games is None or k in games)[-3:]
             den = sum(rows[b["id"]][k][vi] for k in keys for b in grp if k in rows[b["id"]])
             return sum(rows[m["id"]][k][vi] for k in keys) / den if den > 0 else 0.0
 
-        def with_him(a, s):
-            """Share of a's model weight from games s played."""
+        def without_him(a, s):
+            """Share of a's model weight from weeks s didn't play at all (the absence already in
+            a's log). A week s played, a was with him or on another team: neither shows it."""
+            weeks = {k[:2] for k in rows[s["id"]]}
             keys = sorted(rows[a["id"]])[-MODEL["maxGames"]:]
             w = [0.5 ** ((len(keys) - 1 - i) / MODEL["halfLife"]) for i in range(len(keys))]
-            return sum(wi for wi, k in zip(w, keys) if k in rows[s["id"]]) / sum(w) if w else 0.0
+            return sum(wi for wi, k in zip(w, keys) if k[:2] not in weeks) / sum(w) if w else 1.0
 
         starters = [m for m in grp if (m["id"] in out_ids or m["id"] in doubt_ids)
                     and m["g"] and share(m) >= NMU_STARTER[fam]]
         for s in starters:
             for a in grp:
                 if (a["id"] not in out_ids and a["id"] != s["id"] and a["p"] in NMU_HEIRS[fam].get(s["p"], ())
-                        and share(a) >= NMU_MIN_SHARE and with_him(a, s) >= 0.5):
+                        and share(a) >= NMU_MIN_SHARE and without_him(a, s) < 0.5):
                     out.setdefault(a["id"], set()).add(fam)
     return out
 
 
-def compute_injury_boosts(players, espn=None):
+def compute_injury_boosts(players, espn=None, sched=None):
     """Next man up for this week (see above): entry['inj_add'] with the per-game additions and
     entry['inj_boost'] = {"rush"/"rec": recent volume with / without them, "role": [families a
     starter's absence or doubtful status leaves to him], "why": who} on the teammates of anyone out
-    or questionable. In place. Returns (players out, players questionable, teammates adjusted)."""
+    or questionable. sched: load_schedule's games, to tell a team's games from a newcomer's games
+    elsewhere. In place. Returns (players out, players questionable, teammates adjusted)."""
     outs = injury_outs(players, espn)
     doubts = injury_outs(players, espn, DOUBT_RE) - outs
     pos_eff = position_eff(players)
+    tg = team_games(sched)
     teams = {}
     for e in players:
         if e.get("t"):
             teams.setdefault(e["t"], []).append(e)
     adjusted = 0
-    for members in teams.values():
+    for team, members in teams.items():
         out_ids = {m["id"] for m in members if m["id"] in outs and m["p"] in ("RB", "FB", "WR", "TE")}
         doubt_ids = {m["id"] for m in members if m["id"] in doubts and m["p"] in ("RB", "FB", "WR", "TE")}
         if not out_ids and not doubt_ids:
             continue
         adds = nmu_adds(members, out_ids, pos_eff) if out_ids else {}
-        roles = role_changes(members, out_ids, doubt_ids)
+        roles = role_changes(members, out_ids, doubt_ids, tg.get(team))
         info = {m["id"]: (m["n"], m["p"]) for m in members}
         for m in members:
             a, rc = adds.get(m["id"]) or {}, roles.get(m["id"]) or set()
@@ -1004,7 +1020,7 @@ def inj_on(pl, sk):
 
 
 def role_change(pl, sk):
-    """A starter at his position is newly out (role_changes): this prop stays off the lists."""
+    """A starter at his position is out or questionable (role_changes): this prop stays off the lists."""
     b = pl.get("inj_boost")
     return bool(b and stat_family(sk, pl["p"]) in (b.get("role") or ()))
 
@@ -1959,7 +1975,7 @@ def main():
     players = build_players(all_rows, roster, injuries, sched)
     try:
         espn_inj = news.espn_injuries("football/nfl")     # lists Out / IR all week, ahead of nflverse
-        n_out, n_q, n_adj = compute_injury_boosts(players, espn_inj)
+        n_out, n_q, n_adj = compute_injury_boosts(players, espn_inj, sched)
         print(f"  next man up: {n_out} back(s)/receiver(s) out, {n_q} questionable"
               f"{'' if espn_inj is not None else ' (ESPN report unavailable: nflverse and rosters only)'},"
               f" {n_adj} teammate(s) adjusted")
