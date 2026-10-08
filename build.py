@@ -744,17 +744,32 @@ def build_players(all_rows, roster, injuries, sched):
 
 
 # ---------------------------------------------------------------------------
-# Injury target/carry redistribution ("next man up")
-# When a pass-catcher or back is ruled OUT/DOUBTFUL, the target share (receiving)
-# and carry share (rushing) they'd normally command is redistributed to their
-# remaining teammates, boosting those players' projected volume for the week.
-# Stored per player as {"rec":mult,"rush":mult,"why":"..."} and applied to the
-# projection scale in both build.py and the front-end (outside the MODEL block).
+# Next man up: a back or receiver ruled out this week leaves his carries (rushing) and
+# targets (receiving) to the teammates who play.
+#
+# Who's out: ESPN's injury report (Out / Doubtful / injured reserve, listed all week),
+# nflverse's official report (Out / Doubtful, posted late in the week) and the roster's
+# reserve lists (injured reserve, PUP, NFI, suspended).
+#
+# How: each active teammate's past games are rebuilt as if the out player had sat them too.
+# In every game the out player played, the teammate gets a share of his volume: that game's
+# split among the active players, pulled toward how the team actually split the work in
+# games the out player missed (NMU_EMP per such game). The extra carries/targets come at the
+# teammate's own yards, catches and touchdowns per carry or target, shrunk toward his
+# position's (NMU_EFF_K). The additions ride along per game ("inj_add": "season-week" ->
+# {game-row index: amount}) and the model reads the rebuilt rows (model_rows here, modelRows
+# on the page). The old version multiplied every past game by one factor capped at 1.5,
+# which left a backup taking over a starter's job (3-5x the carries) far too low.
+# Strengths fitted on past seasons by tune_injury.py.
 # ---------------------------------------------------------------------------
-INJ_TS_IDX, INJ_CAR_IDX = 17, 9      # game-row indices: target_share, carries
-INJ_CAP = 1.5                         # a remaining player's volume can rise at most 50%
-INJ_CATCH = ("WR", "TE", "RB", "FB")
-INJ_RUSH = ("RB", "FB")
+NMU = {"rush": {"pos": ("RB", "FB"), "vol": 9, "stats": (10, 11)},               # carries -> rush yds, rush TDs
+       "rec": {"pos": ("WR", "TE", "RB", "FB"), "vol": 13, "stats": (12, 14, 15)}}  # targets -> catches, rec yds, rec TDs
+NMU_LAMBDA = 1.0      # share of the out players' volume handed to the active teammates listed
+NMU_EMP = 1.0         # weight of each game the out player missed, against the same-game split
+NMU_EMP_GAMES = 4     # at most this many such games count
+NMU_EFF_K = 20.0      # carries / targets of the position's average mixed into a player's per-carry rates
+OUT_RE = re.compile(r"\bout\b|doubtful|injured reserve|suspen|physically unable|\bpup\b|non-football", re.I)
+OUT_ROSTER = {"RES", "PUP", "NFI", "SUS"}
 
 
 def _inj_out(entry):
@@ -762,55 +777,166 @@ def _inj_out(entry):
     return bool(inj and re.search(r"out|doubtful", (inj[0] or ""), re.I))
 
 
-def _recent_avg(entry, idx, n=6):
-    gs = [g for g in (entry.get("g") or []) if len(g) > idx]
-    vals = [g[idx] for g in gs[-n:]]
-    return sum(vals) / len(vals) if vals else 0.0
+def _gkey(r):
+    return (r[0], r[1], r[2])          # season, week, opponent: one game of one team
 
 
-def compute_injury_boosts(players):
-    """Add entry['inj_boost'] to remaining teammates of OUT/DOUBTFUL players. In place."""
+def injury_outs(players, espn=None):
+    """ids of the backs and receivers out this week (see above)."""
+    byname = {}
+    for e in players:
+        byname.setdefault(pkey(e["n"]), []).append(e)
+    out = {e["id"] for e in players if _inj_out(e) or e.get("st") in OUT_ROSTER}
+    for x in espn or []:
+        if OUT_RE.search(x.get("status") or ""):
+            c = byname.get(pkey(x.get("name") or ""), [])
+            if len(c) == 1:            # a name two players share is left alone
+                out.add(c[0]["id"])
+    return out
+
+
+def position_eff(players):
+    """Per position, each stat per unit of its family's volume (league-wide): the prior the
+    per-carry / per-target rates shrink toward."""
+    tot = {}
+    for e in players:
+        for fam, cfg in NMU.items():
+            if e["p"] not in cfg["pos"]:
+                continue
+            t = tot.setdefault((e["p"], fam), [0.0] * 16)
+            for r in e["g"]:
+                t[cfg["vol"]] += r[cfg["vol"]]
+                for k in cfg["stats"]:
+                    t[k] += r[k]
+    return {key: {k: (t[k] / t[NMU[key[1]]["vol"]] if t[NMU[key[1]]["vol"]] else 0.0) for k in NMU[key[1]]["stats"]}
+            for key, t in tot.items()}
+
+
+def nmu_adds(members, out_ids, pos_eff, before=None, lam=None, w_emp=None):
+    """members: one team's players ({"id", "p", "g"}); out_ids: the ones out. Returns
+    {player id: {(season, week, opp): {row index: amount}}} for the active ones. before:
+    (season, week) — only earlier games count (the backtest). lam / w_emp default to the fitted."""
+    lam = NMU_LAMBDA if lam is None else lam
+    w_emp = NMU_EMP if w_emp is None else w_emp
+    adds = {}
+    for fam, cfg in NMU.items():
+        vi = cfg["vol"]
+        outs = [m for m in members if m["id"] in out_ids and m["p"] in cfg["pos"]]
+        acts = [m for m in members if m["id"] not in out_ids and m["p"] in cfg["pos"]]
+        if not outs or not acts:
+            continue
+        rows = {m["id"]: {_gkey(r): r for r in m["g"] if before is None or (r[0], r[1]) < before}
+                for m in outs + acts}
+        with_out = set()
+        for o in outs:
+            with_out |= {k for k, r in rows[o["id"]].items() if r[vi] > 0}
+        # how the active players split the work in the latest games none of the out players played
+        emp, n_emp = {}, {}
+        for a in acts:
+            num = den = 0.0
+            n = 0
+            for k in sorted(rows[a["id"]], reverse=True):
+                if k in with_out:
+                    continue
+                d = sum(rows[b["id"]][k][vi] for b in acts if k in rows[b["id"]])
+                if d <= 0:
+                    continue
+                num += rows[a["id"]][k][vi]
+                den += d
+                n += 1
+                if n >= NMU_EMP_GAMES:
+                    break
+            if den > 0:
+                emp[a["id"]], n_emp[a["id"]] = num / den, n
+        # each active player's own rates per carry / target, shrunk toward his position's
+        eff = {}
+        for a in acts:
+            g = sorted(rows[a["id"]].values(), key=lambda r: (r[0], r[1]))[-MODEL["maxGames"]:]
+            v = sum(r[vi] for r in g)
+            prior = pos_eff.get((a["p"], fam), {})
+            eff[a["id"]] = {k: (sum(r[k] for r in g) + NMU_EFF_K * prior.get(k, 0.0)) / (v + NMU_EFF_K)
+                            for k in cfg["stats"]}
+        for k in with_out:
+            vac = sum(rows[o["id"]][k][vi] for o in outs if k in rows[o["id"]])
+            here = [a for a in acts if k in rows[a["id"]]]
+            if vac <= 0 or not here:
+                continue
+            tot = sum(rows[a["id"]][k][vi] + 0.5 for a in here)
+            raw = {}
+            for a in here:
+                prop = (rows[a["id"]][k][vi] + 0.5) / tot
+                wn = w_emp * n_emp.get(a["id"], 0)
+                raw[a["id"]] = (prop + wn * emp.get(a["id"], 0.0)) / (1.0 + wn)
+            z = sum(raw.values()) or 1.0
+            for a in here:
+                dv = lam * vac * raw[a["id"]] / z
+                if dv <= 0:
+                    continue
+                add = adds.setdefault(a["id"], {}).setdefault(k, {})
+                add[vi] = add.get(vi, 0.0) + dv
+                for st, rate in eff[a["id"]].items():
+                    add[st] = add.get(st, 0.0) + dv * rate
+    return adds
+
+
+def compute_injury_boosts(players, espn=None):
+    """Next man up for this week (see above): entry['inj_add'] with the per-game additions and
+    entry['inj_boost'] = {"rush"/"rec": recent volume with / without them, "why": who's out}
+    on the teammates of anyone out. In place. Returns (players out, players adjusted)."""
+    outs = injury_outs(players, espn)
+    pos_eff = position_eff(players)
     teams = {}
     for e in players:
         if e.get("t"):
             teams.setdefault(e["t"], []).append(e)
-    for roster in teams.values():
-        outs = [e for e in roster if _inj_out(e)]
-        if not outs:
+    adjusted = 0
+    for members in teams.values():
+        out_ids = {m["id"] for m in members if m["id"] in outs and m["p"] in ("RB", "FB", "WR", "TE")}
+        if not out_ids:
             continue
-        vac_rec = min(0.45, sum(_recent_avg(e, INJ_TS_IDX) for e in outs if e["p"] in INJ_CATCH))
-        car = {e["id"]: _recent_avg(e, INJ_CAR_IDX) for e in roster if e["p"] in INJ_RUSH}
-        team_car = sum(car.values())
-        vac_rush = min(0.6, sum(car.get(e["id"], 0.0) for e in outs if e["p"] in INJ_RUSH) / team_car) if team_car else 0.0
-        rec_mult = min(INJ_CAP, 1.0 / (1.0 - vac_rec)) if vac_rec > 0.03 else 1.0
-        rush_mult = min(INJ_CAP, 1.0 / (1.0 - vac_rush)) if vac_rush > 0.05 else 1.0
-        if rec_mult <= 1.0 and rush_mult <= 1.0:
-            continue
-        why = ", ".join(f"{e['n']} ({(e['inj'][0] or 'OUT').upper()})" for e in outs if e["p"] in INJ_CATCH)[:90]
-        for e in roster:
-            if _inj_out(e):
+        adds = nmu_adds(members, out_ids, pos_eff)
+        info = {m["id"]: (m["n"], m["p"]) for m in members}
+        for m in members:
+            a = adds.get(m["id"])
+            if not a:
                 continue
+            m["inj_add"] = {f"{k[0]}-{k[1]}": {str(i): round(v, 2) for i, v in d.items()} for k, d in a.items()}
             b = {}
-            if rec_mult > 1.0 and e["p"] in INJ_CATCH:
-                b["rec"] = round(rec_mult, 3)
-            if rush_mult > 1.0 and e["p"] in INJ_RUSH:
-                b["rush"] = round(rush_mult, 3)
+            recent = sorted(m["g"], key=lambda r: (r[0], r[1]))[-8:]
+            for fam, cfg in NMU.items():
+                base = sum(r[cfg["vol"]] for r in recent)
+                extra = sum(a.get(_gkey(r), {}).get(cfg["vol"], 0.0) for r in recent)
+                if extra > 0 and base > 0:
+                    b[fam] = round(1.0 + extra / base, 2)
             if b:
-                b["why"] = why
-                e["inj_boost"] = b
+                b["why"] = ", ".join(f"{info[o][0]} (out)" for o in sorted(out_ids, key=lambda x: info[x][0])
+                                     if any(info[o][1] in NMU[f]["pos"] for f in b))[:90]
+                m["inj_boost"] = b
+            adjusted += 1
+    return len(outs), adjusted
 
 
-def inj_mult(pl, sk):
-    """The injury volume multiplier for this player + stat, or 1.0."""
+def model_rows(pl):
+    """The player's game rows as the model reads them: with next man up's additions, if any."""
+    add = pl.get("inj_add")
+    if not add:
+        return pl["g"]
+    out = []
+    for r in pl["g"]:
+        a = add.get(f"{r[0]}-{r[1]}")
+        if a:
+            r = list(r)
+            for i, v in a.items():
+                r[int(i)] += v
+        out.append(r)
+    return out
+
+
+def inj_on(pl, sk):
+    """Is next man up adjusting this player's stat family? (Then the snap-share usage
+    adjustment stays off: the rebuilt games already carry the new role.)"""
     b = pl.get("inj_boost")
-    if not b:
-        return 1.0
-    fam = stat_family(sk, pl["p"])
-    if fam == "rec":
-        return b.get("rec", 1.0)
-    if fam == "rush":
-        return b.get("rush", 1.0)
-    return 1.0
+    return bool(b and b.get(stat_family(sk, pl["p"])))
 
 
 # ---------------------------------------------------------------------------
@@ -1377,12 +1503,12 @@ def build_live_picks(picks, slate_games, sched, by_key, snap, pmus=None, kal=Non
             game_spr = None if (home is None or sg["spread"] is None) else (sg["spread"] if home else -sg["spread"])
             game_pts = None if (game_spr is None or sg["total"] is None) else sg["total"] / 2.0 + game_spr / 2.0
             fam = stat_family(sk, pl["p"])
-            usage = None if inj_mult(pl, sk) != 1.0 else usage_of(pl.get("u"))
+            usage = None if inj_on(pl, sk) else usage_of(pl.get("u"))
             ctx = context_scale(fam, hist_context(pl["g"]), game_pts, game_spr,
                                 def_ratio(snap, opp if home is not None else None, pl["p"], sk), usage)
-            vals = [stat_value(sk, r) for r in pl["g"]]
+            vals = [stat_value(sk, r) for r in model_rows(pl)]
             per = game_per(ctx["scale"], usage, (pl.get("u") or [None])[0], game_shares(pl["id"], pl["g"]), fam)
-            mp = model_prob(vals, pm["line"], stat_kind(sk), ctx["scale"] * inj_mult(pl, sk), CAL.get(sk), per)
+            mp = model_prob(vals, pm["line"], stat_kind(sk), ctx["scale"], CAL.get(sk), per)
             if not mp:
                 continue
             fav = "over" if mp["over"] >= 0.5 else "under"
@@ -1498,10 +1624,10 @@ def news_test(picks, sched, by_pid):
         # p2 only on picks this model version made, so it differs from prob by the news alone
         if wind is not None and p["stat"] in news.WIND_STATS and pl and p.get("adj") is not None and p.get("mv") == MODEL_V:
             scale = min(CTX["clampHi"], max(CTX["clampLo"], p["adj"] * news.wind_factor(wind)))
-            usage = None if inj_mult(pl, p["stat"]) != 1.0 else usage_of(pl.get("u"))
+            usage = None if inj_on(pl, p["stat"]) else usage_of(pl.get("u"))
             per = game_per(p["adj"], usage, (pl.get("u") or [None])[0], game_shares(pl["id"], pl["g"]),
                            stat_family(p["stat"], pl["p"]))
-            mp = model_prob([stat_value(p["stat"], r) for r in pl["g"]], p["line"], stat_kind(p["stat"]), scale,
+            mp = model_prob([stat_value(p["stat"], r) for r in model_rows(pl)], p["line"], stat_kind(p["stat"]), scale,
                             CAL.get(p["stat"]), per)
             if mp:
                 nw["p2"] = round(mp[p["side"]], 3)
@@ -1756,9 +1882,13 @@ def main():
 
     players = build_players(all_rows, roster, injuries, sched)
     try:
-        compute_injury_boosts(players)
+        espn_inj = news.espn_injuries("football/nfl")     # lists Out / IR all week, ahead of nflverse
+        n_out, n_adj = compute_injury_boosts(players, espn_inj)
+        print(f"  next man up: {n_out} back(s)/receiver(s) out"
+              f"{'' if espn_inj is not None else ' (ESPN report unavailable: nflverse and rosters only)'},"
+              f" {n_adj} teammate(s) adjusted")
     except Exception as e:  # noqa: BLE001
-        print(f"  injury boosts: skipped ({e})")
+        print(f"  next man up: skipped ({e})")
     try:
         SNAPS.update(load_snaps(CANDIDATE_SEASONS))
         n_u = 0
