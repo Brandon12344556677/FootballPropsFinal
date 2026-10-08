@@ -22,7 +22,7 @@
   }
   var css = document.createElement('link');
   css.rel = 'stylesheet';
-  css.href = '/halloween.css?v=20261008c';
+  css.href = '/halloween.css?v=20261008d';
   document.head.appendChild(css);
 
   // ---- every green -> pumpkin orange (home page): style sheets, then attributes, then anything drawn later

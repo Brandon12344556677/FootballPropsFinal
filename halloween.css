@@ -24,7 +24,9 @@ html.halloween body{
 /* ---------- brand bits that hard-code the green ---------- */
 html.halloween .apptop,html.halloween header.top{background:rgba(22,10,38,.84);border-bottom-color:rgba(255,122,24,.22)}
 html.halloween .sportnav a:hover{border-color:rgba(255,122,24,.5);box-shadow:0 0 0 3px rgba(255,122,24,.12)}
-html.halloween .appcta:not(.pm){box-shadow:0 6px 16px rgba(255,122,24,.22)}
+html.halloween .appcta{box-shadow:0 6px 16px rgba(255,122,24,.22)}
+html.halloween .appcta.pm{background:#ff7a18;color:#2b1200}      /* the Polymarket $25 button: orange too, not blue */
+html.halloween .appcta.pm:hover{box-shadow:0 8px 20px rgba(255,122,24,.32)}
 html.halloween .app .eyebrow,html.halloween .eyebrow{background:rgba(255,122,24,.08);border-color:rgba(255,122,24,.32)}
 html.halloween .app .eyebrow .dot,html.halloween .eyebrow .dot{animation-name:hw-ping}
 @keyframes hw-ping{0%{box-shadow:0 0 0 0 rgba(255,122,24,.6)}80%,100%{box-shadow:0 0 0 10px rgba(255,122,24,0)}}
