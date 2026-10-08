@@ -1,0 +1,68 @@
+name: Inactives probe (temporary)
+on:
+  push:
+    branches: [claude/upbeat-dijkstra-rktnaf]
+    paths: [.github/workflows/inactives-probe.yml]
+permissions:
+  contents: read
+jobs:
+  probe:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: |
+          python - <<'PY'
+          import collections, json
+          import news
+          def get(path, core=False):
+              for h in (("sports.core.api.espn.com",) if core else news.ESPN_HOSTS):
+                  try:
+                      return news.get_json(f"https://{h}{path}")
+                  except Exception as e:
+                      print("  fail", h, path, e)
+          inj = get("/apis/site/v2/sports/football/nfl/injuries")
+          st = collections.Counter()
+          for t in (inj or {}).get("injuries") or []:
+              for i in t.get("injuries") or []:
+                  st[i.get("status")] += 1
+          print("injury statuses:", dict(st))
+          one = ((inj or {}).get("injuries") or [{}])[0].get("injuries", [{}])[0]
+          print("one injury entry keys:", sorted(one.keys()))
+          print(json.dumps(one)[:1500])
+          sb = get("/apis/site/v2/sports/football/nfl/scoreboard")
+          evs = (sb or {}).get("events") or []
+          print("scoreboard week events:", [(e["id"], e["shortName"], e["status"]["type"]["name"], e["date"]) for e in evs])
+          for wk in (4,):
+              sb2 = get(f"/apis/site/v2/sports/football/nfl/scoreboard?week={wk}&seasontype=2&dates=2026")
+              done = [e for e in (sb2 or {}).get("events") or [] if e["status"]["type"]["completed"]]
+              if done:
+                  e = done[0]
+                  s = get(f"/apis/site/v2/sports/football/nfl/summary?event={e['id']}")
+                  print("past summary", e["shortName"], "keys:", sorted((s or {}).keys()))
+                  txt = json.dumps(s or {})
+                  for kw in ("nactive", "didNotPlay", "\"active\""):
+                      i = txt.find(kw)
+                      print("  ", kw, txt.count(kw), txt[max(0, i-300):i+300] if i >= 0 else "")
+                  comp = e["competitions"][0]
+                  for c in comp["competitors"][:1]:
+                      r = get(f"/v2/sports/football/leagues/nfl/events/{e['id']}/competitions/{comp['id']}/competitors/{c['id']}/roster", core=True)
+                      ents = (r or {}).get("entries") or []
+                      print("past core roster entries", len(ents), "keys:", sorted(ents[0].keys()) if ents else None)
+                      print("  active counts:", collections.Counter((x.get("active"), x.get("didNotPlay")) for x in ents))
+                      print("  sample:", json.dumps(ents[0])[:600] if ents else None)
+          for e in evs[:2]:
+              comp = e["competitions"][0]
+              s = get(f"/apis/site/v2/sports/football/nfl/summary?event={e['id']}")
+              print("upcoming summary", e["shortName"], "keys:", sorted((s or {}).keys()))
+              txt = json.dumps(s or {})
+              for kw in ("nactive", "didNotPlay", "\"active\""):
+                  print("  ", kw, txt.count(kw))
+              for c in comp["competitors"][:1]:
+                  r = get(f"/v2/sports/football/leagues/nfl/events/{e['id']}/competitions/{comp['id']}/competitors/{c['id']}/roster", core=True)
+                  ents = (r or {}).get("entries") or []
+                  print("  upcoming core roster entries", len(ents), "keys:", sorted(ents[0].keys()) if ents else None)
+                  print("  active counts:", collections.Counter((x.get("active"), x.get("didNotPlay")) for x in ents))
+          PY
