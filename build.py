@@ -948,10 +948,11 @@ def compute_injury_boosts(players, espn=None):
                 m["inj_add"] = {f"{k[0]}-{k[1]}": {str(i): round(v, 2) for i, v in d.items()} for k, d in a.items()}
                 recent = sorted(m["g"], key=lambda r: (r[0], r[1]))[-8:]
                 for fam, cfg in NMU.items():
+                    if not any(cfg["vol"] in d for d in a.values()):
+                        continue
                     base = sum(r[cfg["vol"]] for r in recent)
                     extra = sum(a.get(_gkey(r), {}).get(cfg["vol"], 0.0) for r in recent)
-                    if extra > 0 and base > 0:
-                        b[fam] = round(1.0 + extra / base, 2)
+                    b[fam] = round(1.0 + extra / base, 2) if base > 0 else 1.0   # set either way: inj_on reads it
             if rc:
                 b["role"] = sorted(rc)
             fams = set(b) & set(NMU) | rc
