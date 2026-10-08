@@ -1541,7 +1541,7 @@ def make_pick(src, gid, season, week, date, pl, opp, sk, line, mp, price, rec, s
 
 
 def assign_lists(picks, held=0):
-    """T = the 25 highest model chances ('Top 25 Surest'). V = every prop the market
+    """T = the 25 highest model chances ('Top 25 Surest') you can bet, one line per player-prop. V = every prop the market
     prices at 30c or more that the model puts 15+ points higher, ranked by that edge.
     V is side-agnostic: an under qualifies whenever its own ask is the cheap one.
     `held` Top 25 slots stay with locked picks still on the board. Operates in place."""
@@ -1549,26 +1549,36 @@ def assign_lists(picks, held=0):
         p["lists"] = ""
     # waiting on injury news (a questionable teammate in his position group, or himself): no lists
     picks = [p for p in picks if not p.get("hd")]
-    # Top 25: only props you can bet -- a live price with $25+ offered near it (depth.py; not thin)
-    ranked = sorted((p for p in picks if p["prob"] >= 0.5 and p.get("price") is not None and not p.get("th")),
-                    key=lambda p: (-p["prob"], -p["neff"]))
-    for p in ranked[:TOP_N - held]:
-        p["lists"] += "T"
     # The model's widest gap over the price on any rung of a player-prop (one side): over
-    # VALUE_MAX_EDGE on one rung, it's likely missing something about him this week, so no rung
-    # of that prop makes Value (on the record, 15-20 point rungs of such props didn't pay either).
+    # VALUE_MAX_EDGE on one rung, it's likely missing something about him this week (a role
+    # change the market already priced), so no rung of that prop makes Top 25 or Value (on the
+    # record, 15-20 point rungs of such props didn't pay either).
     widest = {}
     for p in picks:
         if p.get("price") is not None:
             k = (p["gid"], p["pid"], p["stat"], p.get("side"))
             widest[k] = max(widest.get(k, -1.0), p["prob"] - p["price"] / 100.0)
+    wide = lambda p: widest.get((p["gid"], p["pid"], p["stat"], p.get("side")), -1.0) > VALUE_MAX_EDGE + 1e-9
+    # Top 25: only props you can bet -- a live price with $25+ offered near it (depth.py; not
+    # thin) -- one line per player-prop (its surest rung), none the model is that far off on
+    ranked = sorted((p for p in picks if p["prob"] >= 0.5 and p.get("price") is not None and not p.get("th")
+                     and not wide(p)), key=lambda p: (-p["prob"], -p["neff"]))
+    seen = set()
+    for p in ranked:
+        k = (p["gid"], p["pid"], p["stat"])
+        if k in seen:
+            continue
+        if len(seen) >= TOP_N - held:
+            break
+        seen.add(k)
+        p["lists"] += "T"
     vals = []
     for p in picks:
         pr = p.get("price")
         if pr is None or p.get("th") or p["neff"] < VALUE_MIN_NEFF:
             continue
         price = pr / 100.0
-        if value_qualifies(p["prob"], price) and widest[(p["gid"], p["pid"], p["stat"], p.get("side"))] <= VALUE_MAX_EDGE + 1e-9:
+        if value_qualifies(p["prob"], price) and not wide(p):
             vals.append((p["prob"] - price, p))
     vals.sort(key=lambda x: -x[0])
     seen, n = set(), 0          # one line per player-prop: a ladder's rungs are one opinion, not four picks
