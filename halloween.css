@@ -1,0 +1,95 @@
+/* Prop Streak Lab — Halloween theme. halloween.js loads this (and adds html.halloween) through
+   October 31, 2026, US Eastern; from November 1 neither is applied.
+   The brand green turns pumpkin orange on a night-purple background. Green that MEANS something
+   stays green: a pick that hit, a positive edge or record, a price that moved our way. */
+
+html.halloween{
+  --hw-orange:#ff7a18; --hw-ink:#2b1200; --hw-hit:#22d07f;
+  /* the boards (app.css) */
+  --ps-green:#ff7a18; --ps-green-2:#ff7a18; --ps-green-ink:#2b1200;
+  /* the home page (index.html) */
+  --green:#ff7a18; --green-2:#ff7a18; --green-ink:#2b1200;
+}
+html.halloween body{
+  background-image:
+    linear-gradient(rgba(255,122,24,.035) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(255,122,24,.035) 1px,transparent 1px),
+    radial-gradient(1100px 700px at 12% -10%,rgba(139,92,246,.20),transparent 60%),
+    radial-gradient(900px 600px at 100% 30%,rgba(255,122,24,.10),transparent 60%),
+    radial-gradient(140px 140px at 88% 9%,rgba(255,236,190,.16),transparent 70%),
+    linear-gradient(180deg,#160c2a,#0e0a1e 45%,#07060f);
+  background-color:#0e0a1e;
+  background-size:58px 58px,58px 58px,100% 100%,100% 100%,100% 100%,100% 100%;background-attachment:fixed}
+
+/* ---------- brand bits that hard-code the green ---------- */
+html.halloween .apptop,html.halloween header.top{background:rgba(22,10,38,.84);border-bottom-color:rgba(255,122,24,.22)}
+html.halloween .sportnav a:hover{border-color:rgba(255,122,24,.5);box-shadow:0 0 0 3px rgba(255,122,24,.12)}
+html.halloween .appcta:not(.pm){box-shadow:0 6px 16px rgba(255,122,24,.22)}
+html.halloween .app .eyebrow,html.halloween .eyebrow{background:rgba(255,122,24,.08);border-color:rgba(255,122,24,.32)}
+html.halloween .app .eyebrow .dot,html.halloween .eyebrow .dot{animation-name:hw-ping}
+@keyframes hw-ping{0%{box-shadow:0 0 0 0 rgba(255,122,24,.6)}80%,100%{box-shadow:0 0 0 10px rgba(255,122,24,0)}}
+html.halloween .app .refbanner{box-shadow:0 6px 16px rgba(255,122,24,.16)}
+html.halloween .app .refbanner.group{border-color:rgba(255,122,24,.5)}
+html.halloween .app .refbanner.group:hover{background:rgba(255,122,24,.08)}
+html.halloween .app .vwbar{border-color:rgba(255,122,24,.35)}
+html.halloween .app .valrules{background:rgba(255,122,24,.05)}
+html.halloween .app .btn{box-shadow:0 6px 16px rgba(255,122,24,.16)}
+html.halloween .app .chip:hover,html.halloween .app .sortpill:hover{border-color:rgba(255,122,24,.5)}
+html.halloween .app .sortpill[aria-pressed=true]{background:rgba(255,122,24,.14);border-color:rgba(255,122,24,.6)}
+html.halloween .app .tile.model{border-color:rgba(255,122,24,.45)}
+html.halloween .app .edgeload{border-color:rgba(255,122,24,.45)}
+html.halloween .app input[type=text]:focus,html.halloween .app select:focus,html.halloween .app textarea:focus{box-shadow:0 0 0 3px rgba(255,122,24,.18)}
+html.halloween select option:checked{background-color:#ff7a18!important;color:#2b1200!important}
+html.halloween .ticker{border-bottom-color:rgba(255,122,24,.2)}
+html.halloween .tk-live{background:#ff7a18;color:#2b1200}
+html.halloween .tk-sep{color:rgba(255,122,24,.6)}
+html.halloween .pstoast,html.halloween .psgate-btns .btn{background:#ff7a18;color:#2b1200}
+html.halloween .qhelp{border-color:rgba(255,122,24,.45);background:rgba(255,122,24,.06)}
+html.halloween .qhelp:hover,html.halloween .qhelp[aria-expanded="true"]{border-color:#ff7a18}
+html.halloween .qhelp .qi{background:rgba(255,122,24,.18);color:#ff7a18}
+html.halloween .pshelp{border-color:rgba(255,122,24,.5)}
+html.halloween .pshelp b{color:#ff7a18}
+html.halloween .pstrust .tr-dot{background:#ff7a18;box-shadow:0 0 0 3px rgba(255,122,24,.18)}
+html.halloween .mini .ic,html.halloween .feat .ic{background:rgba(255,122,24,.1)}
+html.halloween .btn-go{box-shadow:0 6px 18px rgba(255,122,24,.2)}
+
+/* ---------- green that means something stays green ---------- */
+html.halloween .app .edgeval.pos,html.halloween .app .vd-stats b.pos,html.halloween .pxmove.up b,
+html.halloween .app .betsum b.pos,html.halloween .app .r-hit .br-res,html.halloween .app .pickcard.hi .pc-prob b,
+html.halloween .app .pc-model b,html.halloween .dstats .pos b,html.halloween .bs-rec .up,html.halloween .crow .ok{color:var(--hw-hit)}
+html.halloween .pssheet .ps-bars .hit i,html.halloween .bs-dots i.hit,html.halloween .bars i{background:var(--hw-hit)}
+html.halloween .bs-st.hit{background:var(--hw-hit);border-color:var(--hw-hit);color:#06210b}
+html.halloween .app .betrow.r-hit{border-left-color:var(--hw-hit)}
+html.halloween .app .vwbar:not(.down) .big{color:var(--hw-hit)}   /* the Value record, when it's up */
+
+/* ---------- decorations (added by halloween.js) ---------- */
+.hw-banner{position:relative;z-index:49;display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:4px 10px;
+  padding:7px 16px;background:linear-gradient(90deg,#2a0f45,#4a1d0a 50%,#2a0f45);border-bottom:1px solid rgba(255,122,24,.35);
+  color:#ffe2c7;font:600 13.5px/1.35 "Inter",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;text-align:center}
+.hw-banner b{color:#ff9a3c;font-weight:800}
+.hw-banner span{color:#cdb8ec;font-weight:500}
+.hw-deco{position:fixed;inset:0;z-index:-1;pointer-events:none;overflow:hidden}
+.hw-web{position:absolute;top:0;width:clamp(90px,13vw,170px);opacity:.3}
+/* the boards size every svg to 520px+ for their charts: not these */
+.hw-deco svg{display:block;width:100%!important;min-width:0!important;max-width:100%!important;height:auto!important}
+.hw-web-l{left:0} .hw-web-r{right:0;transform:scaleX(-1)}
+.hw-bat{position:absolute;left:0;top:var(--y);width:calc(46px*var(--s));animation:hw-fly var(--d) linear var(--delay) infinite}
+.hw-bat.rev{animation-name:hw-fly-rev}
+.hw-bat svg{animation:hw-flap .3s ease-in-out infinite alternate;filter:drop-shadow(0 0 5px rgba(255,140,60,.55))}
+@keyframes hw-fly{0%{transform:translate(-12vw,0)}25%{transform:translate(22vw,-4vh)}50%{transform:translate(50vw,3vh)}
+  75%{transform:translate(80vw,-3vh)}100%{transform:translate(112vw,0)}}
+@keyframes hw-fly-rev{0%{transform:translate(112vw,0) scaleX(-1)}25%{transform:translate(78vw,3vh) scaleX(-1)}
+  50%{transform:translate(50vw,-4vh) scaleX(-1)}75%{transform:translate(20vw,2vh) scaleX(-1)}100%{transform:translate(-12vw,0) scaleX(-1)}}
+@keyframes hw-flap{from{transform:scaleY(1)}to{transform:scaleY(.45)}}
+.hw-ghost{position:absolute;left:var(--x);top:var(--y);width:calc(40px*var(--s));opacity:.5;
+  animation:hw-float var(--d) ease-in-out infinite alternate}
+@keyframes hw-float{0%{transform:translate(0,0) rotate(-4deg)}50%{transform:translate(2.5vw,-3vh) rotate(3deg)}
+  100%{transform:translate(-2vw,2vh) rotate(-2deg)}}
+@media (max-width:760px){
+  .hw-m{display:none}
+  .hw-banner{font-size:12.5px;padding:6px 12px}
+}
+@media (prefers-reduced-motion:reduce){
+  .hw-bat,.hw-bat svg,.hw-ghost{animation:none}
+  .hw-bat{transform:translateX(var(--x))}
+}
