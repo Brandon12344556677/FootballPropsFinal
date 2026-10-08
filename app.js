@@ -447,7 +447,11 @@ window.PS = (function(){
   // needs a price) but had under $25 offered near its price on both exchanges (depth.py "th").
   // It was never recommended, so Past picks leaves it out. opt: {cents: 100 for NFL prices,
   // tMin: the Top 25 chance floor where Top 25 needs a price (MLB, NHL)} ----
+  // Also left out: a Top 25 / Value pick from the rule's launch day (Oct 7, 2026) recorded before the
+  // rule ran — its depth was never checked (the site owner's call; depth.unchecked in the builders).
+  const RULE_DAY='2026-10-07';
   function thinOut(p, opt){
+    if(p && p.lists && String(p.date)===RULE_DAY && p.vn==null && !p.th) return true;
     if(!p || !p.th || p.lists || p.price==null || p.prob==null) return false;   // on a list = it was recommended
     const o=opt||{}, px=p.price/(o.cents||1), q=+p.prob;
     const value=(p.neff==null || p.neff>=6) && px>=0.30 && q-px>=0.15;

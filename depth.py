@@ -95,6 +95,16 @@ def fetch_clob(token):
     return clob_book(_get(CLOB_BOOK.format(token=token)))
 
 
+RULE_DAY = "2026-10-07"   # the $25 rule went live that evening
+
+
+def unchecked(p):
+    """A Top 25 / Value pick from the rule's launch day recorded before the rule ran: its depth was
+    never checked, so (the site owner's call) it's left out of Past picks and the record like a
+    thin-market rule-out. Mirrors PS.thinOut on the pages."""
+    return bool(p.get("lists")) and str(p.get("date")) == RULE_DAY and p.get("vn") is None and not p.get("th")
+
+
 def deep(usd):
     return usd is not None and usd >= MIN_USD
 

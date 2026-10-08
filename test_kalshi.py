@@ -170,6 +170,13 @@ class Depth(unittest.TestCase):
         depth.choose(p)
         self.assertEqual((p["price"], p["vn"], p["th"]), (None, None, None))
 
+    def test_launch_day_unchecked_picks(self):
+        base = {"lists": "TV", "date": "2026-10-07", "vn": None, "th": None}
+        self.assertTrue(depth.unchecked(base))                                   # recommended before the rule ran
+        self.assertFalse(depth.unchecked(dict(base, vn="P")))                    # checked by the rule
+        self.assertFalse(depth.unchecked(dict(base, lists="")))                  # never recommended
+        self.assertFalse(depth.unchecked(dict(base, date="2026-10-06")))         # earlier history stays
+
     def test_verify_reads_books_only_for_candidates(self):
         real = depth.fetch_kalshi
         calls = []

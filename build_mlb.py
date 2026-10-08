@@ -1192,6 +1192,7 @@ def fit_temperature(picks):
 
 def live_record(picks):
     out = {}
+    picks = [p for p in picks if not depth.unchecked(p)]   # launch-day picks the $25 rule never checked
     for p in picks:
         if p.get("res") not in ("hit", "miss"):
             continue
