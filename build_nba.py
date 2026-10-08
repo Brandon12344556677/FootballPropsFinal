@@ -904,12 +904,18 @@ VALUE_MIN_PRICE = 0.30  # the market has to give it at least 30%
 VALUE_MIN_EDGE = 0.15   # and the model has to be 15+ points higher
 
 
-def could_list(p):
-    """A pending pick that a price could put on Value (Top 25 needs no price here), but whose
-    depth isn't yet known to be enough (depth.verify reads the full book for these)."""
-    if p.get("res") is not None or pick_locked(p) or not p.get("th") or p["neff"] < VALUE_MIN_NEFF:
+TOP_VERIFY = 80         # the surest priced props whose order books are read for Top 25
+
+
+def could_list(p, t_floor=1.01):
+    """A pending pick that a price could put on Top 25 Surest (its chance is t_floor or more: among
+    the TOP_VERIFY surest priced) or Value, but whose depth isn't yet known to be enough
+    (depth.verify reads the full book for these)."""
+    if p.get("res") is not None or pick_locked(p) or not p.get("th"):
         return False
-    return any(px is not None and value_qualifies(p["prob"], px) for px in (p.get("pp"), p.get("kp")))
+    return any(px is not None and (p["prob"] >= t_floor or
+                                   (p["neff"] >= VALUE_MIN_NEFF and value_qualifies(p["prob"], px)))
+               for px in (p.get("pp"), p.get("kp")))
 
 
 def value_qualifies(prob, price):
@@ -1231,7 +1237,9 @@ def assign_lists(picks):
     for p in pending:
         p["lists"] = ""
     pending = [p for p in pending if not p.get("hd")]     # waiting on injury news (holds.py): no lists
-    ranked = sorted((p for p in pending if p["prob"] >= 0.5), key=lambda p: (-p["prob"], -p["neff"]))
+    # Top 25: only props you can bet -- a live price with $25+ offered near it (depth.py; not thin)
+    ranked = sorted((p for p in pending if p["prob"] >= 0.5 and p.get("price") is not None and not p.get("th")),
+                    key=lambda p: (-p["prob"], -p["neff"]))
     for p in ranked[:TOP_N - held]:
         p["lists"] += "T"
     vals = [((p["prob"] - p["price"]), p) for p in pending
@@ -1498,7 +1506,10 @@ def main():
         kalshi_mkts = None
     nk = kalshi.apply(picks, kalshi_mkts, pkey, lambda p: not pick_locked(p))
     print(f"  kalshi: {nk} pending pick(s) priced on Kalshi too")
-    nb = depth.verify(picks, could_list)
+    surest = sorted((p["prob"] for p in picks if p.get("res") is None and not pick_locked(p)
+                     and p.get("price") is not None and not p.get("hd")), reverse=True)[:TOP_VERIFY]
+    t_floor = max(0.5, surest[-1]) if len(surest) == TOP_VERIFY else 0.5
+    nb = depth.verify(picks, lambda p: could_list(p, t_floor))
     thin = sum(1 for p in picks if p.get("res") is None and not pick_locked(p) and p.get("th"))
     print(f"  depth: read {nb} more order book(s); {thin} pending pick(s) too thin for Value "
           f"(under ${depth.MIN_USD:.0f} offered within 2c)")
