@@ -2071,18 +2071,21 @@ function lockedRow(lp, g, sg){
     lists:lp.lists||'', lk:lp.lk, locked:true, vprice:price, vlive:false, vedge:price==null? null : lp.prob-price,
     pp:lp.pp==null? null : lp.pp/100, kp:lp.kp==null? null : lp.kp/100, vn:lp.vn||null};
 }
+/* The model's widest gap over the live price on any rung of a player-prop (one side): over
+   VALUE_MAX_EDGE on one rung, it's likely missing something about him this week (a role change
+   the market already priced), so no rung of that prop makes Top 25 or Value. */
+const pk=c=>c.pl.id+'|'+c.sk+'|'+c.side;
+function widestGaps(cands){
+  const m=new Map();
+  cands.forEach(c=>{ const e=valuePrice(c); if(!e) return; m.set(pk(c), Math.max(m.has(pk(c))? m.get(pk(c)) : -1, c.prob-e.px)); });
+  return m;
+}
+const tooWide=(wide, c)=>wide.get(pk(c))>VALUE_MAX_EDGE+1e-9;
 function computeValueRows(){
-  const out=[], priced=[], widest=new Map();
-  // The model's widest gap on any rung of a player-prop (one side): over VALUE_MAX_EDGE on one
-  // rung, it's likely missing something about him this week, so no rung of that prop qualifies.
-  const pk=c=>c.pl.id+'|'+c.sk+'|'+c.side;
+  const out=[], wide=widestGaps(valueCands);
   valueCands.forEach(c=>{
-    const e=valuePrice(c); if(!e) return; priced.push([c, e]);
-    widest.set(pk(c), Math.max(widest.has(pk(c))? widest.get(pk(c)) : -1, c.prob-e.px));
-  });
-  priced.forEach(([c, e])=>{
-    if(e.thin) return;      // thin: under $25 offered near the price
-    if(!valueQualifies(c.prob, e.px) || widest.get(pk(c))>VALUE_MAX_EDGE+1e-9) return;
+    const e=valuePrice(c); if(!e || e.thin) return;      // thin: under $25 offered near the price
+    if(!valueQualifies(c.prob, e.px) || tooWide(wide, c)) return;
     out.push(Object.assign({}, c, {vprice:e.px, vlive:e.live, vvn:e.vn, vedge:c.prob-e.px, ev:c.prob/e.px-1}));
   });
   out.sort((a,b)=>b.vedge-a.vedge);
@@ -2160,8 +2163,13 @@ async function scanBoard(force){
     try{ await fillLive([...seedMk.values()], false); }catch(e){}
     try{ await fillDepth(topCands, ()=>true); }catch(e){}
     try{ await fillDepth(valueCands); }catch(e){}
-    let nT=0;
-    for(const r of topCands){ const e=valuePrice(r); if(!e || e.thin) continue; r.lists+='T'; if(++nT>=25) break; }
+    // one line per player-prop (its surest rung), and none the model is over VALUE_MAX_EDGE off on
+    const wide=widestGaps(valueCands.concat(topCands)), seenT=new Set();
+    for(const r of topCands){
+      const k=r.pl.id+'|'+r.sk; if(seenT.has(k) || tooWide(wide, r)) continue;
+      const e=valuePrice(r); if(!e || e.thin) continue;
+      seenT.add(k); r.lists+='T'; if(seenT.size>=25) break;
+    }
     valueRows=computeValueRows();
     edgeRows=modeled;
     const nohist=rows.filter(r=>r.nohist).length;
@@ -2243,7 +2251,7 @@ function topRows(){
 function renderEdges(){
   const rows=sortRows(topRows(), edgeSort.key, edgeSort.dir);
   $('edgebody').innerHTML=pickTable(rows,{sort:edgeSort})+
-    `<p class="mktnote" style="margin-top:8px">The 25 props with the highest <b>model chance</b> on this week's board that you can actually bet — a live Polymarket US or Kalshi price with at least <b>$25</b> offered near it — regardless of payout. Props waiting on injury news are left off. Best if you're holding <b>credits you can't withdraw without trading</b>, since these are the props most likely to win and let you cash out. <b>Model</b> = the chance the Bet side hits, with its 80% range and the games it's based on. <b>Best price</b> is the cheaper of Polymarket US (live, refreshed about once a minute) and Kalshi for that exact side — what you'd pay right now, the model's edge over it, and the payout multiplier — with both exchanges' prices underneath. Use the pills to sort. These picks are recorded before kickoff and graded in <b>Past picks</b>.</p>`;
+    `<p class="mktnote" style="margin-top:8px">The 25 props with the highest <b>model chance</b> on this week's board that you can actually bet — a live Polymarket US or Kalshi price with at least <b>$25</b> offered near it — regardless of payout, one line per player-prop. Left off: props waiting on injury news, and any prop where the model is more than 20 points off the market on some line (it's likely missing a role change the market already knows). Best if you're holding <b>credits you can't withdraw without trading</b>, since these are the props most likely to win and let you cash out. <b>Model</b> = the chance the Bet side hits, with its 80% range and the games it's based on. <b>Best price</b> is the cheaper of Polymarket US (live, refreshed about once a minute) and Kalshi for that exact side — what you'd pay right now, the model's edge over it, and the payout multiplier — with both exchanges' prices underneath. Use the pills to sort. These picks are recorded before kickoff and graded in <b>Past picks</b>.</p>`;
   $('edgebody').querySelectorAll('.sortpill').forEach(t=>t.onclick=()=>{ const k=t.dataset.k; if(!k) return;
     if(edgeSort.key===k) edgeSort.dir*=-1; else { edgeSort.key=k; edgeSort.dir=['name','statText','side','matchup'].includes(k)?1:-1; } renderEdges(); });
   wireLoad($('edgebody'), rows);

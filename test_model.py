@@ -639,9 +639,18 @@ class LockTests(unittest.TestCase):
         self.assertEqual(B.lock_picks([p], sched), 1)
         rows = B.locked_rows([p], sched)
         self.assertEqual((len(rows), rows[0]["price"], rows[0]["lists"]), (1, 55, "V"))
-        top = [{"prob": 0.9 - i / 100, "neff": 9.0, "price": 50, "gid": "g", "pid": f"p{i}", "stat": "rec"} for i in range(30)]
+        top = [{"prob": 0.9 - i / 100, "neff": 9.0, "price": 80, "gid": "g", "pid": f"p{i}", "stat": "rec"} for i in range(30)]
         B.assign_lists(top, held=4)
         self.assertEqual(sum("T" in x["lists"] for x in top), B.TOP_N - 4)
+
+    def test_nfl_top25_one_line_per_prop_and_no_wide_gaps(self):
+        mk = lambda prob, price, pid, line: {"prob": prob, "neff": 9.0, "price": price, "lists": "", "gid": "g",
+                                             "pid": pid, "stat": "rush_yds", "side": "under", "line": line}
+        a39, a29 = mk(0.99, 87, "goodson", 39.5), mk(0.96, 77, "goodson", 29.5)
+        a9 = mk(0.74, 33, "goodson", 9.5)                 # 41 points off the market on this rung
+        b79, b69 = mk(0.99, 96, "robinson", 79.5), mk(0.98, 92, "robinson", 69.5)
+        B.assign_lists([a39, a29, a9, b79, b69])
+        self.assertEqual([("T" in p["lists"]) for p in (a39, a29, a9, b79, b69)], [False, False, False, True, False])
 
     def test_nfl_top25_needs_a_price_with_money_behind_it(self):
         mk = lambda prob, price, th=None: {"prob": prob, "neff": 9.0, "price": price, "th": th, "lists": "",
