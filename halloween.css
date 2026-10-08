@@ -93,3 +93,57 @@ html.halloween .app .vwbar:not(.down) .big{color:var(--hw-hit)}   /* the Value r
   .hw-bat,.hw-bat svg,.hw-ghost{animation:none}
   .hw-bat{transform:translateX(var(--x))}
 }
+
+/* ---------- more Halloween: countdown, badge, moon, fog, spiders, jack-o'-lanterns, peeking ghost ---------- */
+.hw-banner .hw-count{font-style:normal;font-weight:800;color:#2b1200;background:#ff9a3c;border-radius:999px;padding:2px 10px;
+  box-shadow:0 0 14px rgba(255,140,40,.45)}
+.hw-badge{display:inline-flex;align-items:center;gap:8px;margin:0 0 14px;padding:7px 14px;border-radius:999px;
+  background:linear-gradient(90deg,#ff7a18,#ff9a3c);color:#2b1200;font:800 14px/1 "Inter",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  letter-spacing:.02em;box-shadow:0 0 0 1px rgba(255,180,90,.5),0 8px 24px rgba(255,122,24,.35);animation:hw-glow 2.6s ease-in-out infinite}
+.hw-badge small{font-size:12px;font-weight:700;opacity:.75}
+@keyframes hw-glow{0%,100%{box-shadow:0 0 0 1px rgba(255,180,90,.5),0 8px 24px rgba(255,122,24,.30)}
+  50%{box-shadow:0 0 0 1px rgba(255,200,120,.7),0 8px 34px rgba(255,122,24,.60)}}
+/* the headline's highlighted word glows like a candle */
+html.halloween h1 i{color:#ff8a26!important;text-shadow:0 0 18px rgba(255,122,24,.55),0 0 42px rgba(255,90,0,.25);animation:hw-flicker 4s infinite}
+@keyframes hw-flicker{0%,18%,22%,25%,53%,57%,100%{opacity:1}20%,24%,55%{opacity:.72}}
+.hw-moon{position:absolute;top:210px;right:3%;width:clamp(56px,7vw,96px);aspect-ratio:1;border-radius:50%;opacity:.9;
+  background:radial-gradient(circle at 62% 38%,rgba(190,160,90,.45) 0 7%,transparent 8%),
+    radial-gradient(circle at 38% 64%,rgba(190,160,90,.4) 0 10%,transparent 11%),
+    radial-gradient(circle at 70% 70%,rgba(190,160,90,.35) 0 5%,transparent 6%),
+    radial-gradient(circle at 35% 32%,#fffbe8,#f6dc95 58%,#e0b65c);
+  box-shadow:0 0 50px 14px rgba(255,226,160,.20),0 0 120px 40px rgba(255,190,90,.10)}
+.hw-fog{position:absolute;left:-25%;right:-25%;bottom:-30px;height:200px;opacity:.9;
+  background:radial-gradient(ellipse 40% 60% at 25% 100%,rgba(205,190,240,.16),transparent 70%),
+    radial-gradient(ellipse 35% 55% at 65% 100%,rgba(205,190,240,.13),transparent 70%),
+    radial-gradient(ellipse 30% 50% at 90% 100%,rgba(205,190,240,.12),transparent 70%);
+  animation:hw-fog 28s ease-in-out infinite alternate}
+@keyframes hw-fog{from{transform:translateX(-6%)}to{transform:translateX(6%)}}
+.hw-spider{position:absolute;top:0;left:var(--x);width:30px;animation:hw-bob var(--d) ease-in-out infinite alternate;transform-origin:top center}
+.hw-spider i{display:block;width:1px;height:var(--len);margin:0 auto;background:linear-gradient(rgba(230,220,255,.15),rgba(230,220,255,.6))}
+.hw-spider svg{margin-top:-4px;filter:drop-shadow(0 0 6px rgba(255,120,60,.35))}
+@keyframes hw-bob{from{transform:translateY(-14px)}to{transform:translateY(26px)}}
+.hw-jack{position:absolute;bottom:6px;width:64px;display:none;filter:drop-shadow(0 0 14px rgba(255,140,30,.65))}
+.hw-jack.l{left:14px} .hw-jack.r{right:14px}
+@media (min-width:1380px){.hw-jack{display:block}}      /* only where the margins are empty: never under text */
+.hw-jack .hw-face,.hw-patch .hw-face{animation:hw-candle 1.8s steps(1) var(--delay) infinite}
+.hw-patch{display:flex;justify-content:center;align-items:flex-end;gap:clamp(8px,2.4vw,26px);max-width:1160px;margin:34px auto 6px;
+  padding:0 16px 8px;border-bottom:2px dashed rgba(255,122,24,.28)}
+.hw-patch span{display:block;width:var(--w);filter:drop-shadow(0 0 12px rgba(255,140,30,.55))}
+.hw-patch svg{display:block;width:100%!important;min-width:0!important;max-width:100%!important;height:auto!important}
+@keyframes hw-candle{0%{opacity:1}30%{opacity:.75}45%{opacity:1}70%{opacity:.85}85%{opacity:1}}
+.hw-peek{position:fixed;right:22px;bottom:-110px;z-index:45;width:62px;pointer-events:none;transform:translateY(0);
+  animation:hw-peek 26s ease-in-out 6s infinite}
+.hw-peek svg{display:block;width:100%!important;min-width:0!important;height:auto!important;filter:drop-shadow(0 6px 14px rgba(0,0,0,.5))}
+.hw-peek b{position:absolute;top:-26px;left:-34px;padding:4px 9px;border-radius:12px 12px 2px 12px;background:#fff;color:#2b1200;
+  font:900 14px/1 "Inter",system-ui,sans-serif;opacity:0;animation:hw-boo 26s ease-in-out 6s infinite}
+@keyframes hw-peek{0%,78%,100%{transform:translateY(0)}83%,92%{transform:translateY(-118px) rotate(-6deg)}87%{transform:translateY(-112px) rotate(5deg)}}
+@keyframes hw-boo{0%,82%,94%,100%{opacity:0}84%,92%{opacity:1}}
+@media (max-width:760px){
+  .hw-badge{font-size:13px;margin-bottom:10px}
+  .hw-moon{display:none}
+  .hw-peek{display:none}
+}
+@media (prefers-reduced-motion:reduce){
+  .hw-badge,html.halloween h1 i,.hw-fog,.hw-spider,.hw-jack .hw-face,.hw-peek,.hw-peek b{animation:none}
+  .hw-peek{display:none}
+}
