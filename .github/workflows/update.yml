@@ -41,7 +41,11 @@ jobs:
     # given a runner and were cancelled after 15 minutes; pinning skips that label's queue.
     runs-on: ubuntu-24.04
     steps:
+      # Pushes with the DEPLOY_KEY deploy key (write access), which the main-branch ruleset
+      # lets bypass its pull-request rule. The default token would be refused.
       - uses: actions/checkout@v4
+        with:
+          ssh-key: ${{ secrets.DEPLOY_KEY }}
 
       - uses: actions/setup-python@v5
         with:
