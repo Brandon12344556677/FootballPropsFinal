@@ -53,7 +53,9 @@ Add or update a `test_*.py` case for any change to model, grading, locking, or l
 
 ## Workflow
 
-- Work on a branch and open a PR into `main`; teammates review before merging.
+- Work on a branch and open a PR into `main`. `main` is protected: every PR needs
+  Brandon's approval (`.github/CODEOWNERS`), and direct pushes are refused except for the
+  update bot, which pushes with the `DEPLOY_KEY` deploy key.
 - Before pushing, `git pull --rebase origin main` — `main` gets an "Auto-update data" commit
   every ~10 minutes. Don't commit regenerated data files in a PR.
 - PR titles describe the user-visible change in plain words, with specifics
