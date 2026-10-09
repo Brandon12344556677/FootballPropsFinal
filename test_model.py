@@ -604,14 +604,14 @@ class LockTests(unittest.TestCase):
     def test_locks_only_inside_the_window(self):
         import build_mlb as M, build_nhl as H, build_nba as N
         for mod in (M, H, N):
-            soon, later, started, graded = (self.pick(15), self.pick(25), self.pick(-5),
+            soon, later, started, graded = (self.pick(25), self.pick(35), self.pick(-5),
                                             self.pick(15, res="hit"))
             self.assertEqual(mod.lock_picks([soon, later, started, graded]), 1, mod.__name__)
-            self.assertTrue(soon["lk"])
-            self.assertNotIn("lk", later)       # 25 minutes out: the next update still refreshes it
+            self.assertTrue(soon["lk"])         # 25 minutes out: inside the 30-minute window
+            self.assertNotIn("lk", later)       # 35 minutes out: the next update still refreshes it
             self.assertNotIn("lk", started)     # never locked after the start
             self.assertEqual(mod.lock_picks([soon]), 0)      # once only
-            self.assertTrue(mod.game_locked(self.at(15)) and not mod.game_locked(self.at(25)), mod.__name__)
+            self.assertTrue(mod.game_locked(self.at(25)) and not mod.game_locked(self.at(35)), mod.__name__)
 
     def test_a_locked_pick_is_frozen(self):
         import build_mlb as M

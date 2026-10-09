@@ -1420,9 +1420,9 @@ def kickoff_utc(sg):
 
 
 # A pick locks when its game kicks off within LOCK_MIN minutes. The site updates about every
-# 10 minutes, so that's 10-20 minutes before kickoff; from then on its lists, chance and price
+# 10 minutes, so that's 20-30 minutes before kickoff; from then on its lists, chance and price
 # stay as published, and no new picks are added for the game.
-LOCK_MIN = 20
+LOCK_MIN = 30
 
 
 def lock_picks(picks, sched):
