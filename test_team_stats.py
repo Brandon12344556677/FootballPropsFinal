@@ -22,6 +22,41 @@ class Rows(unittest.TestCase):
         self.assertEqual(out, [{"name": "United States", "n": 224}])
 
 
+class TimeOnPage(unittest.TestCase):
+    def test_ranges_in_order_with_zeros(self):
+        events = [{"path": "time/1-3m", "count": 4, "event": True}, {"path": "/time/0-10s", "count": 9, "event": True},
+                  {"path": "time/bogus", "count": 2, "event": True}, {"path": "other-event", "count": 1, "event": True}]
+        out = team_stats.time_rows(events)
+        self.assertEqual([r["name"] for r in out], team_stats.TIME_RANGES)
+        self.assertEqual({r["name"]: r["n"] for r in out}["0-10s"], 9)
+        self.assertEqual({r["name"]: r["n"] for r in out}["1-3m"], 4)
+        self.assertEqual(sum(r["n"] for r in out), 13)
+
+    def test_no_time_events_is_empty(self):
+        self.assertEqual(team_stats.time_rows([]), [])
+
+    def test_events_kept_out_of_visits(self):
+        responses = {
+            "/stats/total": {"total": 10, "total_events": 4,
+                             "stats": [{"day": "2026-10-10", "daily": 10, "hourly": [0] * 23 + [10]}]},
+            "/stats/hits": {"hits": [
+                {"path": "/", "count": 6, "event": False, "stats": []},
+                {"path": "time/1-3m", "count": 4, "event": True,
+                 "stats": [{"day": "2026-10-10", "daily": 4, "hourly": [0] * 23 + [4]}]}]},
+        }
+        old = team_stats.get
+        team_stats.get = lambda token, path, **q: responses.get(path, {"stats": []})
+        try:
+            r = team_stats.range_stats("t", team_stats.dt.datetime(2026, 10, 10, 23), 1)
+        finally:
+            team_stats.get = old
+        self.assertEqual(r["total"], 6)
+        self.assertEqual(r["daily"], [{"day": "2026-10-10", "n": 6}])
+        self.assertEqual(r["hourly"][-1], 6)
+        self.assertEqual([p["path"] for p in r["pages"]], ["/"])
+        self.assertEqual({t["name"]: t["n"] for t in r["time"]}["1-3m"], 4)
+
+
 @unittest.skipUnless(shutil.which("openssl"), "openssl not installed")
 class Crypto(unittest.TestCase):
     def setUp(self):

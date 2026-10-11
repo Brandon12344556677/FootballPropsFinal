@@ -151,6 +151,7 @@ footer p{margin:0;max-width:80ch}
   </section>
 
   <div class="grid">
+    <section class="panel"><div class="panel-h"><h2>Time on page</h2><span class="label" id="timeMid">Page views</span></div><ul class="list" id="lTime"></ul></section>
     <section class="panel"><div class="panel-h"><h2>Pages</h2><span class="label">Visits</span></div><ul class="list" id="lPages"></ul></section>
     <section class="panel"><div class="panel-h"><h2>Where visitors come from</h2><span class="label">Visits</span></div><ul class="list" id="lRefs"></ul></section>
     <section class="panel"><div class="panel-h"><h2>Campaigns</h2><span class="label">utm_campaign</span></div><ul class="list" id="lCamp"></ul></section>
@@ -269,6 +270,7 @@ footer p{margin:0;max-width:80ch}
     return [...m.values()].sort((a,b)=>b.n-a.n).map(r => ({...r, name: PAGE_NAME[r.path] || (r.path==='/players/' ? 'Player pages' : r.path)}));
   }
   const clean = rows => (rows||[]).filter(r => r.n > 0);
+  const TIME_NAME = {'0-10s':'Under 10 sec','10-30s':'10–30 sec','30s-1m':'30 sec – 1 min','1-3m':'1–3 min','3-10m':'3–10 min','10m+':'Over 10 min'};
 
   // ---------- rendering ----------
   function list(el, rows, total, opts={}){
@@ -377,6 +379,10 @@ footer p{margin:0;max-width:80ch}
 
     drawChart();
 
+    const time = (R.time||[]).map(t => ({name: TIME_NAME[t.name] || t.name, n: t.n})), timeN = time.reduce((a,b)=>a+b.n,0);
+    let mid = null, run = 0; for (const t of time) { run += t.n; if (!mid && run >= timeN/2) mid = t.name; }
+    $('timeMid').textContent = mid ? 'Typical: ' + mid : 'Page views';
+    list($('lTime'), timeN ? time : [], timeN, {empty:'No data yet. Visitors who load the site after this update start filling this in within the hour.'});
     list($('lPages'), mergePages(R.pages), total);
     list($('lRefs'), refs, total);
     list($('lCamp'), clean(R.campaigns), total, {empty:'No named campaigns yet. Add &utm_campaign=… (for example week6-promo) to the links you post, next to utm_source, to compare promotions here.'});
@@ -396,8 +402,10 @@ footer p{margin:0;max-width:80ch}
     if (sysTotal && pct(mobile, sysTotal) >= 60) acts.push(['Mobile', `${pct(mobile, sysTotal)}% of visitors are on a phone, mostly iPhone. Check new features on a phone first and keep tables usable at narrow widths.`]);
     const pages = mergePages(R.pages); const home = pages.find(p=>p.path==='/'); const boards = pages.filter(p=>/^\/(nfl|nba|nhl|mlb)\.html$/.test(p.path)).reduce((a,b)=>a+b.n,0);
     if (home && home.n > 0) acts.push(['Funnel', `For every 100 home page visits there were ${Math.round(boards/home.n*100)} visits to a sport board. A low number means people aren't clicking through from the home page.`]);
+    const quick = time.length ? time[0].n : 0;
+    if (timeN >= 20 && pct(quick, timeN) >= 40) acts.push(['Quick exits', `${pct(quick, timeN)}% of page views last under 10 seconds. Check what people see first on the pages they land on, especially on a phone.`]);
     const ul = $('acts'); ul.textContent='';
-    acts.slice(0,5).forEach(([tag, txt], i) => { const li=document.createElement('li'); const c=document.createElement('span'); c.className='chip'+(i===0&&tag==='Tag links'?' do':''); c.textContent=tag; const p=document.createElement('p'); p.textContent=txt; li.append(c,p); ul.appendChild(li); });
+    acts.slice(0,6).forEach(([tag, txt], i) => { const li=document.createElement('li'); const c=document.createElement('span'); c.className='chip'+(i===0&&tag==='Tag links'?' do':''); c.textContent=tag; const p=document.createElement('p'); p.textContent=txt; li.append(c,p); ul.appendChild(li); });
     if (!acts.length) { const p=document.createElement('p'); p.className='empty'; p.textContent='Not enough traffic in this range for suggestions.'; ul.appendChild(p); }
   }
 
