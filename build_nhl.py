@@ -934,7 +934,8 @@ PICK_COLS = ["src", "gid", "season", "date", "pid", "player", "pos", "team", "op
              "pd", "kd",     # dollars offered within 2c of each (depth.py)
              "vn",           # which one "price" is: the cheaper with $25+ offered, "P" Polymarket, "K" Kalshi
              "th",           # 1 = thin: neither has $25 offered near its price, so no Top 25 / Value
-             "hd"]           # what it waits on: injury news not settled yet (holds.py), so no lists
+             "hd",           # what it waits on: injury news not settled yet (holds.py), so no lists
+             "pj"]           # a price jump not yet confirmed by a second run (depth.guard): price stays at the old one
 BOARD_STATS = ["pts", "sog", "g"]
 TOP_N = 25
 T_MIN_PROB = 0.90      # Top 25 Surest: the model has to give it 90%+ (and it needs a live price)

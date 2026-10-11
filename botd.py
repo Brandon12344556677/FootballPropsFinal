@@ -71,7 +71,7 @@ def news_flag(sport, nw, player=None, week=None):
     player the NFL dataset entry (its injury report and roster status)."""
     nw = nw if isinstance(nw, dict) else {}
     st = (nw.get("st") or "").strip()
-    if st:
+    if st and st.lower() != "active":               # ESPN also lists players back to full health as "Active"
         return st                                   # ESPN: Questionable, Out, Day-To-Day, ...
     if sport == "mlb" and nw.get("lu") == 0:
         return "not in the posted lineup"

@@ -14,7 +14,10 @@ README.md has the full feature tour; this file is the working rules.
   per sport) and `p/` (link-preview pages for shared picks, kept 14 days after the game), `health.py` → `health.json`,
   `post_daily.py` (Discord/Telegram), `watchdog.py` (own workflow, every 30 min: checks the live site and keeps one
   "Site watchdog" GitHub issue open while something is broken; the team dashboard reads it). `build_today.py` also writes `search.json` (home page player search).
-- `team_stats.py` → `team/stats.enc`: GoatCounter visitor totals, encrypted with the
+- `edge_report.py` → `team/edges.enc` (once a day: which strategies make money, encrypted like the stats);
+  `site_checks.py` (own daily workflow: search basics and sign-up links, keeps a "Site checks" GitHub issue).
+  `depth.guard` holds a 30c+ price jump until a second run confirms it (the `pj` pick column).
+- `team_stats.py` → `team/stats.enc`: GoatCounter visitor totals (and traffic spikes), encrypted with the
   `TEAM_DASH_PASSWORD` secret, for the password-protected team dashboard `team/index.html`
   (hand-written, noindex, not in the sitemap). Totals only — no IPs or per-visitor data.
   `app.js` feeds it two anonymous GoatCounter events, `time/<range>` and `click/<what>/<page>`;
@@ -31,7 +34,7 @@ The bot overwrites these on every pass, so hand edits are lost and cause merge c
   `mlb.html` ← `mlb_template.html`. Edit the template (and the builder), never the output page.
 - `data.json`, `slate.json`, `picks.json`, `weekly.json`, `*_picks.json`, `*_stats.json`,
   `nba.json`, `nhl.json`, `mlb.json`, `today.json`, `botd.json`, `health.json`, `top_cache.json`,
-  `sitemap.xml`, `robots.txt`, `players/`, `games/`, `best/`, `p/`, `team/stats.enc`, `*_picks_recent.json`, `search.json`.
+  `sitemap.xml`, `robots.txt`, `players/`, `games/`, `best/`, `p/`, `team/stats.enc`, `team/edges.enc`, `fast_hist.json`, `*_picks_recent.json`, `search.json`.
 
 `index.html` (home page), `methodology.html`, `guides/`, and the legal pages are hand-written and safe to edit.
 

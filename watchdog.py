@@ -252,29 +252,31 @@ def run_checks():
     return now, problems
 
 
-def issue_body(problems, now):
+def issue_body(problems, now, mark=MARK, hints=HINTS, who="The site watchdog"):
     groups = {}
     for key, msg in sorted(problems.items()):
         groups.setdefault(key.split(":")[0], []).append(msg)
-    lines = [MARK, f"<!-- keys:{json.dumps(sorted(problems))} -->",
-             f"The site watchdog found {len(problems)} problem{'s' if len(problems) != 1 else ''} "
+    lines = [mark, f"<!-- keys:{json.dumps(sorted(problems))} -->",
+             f"{who} found {len(problems)} problem{'s' if len(problems) != 1 else ''} "
              f"on its check at {now:%Y-%m-%d %H:%M} UTC.", ""]
     for g, msgs in groups.items():
-        lines += [f"**{g}**"] + [f"- {m}" for m in msgs] + [f"  _What to check:_ {HINTS.get(g, '')}", ""]
+        lines += [f"**{g}**"] + [f"- {m}" for m in msgs] + [f"  _What to check:_ {hints.get(g, '')}", ""]
     lines.append("This issue updates itself while the problems last and closes once everything passes again.")
     return "\n".join(lines)
 
 
-def report(problems, now, token):
-    """Open, update or close the watchdog's issue. Returns True when this run opened a new one."""
+def report(problems, now, token, title=TITLE, mark=MARK, hints=HINTS, who="The site watchdog"):
+    """Open, update or close the watchdog's issue (or, with another mark/title, another check's
+    own issue: site_checks.py). Returns True when this run opened a new one."""
+    body = lambda: issue_body(problems, now, mark, hints, who)
     st, text = fetch(f"{API}/repos/{REPO}/issues?state=open&per_page=50", token=token)
     if st != 200:
         print(f"  issue: couldn't list issues ({st})")
         return False
-    issue = next((i for i in json.loads(text) if MARK in (i.get("body") or "") and "pull_request" not in i), None)
+    issue = next((i for i in json.loads(text) if mark in (i.get("body") or "") and "pull_request" not in i), None)
     if problems and issue is None:
         st, text = fetch(f"{API}/repos/{REPO}/issues", token=token, method="POST",
-                         body={"title": TITLE, "body": issue_body(problems, now)})
+                         body={"title": title, "body": body()})
         print(f"  issue: opened ({st}) {json.loads(text).get('html_url', '') if st == 201 else text[:200]}")
         return st == 201
     if issue is None:
@@ -292,7 +294,7 @@ def report(problems, now, token):
         new = sorted(set(problems) - old)
         gone = sorted(old - set(problems))
         note = "\n".join([f"New: {problems[k]}" for k in new] + [f"Fixed: {k}" for k in gone])
-        fetch(url, token=token, method="PATCH", body={"body": issue_body(problems, now)})
+        fetch(url, token=token, method="PATCH", body={"body": body()})
         fetch(url + "/comments", token=token, method="POST", body={"body": f"The problem list changed:\n\n{note}"})
         print(f"  issue: #{issue['number']} updated")
     return False

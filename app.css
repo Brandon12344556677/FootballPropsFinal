@@ -595,3 +595,6 @@ html body .pslcookie button{padding:7px 14px;font-size:13px;border-radius:999px;
 .psnote .psn-b.go{background:#22d07f;border-color:#22d07f;color:#06210b}
 .psnote button:focus-visible,.psnote a:focus-visible{outline:2px solid #22d07f;outline-offset:2px}
 @media (prefers-reduced-motion:no-preference){.psnote{animation:psnote-in .25s ease-out}@keyframes psnote-in{from{transform:translateY(12px);opacity:0}}}
+/* pick sheet: the price moved 10c+ in the last hour (app.js fastHtml) */
+.ps-fast{margin:10px 0 0;padding:10px 12px;border-radius:12px;border:1px solid rgba(232,181,74,.45);background:rgba(232,181,74,.08);font-size:13.5px;line-height:1.45}
+.ps-fast b{color:#e8b54a}

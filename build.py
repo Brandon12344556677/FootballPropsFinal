@@ -1470,7 +1470,8 @@ PICK_COLS = ["src", "gid", "season", "week", "date", "pid", "player", "pos", "te
              "pd", "kd",     # dollars offered within 2c of each (depth.py)
              "vn",           # which one "price" is: the cheaper with $25+ offered, "P" Polymarket, "K" Kalshi
              "th",           # 1 = thin: neither has $25 offered near its price, so no Value
-             "hd"]           # what it waits on: injury news not settled yet (holds.py), so no lists
+             "hd",           # what it waits on: injury news not settled yet (holds.py), so no lists
+             "pj"]           # a price jump not yet confirmed by a second run (depth.guard): price stays at the old one
 VALUE_MIN_NEFF = 6.0
 TOP_N = 25
 TOP_VERIFY = 80         # the surest priced props whose order books are read for Top 25 (it needs $25+ near the price)
@@ -1716,8 +1717,14 @@ def build_live_picks(picks, slate_games, sched, by_key, snap, pmus=None, kal=Non
             held += bool(ko and now_dt < ko)
     # Enough money at the price? Every fresh pick's price is its cheaper exchange that has $25+
     # offered within 2c (depth.choose); the books of the ones that could make Value are read.
+    pending = {(p["gid"], p["pid"], p["stat"], p["line"], p["side"]): p for p in picks
+               if p["src"] == "live" and p["res"] is None}
     for f in fresh:
         depth.choose(f)
+        ex = pending.get((f["gid"], f["pid"], f["stat"], f["line"], f["side"]))
+        if ex is not None:     # the price guard: a sudden jump waits for a second run to confirm it
+            f["pj"] = ex.get("pj")
+            depth.guard(f, (ex.get("price"), ex.get("vn"), ex.get("th")))
     # ...and of the surest priced ones, which could make Top 25 (it needs $25+ near the price too)
     surest = {id(f) for f in sorted((f for f in fresh if f.get("price") is not None and not f.get("hd") and f["prob"] >= 0.5),
                                     key=lambda f: -f["prob"])[:TOP_VERIFY]}
@@ -1745,7 +1752,7 @@ def build_live_picks(picks, slate_games, sched, by_key, snap, pmus=None, kal=Non
             added += 1
         elif ex["res"] is None:      # still pending: refresh to the latest pre-kickoff snapshot
             for k in ("side", "prob", "lo", "hi", "neff", "price", "lists", "rec", "team", "opp", "adj",
-                      "pp", "kp", "pd", "kd", "vn", "th", "hd"):
+                      "pp", "kp", "pd", "kd", "vn", "th", "hd", "pj"):
                 ex[k] = f[k]
             note_price(ex)
             updated += 1

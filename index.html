@@ -35,8 +35,8 @@
 <link rel="manifest" href="/site.webmanifest">
 <script data-goatcounter="https://propstreaklive.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
 <link rel="stylesheet" href="fonts.css">
-<link rel="stylesheet" href="app.css?v=20261011d">
-<script src="app.js?v=20261011e"></script>
+<link rel="stylesheet" href="app.css?v=20261011e">
+<script src="app.js?v=20261011f"></script>
 <script src="/halloween.js?v=20261009a"></script>
 <style>
 :root{
@@ -342,6 +342,8 @@ h2 i{color:var(--green)}
 .movegrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px;margin-top:22px}
 .movecol{background:var(--surface);border:1px solid var(--line);border-radius:20px;padding:18px;min-width:0}
 .movecol[hidden]{display:none}
+#mvfast{grid-column:1/-1}
+#mvfast .mv-stat b{color:var(--soft)}
 .movecol h3{margin:0;font-family:var(--display);font-size:20px;color:#fff}
 .mvnote{margin:4px 0 12px;color:var(--muted);font-size:13.5px}
 .mvlist{display:grid;gap:8px}
@@ -578,6 +580,7 @@ footer .fine a{color:#8394ab}
       <div class="app movegrid">
         <div class="movecol" id="mvstreak"><h3>Hot streaks</h3><p class="mvnote">Cleared this exact line in each of their last games, and it still pays.</p><div class="mvlist"></div></div>
         <div class="movecol" id="mvmove"><h3>Market moving our way</h3><p class="mvnote">The price has risen since we recorded the pick: the market came around to it.</p><div class="mvlist"></div></div>
+        <div class="movecol" id="mvfast" hidden><h3>Moving fast</h3><p class="mvnote">The price jumped 10¢ or more in the last hour, often a sign of injury or lineup news. Check before you bet.</p><div class="mvlist"></div></div>
       </div>
     </div>
   </section>
@@ -1080,11 +1083,12 @@ function countUp(el){ const to=+el.dataset.count; if(!to||el.dataset.done) retur
         `<span class="mv-stat">${stat}</span>`+
         `<span class="mv-bet"><span class="leantag ${esc(p.side)}">${esc(p.side)}</span> <b>${esc(p.line)}</b> ${esc(p.statText)}</span></a>`;
     };
-    const st=(t&&t.streaks||[]).filter(up), mv=(t&&t.moves||[]).filter(up);
+    const st=(t&&t.streaks||[]).filter(up), mv=(t&&t.moves||[]).filter(up), fs=(t&&t.fast||[]).filter(up);
     const fill=(id, rows, html)=>{ const col=document.getElementById(id); col.hidden=!rows.length; col.querySelector('.mvlist').innerHTML=rows.map(html).join(''); };
     fill('mvstreak', st, p=>row(p, `<b>${p.streak} straight</b><small>model ${Math.round(p.prob*100)}% · ${Math.round(p.price*100)}¢</small>`));
     fill('mvmove', mv, p=>row(p, `<b>${Math.round(p.px0*100)}¢ → ${Math.round(p.price*100)}¢</b><small>model ${Math.round(p.prob*100)}%</small>`));
-    sec.hidden=!st.length && !mv.length;
+    fill('mvfast', fs, p=>row(p, `<b>${Math.round(p.was*100)}¢ → ${Math.round(p.price*100)}¢</b><small>in the last hour · model ${Math.round(p.prob*100)}%</small>`));
+    sec.hidden=!st.length && !mv.length && !fs.length;
   }
 
   // Calibration: for each band of model chance, how often those picks hit (today.json "calib").

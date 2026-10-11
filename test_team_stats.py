@@ -165,3 +165,18 @@ class Skip(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class Spikes(unittest.TestCase):
+    def test_spikes(self):
+        import team_stats
+        daily = [{"day": f"d{i}", "n": n} for i, n in enumerate([10] * 8 + [40, 5])]
+        snap = {"d30": {"daily": daily},
+                "d1": {"toprefs": [{"name": "snapchat.com", "n": 30}, {"name": "google", "n": 16}, {"name": "(unknown)", "n": 20}],
+                       "pages": [{"path": "/nhl.html", "n": 9}]},
+                "d7": {"toprefs": [{"name": "snapchat.com", "n": 35}, {"name": "google", "n": 140}, {"name": "(unknown)", "n": 21}],
+                       "pages": [{"path": "/nhl.html", "n": 7}]}}
+        out = team_stats.spikes(snap)
+        self.assertEqual([s["what"] for s in out],
+                         ["Visits from no referrer (direct, apps)", "Visits from snapchat.com", "Visits yesterday"])
+        self.assertEqual((out[1]["today"], out[1]["usual"]), (30, 5.0))

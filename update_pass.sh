@@ -31,6 +31,9 @@ python post_daily.py 2>&1 | tee "$LOGDIR/post_daily.log" || echo "daily post ski
 # GOATCOUNTER_TOKEN and TEAM_DASH_PASSWORD secrets, does nothing without them).
 timeout 2m python team_stats.py 2>&1 | tee "$LOGDIR/team_stats.log" || echo "team stats not refreshed this run"
 
+# Once a day: which strategies are making money (team/edges.enc, encrypted like the stats).
+timeout 2m python edge_report.py 2>&1 | tee "$LOGDIR/edge_report.log" || echo "edge report not refreshed this run"
+
 # Reads those logs: any data source that failed, a builder that crashed, a data file gone
 # stale, picks stuck ungraded. Records it in health.json (committed below, so it remembers
 # across passes) and flags every open problem on the run's page.
@@ -43,8 +46,8 @@ git add -A players 2>/dev/null || true
 git add -A games best p 2>/dev/null || true
 for f in nba.html nba.json nba_stats.json nba_picks.json \
          nhl.html nhl.json nhl_stats.json nhl_picks.json \
-         mlb.html mlb.json mlb_stats.json mlb_picks.json today.json botd.json posted.json top_cache.json health.json \
-         team/stats.enc nba_picks_recent.json nhl_picks_recent.json mlb_picks_recent.json search.json; do
+         mlb.html mlb.json mlb_stats.json mlb_picks.json today.json botd.json posted.json top_cache.json health.json fast_hist.json \
+         team/stats.enc team/edges.enc nba_picks_recent.json nhl_picks_recent.json mlb_picks_recent.json search.json; do
   git add "$f" 2>/dev/null || true
 done
 if git diff --cached --quiet; then

@@ -344,7 +344,7 @@ window.PS = (function(){
     const v=(o.vals||[]).filter(x=>x!=null && isFinite(x)).slice(-10), hits=v.filter(x=> o.side==='under'? x<+o.line : x>+o.line).length;
     const w=sheet(`<div class="ps-head" style="${teamVars(o.sport, o.team)}"><span class="av">${esc(initialsOf(o.name))}</span>`+
         `<div><b>${esc(o.name)}</b><span><span class="tbadge">${esc(o.team)}</span>${esc(o.vs||'')}${o.when? ' · '+esc(o.when) : ''}</span></div></div>`+
-      `<div class="verdict" hidden></div>`+
+      `<div class="verdict" hidden></div>`+fastHtml(o)+
       (v.length>=3? `<div class="ps-l10"><div class="ps-sub">Last ${v.length} games · cleared ${esc(o.line)} <b>${hits} of ${v.length}</b></div>${bigSpark(v, o.line, o.side)}</div>` : '')+
       `<div class="ps-actions"><button type="button" class="btn ps-open">Full breakdown →</button></div>`+
       promoHtml(o)+moreHtml(o.more),
@@ -448,6 +448,14 @@ window.PS = (function(){
   const shareKey=st=> `${st.player.id}-${st.stat}-${String(Number(st.line))}-${st.ou}`;   // = build_games.share_key
   if(PAGE_SPORT) fetch('p/keys.json',{cache:'no-store'}).then(r=>r.ok? r.json() : null)
     .then(d=>{ SHARE_KEYS=new Set(Object.keys((d&&d[PAGE_SPORT])||{})); }).catch(()=>{});
+  // props whose price moved 10c+ in the last hour (today.json "fast", build_today.fast_moves): a warning in the pick sheet
+  let FAST=[];
+  if(PAGE_SPORT) fetch('today.json',{cache:'no-store'}).then(r=>r.ok? r.json() : null)
+    .then(d=>{ FAST=((d&&d.fast)||[]).filter(f=>f.sport===PAGE_SPORT); }).catch(()=>{});
+  function fastHtml(o){
+    const f=FAST.find(x=>x.player===o.name && +x.line===+o.line && x.side===o.side);
+    return f? `<div class="ps-fast"><b>Market moving fast:</b> ${Math.round(f.was*100)}¢ → ${Math.round(f.price*100)}¢ in the last hour. That's often injury or lineup news, so check it before you bet.</div>` : '';
+  }
 
   // ---- a small card at the bottom of the screen (welcome back, home-screen tip); one at a time ----
   // actions: [{label, href?, tab?, primary?, run?}] — tab clicks that board tab instead of following the link

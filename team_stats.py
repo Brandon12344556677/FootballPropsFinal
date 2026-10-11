@@ -138,6 +138,36 @@ def range_stats(token, now, days, tz=dt.timezone.utc):
     return r
 
 
+SPIKE_X = 2.5      # a source or page counts as spiking at this many times its usual day...
+SPIKE_MIN = 15     # ...with at least this many visits today
+
+
+def spikes(snap):
+    """Unusual traffic for the dashboard's alert line: the site, each referrer and each page
+    today against its usual day over the last 7 (d7 / 7), plus yesterday against the 7 days
+    before it, both ways. [{"kind": "up"|"down", "what", "today", "usual"}], biggest first."""
+    out = []
+    d1, d7, d30 = snap.get("d1") or {}, snap.get("d7") or {}, snap.get("d30") or {}
+    daily = [d["n"] for d in d30.get("daily") or []]
+    if len(daily) >= 9:
+        y, base = daily[-2], daily[-9:-2]
+        usual = sum(base) / 7
+        if usual >= 5 and y >= SPIKE_X * usual:
+            out.append({"kind": "up", "what": "Visits yesterday", "today": y, "usual": round(usual)})
+        elif usual >= 20 and y <= usual / SPIKE_X:
+            out.append({"kind": "down", "what": "Visits yesterday", "today": y, "usual": round(usual)})
+    for key, label in (("toprefs", "Visits from {}"), ("pages", "Visits to {}")):
+        week = {r.get("name") or r.get("path"): r["n"] for r in d7.get(key) or []}
+        for r in d1.get(key) or []:
+            name = r.get("name") or r.get("path")
+            if name == "(unknown)":
+                name = "no referrer (direct, apps)"
+            usual = week.get(r.get("name") or r.get("path"), r["n"]) / 7
+            if r["n"] >= SPIKE_MIN and r["n"] >= SPIKE_X * max(usual, 1):
+                out.append({"kind": "up", "what": label.format(name), "today": r["n"], "usual": round(usual, 1)})
+    return sorted(out, key=lambda s: -s["today"] / max(s["usual"], 1))[:6]
+
+
 def openssl(args, data, password):
     env = dict(os.environ, TEAM_DASH_PASSWORD=password)
     return subprocess.run(["openssl", "enc", "-aes-256-cbc", "-pbkdf2", "-md", "sha256",
@@ -178,6 +208,7 @@ def main():
             "source": "GoatCounter", "tz": tz_name}
     for key, days in RANGES.items():
         snap[key] = range_stats(token, now, days, tz)
+    snap["spikes"] = spikes(snap)
     if unchanged(snap, password):
         print(f"team stats: no new visits since the last pass ({snap['d90']['total']} in 90 days)")
         return 0

@@ -105,3 +105,42 @@ class StreaksAndMoves(unittest.TestCase):
         c = [self.cand("a", "over", 1.5, [], 0.60, px0=0.50), self.cand("b", "over", 1.5, [], 0.52, px0=0.50),
              self.cand("c", "over", 1.5, [], 0.75, px0=0.70)]   # +5c: listed after the +10c move
         self.assertEqual([r["pid"] for r in build_today.moves(c)], ["a", "c"])
+
+
+class Agents(unittest.TestCase):
+    """Fast price moves, news flags and the promo-day count (build_today)."""
+    NOW = __import__("datetime").datetime(2026, 10, 11, 18, 0, tzinfo=__import__("datetime").timezone.utc)
+
+    def cand(self, pid, price, sport="nhl", value=False, lists="", flag=None, start="2026-10-11T23:00:00Z"):
+        return {"sport": sport, "pid": pid, "player": pid, "team": "A", "opp": "B", "stat": "s", "statText": "S",
+                "line": 1.5, "side": "under", "prob": 0.8, "price": price, "start": start, "value": value,
+                "lists": lists, "flag": flag}
+
+    def test_fast_moves_compare_with_the_price_about_an_hour_ago(self):
+        a, b, c = self.cand("a", 0.70), self.cand("b", 0.55), self.cand("c", 0.80)
+        hist = {"runs": [["2026-10-11T16:30:00Z", {build_today.ckey(a): 0.10}],      # too old: dropped
+                         ["2026-10-11T17:00:00Z", {build_today.ckey(a): 0.55, build_today.ckey(b): 0.60,
+                                                   build_today.ckey(c): 0.95}],
+                         ["2026-10-11T17:40:00Z", {build_today.ckey(a): 0.69}]]}       # too recent to compare with
+        out, keep = build_today.fast_moves([a, b, c], hist, self.NOW)
+        self.assertEqual([(r["pid"], r["was"]) for r in out], [("a", 0.55), ("c", 0.95)])   # b moved only 5c
+        self.assertEqual([r[0] for r in keep["runs"]], ["2026-10-11T17:00:00Z", "2026-10-11T17:40:00Z",
+                                                         "2026-10-11T18:00:00Z"])
+
+    def test_news_flags_list_flagged_picks_only(self):
+        out = build_today.news_flags([self.cand("a", 0.6, lists="V", flag="Questionable"), self.cand("b", 0.6, lists="T")])
+        self.assertEqual([(r["pid"], r["flag"], r["lists"]) for r in out], [("a", "Questionable", "V")])
+
+    def test_featured_is_listed_or_in_the_feed(self):
+        a, b, c = self.cand("a", 0.6, lists="T"), self.cand("b", 0.6), self.cand("c", 0.6)
+        self.assertEqual([x["pid"] for x in build_today.featured([a, b, c], [dict(c, kind="safe")])], ["a", "c"])
+
+    def test_promo_day_against_a_usual_day(self):
+        cols = ["src", "lists", "start", "date"]
+        doc = {"cols": cols, "picks": [["live", "V", "2026-10-09T23:00:00Z", None], ["live", "TV", "2026-10-09T23:30:00Z", None],
+                                       ["live", "V", "2026-10-10T23:00:00Z", None], ["live", "T", "2026-10-10T23:00:00Z", None],
+                                       ["live", "V", "2026-10-11T23:00:00Z", None]]}
+        cands = [self.cand("a", 0.5, value=True), self.cand("b", 0.5, value=True, sport="nfl"),
+                 self.cand("c", 0.5, value=True, start="2026-10-12T23:00:00Z"), self.cand("d", 0.5)]
+        out = build_today.promo_day(cands, [("nhl", doc)], "2026-10-11")
+        self.assertEqual((out["n"], out["by"], out["avg"], out["days"], out["rank"]), (2, {"nhl": 1, "nfl": 1}, 1.5, 2, 0.5))

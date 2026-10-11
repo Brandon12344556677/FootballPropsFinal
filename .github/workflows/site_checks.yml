@@ -1,0 +1,35 @@
+name: Site checks
+
+# Once a day (site_checks.py): can search engines read every page in the sitemap (title,
+# description, heading, canonical, no stray noindex, no broken links on the hand-written
+# pages), and do the Polymarket/Kalshi sign-up links still show the code and offer the site
+# promises? Problems open one "Site checks" GitHub issue, updated as they change and closed
+# when they're fixed; the run goes red only when it opens a new one.
+on:
+  schedule:
+    - cron: "37 14 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write     # open, update and close the site-checks issue
+
+concurrency:
+  group: site-checks
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Check search basics and sign-up links
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: python site_checks.py

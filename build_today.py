@@ -173,6 +173,7 @@ def upcoming(sport, db, picks_doc, labels, getters, now):
             "side": p.get("side") or "over", "prob": round(prob, 3),
             "lo": cap(p.get("lo")), "hi": cap(p.get("hi")), "price": round(price, 3),
             "edge": round(prob - price, 3), "value": "V" in (p.get("lists") or ""),
+            "lists": p.get("lists") or "",     # not written to today.json (news flags)
             "start": start.strftime("%Y-%m-%dT%H:%M:%SZ"),
             "lk": p.get("lk"),      # when the pick locked (its game starts within 30 minutes)
             **venue,
@@ -285,6 +286,77 @@ def moves(cands, min_move=0.03, n=6):
         if len(out) >= n:
             break
     return out
+
+
+FAST_STATE = "fast_hist.json"    # recent price snapshots of the props the site features, for fast_moves()
+FAST_MOVE = 0.10                 # 10c or more...
+FAST_WINDOW = (40, 75)           # ...against the price 40-75 minutes ago
+
+
+def featured(cands, top):
+    """The props the site points people at: Value and Top 25 picks, plus today's feed."""
+    keys = {(c["sport"], c["pid"], c["stat"], c["line"], c["side"]) for c in top}
+    return [c for c in cands if c.get("lists") or (c["sport"], c["pid"], c["stat"], c["line"], c["side"]) in keys]
+
+
+def ckey(c):
+    return f'{c["sport"]}|{c["pid"]}|{c["stat"]}|{float(c["line"]):g}|{c["side"]}'
+
+
+def fast_moves(cands, hist, now, n=8):
+    """Props whose price moved FAST_MOVE+ within about an hour (often injury or lineup news),
+    biggest first: each featured pick's price now against its price in the oldest snapshot
+    40-75 minutes old. Returns (moves, the snapshots to keep for next run)."""
+    stamp = now.strftime("%Y-%m-%dT%H:%M:%SZ")
+    lo, hi = (now - datetime.timedelta(minutes=m) for m in (FAST_WINDOW[1], FAST_WINDOW[0]))
+    runs = [r for r in (hist or {}).get("runs") or [] if isinstance(r, list) and len(r) == 2
+            and (t := parse_start(r[0])) is not None and t >= lo]
+    old = next((r[1] for r in runs if parse_start(r[0]) <= hi), {})    # runs are oldest first
+    out, seen = [], set()
+    for c in sorted(cands, key=lambda c: -abs(c["price"] - old.get(ckey(c), c["price"]))):
+        was = old.get(ckey(c))
+        if was is None or abs(c["price"] - was) < FAST_MOVE or (c["sport"], c["pid"]) in seen:
+            continue
+        seen.add((c["sport"], c["pid"]))
+        out.append(dict({key: c[key] for key in CARD_KEYS}, was=was))
+        if len(out) >= n:
+            break
+    runs.append([stamp, {ckey(c): c["price"] for c in cands}])
+    return out, {"runs": runs}
+
+
+def news_flags(cands):
+    """Featured picks whose player's pre-game news says he may not play (botd.news_flag:
+    ESPN Out / Doubtful / Questionable, not in MLB's posted lineup, NFL roster or practice
+    status): for the team to double-check before pushing them."""
+    return [dict({key: c[key] for key in CARD_KEYS}, flag=c["flag"], lists=c.get("lists") or "")
+            for c in sorted(cands, key=lambda c: c["start"]) if c.get("flag")]
+
+
+def promo_day(cands, docs, today, days=30):
+    """How today's Value spots compare with a usual day: today's count (games today, ET) by sport,
+    and the average Value spots per day over the last `days` days that had any."""
+    by = {}
+    for c in cands:
+        t = parse_start(c["start"])
+        if c["value"] and t and t.astimezone(ET).date().isoformat() == today:
+            by[c["sport"]] = by.get(c["sport"], 0) + 1
+    start = (datetime.date.fromisoformat(today) - datetime.timedelta(days=days)).isoformat()
+    per = {}
+    for sport, doc in docs:
+        cols = doc["cols"]
+        for row in doc["picks"]:
+            p = dict(zip(cols, row))
+            if p.get("src") != "live" or "V" not in (p.get("lists") or ""):
+                continue
+            t = parse_start(p.get("start"))
+            d = t.astimezone(ET).date().isoformat() if t else p.get("date")
+            if d and start <= d < today:
+                per[d] = per.get(d, 0) + 1
+    avg = round(sum(per.values()) / len(per), 1) if per else None
+    n = sum(by.values())
+    return {"day": today, "n": n, "by": by, "avg": avg, "days": len(per),
+            "rank": sum(1 for v in per.values() if v < n) / len(per) if per else None}
 
 
 def calibration(docs):
@@ -422,13 +494,23 @@ def main():
             print(f"  {sport}: {len(got)} upcoming priced pick(s), record {rec[sport]}")
         except Exception as e:     # one bad sport never blanks the others
             print(f"  {sport}: skipped ({e})")
-    picks = [{k: v for k, v in c.items() if k not in ("neff", "flag", "px0")} for c in best(cands)]
+    top = best(cands)
+    picks = [{k: v for k, v in c.items() if k not in ("neff", "flag", "px0", "lists")} for c in top]
+    feat = featured(cands, top)
+    try:
+        fast, hist = fast_moves(feat, load(FAST_STATE) if os.path.exists(FAST_STATE) else {}, now)
+        with open(FAST_STATE, "w", encoding="utf-8") as f:
+            json.dump(hist, f, separators=(",", ":"))
+    except Exception as e:
+        print(f"  fast moves: skipped ({e})")
+        fast = []
     # [sport, start] of every upcoming value spot, so the ticker can count what's still live.
     value_live = sorted([c["sport"], c["start"]] for c in cands if c["value"])
     doc = {"gen": now.strftime("%Y-%m-%dT%H:%M:%SZ"), "record": rec, "picks": picks, "valueLive": value_live,
            "tracked": {"graded": n_graded, "since": since}, "fair": fair_weight(docs), "last": last,
            "calib": calibration(docs),
-           "streaks": streaks(cands), "moves": moves(cands)}
+           "streaks": streaks(cands), "moves": moves(cands), "fast": fast,
+           "flags": news_flags(feat), "promo": promo_day(cands, docs, today_et)}
     with open(OUT, "w", encoding="utf-8") as f:
         json.dump(doc, f, separators=(",", ":"), ensure_ascii=False)
     if search:
@@ -437,7 +519,8 @@ def main():
                        "players": sorted(search, key=lambda r: r[2])}, f, separators=(",", ":"), ensure_ascii=False)
         print(f"  {SEARCH_OUT}: {len(search)} players")
     kinds = sum(1 for p in picks if p["kind"] == "value")
-    print(f"  {OUT}: {len(picks)} pick(s) ({kinds} value, {len(picks) - kinds} safe)")
+    print(f"  {OUT}: {len(picks)} pick(s) ({kinds} value, {len(picks) - kinds} safe), {len(fast)} fast move(s), "
+          f"{len(doc['flags'])} news flag(s), {doc['promo']['n']} value spot(s) today (usual {doc['promo']['avg']})")
     try:
         botd.run(cands, docs, now)
     except Exception as e:     # never costs the home page its Today feed
