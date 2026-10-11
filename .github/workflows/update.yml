@@ -61,6 +61,9 @@ jobs:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           POST_NOW: ${{ github.event.inputs.post }}
+          # team_stats.py: GoatCounter API key ("Read statistics" only) and the /team/ page password
+          GOATCOUNTER_TOKEN: ${{ secrets.GOATCOUNTER_TOKEN }}
+          TEAM_DASH_PASSWORD: ${{ secrets.TEAM_DASH_PASSWORD }}
         run: |
           start=$(date +%s)
           bash update_pass.sh
