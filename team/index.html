@@ -784,7 +784,7 @@ footer p{margin:0;max-width:80ch}
     const t=await fetch('../today.json?t='+Date.now(),{cache:'no-store'}).then(r=>r.ok? r.json() : null).catch(()=>null);
     const L=(t&&t.last)||{}, NAME={nfl:'NFL', nba:'NBA', nhl:'NHL', mlb:'MLB'};
     const recent=new Date(Date.now()-3*864e5).toISOString().slice(0,10);
-    const rows=['nfl','nba','nhl','mlb'].filter(s=>L[s] && L[s].T && L[s].T.n>=5 && L[s].day>=recent)   // a 1-of-2 day says little.map(s=>({s, ...L[s]}));
+    const rows=['nfl','nba','nhl','mlb'].filter(s=>L[s] && L[s].T && L[s].T.n>=5 && L[s].day>=recent).map(s=>({s, ...L[s]}));   // 5+ picks: a 1-of-2 day says little
     if(!rows.length){ $('imgMsg').textContent='No graded results in the last 3 days yet.'; return; }
     try { await Promise.all(['800 90px Archivo','600 40px Inter','700 40px "Barlow Condensed"'].map(f=>document.fonts.load(f))); } catch(e){}
     const W=1080, H=1920, c=document.createElement('canvas'); c.width=W; c.height=H; const g=c.getContext('2d');

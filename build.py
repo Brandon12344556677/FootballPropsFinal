@@ -1752,8 +1752,9 @@ def build_live_picks(picks, slate_games, sched, by_key, snap, pmus=None, kal=Non
             added += 1
         elif ex["res"] is None:      # still pending: refresh to the latest pre-kickoff snapshot
             for k in ("side", "prob", "lo", "hi", "neff", "price", "lists", "rec", "team", "opp", "adj",
-                      "pp", "kp", "pd", "kd", "vn", "th", "hd", "pj"):
+                      "pp", "kp", "pd", "kd", "vn", "th", "hd"):
                 ex[k] = f[k]
+            ex["pj"] = f.get("pj")    # set only while a price jump waits for confirmation (depth.guard)
             note_price(ex)
             updated += 1
     return len(fresh), added, updated
