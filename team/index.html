@@ -255,10 +255,10 @@ footer p{margin:0;max-width:80ch}
     <section class="panel"><div class="panel-h"><h2>Pages</h2><span class="label">Visits</span></div><ul class="list" id="lPages"></ul></section>
     <section class="panel"><div class="panel-h"><h2>Where visitors come from</h2><span class="label">Visits</span></div><ul class="list" id="lRefs"></ul></section>
     <section class="panel"><div class="panel-h"><h2>Tracked links</h2><span class="label">Visits from each link</span></div><ul class="list" id="lCamp"></ul></section>
-    <section class="panel"><div class="panel-h"><h2>Countries</h2><span class="label">Visits</span></div><ul class="list" id="lLoc"></ul></section>
-    <section class="panel"><div class="panel-h"><h2>Operating systems</h2><span class="label">Visits</span></div><ul class="list" id="lSys"></ul></section>
-    <section class="panel"><div class="panel-h"><h2>Browsers</h2><span class="label">Visits</span></div><ul class="list" id="lBrw"></ul></section>
-    <section class="panel"><div class="panel-h"><h2>Screen sizes</h2><span class="label">Visits</span></div><ul class="list" id="lSize"></ul></section>
+    <section class="panel"><div class="panel-h"><h2>Countries</h2><span class="label">Share of visits</span></div><ul class="list" id="lLoc"></ul></section>
+    <section class="panel"><div class="panel-h"><h2>Operating systems</h2><span class="label">Share of visits</span></div><ul class="list" id="lSys"></ul></section>
+    <section class="panel"><div class="panel-h"><h2>Browsers</h2><span class="label">Share of visits</span></div><ul class="list" id="lBrw"></ul></section>
+    <section class="panel"><div class="panel-h"><h2>Screen sizes</h2><span class="label">Share of visits</span></div><ul class="list" id="lSize"></ul></section>
     <section class="panel"><div class="panel-h"><h2>Clicks to sign-ups and markets</h2><span class="label" id="clickRate">Clicks</span></div><ul class="list" id="lClicks"></ul></section>
     <section class="panel">
       <div class="panel-h"><h2>Link builder</h2><span class="label">Tag every post</span></div>
@@ -456,6 +456,8 @@ footer p{margin:0;max-width:80ch}
   // ---------- rendering ----------
   function list(el, rows, total, opts={}){
     el.textContent = '';
+    // shares never pass 100%: of the range's visits, or of everything in the list when that's more
+    const all = rows.reduce((a,b)=>a+b.n,0), base = opts.share ? all : Math.max(total||0, all);
     rows = rows.slice(0, opts.max || 8);
     if (!rows.length) { const p = document.createElement('p'); p.className='empty'; p.textContent = opts.empty || 'Nothing in this range yet.'; el.appendChild(p); return; }
     const max = rows[0].n || 1;
@@ -465,8 +467,10 @@ footer p{margin:0;max-width:80ch}
       const name = document.createElement('span'); name.className='name'; name.textContent = r.name; name.title = r.path || r.name;
       if (r.path && r.path !== r.name) { const s = document.createElement('small'); s.textContent = r.path; name.appendChild(s); }
       if (r.kind) { const c = document.createElement('span'); c.className='chip'; c.textContent = r.kind; name.appendChild(c); }
-      const n = document.createElement('span'); n.className='n'; n.textContent = fmt(r.n);
-      const p = document.createElement('span'); p.className='pct'; p.textContent = total ? pct(r.n,total)+'%' : '';
+      // opts.share: show only the share. GoatCounter counts the site's background pings (time on page,
+      // clicks) in countries, browsers, systems and screen sizes, so those counts run above the visits.
+      const n = document.createElement('span'); n.className='n'; n.textContent = opts.share ? pct(r.n,base)+'%' : fmt(r.n);
+      const p = document.createElement('span'); p.className='pct'; p.textContent = opts.share || !base ? '' : pct(r.n,base)+'%';
       li.append(bar, name, n, p); el.appendChild(li);
     }
   }
@@ -572,10 +576,10 @@ footer p{margin:0;max-width:80ch}
     list($('lPages'), mergePages(R.pages), total);
     list($('lRefs'), refs, total);
     list($('lCamp'), trackedRows(R), total, {max: 12, empty:'No tracked links yet. Make one with the Link builder: give it a name, press Copy and track, and post it. Each link gets its own row here with its visit count.'});
-    list($('lLoc'), clean(R.locations), total);
-    list($('lSys'), sys, sysTotal);
-    list($('lBrw'), clean(R.browsers), total);
-    list($('lSize'), clean(R.sizes), total);
+    list($('lLoc'), clean(R.locations), 0, {share:true});
+    list($('lSys'), sys, 0, {share:true});
+    list($('lBrw'), clean(R.browsers), 0, {share:true});
+    list($('lSize'), clean(R.sizes), 0, {share:true});
     const clicks = clickRows(R.clicks), signups = clicks.filter(c => isSignup(c.what)).reduce((a,b)=>a+b.n,0);
     $('clickRate').textContent = signups && total ? `Sign-up clicks: ${(signups/total*100).toFixed(1)}% of visits` : 'Clicks';
     list($('lClicks'), clicks, clicks.reduce((a,b)=>a+b.n,0), {empty:'No clicks yet. Clicks on the Polymarket and Kalshi sign-up buttons, market links and your social profiles start counting as visitors load the updated site.'});
@@ -642,7 +646,7 @@ footer p{margin:0;max-width:80ch}
   function sponsorFacts(){
     const R = snap.d30; if (!R) return [];
     const total = R.total || 0;
-    const loc = clean(R.locations)[0];
+    const locs = clean(R.locations), locN = locs.reduce((a,b)=>a+b.n,0), loc = locs[0];   // a share: see list()
     const sys = clean(R.systems), sysN = sys.reduce((a,b)=>a+b.n,0), mob = sys.filter(s=>/ios|android|ipados/i.test(s.name)).reduce((a,b)=>a+b.n,0);
     const board = mergePages(R.pages).filter(p => /^\/(nfl|nba|nhl|mlb)\.html$/.test(p.path))[0];
     const signups = (R.clicks||[]).filter(c => isSignup(c.what)).reduce((a,b)=>a+b.n,0);
@@ -650,7 +654,7 @@ footer p{margin:0;max-width:80ch}
     const typ = typicalTime(R.time);
     return [
       ['Visits', fmt(total), `about ${fmt(Math.round(total/30))} a day`, `${fmt(total)} visits (about ${fmt(Math.round(total/30))} a day)`],
-      ['Audience', loc ? pct(loc.n, total) + '%' : '–', loc ? loc.name : 'No location data', loc ? `${pct(loc.n, total)}% from ${/^(United|Netherlands|Philippines)/.test(loc.name) ? "the " : ""}${loc.name}` : ''],
+      ['Audience', loc ? pct(loc.n, locN) + '%' : '–', loc ? loc.name : 'No location data', loc ? `${pct(loc.n, locN)}% from ${/^(United|Netherlands|Philippines)/.test(loc.name) ? "the " : ""}${loc.name}` : ''],
       ['On a phone', sysN ? pct(mob, sysN) + '%' : '–', 'iPhone and Android', sysN ? `${pct(mob, sysN)}% on phones (iPhone and Android)` : ''],
       ['Most visited board', board ? board.name.replace(' board','') : '–', board ? fmt(board.n) + ' visits' : '', board ? `Most visited: ${board.name} (${fmt(board.n)} visits)` : ''],
       ['Typical time on page', typ || '–', typ ? 'half of page views last this long or less' : 'starts filling in after this update',
