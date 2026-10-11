@@ -20,6 +20,9 @@ python build_today.py 2>&1 | tee "$LOGDIR/build_today.log" || echo "today.json n
 # One page per most-bet player, for search engines: rebuilt once a day, sitemap every run.
 python build_players.py 2>&1 | tee "$LOGDIR/build_players.log" || echo "player pages not rebuilt this run"
 
+# One page per upcoming game (games/), every run; adds them to the sitemap.
+timeout 2m python build_games.py 2>&1 | tee "$LOGDIR/build_games.log" || echo "game pages not rebuilt this run"
+
 # Once a day (first run after 11 AM ET): yesterday's Value results + today's best value,
 # to whichever Discord/Telegram secrets are set. With none set, it does nothing.
 python post_daily.py 2>&1 | tee "$LOGDIR/post_daily.log" || echo "daily post skipped this run"
@@ -37,10 +40,11 @@ git config user.name "github-actions[bot]"
 git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 git add nfl.html data.json slate.json picks.json weekly.json sitemap.xml robots.txt
 git add -A players 2>/dev/null || true
+git add -A games 2>/dev/null || true
 for f in nba.html nba.json nba_stats.json nba_picks.json \
          nhl.html nhl.json nhl_stats.json nhl_picks.json \
          mlb.html mlb.json mlb_stats.json mlb_picks.json today.json botd.json posted.json top_cache.json health.json \
-         team/stats.enc nba_picks_recent.json nhl_picks_recent.json mlb_picks_recent.json; do
+         team/stats.enc nba_picks_recent.json nhl_picks_recent.json mlb_picks_recent.json search.json; do
   git add "$f" 2>/dev/null || true
 done
 if git diff --cached --quiet; then

@@ -325,6 +325,16 @@ h2 i{color:var(--green)}
 .pickbar .sports{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:0}
 .pickbar .sport{min-width:0}
 @media (max-width:620px){.pickbar{padding-top:12px}.pickbar .sports{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.pickbar .sport{padding:12px}}
+.psearch{position:relative}
+.psearch input{width:100%;font:500 16px var(--body,"Inter",system-ui,sans-serif);color:#fff;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:13px 16px 13px 44px;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='%239fb0c6' stroke-width='2.2' stroke-linecap='round'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cpath d='m20 20-4-4'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:15px center}
+.psearch input::placeholder{color:var(--muted)}
+.psearch input:focus{outline:none;border-color:var(--green);box-shadow:0 0 0 3px rgba(34,208,127,.15)}
+.psearch ul{position:absolute;left:0;right:0;top:calc(100% + 6px);z-index:40;margin:0;padding:6px;list-style:none;background:#0f2038;border:1px solid var(--line);border-radius:14px;box-shadow:0 18px 40px rgba(0,0,0,.45);max-height:min(60vh,420px);overflow:auto}
+.psearch li a{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 12px;border-radius:10px;color:#fff;text-decoration:none}
+.psearch li a[aria-selected="true"],.psearch li a:hover{background:rgba(34,208,127,.12)}
+.psearch li small{color:var(--muted);font-size:13px;white-space:nowrap}
+.psearch li.empty{padding:10px 12px;color:var(--muted);font-size:14px}
 .promo{padding:16px 0 0}
 .promo .wrap{display:flex;flex-wrap:wrap;gap:10px;justify-content:center}
 .promo .ref,.promo .ref2{display:inline-flex;align-items:center;margin:0;max-width:none;border-radius:999px;padding:10px 20px;
@@ -434,6 +444,12 @@ footer .fine a{color:#8394ab}
         <a class="sport" href="./nhl.html"><span class="ico" aria-hidden="true">🏒</span><span><b>NHL</b><small data-rec="nhl">Hockey props</small></span></a>
         <a class="sport" href="./mlb.html"><span class="ico" aria-hidden="true">⚾</span><span><b>MLB</b><small data-rec="mlb">Baseball props</small></span></a>
       </div>
+      <!-- Player search across all four sports (search.json, from build_today.py), loaded on first focus -->
+      <div class="psearch">
+        <input id="psq" type="search" placeholder="Or search any player: Mahomes, Jokic, McDavid, Judge…" autocomplete="off" spellcheck="false"
+               role="combobox" aria-expanded="false" aria-controls="psres" aria-autocomplete="list" aria-label="Search any player">
+        <ul id="psres" role="listbox" aria-label="Players" hidden></ul>
+      </div>
     </div>
   </section>
 
@@ -502,6 +518,7 @@ footer .fine a{color:#8394ab}
       <p class="sub">Where the model's chance beats the market price (the cheaper of Polymarket and Kalshi) by the most — NFL, NBA, NHL and MLB in one feed. Tap a pick for the game log, the live price and the full breakdown.</p>
       <div class="app todayfeed"><div class="pickgrid" id="todaygrid"></div><div id="todaylock"></div></div>
       <p class="todaynote" id="todaynote"></p>
+      <p class="todaynote"><a href="games/">Browse every game's props →</a></p>
     </div>
   </section>
 
@@ -724,7 +741,7 @@ footer .fine a{color:#8394ab}
       <a class="brand" href="./"><svg width="28" height="28" viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" rx="14" fill="#0f2038"/><path d="M32,6 Q32,32 54,32 Q32,32 32,58 Q32,32 10,32 Q32,32 32,6 Z" fill="#22d07f"/></svg><b>Prop <i>Streak</i> Lab</b></a>
       <nav aria-label="Footer">
         <a href="./nfl.html">NFL</a><a href="./nba.html">NBA</a><a href="./nhl.html">NHL</a><a href="./mlb.html">MLB</a>
-        <a href="players/">Players</a><a href="methodology.html">How the model works</a><a href="privacy.html">Privacy Policy</a><a href="terms.html">Terms &amp; Conditions</a><a href="cookies.html">Cookies Policy</a><a href="team/">Team</a>
+        <a href="players/">Players</a><a href="methodology.html">How the model works</a><a href="privacy.html">Privacy Policy</a><a href="terms.html">Terms &amp; Conditions</a><a href="cookies.html">Cookies Policy</a><a href="games/">Games</a><a href="team/">Team</a>
         <a href="mailto:info@propstreaklab.com">Contact</a>
       </nav>
     </div>
@@ -944,6 +961,52 @@ function countUp(el){ const to=+el.dataset.count; if(!to||el.dataset.done) retur
   const capBotd=b=>{ (b&&b.days||[]).forEach(d=>{ PS.capPick(d.lock); PS.capPick(d.value); }); return b; };
   get('botd.json').then(b=>{ if(!b) return; renderBotd(capBotd(b));
     setInterval(()=>{ if(!document.hidden) get('botd.json').then(n=>{ if(n){ b=capBotd(n); renderBotd(b); } }); }, 300000); });
+
+  // Player search: every player with a game this season or last (search.json), any sport. A result
+  // opens that player on their board (#player/<id>). Accents and punctuation are ignored.
+  (function(){
+    const inp=document.getElementById('psq'), list=document.getElementById('psres'); if(!inp||!list) return;
+    const LBL={nfl:'NFL', nba:'NBA', nhl:'NHL', mlb:'MLB'};
+    const norm=s=>String(s||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase().replace(/[^a-z0-9 ]+/g,'');
+    let rows=null, loading=null, hits=[], active=-1;
+    const load=()=> loading || (loading=fetch('search.json',{cache:'no-store'}).then(r=>r.ok? r.json() : null)
+      .then(d=>{ rows=(d&&d.players||[]).map(p=>({sport:p[0], id:p[1], name:p[2], team:p[3], pos:p[4], key:norm(p[2])})); })
+      .catch(()=>{ rows=[]; }));
+    function find(q){
+      const words=norm(q).split(' ').filter(Boolean); if(!words.length) return [];
+      const score=r=>{ const parts=r.key.split(' ');
+        if(!words.every(w=>parts.some(p=>p.startsWith(w)))) return -1;
+        return (r.key.startsWith(words[0])? 2 : 0) + (parts[parts.length-1].startsWith(words[words.length-1])? 1 : 0); };
+      return rows.map(r=>[score(r), r]).filter(x=>x[0]>=0).sort((a,b)=>b[0]-a[0] || a[1].name.localeCompare(b[1].name)).slice(0,8).map(x=>x[1]);
+    }
+    const href=r=>`./${r.sport}.html#player/${encodeURIComponent(r.id)}`;
+    function paint(){
+      const q=inp.value.trim();
+      if(!q){ list.hidden=true; inp.setAttribute('aria-expanded','false'); return; }
+      if(!rows){ load().then(paint); return; }
+      hits=find(q); active=hits.length? 0 : -1;
+      list.innerHTML= hits.length? hits.map((r,i)=>`<li role="presentation"><a role="option" id="psr${i}" href="${PS.esc(href(r))}" aria-selected="${i===active}">`+
+          `<span>${PS.esc(r.name)}</span><small>${PS.esc([r.team, r.pos, LBL[r.sport]].filter(Boolean).join(' · '))}</small></a></li>`).join('')
+        : `<li class="empty">No player found for “${PS.esc(q)}”. Try a last name.</li>`;
+      list.hidden=false; inp.setAttribute('aria-expanded','true');
+      if(active>=0) inp.setAttribute('aria-activedescendant','psr0'); else inp.removeAttribute('aria-activedescendant');
+    }
+    function move(d){ if(!hits.length) return; active=(active+d+hits.length)%hits.length;
+      list.querySelectorAll('a').forEach((a,i)=>a.setAttribute('aria-selected', String(i===active)));
+      inp.setAttribute('aria-activedescendant','psr'+active); const a=list.querySelector(`#psr${active}`); if(a) a.scrollIntoView({block:'nearest'}); }
+    function go(r){ const gc=window.goatcounter;
+      if(gc && typeof gc.count==='function') gc.count({path:'click/player-search/home', title:'Used the player search', event:true});
+      location.href=href(r); }
+    inp.addEventListener('focus', load, {once:true});
+    inp.addEventListener('input', paint);
+    inp.addEventListener('keydown', e=>{
+      if(e.key==='ArrowDown'){ e.preventDefault(); move(1); }
+      else if(e.key==='ArrowUp'){ e.preventDefault(); move(-1); }
+      else if(e.key==='Enter' && hits[active]){ e.preventDefault(); go(hits[active]); }
+      else if(e.key==='Escape'){ list.hidden=true; inp.setAttribute('aria-expanded','false'); } });
+    list.addEventListener('click', e=>{ const a=e.target.closest('a[id^="psr"]'); if(!a) return; e.preventDefault(); go(hits[+a.id.slice(3)]); });
+    document.addEventListener('click', e=>{ if(!e.target.closest('.psearch')){ list.hidden=true; inp.setAttribute('aria-expanded','false'); } });
+  })();
 
   // "Pick a sport" tiles: each sport's season Top 25 hit rate under its name, once there are enough graded picks
   function pickbarRecords(t){

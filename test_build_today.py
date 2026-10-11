@@ -40,6 +40,17 @@ class LastResults(unittest.TestCase):
         self.assertIsNone(build_today.last_results("nfl", d, "2026-10-11"))
 
 
+class SearchRows(unittest.TestCase):
+    def test_this_or_last_season_only(self):
+        db = {"season": 2026, "players": [
+            {"id": 1, "n": "Now Player", "t": "NE", "p": "WR", "g": [[2026, 1]]},
+            {"id": 2, "n": "Last Year", "t": "LV", "p": "RB", "g": [[2025, 3]]},
+            {"id": 3, "n": "Long Gone", "t": "GB", "p": "QB", "g": [[2023, 1]]},
+            {"id": 4, "n": "No Games", "t": "GB", "p": "QB", "g": []}]}
+        self.assertEqual(build_today.search_rows("nfl", db),
+                         [["nfl", "1", "Now Player", "NE", "WR"], ["nfl", "2", "Last Year", "LV", "RB"]])
+
+
 class WriteRecent(unittest.TestCase):
     def test_keeps_pending_and_recent_results_only(self):
         import json, os, tempfile
