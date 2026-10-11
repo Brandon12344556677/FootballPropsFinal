@@ -36,7 +36,7 @@
 <script data-goatcounter="https://propstreaklive.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
 <link rel="stylesheet" href="fonts.css">
 <link rel="stylesheet" href="app.css?v=20261011d">
-<script src="app.js?v=20261011d"></script>
+<script src="app.js?v=20261011e"></script>
 <script src="/halloween.js?v=20261009a"></script>
 <style>
 :root{
@@ -325,6 +325,9 @@ h2 i{color:var(--green)}
 .pickbar .sports{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:0}
 .pickbar .sport{min-width:0}
 @media (max-width:620px){.pickbar{padding-top:12px}.pickbar .sports{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.pickbar .sport{padding:12px}}
+.pickbar-more{margin:0;font-size:14px;color:var(--muted)}
+.pickbar-more a{color:#86e6b6;text-decoration:none;font-weight:600}
+.pickbar-more a:hover{text-decoration:underline}
 .psearch{position:relative}
 .psearch input{width:100%;font:500 16px var(--body,"Inter",system-ui,sans-serif);color:#fff;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:13px 16px 13px 44px;
   background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='%239fb0c6' stroke-width='2.2' stroke-linecap='round'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cpath d='m20 20-4-4'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:15px center}
@@ -335,6 +338,24 @@ h2 i{color:var(--green)}
 .psearch li a[aria-selected="true"],.psearch li a:hover{background:rgba(34,208,127,.12)}
 .psearch li small{color:var(--muted);font-size:13px;white-space:nowrap}
 .psearch li.empty{padding:10px 12px;color:var(--muted);font-size:14px}
+#move{padding:64px 0 8px}
+.movegrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px;margin-top:22px}
+.movecol{background:var(--surface);border:1px solid var(--line);border-radius:20px;padding:18px;min-width:0}
+.movecol[hidden]{display:none}
+.movecol h3{margin:0;font-family:var(--display);font-size:20px;color:#fff}
+.mvnote{margin:4px 0 12px;color:var(--muted);font-size:13.5px}
+.mvlist{display:grid;gap:8px}
+.mv{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 12px;align-items:center;padding:10px 12px;border-radius:12px;background:var(--surface-2);border:1px solid var(--line);color:inherit;text-decoration:none}
+.mv:hover{border-color:var(--green)}
+.mv:focus-visible{outline:2px solid var(--green);outline-offset:2px}
+.mv-who{min-width:0}
+.mv-who b{display:block;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mv-who small{display:block;color:var(--muted);font-size:12.5px}
+.mv-stat{text-align:right;font-variant-numeric:tabular-nums}
+.mv-stat b{display:block;color:var(--green);font-size:15px}
+.mv-stat small{color:var(--muted);font-size:12px}
+.mv-bet{grid-column:1/-1;font-size:14px;color:var(--soft)}
+@media (max-width:760px){#move{padding:44px 0 0}.movegrid{grid-template-columns:1fr}}
 #calib{padding:64px 0 8px}
 .calib{display:grid;gap:12px;margin-top:26px;max-width:780px}
 .cr{display:grid;grid-template-columns:78px minmax(0,1fr) 220px;align-items:center;gap:14px}
@@ -465,6 +486,7 @@ footer .fine a{color:#8394ab}
                role="combobox" aria-expanded="false" aria-controls="psres" aria-autocomplete="list" aria-label="Search any player">
         <ul id="psres" role="listbox" aria-label="Players" hidden></ul>
       </div>
+      <p class="pickbar-more"><a href="best/">Today's best props by sport</a> · <a href="guides/">New to player props? Start here</a></p>
     </div>
   </section>
 
@@ -533,7 +555,7 @@ footer .fine a{color:#8394ab}
       <p class="sub">Where the model's chance beats the market price (the cheaper of Polymarket and Kalshi) by the most — NFL, NBA, NHL and MLB in one feed. Tap a pick for the game log, the live price and the full breakdown.</p>
       <div class="app todayfeed"><div class="pickgrid" id="todaygrid"></div><div id="todaylock"></div></div>
       <p class="todaynote" id="todaynote"></p>
-      <p class="todaynote"><a href="games/">Browse every game's props →</a></p>
+      <p class="todaynote"><a href="games/">Browse every game's props →</a> · <a href="best/">Today's best props by sport →</a></p>
     </div>
   </section>
 
@@ -545,6 +567,18 @@ footer .fine a{color:#8394ab}
       <p class="sub">One of each, picked from all four sports once a day, locked in when it posts and graded in public — the wins and the losses.</p>
       <div class="app botdgrid"><div class="botdslot lock" id="botd-lock"></div><div class="botdslot" id="botd-value"></div></div>
       <p class="todaynote" id="botdnote"></p>
+    </div>
+  </section>
+
+  <!-- ON THE MOVE: hot streaks and prices moving toward a pick, from today.json "streaks" / "moves" (build_today.py) -->
+  <section id="move" aria-labelledby="move-h" hidden>
+    <div class="wrap">
+      <p class="kicker">On the move</p>
+      <h2 id="move-h">Hot streaks and <i>moving</i> markets.</h2>
+      <div class="app movegrid">
+        <div class="movecol" id="mvstreak"><h3>Hot streaks</h3><p class="mvnote">Cleared this exact line in each of their last games, and it still pays.</p><div class="mvlist"></div></div>
+        <div class="movecol" id="mvmove"><h3>Market moving our way</h3><p class="mvnote">The price has risen since we recorded the pick: the market came around to it.</p><div class="mvlist"></div></div>
+      </div>
     </div>
   </section>
 
@@ -768,7 +802,7 @@ footer .fine a{color:#8394ab}
       <a class="brand" href="./"><svg width="28" height="28" viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" rx="14" fill="#0f2038"/><path d="M32,6 Q32,32 54,32 Q32,32 32,58 Q32,32 10,32 Q32,32 32,6 Z" fill="#22d07f"/></svg><b>Prop <i>Streak</i> Lab</b></a>
       <nav aria-label="Footer">
         <a href="./nfl.html">NFL</a><a href="./nba.html">NBA</a><a href="./nhl.html">NHL</a><a href="./mlb.html">MLB</a>
-        <a href="players/">Players</a><a href="methodology.html">How the model works</a><a href="privacy.html">Privacy Policy</a><a href="terms.html">Terms &amp; Conditions</a><a href="cookies.html">Cookies Policy</a><a href="games/">Games</a><a href="team/">Team</a>
+        <a href="players/">Players</a><a href="methodology.html">How the model works</a><a href="privacy.html">Privacy Policy</a><a href="terms.html">Terms &amp; Conditions</a><a href="cookies.html">Cookies Policy</a><a href="games/">Games</a><a href="best/">Best props</a><a href="guides/">Guides</a><a href="team/">Team</a>
         <a href="mailto:info@propstreaklab.com">Contact</a>
       </nav>
     </div>
@@ -1035,6 +1069,24 @@ function countUp(el){ const to=+el.dataset.count; if(!to||el.dataset.done) retur
     document.addEventListener('click', e=>{ if(!e.target.closest('.psearch')){ list.hidden=true; inp.setAttribute('aria-expanded','false'); } });
   })();
 
+  // On the move: hot streaks and prices moving toward a pick (today.json "streaks", "moves"); games still ahead only.
+  function renderMove(t){
+    const sec=document.getElementById('move'); if(!sec) return;
+    const up=p=>Date.parse(p.start)>Date.now();
+    const row=(p, stat)=>{
+      const href=`./${p.sport}.html#${PS.hashFor(p.pid, p.stat, p.line, p.side, p.player)}`;
+      return `<a class="mv" href="${esc(href)}"><span class="mv-who"><b>${esc(p.player)}</b>`+
+        `<small>${esc(p.team||'')} vs ${esc(p.opp||'')} · ${SPORT[p.sport]||''} · <span data-cd="${esc(p.start)}">${PS.until(Date.parse(p.start))}</span></small></span>`+
+        `<span class="mv-stat">${stat}</span>`+
+        `<span class="mv-bet"><span class="leantag ${esc(p.side)}">${esc(p.side)}</span> <b>${esc(p.line)}</b> ${esc(p.statText)}</span></a>`;
+    };
+    const st=(t&&t.streaks||[]).filter(up), mv=(t&&t.moves||[]).filter(up);
+    const fill=(id, rows, html)=>{ const col=document.getElementById(id); col.hidden=!rows.length; col.querySelector('.mvlist').innerHTML=rows.map(html).join(''); };
+    fill('mvstreak', st, p=>row(p, `<b>${p.streak} straight</b><small>model ${Math.round(p.prob*100)}% · ${Math.round(p.price*100)}¢</small>`));
+    fill('mvmove', mv, p=>row(p, `<b>${Math.round(p.px0*100)}¢ → ${Math.round(p.price*100)}¢</b><small>model ${Math.round(p.prob*100)}%</small>`));
+    sec.hidden=!st.length && !mv.length;
+  }
+
   // Calibration: for each band of model chance, how often those picks hit (today.json "calib").
   // The track runs 40-100% so the gaps between bands are visible; the white line is the model's average.
   function renderCalib(t){
@@ -1062,6 +1114,7 @@ function countUp(el){ const to=+el.dataset.count; if(!to||el.dataset.done) retur
     if(!t) return;
     pickbarRecords(t);
     renderCalib(t);
+    renderMove(t);
     (t.picks||[]).forEach(PS.capPick);
     if(t.fair && t.fair.w>=0) FAIRW=t.fair.w;
     liveDemo(t);

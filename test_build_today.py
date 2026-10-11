@@ -86,3 +86,22 @@ class WriteRecent(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class StreaksAndMoves(unittest.TestCase):
+    def cand(self, pid, side, line, l10, price, prob=0.8, px0=None, sport="nfl"):
+        return {"sport": sport, "pid": pid, "player": pid, "team": "A", "opp": "B", "stat": "s", "statText": "S",
+                "line": line, "side": side, "prob": prob, "price": price, "start": "2026-10-12T17:00:00Z",
+                "l10": l10, "px0": px0}
+
+    def test_streak_counts_back_from_latest_game_and_skips_cheap_payouts(self):
+        c = [self.cand("a", "over", 4.5, [1, 6, 7, 8, 9, 10], 0.7),        # 5 straight
+             self.cand("b", "over", 4.5, [6, 6, 6, 6, 6, 6, 6], 0.9),      # 7 straight but pays too little
+             self.cand("c", "under", 4.5, [5, 3, 3, 3, 3], 0.6)]           # 4 straight: too short
+        out = build_today.streaks(c)
+        self.assertEqual([(r["pid"], r["streak"]) for r in out], [("a", 5)])
+
+    def test_moves_need_three_cents_toward_the_pick(self):
+        c = [self.cand("a", "over", 1.5, [], 0.60, px0=0.50), self.cand("b", "over", 1.5, [], 0.52, px0=0.50),
+             self.cand("c", "over", 1.5, [], 0.75, px0=0.70)]   # +5c: listed after the +10c move
+        self.assertEqual([r["pid"] for r in build_today.moves(c)], ["a", "c"])

@@ -66,3 +66,27 @@ class GameProps(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class SharePages(unittest.TestCase):
+    def test_key_matches_javascript_number_format(self):
+        self.assertEqual(G.share_key({"pid": "1", "stat": "pts", "line": 1.0, "side": "over"}), "1-pts-1-over")
+        self.assertEqual(G.share_key({"pid": "1", "stat": "pts", "line": 24.5, "side": "under"}), "1-pts-24.5-under")
+
+    def test_share_page_has_preview_and_redirect(self):
+        c = {"pid": "9", "player": "Pat Test", "stat": "pass_yds", "statText": "Pass Yds", "line": 247.5, "side": "over",
+             "prob": 0.68, "price": 0.55}
+        g = {"away": "LV", "home": "KC", "start": datetime.datetime(2026, 10, 12, 17, tzinfo=UTC)}
+        html = G.share_page("nfl", c, g)
+        self.assertIn('<meta property="og:title" content="Pat Test over 247.5 Pass Yds">', html)
+        self.assertIn("noindex", html)
+        self.assertIn("/nfl.html#player/9/pass_yds/247.5/over/pat-test", html)
+
+    def test_best_page_lists_value_then_top25(self):
+        g = {"away": "LV", "home": "KC", "start": datetime.datetime(2026, 10, 12, 17, tzinfo=UTC)}
+        v = dict(prop("a", "LV", "rec", "over", 0.6, cls="value", edge=0.2), player="Val Player", price=0.4)
+        t = dict(prop("b", "KC", "rec", "under", 0.95, cls="t25"), player="Top Player", price=0.9)
+        html, url = G.best_page("nfl", [(v, g), (t, g)], "now", datetime.date(2026, 10, 12))
+        self.assertTrue(url.endswith("/best/nfl.html"))
+        self.assertLess(html.index("Val Player"), html.index("Top Player"))
+        self.assertIn("lv-at-kc-2026-10-12.html", html)

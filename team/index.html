@@ -130,6 +130,10 @@ footer p{margin:0;max-width:80ch}
 .heat-key{display:flex;align-items:center;gap:8px;margin-top:10px;font-size:12px;color:var(--muted)}
 .heat-key i{display:inline-block;width:72px;height:8px;border-radius:4px;background:linear-gradient(90deg,var(--surface-2),var(--accent))}
 
+/* results image */
+#imgPrev{display:block;width:min(270px,100%);margin-top:14px;border-radius:14px;border:1px solid var(--line)}
+.ghost-btn{background:none;color:var(--fg);border:1px solid var(--line)}
+
 /* sponsor snapshot */
 .stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:1px;background:var(--line);border:1px solid var(--line);border-radius:12px;overflow:hidden}
 .stat{background:var(--surface);padding:14px 16px;display:grid;gap:2px;align-content:start;min-width:0}
@@ -241,6 +245,13 @@ footer p{margin:0;max-width:80ch}
     <p class="hint" id="heatTop"></p>
     <div class="heat-wrap" style="margin-top:12px"><div class="heat" id="heat"></div></div>
     <div class="heat-key"><span>Fewer visits</span><i></i><span>More</span><span id="heatMax"></span></div>
+  </section>
+
+  <section class="panel">
+    <div class="panel-h"><h2>Results image for social</h2><span class="label">1080 × 1920 story</span></div>
+    <p class="hint">Makes a story-sized image of the latest results for each sport, ready for Snapchat or Instagram. Add your tagged link from the Link builder as a link sticker.</p>
+    <div class="copyrow"><button class="btn" id="imgMake" type="button">Make results image</button><button class="btn ghost-btn" id="imgSave" type="button" hidden>Save or share</button><span class="copied" id="imgMsg" role="status"></span></div>
+    <img id="imgPrev" alt="Results image preview" hidden>
   </section>
 
   <section class="panel">
@@ -621,6 +632,52 @@ footer p{margin:0;max-width:80ch}
     if (!ok) { box.focus(); box.select(); }
     $('spCopied').textContent = ok ? 'Copied. Paste it into an email or pitch deck.' : 'Your browser blocked copying. The text is selected below: press Ctrl+C, or long-press on a phone.';
   });
+
+  // ---------- results image: today.json's latest graded day per sport, drawn on a 1080x1920 canvas ----------
+  let imgBlob=null;
+  async function makeImage(){
+    $('imgMsg').textContent='Drawing…';
+    const t=await fetch('../today.json?t='+Date.now(),{cache:'no-store'}).then(r=>r.ok? r.json() : null).catch(()=>null);
+    const L=(t&&t.last)||{}, NAME={nfl:'NFL', nba:'NBA', nhl:'NHL', mlb:'MLB'};
+    const recent=new Date(Date.now()-3*864e5).toISOString().slice(0,10);
+    const rows=['nfl','nba','nhl','mlb'].filter(s=>L[s] && L[s].T && L[s].T.n>=5 && L[s].day>=recent)   // a 1-of-2 day says little.map(s=>({s, ...L[s]}));
+    if(!rows.length){ $('imgMsg').textContent='No graded results in the last 3 days yet.'; return; }
+    try { await Promise.all(['800 90px Archivo','600 40px Inter','700 40px "Barlow Condensed"'].map(f=>document.fonts.load(f))); } catch(e){}
+    const W=1080, H=1920, c=document.createElement('canvas'); c.width=W; c.height=H; const g=c.getContext('2d');
+    g.fillStyle='#0a1628'; g.fillRect(0,0,W,H);
+    const glow=g.createRadialGradient(200,160,0,200,160,900); glow.addColorStop(0,'rgba(34,208,127,.22)'); glow.addColorStop(1,'rgba(34,208,127,0)'); g.fillStyle=glow; g.fillRect(0,0,W,H);
+    // logo mark + name
+    g.save(); g.translate(96,150); g.fillStyle='#0f2038'; g.beginPath(); g.roundRect(0,0,88,88,22); g.fill();
+    g.fillStyle='#22d07f'; g.beginPath(); g.moveTo(44,8); g.quadraticCurveTo(44,44,80,44); g.quadraticCurveTo(44,44,44,80); g.quadraticCurveTo(44,44,8,44); g.quadraticCurveTo(44,44,44,8); g.fill(); g.restore();
+    g.fillStyle='#fff'; g.font='800 46px Archivo, Inter, sans-serif'; g.textBaseline='middle'; g.fillText('Prop Streak Lab', 208, 196);
+    const day=rows.map(r=>r.day).sort().pop(), dayLbl=new Date(day+'T12:00:00Z').toLocaleDateString('en-US',{weekday:'long', month:'long', day:'numeric', timeZone:'UTC'});
+    g.textBaseline='alphabetic'; g.fillStyle='#22d07f'; g.font='700 40px "Barlow Condensed", Inter, sans-serif'; g.fillText('LATEST RESULTS · '+dayLbl.toUpperCase(), 96, 380);
+    g.fillStyle='#fff'; g.font='800 104px Archivo, Inter, sans-serif'; g.fillText('Picks graded', 96, 500); g.fillText('in public.', 96, 616);
+    let y=760;
+    rows.forEach(r=>{
+      g.fillStyle='#0f2038'; g.strokeStyle='#22354f'; g.lineWidth=3; g.beginPath(); g.roundRect(96,y,W-192,250,34); g.fill(); g.stroke();
+      g.fillStyle='#9fb0c6'; g.font='700 44px "Barlow Condensed", Inter, sans-serif'; g.fillText(NAME[r.s]+'  ·  TOP 25 SUREST', 140, y+78);
+      g.fillStyle='#fff'; g.font='800 112px Archivo, Inter, sans-serif'; g.fillText(`${r.T.hit}/${r.T.n}`, 136, y+196);
+      const pct=Math.round(100*r.T.hit/r.T.n); g.fillStyle='#22d07f'; g.font='800 64px Archivo, Inter, sans-serif'; g.textAlign='right'; g.fillText(pct+'% hit', W-140, y+190);
+      if(r.V && r.V.n){ g.fillStyle='#9fb0c6'; g.font='600 34px Inter, sans-serif'; g.fillText(`Value ${r.V.hit}/${r.V.n}`+(r.V.units!=null? ` · ${r.V.units>=0?'+':'−'}${Math.abs(r.V.units).toFixed(1)}u` : ''), W-140, y+80); }
+      g.textAlign='left'; y+=290;
+    });
+    g.fillStyle='#dfe6ef'; g.font='600 40px Inter, sans-serif'; g.fillText('Every pick recorded before the game.', 96, H-250);
+    g.fillStyle='#22d07f'; g.font='800 58px Archivo, Inter, sans-serif'; g.fillText('propstreaklab.com', 96, H-160);
+    g.fillStyle='#9fb0c6'; g.font='600 32px Inter, sans-serif'; g.fillText('Free · NFL · NBA · NHL · MLB · Research, not betting advice', 96, H-96);
+    imgBlob=await new Promise(res=>c.toBlob(res,'image/png'));
+    $('imgPrev').src=URL.createObjectURL(imgBlob); $('imgPrev').hidden=false; $('imgSave').hidden=false;
+    $('imgMsg').textContent='Ready. On a phone, Save or share opens the share sheet (Snapchat, Instagram, Photos).';
+  }
+  async function saveImage(){
+    if(!imgBlob) return;
+    const file=new File([imgBlob], 'prop-streak-lab-results.png', {type:'image/png'});
+    if(navigator.canShare && navigator.canShare({files:[file]})){ try { await navigator.share({files:[file]}); return; } catch(e){ if(e && e.name==='AbortError') return; } }
+    const a=document.createElement('a'); a.href=URL.createObjectURL(imgBlob); a.download=file.name; document.body.appendChild(a); a.click(); a.remove();
+    $('imgMsg').textContent='Saved. On an iPhone, if it opened in a new tab, press and hold the image to save it.';
+  }
+  $('imgMake').addEventListener('click', makeImage);
+  $('imgSave').addEventListener('click', saveImage);
 
   // ---------- link builder + tracked links ----------
   // Every generated link carries its own campaign name (utm_campaign = "<source>-<link name>"),

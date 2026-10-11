@@ -9,7 +9,8 @@ and writes a small file the home page can fetch in one request:
                 "tracked": {"graded": live picks graded so far, "since": first live pick date},
                 "fair": {"w": model weight in the fair chance, "n": priced picks it was fitted on},
                 "last": {sport: {"day", "T": {n, hit}, "V": {n, hit, units}}}: each sport's latest graded day,
-                "calib": [{"lo", "hi", "n", "said", "hit"}]: hit rate by model chance (home page chart)}
+                "calib": [{"lo", "hi", "n", "said", "hit"}]: hit rate by model chance (home page chart),
+                "streaks", "moves": home page cards (hot streaks; prices moving toward a pick)}
                (each pick carries "l10": its last ten game values, for the mini chart)
 
 "picks" holds the best upcoming bets across all four sports at the last recorded
@@ -178,6 +179,7 @@ def upcoming(sport, db, picks_doc, labels, getters, now):
             "l10": last10(sport, players.get(str(p["pid"])), p["stat"], getters),
             # for Bet of the Day (botd.py); not written to today.json
             "neff": p.get("neff"),
+            "px0": round(float(p["px0"]) / cents, 3) if p.get("px0") is not None else None,   # price when recorded (moves)
             "flag": botd.news_flag(sport, p.get("nw"), players.get(str(p["pid"])) if sport == "nfl" else None, week),
         })
     return out
@@ -236,6 +238,52 @@ def last_results(sport, picks_doc, today, max_age=7):
             out[tag] = days[day][tag]
     if "V" in out:
         out["V"]["units"] = round(out["V"]["units"], 2)
+    return out
+
+
+CARD_KEYS = ("sport", "pid", "player", "team", "opp", "stat", "statText", "line", "side", "prob", "price", "start")
+
+
+def streaks(cands, min_streak=5, n=6):
+    """Hot streaks for the home page: upcoming priced picks whose player cleared this exact
+    line (on this side) in each of his last `min_streak`+ games, longest first, one per player.
+    Only props that still pay (priced 85c or less): a streak on a near-certain prop says little."""
+    out, seen = [], set()
+    def run(c):
+        k = 0
+        for v in reversed(c.get("l10") or []):
+            if v is None or not ((v < c["line"]) if c["side"] == "under" else (v > c["line"])):
+                break
+            k += 1
+        return k
+    # longest first; at equal length overs first (the streaks people look for), then likeliest
+    rows = sorted(((run(c), c) for c in cands if c["price"] <= SAFE_MAX_PRICE),
+                  key=lambda x: (-x[0], x[1]["side"] != "over", -x[1]["prob"]))
+    per = {}
+    for k, c in rows:
+        if k < min_streak or (c["sport"], c["pid"]) in seen or per.get(c["sport"], 0) >= 3:   # 3 per sport at most
+            continue
+        seen.add((c["sport"], c["pid"]))
+        per[c["sport"]] = per.get(c["sport"], 0) + 1
+        out.append(dict({key: c[key] for key in CARD_KEYS}, streak=k, games=len(c.get("l10") or [])))
+        if len(out) >= n:
+            break
+    return out
+
+
+def moves(cands, min_move=0.03, n=6):
+    """The market moving our way: upcoming picks whose price rose at least `min_move` since the
+    site recorded them (the market came around to the pick), biggest first, one per player."""
+    rows = sorted((c for c in cands if c.get("px0") is not None and c["price"] - c["px0"] >= min_move),
+                  key=lambda c: -(c["price"] - c["px0"]))
+    out, seen = [], set()
+    for c in rows:
+        if (c["sport"], c["pid"]) in seen:
+            continue
+        seen.add((c["sport"], c["pid"]))
+        out.append(dict({key: c[key] for key in CARD_KEYS}, px0=c["px0"]))
+        if len(out) >= n:
+            break
     return out
 
 
@@ -374,12 +422,13 @@ def main():
             print(f"  {sport}: {len(got)} upcoming priced pick(s), record {rec[sport]}")
         except Exception as e:     # one bad sport never blanks the others
             print(f"  {sport}: skipped ({e})")
-    picks = [{k: v for k, v in c.items() if k not in ("neff", "flag")} for c in best(cands)]
+    picks = [{k: v for k, v in c.items() if k not in ("neff", "flag", "px0")} for c in best(cands)]
     # [sport, start] of every upcoming value spot, so the ticker can count what's still live.
     value_live = sorted([c["sport"], c["start"]] for c in cands if c["value"])
     doc = {"gen": now.strftime("%Y-%m-%dT%H:%M:%SZ"), "record": rec, "picks": picks, "valueLive": value_live,
            "tracked": {"graded": n_graded, "since": since}, "fair": fair_weight(docs), "last": last,
-           "calib": calibration(docs)}
+           "calib": calibration(docs),
+           "streaks": streaks(cands), "moves": moves(cands)}
     with open(OUT, "w", encoding="utf-8") as f:
         json.dump(doc, f, separators=(",", ":"), ensure_ascii=False)
     if search:

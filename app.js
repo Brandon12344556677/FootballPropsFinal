@@ -228,7 +228,10 @@ window.PS = (function(){
   // Phones get the native share sheet; everywhere else the link is copied.
   function sharePick(st, statText){
     if(!st || !st.player) return;
-    const url=location.origin+location.pathname+'#'+pickHash(st);
+    // A listed pick has a share page (p/<sport>/<key>.html, build_games.py) whose link preview names the pick;
+    // anything else shares the board link itself.
+    const key=shareKey(st), page=PAGE_SPORT && SHARE_KEYS && SHARE_KEYS.has(key);
+    const url= page? `${location.origin}/p/${PAGE_SPORT}/${key}.html` : location.origin+location.pathname+'#'+pickHash(st);
     const text=`${st.player.n} ${st.ou} ${st.line} ${statText||st.stat} — the model's chance, the game log and the live price`;
     const touch=window.matchMedia && matchMedia('(pointer:coarse)').matches;
     if(touch && navigator.share){ navigator.share({title:'Prop Streak Lab', text, url}).catch(()=>{}); return; }
@@ -439,6 +442,12 @@ window.PS = (function(){
   // which sport board this is (null on the home page and the other pages)
   const PAGE_SPORT=(location.pathname.match(/\/(nfl|nba|nhl|mlb)\.html$/)||[])[1]||null;
   const SPORT_LBL={nfl:'NFL', nba:'NBA', nhl:'NHL', mlb:'MLB'};
+
+  // share pages that exist for this board's picks (p/keys.json, build_games.py): {sport: {key: expiry}}
+  let SHARE_KEYS=null;
+  const shareKey=st=> `${st.player.id}-${st.stat}-${String(Number(st.line))}-${st.ou}`;   // = build_games.share_key
+  if(PAGE_SPORT) fetch('p/keys.json',{cache:'no-store'}).then(r=>r.ok? r.json() : null)
+    .then(d=>{ SHARE_KEYS=new Set(Object.keys((d&&d[PAGE_SPORT])||{})); }).catch(()=>{});
 
   // ---- a small card at the bottom of the screen (welcome back, home-screen tip); one at a time ----
   // actions: [{label, href?, tab?, primary?, run?}] — tab clicks that board tab instead of following the link
