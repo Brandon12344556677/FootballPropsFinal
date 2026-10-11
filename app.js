@@ -344,11 +344,21 @@ window.PS = (function(){
       `<div class="verdict" hidden></div>`+
       (v.length>=3? `<div class="ps-l10"><div class="ps-sub">Last ${v.length} games · cleared ${esc(o.line)} <b>${hits} of ${v.length}</b></div>${bigSpark(v, o.line, o.side)}</div>` : '')+
       `<div class="ps-actions"><button type="button" class="btn ps-open">Full breakdown →</button></div>`+
-      moreHtml(o.more),
+      promoHtml(o)+moreHtml(o.more),
       `${o.name} ${o.side} ${o.line} ${o.statText}`);
     verdict(w.querySelector('.verdict'), o);
     w.querySelector('.ps-open').onclick=()=>{ closeSheet(); if(o.onOpen) o.onOpen(); };
     w.querySelectorAll('.ps-mi').forEach(b=>b.onclick=()=>{ const it=o.more[+b.dataset.g].items[+b.dataset.i]; closeSheet(); it.open(); });
+  }
+  // Sign-up offer at the moment of decision: the exchange with the cheaper price for this pick first.
+  // data-place="sheet" makes the click count as "<exchange>-signup-sheet" on the team dashboard.
+  const REF={P:{name:'Polymarket', href:'https://polymarket.us/join/propstreaklab', deal:'$25 free with code PROPSTREAKLAB'},
+             K:{name:'Kalshi', href:'https://kalshi.com/sign-up/?referral=4373e9f9-0304-498c-8ca7-fccd3714b808&m=true&utm_source=mobile_app&utm_medium=share&utm_campaign=referral&utm_content=share_button&utm_term=referrals_pill', deal:'$25 free with our sign-up link'}};
+  function promoHtml(o){
+    const a=REF[o.vn==='K'? 'K' : 'P'], b=REF[o.vn==='K'? 'P' : 'K'];
+    return `<div class="ps-promo"><a class="ps-ref" href="${esc(a.href)}" target="_blank" rel="noopener sponsored" data-place="sheet">${icon('gift')}<span>Bet this on <b>${a.name}</b>: ${esc(a.deal)}</span></a>`+
+      `<a class="ps-ref2" href="${esc(b.href)}" target="_blank" rel="noopener sponsored" data-place="sheet">or ${b.name}: $25 free →</a>`+
+      `<p class="ps-fine">For new users. Research, not betting advice.</p></div>`;
   }
   // "More from this game" / "More for <player>": o.more = [{title, items:[{name, side, line, statText, prob, open}]}]
   function moreHtml(groups){
@@ -655,7 +665,7 @@ window.PS = (function(){
     let u; try { u = new URL(a.href, location.href); } catch(_) { return; }
     if (!/^https?:$/.test(u.protocol) || u.hostname === location.hostname) return;
     const gc = window.goatcounter; if (!gc || typeof gc.count !== 'function') return;
-    const k = kind(u);
+    const k = kind(u) + (a.dataset.place ? '-' + a.dataset.place : '');   // e.g. polymarket-signup-sheet
     gc.count({path: 'click/' + k + '/' + PAGE, title: 'Clicked ' + k + ' on ' + PAGE, event: true});
   }
   document.addEventListener('click', onClick, true);

@@ -35,8 +35,8 @@
 <link rel="manifest" href="/site.webmanifest">
 <script data-goatcounter="https://propstreaklive.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
 <link rel="stylesheet" href="fonts.css">
-<link rel="stylesheet" href="app.css?v=20261011b">
-<script src="app.js?v=20261011c"></script>
+<link rel="stylesheet" href="app.css?v=20261011d">
+<script src="app.js?v=20261011d"></script>
 <script src="/halloween.js?v=20261009a"></script>
 <style>
 :root{
@@ -335,6 +335,21 @@ h2 i{color:var(--green)}
 .psearch li a[aria-selected="true"],.psearch li a:hover{background:rgba(34,208,127,.12)}
 .psearch li small{color:var(--muted);font-size:13px;white-space:nowrap}
 .psearch li.empty{padding:10px 12px;color:var(--muted);font-size:14px}
+#calib{padding:64px 0 8px}
+.calib{display:grid;gap:12px;margin-top:26px;max-width:780px}
+.cr{display:grid;grid-template-columns:78px minmax(0,1fr) 220px;align-items:center;gap:14px}
+.cr-l{font-family:var(--cond);font-weight:700;letter-spacing:.06em;color:var(--soft);font-size:16px}
+.cr-track{position:relative;height:14px;border-radius:7px;background:var(--surface-2);border:1px solid var(--line)}
+.cr-bar{position:absolute;left:0;top:0;bottom:0;border-radius:7px;background:var(--green)}
+.cr-said{position:absolute;top:-6px;bottom:-6px;width:3px;margin-left:-1.5px;border-radius:2px;background:#fff;box-shadow:0 0 0 2px var(--bg)}
+.cr-v{font-size:14px;color:var(--soft);font-variant-numeric:tabular-nums}
+.cr-v b{color:#fff;font-size:18px}
+.cr-v small{display:block;color:var(--muted);font-size:12.5px}
+.calib-key{display:flex;flex-wrap:wrap;gap:8px 18px;margin-top:14px;font-size:13px;color:var(--muted)}
+.calib-key span{display:inline-flex;align-items:center;gap:8px}
+.calib-key .k-bar{width:22px;height:10px;border-radius:5px;background:var(--green)}
+.calib-key .k-said{width:3px;height:16px;border-radius:2px;background:#fff}
+@media (max-width:620px){#calib{padding:44px 0 0}.cr{grid-template-columns:70px minmax(0,1fr);gap:6px 12px}.cr-v{grid-column:2}}
 .promo{padding:16px 0 0}
 .promo .wrap{display:flex;flex-wrap:wrap;gap:10px;justify-content:center}
 .promo .ref,.promo .ref2{display:inline-flex;align-items:center;margin:0;max-width:none;border-radius:999px;padding:10px 20px;
@@ -530,6 +545,18 @@ footer .fine a{color:#8394ab}
       <p class="sub">One of each, picked from all four sports once a day, locked in when it posts and graded in public — the wins and the losses.</p>
       <div class="app botdgrid"><div class="botdslot lock" id="botd-lock"></div><div class="botdslot" id="botd-value"></div></div>
       <p class="todaynote" id="botdnote"></p>
+    </div>
+  </section>
+
+  <!-- HONEST NUMBERS: how often each confidence level hit, from today.json "calib" (build_today.py) -->
+  <section id="calib" aria-labelledby="calib-h" hidden>
+    <div class="wrap">
+      <p class="kicker">Honest numbers</p>
+      <h2 id="calib-h">When we say <i>70%</i>, it hits about <i>70%</i>.</h2>
+      <p class="sub" id="calibsub"></p>
+      <div class="calib" id="calibrows" role="list"></div>
+      <div class="calib-key" aria-hidden="true"><span><i class="k-bar"></i>How often it hit</span><span><i class="k-said"></i>What the model said</span></div>
+      <p class="todaynote">Every pick recorded before its game and graded from the box score. Pushes and players who didn't play are left out.</p>
     </div>
   </section>
 
@@ -1008,6 +1035,22 @@ function countUp(el){ const to=+el.dataset.count; if(!to||el.dataset.done) retur
     document.addEventListener('click', e=>{ if(!e.target.closest('.psearch')){ list.hidden=true; inp.setAttribute('aria-expanded','false'); } });
   })();
 
+  // Calibration: for each band of model chance, how often those picks hit (today.json "calib").
+  // The track runs 40-100% so the gaps between bands are visible; the white line is the model's average.
+  function renderCalib(t){
+    const rows=(t&&t.calib||[]).filter(b=>b.n>=200), sec=document.getElementById('calib'); if(!sec || rows.length<3) return;
+    const pos=v=>Math.max(0, Math.min(100, (v-0.4)/0.6*100)).toFixed(1)+'%', pct=v=>Math.round(v*100)+'%';
+    const total=(t.calib||[]).reduce((a,b)=>a+b.n,0), tr=t.tracked||{};
+    const since=tr.since? new Date(tr.since+'T12:00:00Z').toLocaleDateString('en-US',{month:'short', day:'numeric', year:'numeric'}) : '';
+    document.getElementById('calibsub').textContent=`${total.toLocaleString('en-US')} graded picks across all four sports${since? ' since '+since : ''}. A well-calibrated model hits about as often as it says it will, and ours does.`;
+    document.getElementById('calibrows').innerHTML=rows.map(b=>
+      `<div class="cr" role="listitem" aria-label="Model said ${b.lo} to ${b.hi} percent: hit ${pct(b.hit)} of ${b.n.toLocaleString('en-US')} picks">`+
+      `<span class="cr-l">${b.lo}–${b.hi}%</span>`+
+      `<div class="cr-track"><i class="cr-bar" style="width:${pos(b.hit)}"></i><b class="cr-said" style="left:${pos(b.said)}"></b></div>`+
+      `<span class="cr-v"><b>${pct(b.hit)}</b> hit<small>model said ${pct(b.said)} · ${b.n.toLocaleString('en-US')} picks</small></span></div>`).join('');
+    sec.hidden=false;
+  }
+
   // "Pick a sport" tiles: each sport's season Top 25 hit rate under its name, once there are enough graded picks
   function pickbarRecords(t){
     const R=(t&&t.record)||{};
@@ -1018,6 +1061,7 @@ function countUp(el){ const to=+el.dataset.count; if(!to||el.dataset.done) retur
     PS.ticker(tickerItems(t, w));
     if(!t) return;
     pickbarRecords(t);
+    renderCalib(t);
     (t.picks||[]).forEach(PS.capPick);
     if(t.fair && t.fair.w>=0) FAIRW=t.fair.w;
     liveDemo(t);

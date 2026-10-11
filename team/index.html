@@ -99,6 +99,16 @@ footer{color:var(--muted);font-size:13px}
 footer p{margin:0;max-width:80ch}
 @media (prefers-reduced-motion:no-preference){ .row .bar{transition:width .3s ease} }
 
+/* site health */
+.health{display:flex;gap:12px;align-items:flex-start;padding:12px 16px;border-radius:12px;border:1px solid var(--line);background:var(--surface)}
+.health .hdot{width:10px;height:10px;border-radius:50%;margin-top:6px;flex:none;background:var(--accent)}
+.health.warn{border-color:rgba(232,181,74,.5)} .health.warn .hdot{background:var(--warn)}
+.health.bad{border-color:rgba(235,111,125,.6)} .health.bad .hdot{background:var(--down)}
+.health .hbody{min-width:0;font-size:14px;color:var(--soft)}
+.health b{color:var(--fg)}
+.health ul{margin:6px 0 0;padding-left:18px;color:var(--muted);font-size:13px}
+.health li{margin:2px 0;overflow-wrap:anywhere}
+
 /* link builder */
 .form{display:grid;gap:12px}
 .form label{display:grid;gap:5px;font-size:13px;color:var(--muted);min-width:0}
@@ -156,6 +166,11 @@ footer p{margin:0;max-width:80ch}
       <button class="ghost" id="lockBtn" type="button">Lock</button>
     </div>
   </header>
+
+  <section class="health" id="health" aria-live="polite" hidden>
+    <span class="hdot" aria-hidden="true"></span>
+    <div class="hbody"><b id="hTitle"></b> <span id="hSub"></span><ul id="hList"></ul></div>
+  </section>
 
   <div class="tabs" role="tablist" aria-label="Date range" id="tabs">
     <button role="tab" id="tab-d1" data-r="d1" aria-selected="false">Today</button>
@@ -279,7 +294,7 @@ footer p{margin:0;max-width:80ch}
       snap = await load(pw);
       password = pw; store.set('psa-pw', pw);
       $('lock').hidden = true; $('app').hidden = false;
-      setRange(range); freshness();
+      setRange(range); freshness(); loadHealth();
       clearInterval(timer);
       timer = setInterval(refresh, 5*60*1000);
     } catch(e){
@@ -293,7 +308,7 @@ footer p{margin:0;max-width:80ch}
   }
   async function refresh(){
     if (!password) return;
-    try { snap = await load(password); freshness(); render(); } catch(e){ if (e.code === 'wrong') lock(); }
+    try { snap = await load(password); freshness(); render(); loadHealth(); } catch(e){ if (e.code === 'wrong') lock(); }
   }
   function lock(){
     password = null; snap = null; store.del('psa-pw'); clearInterval(timer);
@@ -351,9 +366,10 @@ footer p{margin:0;max-width:80ch}
   // what app.js calls each outside link (click/<what>/<page>)
   const CLICK_NAME = {'polymarket-signup':'Polymarket sign-up','kalshi-signup':'Kalshi sign-up','polymarket-market':'A Polymarket market',
     'kalshi-market':'A Kalshi market','instagram-profile':'Our Instagram','tiktok-profile':'Our TikTok','x-profile':'Our X (Twitter)',
-    'gambling-help':'Gambling help line','other-site':'Other sites','home-screen-open':'Opened from the home screen','player-search':'Used the player search'};
+    'gambling-help':'Gambling help line','other-site':'Other sites','home-screen-open':'Opened from the home screen','player-search':'Used the player search',
+    'polymarket-signup-sheet':'Polymarket sign-up, from a pick','kalshi-signup-sheet':'Kalshi sign-up, from a pick'};
   const CLICK_PAGE = {home:'Home', nfl:'NFL', nba:'NBA', nhl:'NHL', mlb:'MLB'};
-  const isSignup = w => /-signup$/.test(w);
+  const isSignup = w => /-signup(-|$)/.test(w);   // includes the in-pick buttons (…-signup-sheet)
   function clickRows(rows){
     const m = new Map();
     for (const c of rows||[]) {
@@ -656,6 +672,28 @@ footer p{margin:0;max-width:80ch}
     render();
   });
   buildLink();
+
+  // ---------- site health: public health.json (health.py) and today.json's time of the last update ----------
+  // Updates run about every 10 minutes, but GitHub can delay one by 20+; warn past 40, alarm past 90.
+  async function loadHealth(){
+    const get=u=>fetch(u+'?t='+Date.now(),{cache:'no-store'}).then(r=>r.ok? r.json() : null).catch(()=>null);
+    const [h, t]=await Promise.all([get('../health.json'), get('../today.json')]);
+    const el=$('health'); if(!h && !t) return;
+    const age=t && isFinite(Date.parse(t.gen))? Math.round((Date.now()-Date.parse(t.gen))/60000) : null;
+    const probs=Object.entries((h && h.problems)||{});
+    const level= age!=null && age>90? 'bad' : (probs.length || (age!=null && age>40))? 'warn' : 'ok';
+    el.className='health'+(level==='ok'? '' : ' '+level);
+    $('hTitle').textContent= level==='bad'? 'The site has stopped updating.' : level==='warn'? 'Something needs a look.' : 'Everything is running.';
+    const ago= age==null? 'unknown' : age<60? age+' min ago' : Math.round(age/60)+' h ago';
+    $('hSub').textContent=`Site data last updated ${ago} (updates about every 10 minutes).`+
+      (level==='bad'? ' Check the "Update NFL data" runs on GitHub Actions.' : !probs.length? ' All data sources are working.' : '');
+    const ul=$('hList'); ul.textContent='';
+    probs.forEach(([key, p])=>{ const li=document.createElement('li');
+      const since=p.first? new Date(p.first).toLocaleString('en-US',{month:'short', day:'numeric', hour:'numeric', minute:'2-digit', timeZone:'America/New_York'})+' ET' : '';
+      li.textContent=`${p.msg||key} (${p.runs||1} update${p.runs===1?'':'s'} in a row${since? ', since '+since : ''}${p.alerted? ', alert email sent' : ''})`;
+      ul.appendChild(li); });
+    el.hidden=false;
+  }
 
   // generated_at only moves when the numbers change (team_stats.py skips quiet passes)
   function freshness(){

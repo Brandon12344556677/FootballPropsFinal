@@ -40,6 +40,19 @@ class LastResults(unittest.TestCase):
         self.assertIsNone(build_today.last_results("nfl", d, "2026-10-11"))
 
 
+class Calibration(unittest.TestCase):
+    def test_buckets_from_live_graded_picks(self):
+        cols = ["src", "res", "prob"]
+        d = {"cols": cols, "picks": [["live", "hit", 0.72], ["live", "miss", 0.78], ["live", "hit", 0.95],
+                                     ["backtest", "hit", 0.75], ["live", None, 0.75], ["live", "push", 0.75],
+                                     ["live", "hit", 0.30], ["live", "hit", 1.0]]}
+        out = build_today.calibration([("nhl", d)])
+        self.assertEqual([(b["lo"], b["n"]) for b in out], [(70, 2), (90, 2)])
+        self.assertEqual(out[0]["hit"], 0.5)
+        self.assertEqual(out[0]["said"], 0.75)
+        self.assertEqual(out[1]["hit"], 1.0)        # a 100% pick lands in the 90-100 bucket
+
+
 class SearchRows(unittest.TestCase):
     def test_this_or_last_season_only(self):
         db = {"season": 2026, "players": [
