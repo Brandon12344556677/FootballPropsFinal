@@ -185,7 +185,7 @@ footer p{margin:0;max-width:80ch}
     <section class="panel"><div class="panel-h"><h2>Time on page</h2><span class="label" id="timeMid">Page views</span></div><ul class="list" id="lTime"></ul></section>
     <section class="panel"><div class="panel-h"><h2>Pages</h2><span class="label">Visits</span></div><ul class="list" id="lPages"></ul></section>
     <section class="panel"><div class="panel-h"><h2>Where visitors come from</h2><span class="label">Visits</span></div><ul class="list" id="lRefs"></ul></section>
-    <section class="panel"><div class="panel-h"><h2>Campaigns</h2><span class="label">utm_campaign</span></div><ul class="list" id="lCamp"></ul></section>
+    <section class="panel"><div class="panel-h"><h2>Tracked links</h2><span class="label">Visits from each link</span></div><ul class="list" id="lCamp"></ul></section>
     <section class="panel"><div class="panel-h"><h2>Countries</h2><span class="label">Visits</span></div><ul class="list" id="lLoc"></ul></section>
     <section class="panel"><div class="panel-h"><h2>Operating systems</h2><span class="label">Visits</span></div><ul class="list" id="lSys"></ul></section>
     <section class="panel"><div class="panel-h"><h2>Browsers</h2><span class="label">Visits</span></div><ul class="list" id="lBrw"></ul></section>
@@ -209,12 +209,12 @@ footer p{margin:0;max-width:80ch}
             </select>
           </label>
         </div>
-        <label for="lbCamp">Campaign name (optional)
-          <input id="lbCamp" type="text" placeholder="for example week6-promo or bio-link" maxlength="40">
+        <label for="lbCamp">Link name
+          <input id="lbCamp" type="text" placeholder="for example bio link, story Oct 12, week 6 promo" maxlength="40">
         </label>
         <div class="out">
           <input id="lbOut" type="text" readonly aria-label="Tagged link">
-          <button class="btn" id="lbCopy" type="button">Copy</button>
+          <button class="btn" id="lbCopy" type="button">Copy and track</button>
         </div>
         <p class="hint" id="lbHint"></p>
       </form>
@@ -493,7 +493,7 @@ footer p{margin:0;max-width:80ch}
     list($('lTime'), timeN ? time : [], timeN, {empty:'No data yet. Visitors who load the site after this update start filling this in within the hour.'});
     list($('lPages'), mergePages(R.pages), total);
     list($('lRefs'), refs, total);
-    list($('lCamp'), clean(R.campaigns), total, {empty:'No named campaigns yet. Make links with the Link builder below and give each promotion a campaign name to compare them here.'});
+    list($('lCamp'), trackedRows(R), total, {max: 12, empty:'No tracked links yet. Make one with the Link builder: give it a name, press Copy and track, and post it. Each link gets its own row here with its visit count.'});
     list($('lLoc'), clean(R.locations), total);
     list($('lSys'), sys, sysTotal);
     list($('lBrw'), clean(R.browsers), total);
@@ -501,12 +501,12 @@ footer p{margin:0;max-width:80ch}
     const clicks = clickRows(R.clicks), signups = clicks.filter(c => isSignup(c.what)).reduce((a,b)=>a+b.n,0);
     $('clickRate').textContent = signups && total ? `Sign-up clicks: ${(signups/total*100).toFixed(1)}% of visits` : 'Clicks';
     list($('lClicks'), clicks, clicks.reduce((a,b)=>a+b.n,0), {empty:'No clicks yet. Clicks on the Polymarket and Kalshi sign-up buttons, market links and your social profiles start counting as visitors load the updated site.'});
-    renderHeat(); renderSponsor();
+    renderHeat(); renderSponsor(); buildLink();
 
     // plain-language suggestions computed from this range
     const acts = [];
     const none = refs.find(r=>r.name==='No referrer'); const noneP = none ? pct(none.n, total) : 0;
-    if (noneP >= 35) acts.push(['Tag links', `${noneP}% of visits arrive with no referrer. In-app browsers and texts hide where people came from. Add ?utm_source=snapchat, ?utm_source=instagram and so on to every link you post, bio links included, so each visit is credited to its channel.`]);
+    if (noneP >= 35) acts.push(['Tag links', `${noneP}% of visits arrive with no referrer. In-app browsers and texts hide where people came from. Make every link you post (bio links too) with the Link builder below, so each visit is credited to its channel and to that link.`]);
     const social = refs.filter(r=>r.kind==='Social'), socialN = social.reduce((a,b)=>a+b.n,0);
     if (social.length) acts.push(['Social', `${social[0].name} is your biggest social source (${fmt(social[0].n)} visits). Social overall brought ${fmt(socialN)} visits, ${pct(socialN, total)}% of all visits.`]);
     const searchN = refs.filter(r=>r.kind==='Search').reduce((a,b)=>a+b.n,0);
@@ -606,24 +606,54 @@ footer p{margin:0;max-width:80ch}
     $('spCopied').textContent = ok ? 'Copied. Paste it into an email or pitch deck.' : 'Your browser blocked copying. The text is selected below: press Ctrl+C, or long-press on a phone.';
   });
 
-  // ---------- link builder ----------
+  // ---------- link builder + tracked links ----------
+  // Every generated link carries its own campaign name (utm_campaign = "<source>-<link name>"),
+  // and GoatCounter counts visits per campaign, so each link becomes its own row in Tracked links.
+  // Links made on this device are remembered here so they show (at 0) before their first visit;
+  // after that they come from the stats and everyone on the team sees them.
   const slugify = s => String(s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'').slice(0,40);
+  const SOURCES = ['snapchat','instagram','tiktok','x','discord','telegram','reddit','facebook','text','email'];
+  const savedLinks = {
+    all(){ try { return JSON.parse(localStorage.getItem('psa-links') || '[]'); } catch(e){ return []; } },
+    add(l){ try { const a = this.all().filter(x => x.c !== l.c); a.unshift(l); localStorage.setItem('psa-links', JSON.stringify(a.slice(0,50))); } catch(e){} }
+  };
+  function linkSource(c){ const p = String(c).split('-')[0]; return SOURCES.includes(p) ? refName(p) : (c === 'daily-post' ? 'Discord / Telegram' : ''); }
+  function trackedRows(R){
+    const seen = new Map(clean(R.campaigns).map(r => [r.name, r.n]));
+    const rows = [...seen].map(([name, n]) => ({name, n, kind: linkSource(name)}));
+    for (const l of savedLinks.all()) if (!seen.has(l.c)) rows.push({name: l.c, n: 0, kind: 'waiting for first visit'});
+    return rows.sort((a,b) => b.n - a.n);
+  }
+  function linkVisits(c){
+    const r = snap && snap.d90 && (snap.d90.campaigns||[]).find(x => x.name === c);
+    return r ? r.n : 0;
+  }
+  function currentLink(){
+    const src = $('lbSource').value, page = $('lbPage').value;
+    let name = slugify($('lbCamp').value);
+    if (!name) name = new Date().toLocaleDateString('en-US', {month:'short', day:'numeric'}).toLowerCase().replace(/\W+/g,'-');
+    if (name.startsWith(src + '-')) name = name.slice(src.length + 1);
+    const c = (src + '-' + name).slice(0, 50);
+    return {c, src, page, url: 'https://propstreaklab.com/' + page + '?utm_source=' + src + '&utm_campaign=' + c};
+  }
   function buildLink(){
-    const src = $('lbSource').value, camp = slugify($('lbCamp').value), page = $('lbPage').value;
-    const url = 'https://propstreaklab.com/' + page + '?utm_source=' + src + (camp ? '&utm_campaign=' + camp : '');
-    $('lbOut').value = url;
+    const l = currentLink();
+    $('lbOut').value = l.url;
     const h = $('lbHint'); h.textContent = '';
-    const b1 = document.createElement('b'); b1.textContent = refName(src);
-    h.append('Visits from this link count under ', b1);
-    if (camp) { const b2 = document.createElement('b'); b2.textContent = camp; h.append(' in "Where visitors come from", and under ', b2, ' in Campaigns.'); }
-    else h.append(' in "Where visitors come from". Add a campaign name to compare promotions.');
+    const b = document.createElement('b'); b.textContent = l.c;
+    const used = linkVisits(l.c);
+    if (used) h.append('A link named ', b, ` already has ${fmt(used)} visits in the last 90 days. Use a new name to track this post on its own, or keep it to add to that count.`);
+    else h.append('Tracked as ', b, ' in Tracked links. Each visit through it counts there, and under ' + refName(l.src) + ' in "Where visitors come from".');
   }
   ['lbSource','lbPage','lbCamp'].forEach(id => $(id).addEventListener('input', buildLink));
   $('lb').addEventListener('submit', e => e.preventDefault());
   $('lbCopy').addEventListener('click', async () => {
-    const ok = await copyText($('lbOut').value, $('lbOut'));
-    $('lbCopy').textContent = ok ? 'Copied' : 'Press Ctrl+C';
-    setTimeout(() => { $('lbCopy').textContent = 'Copy'; }, 1800);
+    const l = currentLink();
+    savedLinks.add({c: l.c, src: l.src, page: l.page, t: Date.now()});
+    const ok = await copyText(l.url, $('lbOut'));
+    $('lbCopy').textContent = ok ? 'Copied and tracked' : 'Tracked. Press Ctrl+C';
+    setTimeout(() => { $('lbCopy').textContent = 'Copy and track'; }, 2200);
+    render();
   });
   buildLink();
 
