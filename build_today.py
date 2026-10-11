@@ -8,7 +8,8 @@ and writes a small file the home page can fetch in one request:
   today.json   {"gen", "record": {sport: {"T", "V"}}, "picks": [...], "valueLive": [[sport, start], ...],
                 "tracked": {"graded": live picks graded so far, "since": first live pick date},
                 "fair": {"w": model weight in the fair chance, "n": priced picks it was fitted on},
-                "last": {sport: {"day", "T": {n, hit}, "V": {n, hit, units}}}: each sport's latest graded day}
+                "last": {sport: {"day", "T": {n, hit}, "V": {n, hit, units}}}: each sport's latest graded day,
+                "calib": [{"lo", "hi", "n", "said", "hit"}]: hit rate by model chance (home page chart)}
                (each pick carries "l10": its last ten game values, for the mini chart)
 
 "picks" holds the best upcoming bets across all four sports at the last recorded
@@ -238,6 +239,28 @@ def last_results(sport, picks_doc, today, max_age=7):
     return out
 
 
+def calibration(docs):
+    """How often each confidence level hit, over every graded live pick in all sports:
+    [{"lo", "hi", "n", "said", "hit"}] for 50-60% ... 90-100% (the home page's chart).
+    "said" is the average model chance in the bucket, "hit" the share that hit."""
+    buckets = {}
+    for sport, doc in docs:
+        cols = doc["cols"]
+        for row in doc["picks"]:
+            p = dict(zip(cols, row))
+            if p.get("src") != "live" or p.get("res") not in ("hit", "miss") or p.get("prob") is None:
+                continue
+            prob = float(p["prob"])
+            if prob < 0.5:
+                continue
+            b = buckets.setdefault(min(9, int(prob * 10)), [0, 0, 0.0])
+            b[0] += 1
+            b[1] += p["res"] == "hit"
+            b[2] += prob
+    return [{"lo": k * 10, "hi": k * 10 + 10, "n": n, "said": round(s / n, 4), "hit": round(h / n, 4)}
+            for k, (n, h, s) in sorted(buckets.items())]
+
+
 def search_rows(sport, db):
     """[sport, id, name, team, pos] for each player with a game this season or last, for the
     home page's player search (search.json). Game rows start with the season."""
@@ -355,7 +378,8 @@ def main():
     # [sport, start] of every upcoming value spot, so the ticker can count what's still live.
     value_live = sorted([c["sport"], c["start"]] for c in cands if c["value"])
     doc = {"gen": now.strftime("%Y-%m-%dT%H:%M:%SZ"), "record": rec, "picks": picks, "valueLive": value_live,
-           "tracked": {"graded": n_graded, "since": since}, "fair": fair_weight(docs), "last": last}
+           "tracked": {"graded": n_graded, "since": since}, "fair": fair_weight(docs), "last": last,
+           "calib": calibration(docs)}
     with open(OUT, "w", encoding="utf-8") as f:
         json.dump(doc, f, separators=(",", ":"), ensure_ascii=False)
     if search:
