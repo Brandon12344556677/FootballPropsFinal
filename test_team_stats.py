@@ -57,6 +57,34 @@ class TimeOnPage(unittest.TestCase):
         self.assertEqual({t["name"]: t["n"] for t in r["time"]}["1-3m"], 4)
 
 
+class Clicks(unittest.TestCase):
+    def test_click_events_parsed_and_sorted(self):
+        events = [{"path": "click/kalshi-signup/nba", "count": 2, "event": True},
+                  {"path": "/click/polymarket-signup/home", "count": 7, "event": True},
+                  {"path": "time/1-3m", "count": 9, "event": True}]
+        self.assertEqual(team_stats.click_rows(events),
+                         [{"what": "polymarket-signup", "page": "home", "n": 7},
+                          {"what": "kalshi-signup", "page": "nba", "n": 2}])
+
+    def test_heatmap_hours_only_for_30_days_and_without_events(self):
+        responses = {
+            "/stats/total": {"total": 5, "total_events": 1,
+                             "stats": [{"day": "2026-10-10", "daily": 5, "hourly": [0] * 20 + [5, 0, 0, 0]}]},
+            "/stats/hits": {"hits": [{"path": "click/kalshi-market/nfl", "count": 1, "event": True,
+                                      "stats": [{"day": "2026-10-10", "daily": 1, "hourly": [0] * 20 + [1, 0, 0, 0]}]}]},
+        }
+        old = team_stats.get
+        team_stats.get = lambda token, path, **q: responses.get(path, {"stats": []})
+        try:
+            r30 = team_stats.range_stats("t", team_stats.dt.datetime(2026, 10, 10, 23), 30)
+            r7 = team_stats.range_stats("t", team_stats.dt.datetime(2026, 10, 10, 23), 7)
+        finally:
+            team_stats.get = old
+        self.assertEqual(r30["hours"], [{"day": "2026-10-10", "h": [0] * 20 + [4, 0, 0, 0]}])
+        self.assertNotIn("hours", r7)
+        self.assertEqual(r30["clicks"], [{"what": "kalshi-market", "page": "nfl", "n": 1}])
+
+
 class LocalDay(unittest.TestCase):
     def test_today_starts_at_local_midnight(self):
         seen = []

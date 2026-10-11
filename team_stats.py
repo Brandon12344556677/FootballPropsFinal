@@ -32,6 +32,7 @@ TOP_N = 15
 RANGES = {"d1": 1, "d7": 7, "d30": 30, "d90": 90}
 TIME_RANGES = ["0-10s", "10-30s", "30s-1m", "1-3m", "3-10m", "10m+"]   # same labels as app.js
 TIME_RE = re.compile(r"(?:^|/)time/([^/?#]+)$")
+CLICK_RE = re.compile(r"(?:^|/)click/([a-z0-9-]+)/([a-z0-9-]+)$")   # app.js: click/<what>/<page>
 SIZE_NAMES = {"phone": "Phone", "largephone": "Large phone", "tablet": "Tablet",
               "desktop": "Computer", "desktophd": "Large computer screen", "unknown": "(unknown)"}
 
@@ -72,6 +73,16 @@ def time_rows(events):
     return [{"name": k, "n": counts.get(k, 0)} for k in TIME_RANGES] if counts else []
 
 
+def click_rows(events):
+    """Clicks on links that leave the site, from app.js's "click/<what>/<page>" events."""
+    out = []
+    for h in events:
+        m = CLICK_RE.search(h.get("path") or "")
+        if m:
+            out.append({"what": m.group(1), "page": m.group(2), "n": int(h.get("count") or 0)})
+    return sorted(out, key=lambda r: -r["n"])
+
+
 def site_tz(token):
     """The GoatCounter account's time zone ("US.America/New_York" → America/New_York). Its
     daily and hourly buckets use it, so "today" has to start at local midnight too."""
@@ -88,11 +99,11 @@ def range_stats(token, now, days, tz=dt.timezone.utc):
     start = dt.datetime.combine(local_day, dt.time(), tzinfo=tz).astimezone(dt.timezone.utc).replace(tzinfo=None)
     q = {"start": hour(start), "end": hour(now + dt.timedelta(hours=1))}
     total = get(token, "/stats/total", **q)          # rejects a "limit" parameter
-    hits = get(token, "/stats/hits", limit=60, **q)  # room for ?v= test URLs (merged on the page) and events
+    hits = get(token, "/stats/hits", limit=100, **q)  # room for ?v= test URLs (merged on the page) and events
     hits = hits.get("hits") or []
     events = [h for h in hits if h.get("event")]
-    # GoatCounter's totals include events (app.js sends one "time/<range>" event per page
-    # view), so take them back out to keep "visits" meaning page visits.
+    # GoatCounter's totals include events (app.js sends "time/<range>" and "click/<what>/<page>"),
+    # so take them back out to keep "visits" meaning page visits.
     ev_day, ev_hour = {}, {}
     for h in events:
         for s in h.get("stats") or []:
@@ -106,6 +117,7 @@ def range_stats(token, now, days, tz=dt.timezone.utc):
         "pages": [{"path": h["path"], "title": h.get("title", ""), "n": int(h.get("count") or 0)}
                   for h in hits if not h.get("event")],
         "time": time_rows(events),
+        "clicks": click_rows(events),
     }
     if days == 1 and daily:
         last = daily[-1]
@@ -113,6 +125,10 @@ def range_stats(token, now, days, tz=dt.timezone.utc):
                        zip(last.get("hourly") or [], ev_hour.get(last["day"], [0] * 24))]
     elif days == 1:
         r["hourly"] = []
+    if days == 30:   # each day's hours, for the best-time-to-post heatmap
+        r["hours"] = [{"day": d["day"], "h": [max(0, int(a or 0) - b) for a, b in
+                                             zip(d.get("hourly") or [0] * 24, ev_hour.get(d["day"], [0] * 24))]}
+                      for d in daily]
     for page in ("toprefs", "campaigns", "locations", "browsers", "systems", "sizes"):
         r[page] = rows(get(token, f"/stats/{page}", limit=TOP_N, **q).get("stats"), page)
     return r

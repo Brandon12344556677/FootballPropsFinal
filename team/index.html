@@ -98,6 +98,37 @@ header{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-be
 footer{color:var(--muted);font-size:13px}
 footer p{margin:0;max-width:80ch}
 @media (prefers-reduced-motion:no-preference){ .row .bar{transition:width .3s ease} }
+
+/* link builder */
+.form{display:grid;gap:12px}
+.form label{display:grid;gap:5px;font-size:13px;color:var(--muted);min-width:0}
+.form select,.form input{font:500 15px var(--f-body);color:var(--fg);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:9px 10px;width:100%;min-width:0}
+.form .two{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.out{display:flex;gap:8px;min-width:0}
+.out input{flex:1;font:500 13px ui-monospace,"Cascadia Mono",Consolas,monospace;color:var(--soft)}
+.btn{background:var(--accent);color:var(--accent-ink);border:0;border-radius:8px;padding:9px 14px;flex:none}
+.hint{margin:0;font-size:13px;color:var(--muted)}
+.hint b{color:var(--soft);font-weight:600}
+
+/* best time to post */
+.heat-wrap{overflow-x:auto;padding-bottom:4px}
+.heat{display:grid;grid-template-columns:38px repeat(24,minmax(13px,1fr));gap:3px;min-width:440px}
+.heat .hl{grid-column:span 3;font-size:11px;color:var(--muted)}
+.heat .rl{font-family:var(--f-label);font-weight:600;letter-spacing:.06em;text-transform:uppercase;font-size:12px;color:var(--muted);align-self:center}
+.heat .c{aspect-ratio:1;border-radius:3px;background:var(--surface-2)}
+.heat .c.top{outline:2px solid var(--fg);outline-offset:-1px}
+.heat-key{display:flex;align-items:center;gap:8px;margin-top:10px;font-size:12px;color:var(--muted)}
+.heat-key i{display:inline-block;width:72px;height:8px;border-radius:4px;background:linear-gradient(90deg,var(--surface-2),var(--accent))}
+
+/* sponsor snapshot */
+.stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:1px;background:var(--line);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.stat{background:var(--surface);padding:14px 16px;display:grid;gap:2px;align-content:start;min-width:0}
+.stat .v{font-family:var(--f-display);font-weight:800;font-size:22px;line-height:1.2;overflow-wrap:anywhere}
+.stat .s{font-size:13px;color:var(--muted)}
+@media (max-width:760px){ .stats{grid-template-columns:repeat(2,minmax(0,1fr))} }
+.copyrow{display:flex;align-items:center;gap:12px;margin-top:14px;flex-wrap:wrap}
+.copied{color:var(--accent);font-size:13px}
+#spText{width:100%;margin-top:10px;font:13px/1.5 var(--f-body);color:var(--soft);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:10px}
 </style>
 </head>
 <body>
@@ -159,7 +190,50 @@ footer p{margin:0;max-width:80ch}
     <section class="panel"><div class="panel-h"><h2>Operating systems</h2><span class="label">Visits</span></div><ul class="list" id="lSys"></ul></section>
     <section class="panel"><div class="panel-h"><h2>Browsers</h2><span class="label">Visits</span></div><ul class="list" id="lBrw"></ul></section>
     <section class="panel"><div class="panel-h"><h2>Screen sizes</h2><span class="label">Visits</span></div><ul class="list" id="lSize"></ul></section>
+    <section class="panel"><div class="panel-h"><h2>Clicks to sign-ups and markets</h2><span class="label" id="clickRate">Clicks</span></div><ul class="list" id="lClicks"></ul></section>
+    <section class="panel">
+      <div class="panel-h"><h2>Link builder</h2><span class="label">Tag every post</span></div>
+      <form class="form" id="lb" autocomplete="off">
+        <div class="two">
+          <label for="lbSource">Where you're posting
+            <select id="lbSource">
+              <option value="snapchat">Snapchat</option><option value="instagram">Instagram</option><option value="tiktok">TikTok</option>
+              <option value="x">X (Twitter)</option><option value="discord">Discord</option><option value="telegram">Telegram</option>
+              <option value="reddit">Reddit</option><option value="facebook">Facebook</option><option value="text">Text / DM</option><option value="email">Email</option>
+            </select>
+          </label>
+          <label for="lbPage">Page to open
+            <select id="lbPage">
+              <option value="">Home</option><option value="nfl.html">NFL board</option><option value="nba.html">NBA board</option>
+              <option value="nhl.html">NHL board</option><option value="mlb.html">MLB board</option>
+            </select>
+          </label>
+        </div>
+        <label for="lbCamp">Campaign name (optional)
+          <input id="lbCamp" type="text" placeholder="for example week6-promo or bio-link" maxlength="40">
+        </label>
+        <div class="out">
+          <input id="lbOut" type="text" readonly aria-label="Tagged link">
+          <button class="btn" id="lbCopy" type="button">Copy</button>
+        </div>
+        <p class="hint" id="lbHint"></p>
+      </form>
+    </section>
   </div>
+
+  <section class="panel">
+    <div class="panel-h"><h2>Best time to post</h2><span class="label" id="heatLabel">Last 4 weeks</span></div>
+    <p class="hint" id="heatTop"></p>
+    <div class="heat-wrap" style="margin-top:12px"><div class="heat" id="heat"></div></div>
+    <div class="heat-key"><span>Fewer visits</span><i></i><span>More</span><span id="heatMax"></span></div>
+  </section>
+
+  <section class="panel">
+    <div class="panel-h"><h2>Sponsor snapshot</h2><span class="label" id="spLabel">Last 30 days</span></div>
+    <div class="stats" id="sp"></div>
+    <div class="copyrow"><button class="btn" id="spCopy" type="button">Copy as text</button><span class="copied" id="spCopied" role="status"></span></div>
+    <textarea id="spText" readonly rows="10" hidden aria-label="Sponsor summary text"></textarea>
+  </section>
 
   <footer><p>Totals only, from GoatCounter, refreshed by the site's update job about every 10 minutes. No IP addresses or individual visitors are stored, which matches the site's Privacy Policy. A "visit" is GoatCounter's count of unique visitors per page per day.</p></footer>
 </div>
@@ -237,6 +311,9 @@ footer p{margin:0;max-width:80ch}
     'reddit.com':'Reddit','old.reddit.com':'Reddit','out.reddit.com':'Reddit',
     'tiktok.com':'TikTok','discord.com':'Discord','discordapp.com':'Discord','t.me':'Telegram','telegram.org':'Telegram',
     'bing.com':'Bing','duckduckgo.com':'DuckDuckGo','search.yahoo.com':'Yahoo','yahoo.com':'Yahoo',
+    // utm_source values from the link builder and the daily Discord/Telegram post
+    'x':'X (Twitter)','tiktok':'TikTok','discord':'Discord','telegram':'Telegram','reddit':'Reddit','facebook':'Facebook',
+    'text':'Text / DM','email':'Email',
     '(unknown)':'No referrer'
   };
   const SOCIAL = new Set(['Snapchat','Instagram','Facebook','X (Twitter)','Reddit','TikTok','Discord','Telegram']);
@@ -271,6 +348,32 @@ footer p{margin:0;max-width:80ch}
   }
   const clean = rows => (rows||[]).filter(r => r.n > 0);
   const TIME_NAME = {'0-10s':'Under 10 sec','10-30s':'10–30 sec','30s-1m':'30 sec – 1 min','1-3m':'1–3 min','3-10m':'3–10 min','10m+':'Over 10 min'};
+  // what app.js calls each outside link (click/<what>/<page>)
+  const CLICK_NAME = {'polymarket-signup':'Polymarket sign-up','kalshi-signup':'Kalshi sign-up','polymarket-market':'A Polymarket market',
+    'kalshi-market':'A Kalshi market','instagram-profile':'Our Instagram','tiktok-profile':'Our TikTok','x-profile':'Our X (Twitter)',
+    'gambling-help':'Gambling help line','other-site':'Other sites'};
+  const CLICK_PAGE = {home:'Home', nfl:'NFL', nba:'NBA', nhl:'NHL', mlb:'MLB'};
+  const isSignup = w => /-signup$/.test(w);
+  function clickRows(rows){
+    const m = new Map();
+    for (const c of rows||[]) {
+      const cur = m.get(c.what) || {name: CLICK_NAME[c.what] || c.what, what: c.what, n: 0, pages: {}};
+      cur.n += c.n; cur.pages[c.page] = (cur.pages[c.page]||0) + c.n; m.set(c.what, cur);
+    }
+    return [...m.values()].sort((a,b)=>b.n-a.n).map(r => {
+      const top = Object.entries(r.pages).sort((a,b)=>b[1]-a[1])[0];
+      return {...r, kind: top ? 'mostly ' + (CLICK_PAGE[top[0]] || top[0]) : ''};
+    });
+  }
+  function typicalTime(rows){
+    const t = rows||[], n = t.reduce((a,b)=>a+b.n,0); let run = 0;
+    for (const r of t) { run += r.n; if (n && run >= n/2) return TIME_NAME[r.name] || r.name; }
+    return null;
+  }
+  async function copyText(text, input){
+    try { await navigator.clipboard.writeText(text); return true; }
+    catch(e){ if (input) { input.focus(); input.select(); } return false; }
+  }
 
   // ---------- rendering ----------
   function list(el, rows, total, opts={}){
@@ -390,11 +493,15 @@ footer p{margin:0;max-width:80ch}
     list($('lTime'), timeN ? time : [], timeN, {empty:'No data yet. Visitors who load the site after this update start filling this in within the hour.'});
     list($('lPages'), mergePages(R.pages), total);
     list($('lRefs'), refs, total);
-    list($('lCamp'), clean(R.campaigns), total, {empty:'No named campaigns yet. Add &utm_campaign=… (for example week6-promo) to the links you post, next to utm_source, to compare promotions here.'});
+    list($('lCamp'), clean(R.campaigns), total, {empty:'No named campaigns yet. Make links with the Link builder below and give each promotion a campaign name to compare them here.'});
     list($('lLoc'), clean(R.locations), total);
     list($('lSys'), sys, sysTotal);
     list($('lBrw'), clean(R.browsers), total);
     list($('lSize'), clean(R.sizes), total);
+    const clicks = clickRows(R.clicks), signups = clicks.filter(c => isSignup(c.what)).reduce((a,b)=>a+b.n,0);
+    $('clickRate').textContent = signups && total ? `Sign-up clicks: ${(signups/total*100).toFixed(1)}% of visits` : 'Clicks';
+    list($('lClicks'), clicks, clicks.reduce((a,b)=>a+b.n,0), {empty:'No clicks yet. Clicks on the Polymarket and Kalshi sign-up buttons, market links and your social profiles start counting as visitors load the updated site.'});
+    renderHeat(); renderSponsor();
 
     // plain-language suggestions computed from this range
     const acts = [];
@@ -407,12 +514,118 @@ footer p{margin:0;max-width:80ch}
     if (sysTotal && pct(mobile, sysTotal) >= 60) acts.push(['Mobile', `${pct(mobile, sysTotal)}% of visitors are on a phone, mostly iPhone. Check new features on a phone first and keep tables usable at narrow widths.`]);
     const pages = mergePages(R.pages); const home = pages.find(p=>p.path==='/'); const boards = pages.filter(p=>/^\/(nfl|nba|nhl|mlb)\.html$/.test(p.path)).reduce((a,b)=>a+b.n,0);
     if (home && home.n > 0) acts.push(['Funnel', `For every 100 home page visits there were ${Math.round(boards/home.n*100)} visits to a sport board. A low number means people aren't clicking through from the home page.`]);
+    if (total >= 50 && clicks.length && !signups) acts.push(['Sign-ups', 'Nobody clicked a Polymarket or Kalshi sign-up button in this range. Try putting the $25 offer closer to the picks people open most.']);
+    else if (signups) acts.push(['Sign-ups', `${fmt(signups)} clicks on sign-up buttons, ${(signups/Math.max(1,total)*100).toFixed(1)}% of visits. ${clicks.find(c=>isSignup(c.what)).name} gets the most.`]);
     const quick = time.length ? time[0].n : 0;
     if (timeN >= 20 && pct(quick, timeN) >= 40) acts.push(['Quick exits', `${pct(quick, timeN)}% of page views last under 10 seconds. Check what people see first on the pages they land on, especially on a phone.`]);
     const ul = $('acts'); ul.textContent='';
     acts.slice(0,6).forEach(([tag, txt], i) => { const li=document.createElement('li'); const c=document.createElement('span'); c.className='chip'+(i===0&&tag==='Tag links'?' do':''); c.textContent=tag; const p=document.createElement('p'); p.textContent=txt; li.append(c,p); ul.appendChild(li); });
     if (!acts.length) { const p=document.createElement('p'); p.className='empty'; p.textContent='Not enough traffic in this range for suggestions.'; ul.appendChild(p); }
   }
+
+  // ---------- best time to post: average visits per weekday and hour, last 4 weeks ----------
+  const DOW = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'], ORDER = [1,2,3,4,5,6,0];
+  const hourName = h => (h%12||12) + (h<12?' AM':' PM');
+  function renderHeat(){
+    const el = $('heat'); el.textContent = '';
+    const days = ((snap.d30 && snap.d30.hours) || []).slice(-28);
+    const sum = DOW.map(() => Array(24).fill(0)), cnt = Array(7).fill(0);
+    for (const d of days) { const w = new Date(d.day+'T12:00:00Z').getUTCDay(); cnt[w]++; (d.h||[]).forEach((v,i) => sum[w][i] += v); }
+    const avg = sum.map((row,w) => row.map(v => cnt[w] ? v/cnt[w] : 0));
+    const cells = []; avg.forEach((row,w) => row.forEach((v,h) => cells.push({w,h,v})));
+    const max = Math.max(0, ...cells.map(c=>c.v));
+    if (days.length < 7 || !max) {
+      $('heatTop').textContent = 'Not enough data yet. This fills in after a week of hourly data (it starts with the next update).';
+      $('heatMax').textContent = ''; return;
+    }
+    const top = cells.slice().sort((a,b)=>b.v-a.v).slice(0,3);
+    const tz = tzAbbr();
+    $('heatTop').innerHTML = '';
+    const b = document.createElement('b'); b.textContent = top.map(c => `${DOW[c.w]} ${hourName(c.h)}`).join(', ') + ' ' + tz;
+    $('heatTop').append('Busiest hours: ', b, '. Post about an hour before a busy hour so the post is fresh when people are on.');
+    $('heatLabel').textContent = `Last ${days.length} days · ${tz}`;
+    $('heatMax').textContent = `(darkest ≈ ${max.toFixed(1)} visits an hour)`;
+    el.appendChild(document.createElement('span'));
+    for (let h = 0; h < 24; h += 3) { const s = document.createElement('span'); s.className = 'hl'; s.textContent = (h%12||12) + (h<12?'a':'p'); el.appendChild(s); }
+    const topKeys = new Set(top.map(c => c.w+'-'+c.h));
+    for (const w of ORDER) {
+      const rl = document.createElement('span'); rl.className = 'rl'; rl.textContent = DOW[w]; el.appendChild(rl);
+      for (let h = 0; h < 24; h++) {
+        const v = avg[w][h], c = document.createElement('span');
+        c.className = 'c' + (topKeys.has(w+'-'+h) ? ' top' : '');
+        c.style.background = `color-mix(in srgb, var(--accent) ${Math.round(v/max*100)}%, var(--surface-2))`;
+        c.title = `${DOW[w]} ${hourName(h)} ${tz}: ${v.toFixed(1)} visits on average`;
+        el.appendChild(c);
+      }
+    }
+  }
+
+  // ---------- sponsor snapshot: last 30 days, ready to paste into an email ----------
+  function sponsorFacts(){
+    const R = snap.d30; if (!R) return [];
+    const total = R.total || 0;
+    const loc = clean(R.locations)[0];
+    const sys = clean(R.systems), sysN = sys.reduce((a,b)=>a+b.n,0), mob = sys.filter(s=>/ios|android|ipados/i.test(s.name)).reduce((a,b)=>a+b.n,0);
+    const board = mergePages(R.pages).filter(p => /^\/(nfl|nba|nhl|mlb)\.html$/.test(p.path))[0];
+    const signups = (R.clicks||[]).filter(c => isSignup(c.what)).reduce((a,b)=>a+b.n,0);
+    const chans = mergeRefs(R.toprefs).filter(r => r.name !== 'No referrer').slice(0,3).map(r => r.name);
+    const typ = typicalTime(R.time);
+    return [
+      ['Visits', fmt(total), `about ${fmt(Math.round(total/30))} a day`, `${fmt(total)} visits (about ${fmt(Math.round(total/30))} a day)`],
+      ['Audience', loc ? pct(loc.n, total) + '%' : '–', loc ? loc.name : 'No location data', loc ? `${pct(loc.n, total)}% from ${/^(United|Netherlands|Philippines)/.test(loc.name) ? "the " : ""}${loc.name}` : ''],
+      ['On a phone', sysN ? pct(mob, sysN) + '%' : '–', 'iPhone and Android', sysN ? `${pct(mob, sysN)}% on phones (iPhone and Android)` : ''],
+      ['Most visited board', board ? board.name.replace(' board','') : '–', board ? fmt(board.n) + ' visits' : '', board ? `Most visited: ${board.name} (${fmt(board.n)} visits)` : ''],
+      ['Typical time on page', typ || '–', typ ? 'half of page views last this long or less' : 'starts filling in after this update',
+        typ ? `Typical time on page: ${typ}` : ''],
+      ['Sign-up clicks', fmt(signups), signups && total ? (signups/total*100).toFixed(1) + '% of visits' : 'Polymarket and Kalshi', signups ? `${fmt(signups)} clicks on Polymarket and Kalshi sign-up buttons (${(signups/Math.max(1,total)*100).toFixed(1)}% of visits)` : ''],
+      ['Top channels', chans[0] || '–', chans.slice(1).join(', '), chans.length ? `Top channels: ${chans.join(', ')}` : ''],
+      ['Sports covered', '4', 'NFL, NBA, NHL, MLB', 'Covers NFL, NBA, NHL and MLB'],
+    ];
+  }
+  function renderSponsor(){
+    const el = $('sp'); el.textContent = '';
+    for (const [k, v, s] of sponsorFacts()) {
+      const d = document.createElement('div'); d.className = 'stat';
+      const l = document.createElement('span'); l.className = 'label'; l.textContent = k;
+      const vv = document.createElement('span'); vv.className = 'v'; vv.textContent = v;
+      const ss = document.createElement('span'); ss.className = 's'; ss.textContent = s || '';
+      d.append(l, vv, ss); el.appendChild(d);
+    }
+  }
+  $('spCopy').addEventListener('click', async () => {
+    if (!snap) return;
+    const asOf = new Date(snap.generated_at).toLocaleDateString('en-US', {month:'long', day:'numeric', year:'numeric'});
+    const lines = [`Prop Streak Lab (propstreaklab.com): audience, last 30 days, as of ${asOf}`]
+      .concat(sponsorFacts().filter(f => f[3]).map(f => '• ' + f[3]))
+      .concat(['Free player-prop research with every pick graded in public.']);
+    const text = lines.join('\n'), box = $('spText');
+    box.value = text;
+    const ok = await copyText(text);
+    box.hidden = ok;
+    if (!ok) { box.focus(); box.select(); }
+    $('spCopied').textContent = ok ? 'Copied. Paste it into an email or pitch deck.' : 'Your browser blocked copying. The text is selected below: press Ctrl+C, or long-press on a phone.';
+  });
+
+  // ---------- link builder ----------
+  const slugify = s => String(s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'').slice(0,40);
+  function buildLink(){
+    const src = $('lbSource').value, camp = slugify($('lbCamp').value), page = $('lbPage').value;
+    const url = 'https://propstreaklab.com/' + page + '?utm_source=' + src + (camp ? '&utm_campaign=' + camp : '');
+    $('lbOut').value = url;
+    const h = $('lbHint'); h.textContent = '';
+    const b1 = document.createElement('b'); b1.textContent = refName(src);
+    h.append('Visits from this link count under ', b1);
+    if (camp) { const b2 = document.createElement('b'); b2.textContent = camp; h.append(' in "Where visitors come from", and under ', b2, ' in Campaigns.'); }
+    else h.append(' in "Where visitors come from". Add a campaign name to compare promotions.');
+  }
+  ['lbSource','lbPage','lbCamp'].forEach(id => $(id).addEventListener('input', buildLink));
+  $('lb').addEventListener('submit', e => e.preventDefault());
+  $('lbCopy').addEventListener('click', async () => {
+    const ok = await copyText($('lbOut').value, $('lbOut'));
+    $('lbCopy').textContent = ok ? 'Copied' : 'Press Ctrl+C';
+    setTimeout(() => { $('lbCopy').textContent = 'Copy'; }, 1800);
+  });
+  buildLink();
 
   // generated_at only moves when the numbers change (team_stats.py skips quiet passes)
   function freshness(){
