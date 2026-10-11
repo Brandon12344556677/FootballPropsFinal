@@ -40,6 +40,7 @@ SPORTS = [
     ("mlb", "mlb.json", "mlb_picks.json", "mlb_template.html"),
 ]
 OUT = "today.json"
+SEARCH_OUT = "search.json"   # the home page player search: [sport, id, name, team, pos] per player
 MAX_PICKS = 12          # the page shows up to 6; spares cover games that start before the next build
 SAFE_MAX_PRICE = 0.85   # "still pays": at least ~1.18x
 PER_SPORT = 3           # per sport, before the other sports have had their turn
@@ -237,6 +238,17 @@ def last_results(sport, picks_doc, today, max_age=7):
     return out
 
 
+def search_rows(sport, db):
+    """[sport, id, name, team, pos] for each player with a game this season or last, for the
+    home page's player search (search.json). Game rows start with the season."""
+    season = db.get("season") or 0
+    out = []
+    for p in db.get("players") or []:
+        if p.get("n") and any(r and isinstance(r[0], int) and r[0] >= season - 1 for r in p.get("g") or []):
+            out.append([sport, str(p["id"]), p["n"], p.get("t") or "", p.get("p") or ""])
+    return out
+
+
 RECENT_DAYS = 2   # the ticker only needs the latest graded day; the Past tab loads everything
 
 
@@ -309,7 +321,7 @@ def best(cands):
 
 def main():
     now = datetime.datetime.now(datetime.timezone.utc)
-    rec, cands, n_graded, since, docs, last = {}, [], 0, None, [], {}
+    rec, cands, n_graded, since, docs, last, search = {}, [], 0, None, [], {}, []
     today_et = now.astimezone(ET).date().isoformat()
     for sport, data_file, picks_file, template in SPORTS:
         if not all(os.path.exists(f) for f in (data_file, picks_file, template)):
@@ -326,6 +338,7 @@ def main():
             if first and (since is None or first < since):
                 since = first
             cands += got
+            search += search_rows(sport, db)
             lr = last_results(sport, picks_doc, today_et)
             if lr:
                 last[sport] = lr
@@ -345,6 +358,11 @@ def main():
            "tracked": {"graded": n_graded, "since": since}, "fair": fair_weight(docs), "last": last}
     with open(OUT, "w", encoding="utf-8") as f:
         json.dump(doc, f, separators=(",", ":"), ensure_ascii=False)
+    if search:
+        with open(SEARCH_OUT, "w", encoding="utf-8") as f:
+            json.dump({"gen": doc["gen"], "cols": ["sport", "id", "name", "team", "pos"],
+                       "players": sorted(search, key=lambda r: r[2])}, f, separators=(",", ":"), ensure_ascii=False)
+        print(f"  {SEARCH_OUT}: {len(search)} players")
     kinds = sum(1 for p in picks if p["kind"] == "value")
     print(f"  {OUT}: {len(picks)} pick(s) ({kinds} value, {len(picks) - kinds} safe)")
     try:
