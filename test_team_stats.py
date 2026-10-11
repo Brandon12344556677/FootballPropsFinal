@@ -57,6 +57,22 @@ class TimeOnPage(unittest.TestCase):
         self.assertEqual({t["name"]: t["n"] for t in r["time"]}["1-3m"], 4)
 
 
+class LocalDay(unittest.TestCase):
+    def test_today_starts_at_local_midnight(self):
+        seen = []
+        old = team_stats.get
+        team_stats.get = lambda token, path, **q: (seen.append((path, q)), {})[1]
+        try:
+            ny = team_stats.ZoneInfo("America/New_York")
+            # 01:30 UTC on Oct 11 is still Oct 10 in New York (EDT, UTC-4)
+            team_stats.range_stats("t", team_stats.dt.datetime(2026, 10, 11, 1, 30), 1, ny)
+        finally:
+            team_stats.get = old
+        self.assertEqual(seen[0][0], "/stats/total")
+        self.assertEqual(seen[0][1]["start"], "2026-10-10T04:00:00Z")
+        self.assertEqual(seen[0][1]["end"], "2026-10-11T02:00:00Z")
+
+
 @unittest.skipUnless(shutil.which("openssl"), "openssl not installed")
 class Crypto(unittest.TestCase):
     def setUp(self):

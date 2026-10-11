@@ -23,6 +23,7 @@ import sys
 import time
 import urllib.parse
 import urllib.request
+from zoneinfo import ZoneInfo
 
 BASE = "https://propstreaklive.goatcounter.com/api/v0"
 OUT = os.path.join("team", "stats.enc")
@@ -71,9 +72,21 @@ def time_rows(events):
     return [{"name": k, "n": counts.get(k, 0)} for k in TIME_RANGES] if counts else []
 
 
-def range_stats(token, now, days):
-    q = {"start": hour(dt.datetime.combine(now.date() - dt.timedelta(days=days - 1), dt.time())),
-         "end": hour(now + dt.timedelta(hours=1))}
+def site_tz(token):
+    """The GoatCounter account's time zone ("US.America/New_York" → America/New_York). Its
+    daily and hourly buckets use it, so "today" has to start at local midnight too."""
+    try:
+        name = get(token, "/me")["user"]["settings"]["timezone"].split(".", 1)[-1]
+        return name, ZoneInfo(name)
+    except Exception:
+        return "America/New_York", ZoneInfo("America/New_York")
+
+
+def range_stats(token, now, days, tz=dt.timezone.utc):
+    """`now` is naive UTC; the range starts at local midnight `days - 1` days ago."""
+    local_day = now.replace(tzinfo=dt.timezone.utc).astimezone(tz).date() - dt.timedelta(days=days - 1)
+    start = dt.datetime.combine(local_day, dt.time(), tzinfo=tz).astimezone(dt.timezone.utc).replace(tzinfo=None)
+    q = {"start": hour(start), "end": hour(now + dt.timedelta(hours=1))}
     total = get(token, "/stats/total", **q)          # rejects a "limit" parameter
     hits = get(token, "/stats/hits", limit=60, **q)  # room for ?v= test URLs (merged on the page) and events
     hits = hits.get("hits") or []
@@ -140,10 +153,11 @@ def main():
         print("team stats: GOATCOUNTER_TOKEN or TEAM_DASH_PASSWORD not set, skipping")
         return 0
     now = dt.datetime.now(dt.timezone.utc).replace(tzinfo=None)
+    tz_name, tz = site_tz(token)
     snap = {"generated_at": now.strftime("%Y-%m-%dT%H:%M:%SZ"), "site": "propstreaklab.com",
-            "source": "GoatCounter"}
+            "source": "GoatCounter", "tz": tz_name}
     for key, days in RANGES.items():
-        snap[key] = range_stats(token, now, days)
+        snap[key] = range_stats(token, now, days, tz)
     if unchanged(snap, password):
         print(f"team stats: no new visits since the last pass ({snap['d90']['total']} in 90 days)")
         return 0

@@ -296,12 +296,17 @@ footer p{margin:0;max-width:80ch}
     const daily = (snap.d90.daily||[]).slice(-days);
     return {kind:'day', pts: daily.map(d => ({label: new Date(d.day+'T12:00:00Z').toLocaleDateString('en-US',{month:'short',day:'numeric',timeZone:'UTC'}), n:d.n}))};
   }
+  // GoatCounter buckets days and hours in the account's time zone (snap.tz, e.g. America/New_York)
+  function tzAbbr(){
+    try { return new Intl.DateTimeFormat('en-US',{timeZone:snap.tz,timeZoneName:'short'}).formatToParts(new Date()).find(p=>p.type==='timeZoneName').value; }
+    catch(e){ return 'UTC'; }
+  }
   function niceMax(v){ if (v<=4) return 4; const p = Math.pow(10, Math.floor(Math.log10(v))); for (const m of [1,2,2.5,5,10]) if (m*p >= v) return m*p; return 10*p; }
 
   function drawChart(){
     const {kind, pts} = series();
     const el = $('chart'); el.textContent = '';
-    $('chartTitle').textContent = kind === 'hour' ? 'Visits by hour today (UTC)' : 'Visits per day';
+    $('chartTitle').textContent = kind === 'hour' ? 'Visits by hour today (' + tzAbbr() + ')' : 'Visits per day';
     if (!pts.length) { const p=document.createElement('p'); p.className='empty'; p.textContent='No visits recorded in this range.'; el.appendChild(p); $('chartPeak').textContent=''; return; }
     const peak = pts.reduce((a,b)=> b.n>a.n ? b : a, pts[0]);
     $('chartPeak').textContent = 'Peak ' + fmt(peak.n) + ' · ' + peak.label;
@@ -371,7 +376,7 @@ footer p{margin:0;max-width:80ch}
     if (ch === null) kv.textContent = range==='d90' ? 'Last 90 days' : 'No earlier period to compare';
     else { kv.textContent = (ch>=0?'▲ ':'▼ ') + Math.abs(ch) + '% vs previous ' + (days===1?'day':days+' days'); kv.classList.add(ch>=0?'up':'down'); }
     $('kAvg').textContent = range==='d1' ? fmt(total) : fmt(Math.round(total/days));
-    $('kAvgS').textContent = range==='d1' ? 'So far today (UTC)' : 'Average over ' + days + ' days';
+    $('kAvgS').textContent = range==='d1' ? 'So far today (' + tzAbbr() + ')' : 'Average over ' + days + ' days';
     $('kMobile').textContent = sysTotal ? pct(mobile, sysTotal)+'%' : '–';
     $('kMobileS').textContent = sysTotal ? 'iPhone and Android' : 'No device data yet';
     $('kSrc').textContent = named[0] ? named[0].name : '–';
