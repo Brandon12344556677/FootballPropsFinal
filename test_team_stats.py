@@ -85,6 +85,23 @@ class Clicks(unittest.TestCase):
         self.assertEqual(r30["clicks"], [{"what": "kalshi-market", "page": "nfl", "n": 1}])
 
 
+class LateEvening(unittest.TestCase):
+    def test_tomorrow_from_goatcounter_is_dropped(self):
+        # 11:45 PM in New York: "end" reaches past midnight, so GoatCounter returns tomorrow too
+        responses = {"/stats/total": {"total": 26, "total_events": 0, "stats": [
+            {"day": "2026-10-10", "daily": 26, "hourly": [0] * 21 + [20, 6, 0]},
+            {"day": "2026-10-11", "daily": 0, "hourly": [0] * 24}]}}
+        old = team_stats.get
+        team_stats.get = lambda token, path, **q: responses.get(path, {"stats": [], "hits": []})
+        try:
+            ny = team_stats.ZoneInfo("America/New_York")
+            r = team_stats.range_stats("t", team_stats.dt.datetime(2026, 10, 11, 3, 45), 1, ny)
+        finally:
+            team_stats.get = old
+        self.assertEqual([d["day"] for d in r["daily"]], ["2026-10-10"])
+        self.assertEqual(r["hourly"][21], 20)
+
+
 class LocalDay(unittest.TestCase):
     def test_today_starts_at_local_midnight(self):
         seen = []

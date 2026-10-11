@@ -95,7 +95,8 @@ def site_tz(token):
 
 def range_stats(token, now, days, tz=dt.timezone.utc):
     """`now` is naive UTC; the range starts at local midnight `days - 1` days ago."""
-    local_day = now.replace(tzinfo=dt.timezone.utc).astimezone(tz).date() - dt.timedelta(days=days - 1)
+    today = now.replace(tzinfo=dt.timezone.utc).astimezone(tz).date()
+    local_day = today - dt.timedelta(days=days - 1)
     start = dt.datetime.combine(local_day, dt.time(), tzinfo=tz).astimezone(dt.timezone.utc).replace(tzinfo=None)
     q = {"start": hour(start), "end": hour(now + dt.timedelta(hours=1))}
     total = get(token, "/stats/total", **q)          # rejects a "limit" parameter
@@ -110,7 +111,9 @@ def range_stats(token, now, days, tz=dt.timezone.utc):
             ev_day[s["day"]] = ev_day.get(s["day"], 0) + int(s.get("daily") or 0)
             ev_hour[s["day"]] = [a + int(b or 0) for a, b in
                                  zip(ev_hour.get(s["day"], [0] * 24), s.get("hourly") or [0] * 24)]
-    daily = total.get("stats") or []
+    # "end" is an hour past now, so late in the evening it reaches past local midnight and
+    # GoatCounter adds tomorrow (empty); drop it, or it becomes "today" for the hours chart.
+    daily = [d for d in total.get("stats") or [] if d.get("day", "") <= today.isoformat()]
     r = {
         "total": max(0, int(total.get("total") or 0) - int(total.get("total_events") or 0)),
         "daily": [{"day": d["day"], "n": max(0, int(d.get("daily") or 0) - ev_day.get(d["day"], 0))} for d in daily],
