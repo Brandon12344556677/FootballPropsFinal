@@ -12,7 +12,8 @@ README.md has the full feature tour; this file is the working rules.
 - `build_today.py` → `today.json` (home feed), runs `botd.py` → `botd.json` (Bet of the Day).
 - `build_players.py` → `players/`, `build_games.py` → `games/` (one page per upcoming game), `best/` (today's best props
   per sport) and `p/` (link-preview pages for shared picks, kept 14 days after the game), `health.py` → `health.json`,
-  `post_daily.py` (Discord/Telegram). `build_today.py` also writes `search.json` (home page player search).
+  `post_daily.py` (Discord/Telegram), `watchdog.py` (own workflow, every 30 min: checks the live site and keeps one
+  "Site watchdog" GitHub issue open while something is broken; the team dashboard reads it). `build_today.py` also writes `search.json` (home page player search).
 - `team_stats.py` → `team/stats.enc`: GoatCounter visitor totals, encrypted with the
   `TEAM_DASH_PASSWORD` secret, for the password-protected team dashboard `team/index.html`
   (hand-written, noindex, not in the sitemap). Totals only — no IPs or per-visitor data.
