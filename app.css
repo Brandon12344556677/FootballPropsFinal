@@ -482,6 +482,14 @@ html.ps-lock{overflow:hidden}
 .pssheet .ps-line small{position:absolute;right:0;top:-17px;font-size:11px;color:var(--ps-soft)}
 .pssheet .ps-actions{display:flex;gap:10px;margin-top:16px}
 .pssheet .ps-actions .btn{flex:1;justify-content:center;padding:12px 18px}
+.pssheet .ps-more{display:grid;gap:6px;margin-top:18px}
+.pssheet .ps-more .ps-sub{margin:0 0 2px}
+.pssheet .ps-mi{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;text-align:left;padding:10px 12px;border-radius:10px;border:1px solid var(--ps-line);background:var(--ps-surface-2);color:var(--ps-soft);font:500 14px var(--ps-body);cursor:pointer}
+.pssheet .ps-mi:hover{border-color:var(--ps-green)}
+.pssheet .ps-mi:focus-visible{outline:2px solid var(--ps-green);outline-offset:2px}
+.pssheet .ps-mi .ps-mt{min-width:0}
+.pssheet .ps-mi b{color:#fff}
+.pssheet .ps-mp{flex:none;font-weight:700;color:#fff;font-variant-numeric:tabular-nums}
 @media(max-width:760px){
   .pssheet{place-items:end stretch;padding:0}
   .pssheet .ps-card{width:100%;max-height:88vh;border-radius:22px 22px 0 0;padding:20px 16px calc(16px + env(safe-area-inset-bottom))}
@@ -520,6 +528,10 @@ html body .pslcookie button{padding:7px 14px;font-size:13px;border-radius:999px;
 .pstrust .tr-grd .ic{color:#e8b54a}
 .pstrust .tr-how{color:#86e6b6;text-decoration:none;font-weight:600}
 .pstrust .tr-how:hover{text-decoration:underline}
+.pstrust .tr-res{display:inline-flex;flex-wrap:wrap;align-items:center;gap:4px 6px;padding:4px 11px;border-radius:999px;border:1px solid rgba(34,208,127,.4);background:rgba(34,208,127,.08);color:#cfeedd}
+.pstrust .tr-res .ic{color:#22d07f}
+.pstrust .tr-res a{color:#86e6b6;text-decoration:none;font-weight:600}
+.pstrust .tr-res a:hover{text-decoration:underline}
 @media(max-width:760px){.pstrust{font-size:12px;gap:6px 12px;margin-top:10px}}
 
 /* ================= My bets ================= */
@@ -560,3 +572,18 @@ html body .pslcookie button{padding:7px 14px;font-size:13px;border-radius:999px;
 .venues .vq i{font-style:normal;font-weight:700;color:#e8b04b}
 .vtag{display:inline-block;padding:0 5px;border:1px solid var(--ps-line-soft);border-radius:999px;font-size:10.5px;line-height:1.5;color:var(--ps-muted);white-space:nowrap}
 .vtag.k{color:var(--ps-green);border-color:currentColor}
+
+/* ---------- bottom card: welcome back, home-screen tip (app.js note()) ---------- */
+.psnote{position:fixed;left:12px;right:12px;bottom:calc(12px + env(safe-area-inset-bottom,0px));z-index:90;max-width:520px;margin:0 auto;
+  background:#0f2038;border:1px solid #22354f;border-radius:16px;padding:14px 44px 14px 16px;box-shadow:0 18px 40px rgba(0,0,0,.45);
+  font:14px/1.45 "Inter",system-ui,sans-serif;color:#dfe6ef;display:grid;gap:10px}
+.psnote p{margin:0}
+.psnote b{color:#fff;font-weight:600}
+.psnote .psn-x{position:absolute;top:8px;right:8px;width:30px;height:30px;border:0;border-radius:8px;background:none;color:#9fb0c6;font-size:15px;cursor:pointer}
+.psnote .psn-x:hover{color:#fff;background:rgba(255,255,255,.06)}
+.psnote .psn-acts{display:flex;flex-wrap:wrap;gap:8px}
+.psnote .psn-b{display:inline-flex;align-items:center;border:1px solid #22354f;border-radius:10px;padding:8px 14px;background:none;color:#dfe6ef;
+  font:600 14px "Inter",system-ui,sans-serif;text-decoration:none;cursor:pointer}
+.psnote .psn-b.go{background:#22d07f;border-color:#22d07f;color:#06210b}
+.psnote button:focus-visible,.psnote a:focus-visible{outline:2px solid #22d07f;outline-offset:2px}
+@media (prefers-reduced-motion:no-preference){.psnote{animation:psnote-in .25s ease-out}@keyframes psnote-in{from{transform:translateY(12px);opacity:0}}}

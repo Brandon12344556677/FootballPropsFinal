@@ -617,8 +617,8 @@ tr.hit td{background:var(--hit-soft)} tr.miss td{background:var(--miss-soft)}
 .panel.collapsed > *:not(:first-child){display:none!important}
 .panel.collapsed{padding-bottom:14px}
 </style>
-<link rel="stylesheet" href="app.css?v=20261009a">
-<script src="app.js?v=20261011a"></script>
+<link rel="stylesheet" href="app.css?v=20261011b">
+<script src="app.js?v=20261011b"></script>
 <script src="/halloween.js?v=20261009a"></script>
 
 <header class="apptop">
@@ -1323,6 +1323,7 @@ function openPickSheet(r){ const p=byId[r.pid]; if(!p){ loadPick(r); return; }
   PS.pickSheet({name:r.name, team:r.team, sport:SPORT_KEY, vs, prob:r.prob, lo:r.lo, hi:r.hi, neff:r.n, side:r.side, line:r.line, statText:r.statText,
     price:r.price, vn:r.vn, live:false, vals:valuesOf(p, r.sk), onOpen:()=>loadPick(r),
     track:trackFor(betFor(p, r.sk, r.line, r.side, r.prob, r.price, r.gid)),
+    more:PS.relatedPicks(r, upcomingPicks().filter(x=>x.prob!=null).map(normPick), {key:x=>[x.pid,x.sk,x.line,x.side].join("|"), game:x=>x.gid, pid:x=>x.pid, open:openPickSheet}),
     onShare:()=>PS.sharePick({player:p, stat:r.sk, line:r.line, ou:r.side}, r.statText)}); }
 function wireTable(el, rows, sort, rerender){
   el.querySelectorAll('.edgeload').forEach(b=>b.onclick=()=>openPickSheet(rows[+b.dataset.i]));
@@ -1445,18 +1446,29 @@ function tickerItems(){
 
 // ---- Picks store (drives both Upcoming and Past) ----
 let PICKS=null;
+// First load: mlb_picks_recent.json (pending picks plus the latest results, written by build_today.py).
+// The full history loads only when the Past tab opens; with no recent file, the full one loads instead.
+let PICKS_FULL=false, fullPicksLoading=false;
+function setPicks(d, full){
+  if(!d||!d.picks){ PICKS=PICKS||[]; } else { const cols=d.cols; PICKS=d.picks.map(row=>PS.capPick(Object.fromEntries(cols.map((c,i)=>[c,row[i]]))))
+    .filter(p=>!PS.thinOut(p, {tMin:0.90})); }      // ruled out only for a thin market: never recommended
+  if(full) PICKS_FULL=true;
+  renderPickViews();
+}
 function loadPicks(){
-  fetch('./mlb_picks.json',{cache:'no-store'}).then(r=>r.ok?r.json():null).then(d=>{
-    if(!d||!d.picks){ PICKS=[]; } else { const cols=d.cols; PICKS=d.picks.map(row=>PS.capPick(Object.fromEntries(cols.map((c,i)=>[c,row[i]]))))
-      .filter(p=>!PS.thinOut(p, {tMin:0.90})); }      // ruled out only for a thin market: never recommended
-    renderPickViews();
-  }).catch(()=>{ PICKS=[]; renderPickViews(); });
+  if(PICKS_FULL){ PICKS_FULL=false; loadFullPicks(); return; }   // a rescan after the Past tab opened: keep the full history
+  fetch('./mlb_picks_recent.json',{cache:'no-store'}).then(r=>r.ok? r.json() : Promise.reject()).then(d=>setPicks(d, false))
+    .catch(()=>loadFullPicks());
+}
+function loadFullPicks(){ if(PICKS_FULL||fullPicksLoading) return; fullPicksLoading=true;
+  fetch('./mlb_picks.json',{cache:'no-store'}).then(r=>r.ok? r.json() : null).then(d=>setPicks(d, true))
+    .catch(()=>{ PICKS=PICKS||[]; PICKS_FULL=true; renderPickViews(); }).finally(()=>{ fullPicksLoading=false; });
 }
 let upSig=-1;
 function renderPickViews(){ paintVerdict(); renderEdges(); renderValue(); renderValueWeek(); generateDigest(); renderPast(); renderApTeams(); PS.ticker(tickerItems()); upSig=upcomingPicks().length; }
 // Once a minute: when a game starts, its picks drop off the boards without a reload.
 setInterval(()=>{ if(PICKS!==null && !document.hidden && upcomingPicks().length!==upSig) renderPickViews(); }, 60000);
-function initPicks(){ renderPast(); }   // Past tab opened
+function initPicks(){ renderPast(); loadFullPicks(); }   // Past tab opened: load the full history
 // ---- Past picks: the NFL page's layout (filters, summary, calibration, by week, profit,
 // breakdown, sortable table). Every pick here was recorded live before its game; prices are
 // fractions (0.43 = 43¢), and weeks are calendar weeks (this sport has no week numbers).
@@ -1473,7 +1485,7 @@ function weekOf(iso){ const t=Date.parse((iso||'')+'T12:00:00Z'); if(!isFinite(t
 function weekLabel(w){ const d=new Date(w+'T12:00:00Z'); return isFinite(d.getTime())? PK_MON[d.getUTCMonth()]+' '+d.getUTCDate() : w; }
 const unitsOf = p => p.res==='hit'? 1/p.price-1 : -1;
 function renderPast(){ const st=$('pkstatus'); if(!st) return;
-  if(PICKS===null){ $('pksummary').innerHTML='<p class="mktnote">Loading picks…</p>'; return; }
+  if(PICKS===null || !PICKS_FULL){ $('pksummary').innerHTML='<p class="mktnote">Loading every past pick…</p>'; return; }
   const nG=PICKS.filter(p=>p.res==='hit'||p.res==='miss').length, nP=PICKS.filter(p=>p.res==null).length;
   st.textContent=`${PICKS.length.toLocaleString()} picks (${nG.toLocaleString()} graded, ${nP.toLocaleString()} pending)`;
   const boxIn=new Set(PICKS.filter(p=>p.res!=null).map(p=>p.gid));   // a graded pick means that game's box score is in

@@ -7,7 +7,8 @@ and writes a small file the home page can fetch in one request:
 
   today.json   {"gen", "record": {sport: {"T", "V"}}, "picks": [...], "valueLive": [[sport, start], ...],
                 "tracked": {"graded": live picks graded so far, "since": first live pick date},
-                "fair": {"w": model weight in the fair chance, "n": priced picks it was fitted on}}
+                "fair": {"w": model weight in the fair chance, "n": priced picks it was fitted on},
+                "last": {sport: {"day", "T": {n, hit}, "V": {n, hit, units}}}: each sport's latest graded day}
                (each pick carries "l10": its last ten game values, for the mini chart)
 
 "picks" holds the best upcoming bets across all four sports at the last recorded
@@ -16,7 +17,8 @@ are too few of those, the likeliest picks that still pay (price 85¢ or less). O
 pick per player. The home page drops any whose game has started since.
 
 It also updates botd.json, the home page's Bet of the Day (botd.py), from the same
-upcoming picks.
+upcoming picks, and writes nba/nhl/mlb_picks_recent.json (pending picks plus the last
+RECENT_DAYS days) for the boards' first load.
 
 Standard library only. Never fails the deploy: a sport whose files are missing is
 skipped, and a failure leaves the previous today.json in place.
@@ -195,6 +197,65 @@ def graded(picks_doc):
     return n, first
 
 
+def last_results(sport, picks_doc, today, max_age=7):
+    """The latest ET game day (on or before `today`, within `max_age` days) with graded live
+    picks: {"day", "T": {n, hit}, "V": {n, hit, units}} for the results line under each page's
+    hero. Pushes and voids don't count; units are 1 unit per Value spot at its recorded price."""
+    cols = picks_doc["cols"]
+    days = {}
+    for row in picks_doc["picks"]:
+        p = dict(zip(cols, row))
+        if p.get("src") != "live" or p.get("res") not in ("hit", "miss"):
+            continue
+        t = parse_start(p.get("start"))
+        day = t.astimezone(ET).date().isoformat() if t else p.get("date")   # NFL dates are already ET
+        if not day:
+            continue
+        lists, hit = p.get("lists") or "", p["res"] == "hit"
+        d = days.setdefault(day, {"T": {"n": 0, "hit": 0}, "V": {"n": 0, "hit": 0, "units": 0.0}})
+        if "T" in lists:
+            d["T"]["n"] += 1
+            d["T"]["hit"] += hit
+        if "V" in lists:
+            d["V"]["n"] += 1
+            d["V"]["hit"] += hit
+            price = p.get("price")
+            if price:
+                price = price / 100.0 if sport == "nfl" else price
+                d["V"]["units"] += (1 / price - 1) if hit else -1
+    oldest = (datetime.date.fromisoformat(today) - datetime.timedelta(days=max_age)).isoformat()
+    recent = sorted(d for d in days if oldest <= d <= today and (days[d]["T"]["n"] or days[d]["V"]["n"]))
+    if not recent:
+        return None
+    day = recent[-1]
+    out = {"day": day}
+    for tag in ("T", "V"):
+        if days[day][tag]["n"]:
+            out[tag] = days[day][tag]
+    if "V" in out:
+        out["V"]["units"] = round(out["V"]["units"], 2)
+    return out
+
+
+RECENT_DAYS = 2   # the ticker only needs the latest graded day; the Past tab loads everything
+
+
+def write_recent(picks_file, picks_doc, today, days=RECENT_DAYS):
+    """<sport>_picks_recent.json: the picks file cut down to pending picks plus the last `days`
+    days, so a board loads in a fraction of the bytes. The board fetches the full file only
+    when its Past tab opens (and falls back to it if this file is missing)."""
+    cols = picks_doc["cols"]
+    i_res, i_date = cols.index("res"), cols.index("date")
+    cutoff = (datetime.date.fromisoformat(today) - datetime.timedelta(days=days)).isoformat()
+    rows = [r for r in picks_doc["picks"]
+            if r[i_res] is None or (r[i_res] in ("hit", "miss", "push") and (r[i_date] or "") >= cutoff)]
+    out = dict(picks_doc, picks=rows, recentFrom=cutoff)
+    path = picks_file.replace(".json", "_recent.json")
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(out, f, separators=(",", ":"), ensure_ascii=False)
+    return path, len(rows)
+
+
 def fair_weight(docs):
     """How much to trust the model against the market: the weight w in
         fair chance = w * model + (1 - w) * Polymarket price
@@ -248,7 +309,8 @@ def best(cands):
 
 def main():
     now = datetime.datetime.now(datetime.timezone.utc)
-    rec, cands, n_graded, since, docs = {}, [], 0, None, []
+    rec, cands, n_graded, since, docs, last = {}, [], 0, None, [], {}
+    today_et = now.astimezone(ET).date().isoformat()
     for sport, data_file, picks_file, template in SPORTS:
         if not all(os.path.exists(f) for f in (data_file, picks_file, template)):
             print(f"  {sport}: files missing — skipped")
@@ -264,6 +326,15 @@ def main():
             if first and (since is None or first < since):
                 since = first
             cands += got
+            lr = last_results(sport, picks_doc, today_et)
+            if lr:
+                last[sport] = lr
+            if sport != "nfl":   # the NFL board computes its picks live and loads picks.json only for Past
+                try:
+                    path, n = write_recent(picks_file, picks_doc, today_et)
+                    print(f"  {path}: {n} of {len(picks_doc['picks'])} picks")
+                except Exception as e:
+                    print(f"  {sport} recent picks: skipped ({e})")
             print(f"  {sport}: {len(got)} upcoming priced pick(s), record {rec[sport]}")
         except Exception as e:     # one bad sport never blanks the others
             print(f"  {sport}: skipped ({e})")
@@ -271,7 +342,7 @@ def main():
     # [sport, start] of every upcoming value spot, so the ticker can count what's still live.
     value_live = sorted([c["sport"], c["start"]] for c in cands if c["value"])
     doc = {"gen": now.strftime("%Y-%m-%dT%H:%M:%SZ"), "record": rec, "picks": picks, "valueLive": value_live,
-           "tracked": {"graded": n_graded, "since": since}, "fair": fair_weight(docs)}
+           "tracked": {"graded": n_graded, "since": since}, "fair": fair_weight(docs), "last": last}
     with open(OUT, "w", encoding="utf-8") as f:
         json.dump(doc, f, separators=(",", ":"), ensure_ascii=False)
     kinds = sum(1 for p in picks if p["kind"] == "value")
