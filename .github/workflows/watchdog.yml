@@ -1,0 +1,37 @@
+name: Site watchdog
+
+# Checks the live site from the outside every 30 minutes (watchdog.py): the update job is
+# still running and passing, the data is fresh, every main page and data file loads, and
+# each board opens in headless Chrome without script errors. A problem opens one GitHub
+# issue (updated as it changes, closed when it's fixed); the run itself goes red only when
+# it opens a new issue, so GitHub's failure email fires once per problem, not every check.
+# Off the update job's :05/:25/:45 slots, so the two don't compete for a runner.
+on:
+  schedule:
+    - cron: "17,47 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read     # the update job's recent runs
+  issues: write     # open, update and close the watchdog issue
+
+concurrency:
+  group: watchdog
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-24.04   # comes with Google Chrome, which the render check uses
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Check the live site
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: python watchdog.py

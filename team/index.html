@@ -734,17 +734,28 @@ footer p{margin:0;max-width:80ch}
   // Updates run about every 10 minutes, but GitHub can delay one by 20+; warn past 40, alarm past 90.
   async function loadHealth(){
     const get=u=>fetch(u+'?t='+Date.now(),{cache:'no-store'}).then(r=>r.ok? r.json() : null).catch(()=>null);
-    const [h, t]=await Promise.all([get('../health.json'), get('../today.json')]);
+    // The site watchdog (watchdog.py) keeps one open GitHub issue while it sees a problem on the live site.
+    const dog=fetch('https://api.github.com/repos/Brandon12344556677/FootballPropsFinal/issues?state=open&per_page=50',{cache:'no-store'})
+      .then(r=>r.ok? r.json() : null).then(a=>a? (a.find(i=>(i.body||'').includes('<!-- watchdog -->') && !i.pull_request) || false) : null).catch(()=>null);
+    const [h, t, w]=await Promise.all([get('../health.json'), get('../today.json'), dog]);
     const el=$('health'); if(!h && !t) return;
     const age=t && isFinite(Date.parse(t.gen))? Math.round((Date.now()-Date.parse(t.gen))/60000) : null;
     const probs=Object.entries((h && h.problems)||{});
-    const level= age!=null && age>90? 'bad' : (probs.length || (age!=null && age>40))? 'warn' : 'ok';
+    const level= (age!=null && age>90) || w? 'bad' : (probs.length || (age!=null && age>40))? 'warn' : 'ok';
     el.className='health'+(level==='ok'? '' : ' '+level);
-    $('hTitle').textContent= level==='bad'? 'The site has stopped updating.' : level==='warn'? 'Something needs a look.' : 'Everything is running.';
+    $('hTitle').textContent= age!=null && age>90? 'The site has stopped updating.' : w? 'The watchdog found a problem on the live site.' :
+      level==='warn'? 'Something needs a look.' : 'Everything is running.';
     const ago= age==null? 'unknown' : age<60? age+' min ago' : Math.round(age/60)+' h ago';
     $('hSub').textContent=`Site data last updated ${ago} (updates about every 10 minutes).`+
-      (level==='bad'? ' Check the "Update NFL data" runs on GitHub Actions.' : !probs.length? ' All data sources are working.' : '');
+      (age!=null && age>90? ' Check the "Update NFL data" runs on GitHub Actions.' : !probs.length && !w? ' All data sources are working.' : '')+
+      (w===false? ' Watchdog: all live checks pass.' : '');
     const ul=$('hList'); ul.textContent='';
+    if(w){
+      (w.body||'').split('\n').filter(l=>l.startsWith('- ')).forEach(l=>{ const li=document.createElement('li'); li.textContent=l.slice(2); ul.appendChild(li); });
+      const li=document.createElement('li'), a=document.createElement('a');
+      a.href=w.html_url; a.target='_blank'; a.rel='noopener'; a.textContent='Open the watchdog issue on GitHub';
+      li.appendChild(a); ul.appendChild(li);
+    }
     probs.forEach(([key, p])=>{ const li=document.createElement('li');
       const since=p.first? new Date(p.first).toLocaleString('en-US',{month:'short', day:'numeric', hour:'numeric', minute:'2-digit', timeZone:'America/New_York'})+' ET' : '';
       li.textContent=`${p.msg||key} (${p.runs||1} update${p.runs===1?'':'s'} in a row${since? ', since '+since : ''}${p.alerted? ', alert email sent' : ''})`;

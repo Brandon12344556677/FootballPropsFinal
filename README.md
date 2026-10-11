@@ -142,6 +142,7 @@ Put your referral link in `url`. Leave it `""` to hide the banner.
 | `fonts/` | Self-hosted fonts (Barlow Condensed for labels, Archivo, Inter), with their SIL Open Font License files. |
 | `LICENSE-lucide-icons.txt` | License notice for the Lucide icon shapes bundled in `app.js`. |
 | `.github/workflows/update.yml` | The scheduled job: every 20 minutes, two update passes 10 minutes apart (GitHub delays and drops 10-minute schedules). |
+| `watchdog.py` | Its own workflow (`.github/workflows/watchdog.yml`), every 30 minutes: checks the live site from the outside. Is the update job still running and passing, is the data fresh, does every main page and data file load, and does each board open in headless Chrome without script errors? A problem opens one GitHub issue ("Site watchdog: …"), updated as it changes and closed once everything passes; the team dashboard's health panel shows it too. |
 | `update_pass.sh` | One update pass: every builder, the health check, commit + push. Only the NFL build is fatal. |
 | `tests/` | Unit tests for the model, market parsing, grading, and a check that the JavaScript model matches the Python one. |
 | `tools/tune_context.py` | Re-fits the game-context adjustment strengths on the backtest. Run it when a season of new data has accumulated. |
