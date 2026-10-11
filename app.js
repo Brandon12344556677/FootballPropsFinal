@@ -500,7 +500,7 @@ window.PS = (function(){
     setTimeout(()=>{ if(quiet()) return;
       let html, acts=[{label:'Got it', run:()=>{ st.off=true; save(); }}];
       if(inApp) html=`<b>Coming back often?</b> Open this page in ${ios? 'Safari' : 'Chrome'} and add it to your Home Screen. Prop Streak Lab then opens with one tap, like an app.`;
-      else if(ios) html=`<b>Add Prop Streak Lab to your Home Screen.</b> Tap the Share button (the square with the arrow), then <b>Add to Home Screen</b>. It opens with one tap, like an app.`;
+      else if(ios) html=`<b>Add Prop Streak Lab to your Home Screen.</b> Tap the <b>three lines</b> in the bottom right, then <b>Share</b>, then <b>View More</b>, then <b>Add to Home Screen</b>. It opens with one tap, like an app.`;
       else if(installEvt){ html=`<b>Add Prop Streak Lab to your Home Screen</b> so it opens with one tap, like an app.`;
         acts=[{label:'Add to Home Screen', primary:true, run:()=>{ st.off=true; save(); installEvt.prompt(); }}, {label:'Not now'}]; }
       else html=`<b>Add Prop Streak Lab to your Home Screen.</b> Tap the menu (⋮), then <b>Add to Home screen</b>. It opens with one tap, like an app.`;
