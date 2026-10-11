@@ -130,7 +130,8 @@ def range_stats(token, now, days, tz=dt.timezone.utc):
                                              zip(d.get("hourly") or [0] * 24, ev_hour.get(d["day"], [0] * 24))]}
                       for d in daily]
     for page in ("toprefs", "campaigns", "locations", "browsers", "systems", "sizes"):
-        r[page] = rows(get(token, f"/stats/{page}", limit=TOP_N, **q).get("stats"), page)
+        n = 50 if page == "campaigns" else TOP_N   # every tracked link from the team page is a campaign
+        r[page] = rows(get(token, f"/stats/{page}", limit=n, **q).get("stats"), page)
     return r
 
 
