@@ -1,13 +1,4 @@
 {
- "problems": {
-  "MLB: ungraded": {
-   "first": "2026-10-10T21:09:27Z",
-   "runs": 18,
-   "alerted": "2026-10-10T23:58:22Z",
-   "msg": "MLB: 182 pick(s) still ungraded 2+ days after their game"
-  }
- },
- "alert": [
-  "MLB: 182 pick(s) still ungraded 2+ days after their game"
- ]
+ "problems": {},
+ "alert": []
 }
