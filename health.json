@@ -2,7 +2,7 @@
  "problems": {
   "team_stats: GoatCounter team stats": {
    "first": "2026-10-11T15:32:26Z",
-   "runs": 1,
+   "runs": 2,
    "alerted": null,
    "msg": "team_stats.py: GoatCounter team stats failed (URLError: <urlopen error [Errno 104] Connection reset by peer>)"
   }
