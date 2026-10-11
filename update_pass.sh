@@ -40,7 +40,7 @@ git config user.name "github-actions[bot]"
 git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 git add nfl.html data.json slate.json picks.json weekly.json sitemap.xml robots.txt
 git add -A players 2>/dev/null || true
-git add -A games 2>/dev/null || true
+git add -A games best p 2>/dev/null || true
 for f in nba.html nba.json nba_stats.json nba_picks.json \
          nhl.html nhl.json nhl_stats.json nhl_picks.json \
          mlb.html mlb.json mlb_stats.json mlb_picks.json today.json botd.json posted.json top_cache.json health.json \

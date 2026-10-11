@@ -10,7 +10,8 @@ README.md has the full feature tour; this file is the working rules.
   download data, grade picks, price props off Polymarket/Kalshi, write the sport's
   JSON files and bake them into its page. Standard library only — don't add packages.
 - `build_today.py` → `today.json` (home feed), runs `botd.py` → `botd.json` (Bet of the Day).
-- `build_players.py` → `players/`, `build_games.py` → `games/` (one page per upcoming game), `health.py` → `health.json`,
+- `build_players.py` → `players/`, `build_games.py` → `games/` (one page per upcoming game), `best/` (today's best props
+  per sport) and `p/` (link-preview pages for shared picks, kept 14 days after the game), `health.py` → `health.json`,
   `post_daily.py` (Discord/Telegram). `build_today.py` also writes `search.json` (home page player search).
 - `team_stats.py` → `team/stats.enc`: GoatCounter visitor totals, encrypted with the
   `TEAM_DASH_PASSWORD` secret, for the password-protected team dashboard `team/index.html`
@@ -29,9 +30,9 @@ The bot overwrites these on every pass, so hand edits are lost and cause merge c
   `mlb.html` ← `mlb_template.html`. Edit the template (and the builder), never the output page.
 - `data.json`, `slate.json`, `picks.json`, `weekly.json`, `*_picks.json`, `*_stats.json`,
   `nba.json`, `nhl.json`, `mlb.json`, `today.json`, `botd.json`, `health.json`, `top_cache.json`,
-  `sitemap.xml`, `robots.txt`, `players/`, `games/`, `team/stats.enc`, `*_picks_recent.json`, `search.json`.
+  `sitemap.xml`, `robots.txt`, `players/`, `games/`, `best/`, `p/`, `team/stats.enc`, `*_picks_recent.json`, `search.json`.
 
-`index.html` (home page), `methodology.html`, and the legal pages are hand-written and safe to edit.
+`index.html` (home page), `methodology.html`, `guides/`, and the legal pages are hand-written and safe to edit.
 
 ## Rules that bite
 
