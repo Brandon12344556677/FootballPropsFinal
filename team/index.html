@@ -1,0 +1,427 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<title>Prop Streak Audience</title>
+<link rel="icon" href="../favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="../fonts.css">
+<!-- Team-only audience dashboard. The numbers live in stats.enc, encrypted with the team
+     password by team_stats.py; nothing is readable until the password is entered here.
+     No GoatCounter tag on this page, so team visits aren't counted. -->
+<style>
+/* Layout: a lock screen; once unlocked, headline numbers, one wide trend chart, then a two-column grid of ranked lists */
+:root{
+  --bg:#0a1628; --surface:#0f2038; --surface-2:#142743; --line:#22354f; --line-soft:rgba(255,255,255,.07);
+  --fg:#ffffff; --soft:#dfe6ef; --muted:#9fb0c6;
+  --accent:#22d07f; --accent-weak:rgba(34,208,127,.16); --accent-ink:#06210b;
+  --warn:#e8b54a; --down:#eb6f7d;
+  --f-display:"Archivo","Inter",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --f-body:"Inter",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --f-label:"Barlow Condensed","Arial Narrow",Impact,sans-serif;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--fg);font-family:var(--f-body);font-size:15px;line-height:1.5;font-variant-numeric:tabular-nums;
+  padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+[hidden]{display:none!important}
+.wrap{max-width:1120px;margin:0 auto;padding-inline:16px;padding-block:28px 56px;display:grid;gap:22px}
+h1,h2{font-family:var(--f-display);margin:0;text-wrap:balance}
+h1{font-size:clamp(24px,4vw,32px);font-weight:800;letter-spacing:-.01em}
+h2{font-size:17px;font-weight:600}
+.label{font-family:var(--f-label);text-transform:uppercase;letter-spacing:.08em;font-size:13px;font-weight:600;color:var(--muted)}
+button{font:600 14px var(--f-body);cursor:pointer}
+button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+/* lock screen */
+.lock{min-height:100vh;min-height:100dvh;display:grid;place-items:center;padding-inline:16px;padding-block:32px}
+.lock form{width:100%;max-width:380px;background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:28px 24px;display:grid;gap:14px}
+.lock .label{color:var(--accent)}
+.lock p{margin:0;color:var(--muted);font-size:14px}
+.lock input{width:100%;font:500 16px var(--f-body);color:var(--fg);background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:12px 14px}
+.lock .go{background:var(--accent);color:var(--accent-ink);border:0;border-radius:10px;padding:12px}
+.lock .go:disabled{opacity:.6;cursor:wait}
+.lock .err{color:var(--down);font-size:14px;min-height:1.5em}
+
+header{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:14px}
+.brand{display:grid;gap:4px}
+.brand .label{color:var(--accent)}
+.hright{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.fresh{display:flex;align-items:center;gap:8px;color:var(--muted);font-size:13px}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--accent);flex:none}
+.fresh.stale .dot{background:var(--warn)}
+.fresh.stale{color:var(--warn)}
+.ghost{background:none;color:var(--muted);border:1px solid var(--line);border-radius:8px;padding:6px 12px}
+.ghost:hover{color:var(--fg)}
+
+.tabs{display:flex;gap:4px;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:4px;width:max-content;max-width:100%;overflow-x:auto}
+.tabs button{color:var(--muted);background:none;border:0;border-radius:7px;padding:7px 14px;white-space:nowrap}
+.tabs button[aria-selected="true"]{background:var(--accent);color:var(--accent-ink)}
+.tabs button:hover:not([aria-selected="true"]){color:var(--fg)}
+
+.kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));border:1px solid var(--line);border-radius:14px;background:var(--surface);overflow:hidden}
+.kpi{padding:16px 18px;display:grid;gap:2px;min-width:0}
+.kpi + .kpi{border-left:1px solid var(--line)}
+.kpi .v{font-family:var(--f-display);font-weight:800;font-size:clamp(24px,3.4vw,34px);line-height:1.15;overflow-wrap:anywhere}
+.kpi .v.sm{font-size:clamp(20px,2.6vw,26px)}
+.kpi .s{font-size:13px;color:var(--muted)}
+.up{color:var(--accent)} .down{color:var(--down)}
+@media (max-width:760px){ .kpis{grid-template-columns:repeat(2,minmax(0,1fr))} .kpi:nth-child(3){border-left:0} .kpi:nth-child(n+3){border-top:1px solid var(--line)} }
+
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:18px;min-width:0}
+.panel-h{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-bottom:12px}
+.chart{position:relative}
+.chart svg{display:block;width:100%;height:auto;overflow:visible}
+.chart .tip{position:absolute;pointer-events:none;background:var(--surface-2);border:1px solid var(--line);border-radius:8px;padding:6px 10px;font-size:13px;white-space:nowrap;transform:translate(-50%,-110%)}
+.chart .tip b{font-family:var(--f-display)}
+
+.acts{display:grid;gap:10px;margin:0;padding:0;list-style:none}
+.acts li{display:grid;grid-template-columns:auto 1fr;gap:12px;align-items:start}
+.chip{font-family:var(--f-label);font-weight:600;text-transform:uppercase;letter-spacing:.06em;font-size:12px;padding:2px 8px;border-radius:999px;border:1px solid var(--line);color:var(--soft);white-space:nowrap}
+.chip.do{background:var(--accent-weak);border-color:transparent;color:var(--accent)}
+.acts p{margin:0;max-width:72ch;color:var(--soft)}
+
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:22px}
+@media (max-width:760px){ .grid{grid-template-columns:1fr} }
+.list{display:grid;gap:6px;margin:0;padding:0;list-style:none}
+.row{position:relative;display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:10px;align-items:center;padding:6px 8px;border-radius:6px}
+.row .bar{position:absolute;inset:0 auto 0 0;background:var(--accent-weak);border-radius:6px;z-index:0}
+.row > *:not(.bar){position:relative;z-index:1}
+.row .name{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.row .name small{color:var(--muted);margin-left:6px}
+.row .n{font-weight:600}
+.row .pct{color:var(--muted);font-size:13px;width:3.4em;text-align:right}
+.row .chip{margin-left:6px;font-size:11px;padding:1px 6px}
+.empty{color:var(--muted);font-size:14px;margin:0}
+footer{color:var(--muted);font-size:13px}
+footer p{margin:0;max-width:80ch}
+@media (prefers-reduced-motion:no-preference){ .row .bar{transition:width .3s ease} }
+</style>
+</head>
+<body>
+
+<div class="lock" id="lock">
+  <form id="lockForm" autocomplete="on">
+    <span class="label">Prop Streak Lab · team only</span>
+    <h1>Audience</h1>
+    <p>Enter the team password to see visitor stats.</p>
+    <input type="text" name="username" value="team" autocomplete="username" hidden>
+    <input type="password" id="pw" name="password" placeholder="Team password" autocomplete="current-password" required aria-label="Team password">
+    <button class="go" id="go" type="submit">Unlock</button>
+    <div class="err" id="err" role="alert"></div>
+  </form>
+</div>
+
+<div class="wrap" id="app" hidden>
+  <header>
+    <div class="brand">
+      <span class="label">Prop Streak Lab · team only</span>
+      <h1>Audience</h1>
+    </div>
+    <div class="hright">
+      <div class="fresh" id="fresh"><span class="dot"></span><span id="freshText"></span></div>
+      <button class="ghost" id="lockBtn" type="button">Lock</button>
+    </div>
+  </header>
+
+  <div class="tabs" role="tablist" aria-label="Date range" id="tabs">
+    <button role="tab" id="tab-d1" data-r="d1" aria-selected="false">Today</button>
+    <button role="tab" id="tab-d7" data-r="d7" aria-selected="false">7 days</button>
+    <button role="tab" id="tab-d30" data-r="d30" aria-selected="true">30 days</button>
+    <button role="tab" id="tab-d90" data-r="d90" aria-selected="false">90 days</button>
+  </div>
+
+  <section class="kpis" aria-label="Headline numbers">
+    <div class="kpi"><span class="label">Visits</span><span class="v" id="kVisits">–</span><span class="s" id="kVisitsS"></span></div>
+    <div class="kpi"><span class="label">Per day</span><span class="v" id="kAvg">–</span><span class="s" id="kAvgS"></span></div>
+    <div class="kpi"><span class="label">On a phone</span><span class="v" id="kMobile">–</span><span class="s" id="kMobileS"></span></div>
+    <div class="kpi"><span class="label">Top source</span><span class="v sm" id="kSrc">–</span><span class="s" id="kSrcS"></span></div>
+  </section>
+
+  <section class="panel">
+    <div class="panel-h"><h2 id="chartTitle">Visits per day</h2><span class="label" id="chartPeak"></span></div>
+    <div class="chart" id="chart"></div>
+  </section>
+
+  <section class="panel">
+    <div class="panel-h"><h2>What to act on</h2><span class="label">From this range</span></div>
+    <ul class="acts" id="acts"></ul>
+  </section>
+
+  <div class="grid">
+    <section class="panel"><div class="panel-h"><h2>Pages</h2><span class="label">Visits</span></div><ul class="list" id="lPages"></ul></section>
+    <section class="panel"><div class="panel-h"><h2>Where visitors come from</h2><span class="label">Visits</span></div><ul class="list" id="lRefs"></ul></section>
+    <section class="panel"><div class="panel-h"><h2>Campaigns</h2><span class="label">utm_campaign</span></div><ul class="list" id="lCamp"></ul></section>
+    <section class="panel"><div class="panel-h"><h2>Countries</h2><span class="label">Visits</span></div><ul class="list" id="lLoc"></ul></section>
+    <section class="panel"><div class="panel-h"><h2>Operating systems</h2><span class="label">Visits</span></div><ul class="list" id="lSys"></ul></section>
+    <section class="panel"><div class="panel-h"><h2>Browsers</h2><span class="label">Visits</span></div><ul class="list" id="lBrw"></ul></section>
+    <section class="panel"><div class="panel-h"><h2>Screen sizes</h2><span class="label">Visits</span></div><ul class="list" id="lSize"></ul></section>
+  </div>
+
+  <footer><p>Totals only, from GoatCounter, refreshed by the site's update job about every 10 minutes. No IP addresses or individual visitors are stored, which matches the site's Privacy Policy. A "visit" is GoatCounter's count of unique visitors per page per day.</p></footer>
+</div>
+
+<script>
+(function(){
+  'use strict';
+  const ITERATIONS = 600000;   // must match ITERATIONS in team_stats.py
+  const $ = id => document.getElementById(id);
+  const fmt = n => (n||0).toLocaleString('en-US');
+  const pct = (a,b) => b ? Math.round(a/b*100) : 0;
+  const store = {
+    get(k){ try { return sessionStorage.getItem(k); } catch(e){ return null; } },
+    set(k,v){ try { sessionStorage.setItem(k,v); } catch(e){} },
+    del(k){ try { sessionStorage.removeItem(k); } catch(e){} }
+  };
+  let snap = null, range = 'd30', password = null, timer = null;
+  try { const r = localStorage.getItem('psa-range'); if (/^d(1|7|30|90)$/.test(r)) range = r; } catch(e){}
+
+  // ---------- decryption (OpenSSL "Salted__" format, PBKDF2-SHA256 → AES-256-CBC) ----------
+  async function decrypt(b64, pw){
+    const raw = Uint8Array.from(atob(b64.trim()), c => c.charCodeAt(0));
+    if (new TextDecoder().decode(raw.slice(0,8)) !== 'Salted__') throw new Error('format');
+    const salt = raw.slice(8,16), ct = raw.slice(16);
+    const base = await crypto.subtle.importKey('raw', new TextEncoder().encode(pw), 'PBKDF2', false, ['deriveBits']);
+    const bits = new Uint8Array(await crypto.subtle.deriveBits({name:'PBKDF2', salt, iterations:ITERATIONS, hash:'SHA-256'}, base, 384));
+    const key = await crypto.subtle.importKey('raw', bits.slice(0,32), 'AES-CBC', false, ['decrypt']);
+    const plain = await crypto.subtle.decrypt({name:'AES-CBC', iv:bits.slice(32,48)}, key, ct);
+    return JSON.parse(new TextDecoder().decode(plain));
+  }
+  async function load(pw){
+    const res = await fetch('stats.enc?t=' + Date.now(), {cache:'no-store'});
+    if (res.status === 404) throw Object.assign(new Error('missing'), {code:'missing'});
+    if (!res.ok) throw Object.assign(new Error('http'), {code:'http'});
+    const blob = await res.text();
+    try { return await decrypt(blob, pw); }
+    catch(e){ throw Object.assign(new Error('wrong'), {code:'wrong'}); }
+  }
+
+  async function unlock(pw, quiet){
+    $('go').disabled = true; $('go').textContent = 'Unlocking…'; $('err').textContent = '';
+    try {
+      snap = await load(pw);
+      password = pw; store.set('psa-pw', pw);
+      $('lock').hidden = true; $('app').hidden = false;
+      setRange(range); freshness();
+      clearInterval(timer);
+      timer = setInterval(refresh, 5*60*1000);
+    } catch(e){
+      store.del('psa-pw');
+      if (!quiet) $('err').textContent =
+        e.code === 'wrong' ? 'That password is wrong. Check it and try again.' :
+        e.code === 'missing' ? 'No stats have been published yet. The update job creates them once the team secrets are set.' :
+        'Could not load the stats. Check your connection and try again.';
+      $('pw').select();
+    } finally { $('go').disabled = false; $('go').textContent = 'Unlock'; }
+  }
+  async function refresh(){
+    if (!password) return;
+    try { snap = await load(password); freshness(); render(); } catch(e){ if (e.code === 'wrong') lock(); }
+  }
+  function lock(){
+    password = null; snap = null; store.del('psa-pw'); clearInterval(timer);
+    $('app').hidden = true; $('lock').hidden = false; $('pw').value = ''; $('pw').focus();
+  }
+  $('lockForm').addEventListener('submit', e => { e.preventDefault(); const pw = $('pw').value; if (pw) unlock(pw); });
+  $('lockBtn').addEventListener('click', lock);
+
+  // ---------- cleanup of GoatCounter's raw names ----------
+  const REF_ALIAS = {
+    'snapchat':'Snapchat','snapchat.com':'Snapchat',
+    'ig':'Instagram','instagram':'Instagram','instagram.com':'Instagram','l.instagram.com':'Instagram',
+    'facebook.com':'Facebook','m.facebook.com':'Facebook','l.facebook.com':'Facebook','lm.facebook.com':'Facebook','fb':'Facebook',
+    't.co':'X (Twitter)','x.com':'X (Twitter)','twitter.com':'X (Twitter)',
+    'reddit.com':'Reddit','old.reddit.com':'Reddit','out.reddit.com':'Reddit',
+    'tiktok.com':'TikTok','discord.com':'Discord','discordapp.com':'Discord','t.me':'Telegram','telegram.org':'Telegram',
+    'bing.com':'Bing','duckduckgo.com':'DuckDuckGo','search.yahoo.com':'Yahoo','yahoo.com':'Yahoo',
+    '(unknown)':'No referrer'
+  };
+  const SOCIAL = new Set(['Snapchat','Instagram','Facebook','X (Twitter)','Reddit','TikTok','Discord','Telegram']);
+  const SEARCH = new Set(['Google','Bing','DuckDuckGo','Yahoo']);
+  function refName(raw){
+    const k = String(raw||'(unknown)').trim().toLowerCase().replace(/^https?:\/\//,'').replace(/^www\./,'').replace(/\/.*$/,'');
+    return REF_ALIAS[k] || REF_ALIAS[raw] || raw;
+  }
+  function refKind(name, scheme){
+    if (name === 'No referrer') return 'Direct / app';
+    if (SEARCH.has(name) || scheme === 'g') return 'Search';
+    if (SOCIAL.has(name)) return 'Social';
+    if (scheme === 'c') return 'Campaign';
+    return 'Link';
+  }
+  function mergeRefs(rows){
+    const m = new Map();
+    for (const r of rows||[]) { const name = refName(r.name); const cur = m.get(name) || {name, n:0, kind:refKind(name, r.kind)}; cur.n += r.n; m.set(name, cur); }
+    return [...m.values()].sort((a,b)=>b.n-a.n);
+  }
+  const PAGE_NAME = {'/':'Home','/index.html':'Home','/nfl.html':'NFL board','/nba.html':'NBA board','/nhl.html':'NHL board','/mlb.html':'MLB board',
+    '/methodology.html':'Methodology','/privacy.html':'Privacy','/terms.html':'Terms','/cookies.html':'Cookie policy'};
+  function mergePages(rows){
+    const m = new Map();
+    for (const r of rows||[]) {
+      let p = String(r.path||'').split(/[?#]/)[0] || '/';
+      if (/^\/diag/i.test(p) || p.startsWith('/team')) continue;   // internal test pings, this page
+      if (p.startsWith('/players/')) p = '/players/';                // one row for all player pages
+      const cur = m.get(p) || {path:p, n:0}; cur.n += r.n; m.set(p, cur);
+    }
+    return [...m.values()].sort((a,b)=>b.n-a.n).map(r => ({...r, name: PAGE_NAME[r.path] || (r.path==='/players/' ? 'Player pages' : r.path)}));
+  }
+  const clean = rows => (rows||[]).filter(r => r.n > 0);
+
+  // ---------- rendering ----------
+  function list(el, rows, total, opts={}){
+    el.textContent = '';
+    rows = rows.slice(0, opts.max || 8);
+    if (!rows.length) { const p = document.createElement('p'); p.className='empty'; p.textContent = opts.empty || 'Nothing in this range yet.'; el.appendChild(p); return; }
+    const max = rows[0].n || 1;
+    for (const r of rows) {
+      const li = document.createElement('li'); li.className = 'row';
+      const bar = document.createElement('span'); bar.className='bar'; bar.style.width = (r.n/max*100).toFixed(1)+'%';
+      const name = document.createElement('span'); name.className='name'; name.textContent = r.name; name.title = r.path || r.name;
+      if (r.path && r.path !== r.name) { const s = document.createElement('small'); s.textContent = r.path; name.appendChild(s); }
+      if (r.kind) { const c = document.createElement('span'); c.className='chip'; c.textContent = r.kind; name.appendChild(c); }
+      const n = document.createElement('span'); n.className='n'; n.textContent = fmt(r.n);
+      const p = document.createElement('span'); p.className='pct'; p.textContent = total ? pct(r.n,total)+'%' : '';
+      li.append(bar, name, n, p); el.appendChild(li);
+    }
+  }
+
+  function series(){
+    if (range === 'd1') return {kind:'hour', pts:(snap.d1.hourly||[]).map((n,i)=>({label: (i%12||12)+(i<12?' am':' pm'), n}))};
+    const days = {d7:7,d30:30,d90:90}[range];
+    const daily = (snap.d90.daily||[]).slice(-days);
+    return {kind:'day', pts: daily.map(d => ({label: new Date(d.day+'T12:00:00Z').toLocaleDateString('en-US',{month:'short',day:'numeric',timeZone:'UTC'}), n:d.n}))};
+  }
+  function niceMax(v){ if (v<=4) return 4; const p = Math.pow(10, Math.floor(Math.log10(v))); for (const m of [1,2,2.5,5,10]) if (m*p >= v) return m*p; return 10*p; }
+
+  function drawChart(){
+    const {kind, pts} = series();
+    const el = $('chart'); el.textContent = '';
+    $('chartTitle').textContent = kind === 'hour' ? 'Visits by hour today (UTC)' : 'Visits per day';
+    if (!pts.length) { const p=document.createElement('p'); p.className='empty'; p.textContent='No visits recorded in this range.'; el.appendChild(p); $('chartPeak').textContent=''; return; }
+    const peak = pts.reduce((a,b)=> b.n>a.n ? b : a, pts[0]);
+    $('chartPeak').textContent = 'Peak ' + fmt(peak.n) + ' · ' + peak.label;
+    const fs = Math.max(12, Math.min(30, 12000 / (el.clientWidth || 1000)));   // axis text stays ~12px on screen
+    const W=1000, H=260, L=Math.round(fs*3.3), R=12, T=12, B=Math.round(fs*2.3), iw=W-L-R, ih=H-T-B;
+    const ymax = niceMax(Math.max(...pts.map(p=>p.n)));
+    const x = i => L + (pts.length===1 ? iw/2 : i*iw/(pts.length-1));
+    const y = v => T + ih - v/ymax*ih;
+    const NS='http://www.w3.org/2000/svg';
+    const svg = document.createElementNS(NS,'svg'); svg.setAttribute('viewBox',`0 0 ${W} ${H}`); svg.setAttribute('role','img');
+    svg.setAttribute('aria-label', `${pts.length} points, peak ${peak.n} on ${peak.label}`);
+    const mk = (tag, attrs) => { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); svg.appendChild(e); return e; };
+    for (let i=0;i<=4;i++){ const v = ymax*i/4, yy=y(v);
+      mk('line',{x1:L,x2:W-R,y1:yy,y2:yy,stroke:'var(--line-soft)','stroke-width':1});
+      const t = mk('text',{x:L-8,y:yy+fs/3,'text-anchor':'end','font-size':fs,fill:'var(--muted)'}); t.textContent = fmt(v); }
+    const step = Math.max(1, Math.ceil(pts.length/((el.clientWidth || 1000) < 560 ? 4 : 7)));
+    pts.forEach((p,i)=>{ if (i%step===0 || i===pts.length-1){ if (i!==pts.length-1 && pts.length-1-i < step*0.75) return;
+      const t = mk('text',{x:x(i),y:H-fs*0.6,'text-anchor': i===0?'start':(i===pts.length-1?'end':'middle'),'font-size':fs,fill:'var(--muted)'}); t.textContent=p.label; } });
+    if (kind === 'hour') {
+      const bw = Math.max(4, iw/pts.length - 4);
+      pts.forEach((p,i)=>{ const cx = L + (i+.5)*iw/pts.length; const h = Math.max(0, T+ih - y(p.n));
+        if (h>0) mk('rect',{x:cx-bw/2,y:y(p.n),width:bw,height:h,rx:Math.min(4,bw/2),fill:'var(--accent)'}); });
+    } else {
+      const line = pts.map((p,i)=>`${i?'L':'M'}${x(i).toFixed(1)},${y(p.n).toFixed(1)}`).join('');
+      mk('path',{d:`${line}L${x(pts.length-1)},${T+ih}L${x(0)},${T+ih}Z`,fill:'var(--accent-weak)',stroke:'none'});
+      mk('path',{d:line,fill:'none',stroke:'var(--accent)','stroke-width':2,'stroke-linejoin':'round','stroke-linecap':'round'});
+      const last = pts.length-1; mk('circle',{cx:x(last),cy:y(pts[last].n),r:4.5,fill:'var(--accent)',stroke:'var(--surface)','stroke-width':2});
+    }
+    const cross = mk('line',{y1:T,y2:T+ih,stroke:'var(--muted)','stroke-width':1,'stroke-dasharray':'3 3',visibility:'hidden'});
+    const dotH = mk('circle',{r:5,fill:'var(--accent)',stroke:'var(--surface)','stroke-width':2,visibility:'hidden'});
+    const hit = mk('rect',{x:L,y:T,width:iw,height:ih,fill:'transparent'});
+    el.appendChild(svg);
+    const tip = document.createElement('div'); tip.className='tip'; tip.hidden = true; el.appendChild(tip);
+    function show(ev){
+      const r = svg.getBoundingClientRect(); const sx = (ev.clientX - r.left) * W / r.width;
+      let i = kind==='hour' ? Math.floor((sx-L)/iw*pts.length) : Math.round((sx-L)/iw*(pts.length-1));
+      i = Math.max(0, Math.min(pts.length-1, i));
+      const cx = kind==='hour' ? L+(i+.5)*iw/pts.length : x(i), cy = y(pts[i].n);
+      cross.setAttribute('x1',cx); cross.setAttribute('x2',cx); cross.setAttribute('visibility','visible');
+      dotH.setAttribute('cx',cx); dotH.setAttribute('cy',cy); dotH.setAttribute('visibility', kind==='hour'?'hidden':'visible');
+      tip.textContent = ''; const b=document.createElement('b'); b.textContent = fmt(pts[i].n); tip.append(b, document.createTextNode(' visits · ' + pts[i].label));
+      tip.style.left = (cx / W * r.width) + 'px'; tip.style.top = (cy / H * r.height) + 'px'; tip.hidden = false;
+    }
+    hit.addEventListener('pointermove', show); hit.addEventListener('pointerdown', show);
+    hit.addEventListener('pointerleave', ()=>{ tip.hidden = true; cross.setAttribute('visibility','hidden'); dotH.setAttribute('visibility','hidden'); });
+  }
+
+  function prevChange(){
+    const days = {d1:1,d7:7,d30:30}[range]; if (!days) return null;
+    const d = (snap.d90.daily||[]).map(x=>x.n); if (d.length < days*2) return null;
+    const cur = d.slice(-days).reduce((a,b)=>a+b,0), prev = d.slice(-days*2,-days).reduce((a,b)=>a+b,0);
+    if (!prev) return null; return Math.round((cur-prev)/prev*100);
+  }
+
+  function render(){
+    if (!snap) return;
+    const R = snap[range]; if (!R) return;
+    const total = R.total || 0;
+    const days = {d1:1,d7:7,d30:30,d90:90}[range];
+    const refs = mergeRefs(R.toprefs);   // shares below are of all visits, like GoatCounter's own dashboard
+    const sys = clean(R.systems), sysTotal = sys.reduce((a,b)=>a+b.n,0);
+    const mobile = sys.filter(s=>/ios|android|ipados/i.test(s.name)).reduce((a,b)=>a+b.n,0);
+    const named = refs.filter(r=>r.name!=='No referrer');
+
+    $('kVisits').textContent = fmt(total);
+    const ch = prevChange(); const kv = $('kVisitsS'); kv.textContent=''; kv.className='s';
+    if (ch === null) kv.textContent = range==='d90' ? 'Last 90 days' : 'No earlier period to compare';
+    else { kv.textContent = (ch>=0?'▲ ':'▼ ') + Math.abs(ch) + '% vs previous ' + (days===1?'day':days+' days'); kv.classList.add(ch>=0?'up':'down'); }
+    $('kAvg').textContent = range==='d1' ? fmt(total) : fmt(Math.round(total/days));
+    $('kAvgS').textContent = range==='d1' ? 'So far today (UTC)' : 'Average over ' + days + ' days';
+    $('kMobile').textContent = sysTotal ? pct(mobile, sysTotal)+'%' : '–';
+    $('kMobileS').textContent = sysTotal ? 'iPhone and Android' : 'No device data yet';
+    $('kSrc').textContent = named[0] ? named[0].name : '–';
+    $('kSrcS').textContent = named[0] ? fmt(named[0].n)+' visits · '+named[0].kind : 'No referrers in this range';
+
+    drawChart();
+
+    list($('lPages'), mergePages(R.pages), total);
+    list($('lRefs'), refs, total);
+    list($('lCamp'), clean(R.campaigns), total, {empty:'No named campaigns yet. Add &utm_campaign=… (for example week6-promo) to the links you post, next to utm_source, to compare promotions here.'});
+    list($('lLoc'), clean(R.locations), total);
+    list($('lSys'), sys, sysTotal);
+    list($('lBrw'), clean(R.browsers), total);
+    list($('lSize'), clean(R.sizes), total);
+
+    // plain-language suggestions computed from this range
+    const acts = [];
+    const none = refs.find(r=>r.name==='No referrer'); const noneP = none ? pct(none.n, total) : 0;
+    if (noneP >= 35) acts.push(['Tag links', `${noneP}% of visits arrive with no referrer. In-app browsers and texts hide where people came from. Add ?utm_source=snapchat, ?utm_source=instagram and so on to every link you post, bio links included, so each visit is credited to its channel.`]);
+    const social = refs.filter(r=>r.kind==='Social'), socialN = social.reduce((a,b)=>a+b.n,0);
+    if (social.length) acts.push(['Social', `${social[0].name} is your biggest social source (${fmt(social[0].n)} visits). Social overall brought ${fmt(socialN)} visits, ${pct(socialN, total)}% of all visits.`]);
+    const searchN = refs.filter(r=>r.kind==='Search').reduce((a,b)=>a+b.n,0);
+    if (total) acts.push(['Search', searchN ? `Search engines sent ${fmt(searchN)} visits (${pct(searchN, total)}% of all visits). The player pages and sport boards are what can rank, so keep their titles and descriptions specific.` : 'No search traffic in this range yet. Player pages and the sitemap are what search engines will index first.']);
+    if (sysTotal && pct(mobile, sysTotal) >= 60) acts.push(['Mobile', `${pct(mobile, sysTotal)}% of visitors are on a phone, mostly iPhone. Check new features on a phone first and keep tables usable at narrow widths.`]);
+    const pages = mergePages(R.pages); const home = pages.find(p=>p.path==='/'); const boards = pages.filter(p=>/^\/(nfl|nba|nhl|mlb)\.html$/.test(p.path)).reduce((a,b)=>a+b.n,0);
+    if (home && home.n > 0) acts.push(['Funnel', `For every 100 home page visits there were ${Math.round(boards/home.n*100)} visits to a sport board. A low number means people aren't clicking through from the home page.`]);
+    const ul = $('acts'); ul.textContent='';
+    acts.slice(0,5).forEach(([tag, txt], i) => { const li=document.createElement('li'); const c=document.createElement('span'); c.className='chip'+(i===0&&tag==='Tag links'?' do':''); c.textContent=tag; const p=document.createElement('p'); p.textContent=txt; li.append(c,p); ul.appendChild(li); });
+    if (!acts.length) { const p=document.createElement('p'); p.className='empty'; p.textContent='Not enough traffic in this range for suggestions.'; ul.appendChild(p); }
+  }
+
+  // generated_at only moves when the numbers change (team_stats.py skips quiet passes)
+  function freshness(){
+    if (!snap) return;
+    const h = (Date.now() - new Date(snap.generated_at)) / 36e5;
+    const ago = h < 1 ? Math.max(1,Math.round(h*60))+' min ago' : h < 48 ? Math.round(h)+' h ago' : Math.round(h/24)+' days ago';
+    $('freshText').textContent = 'Last new visit counted ' + ago + (h > 12 ? ' · check the update job' : '');
+    $('fresh').classList.toggle('stale', h > 12);
+  }
+
+  function setRange(r){
+    range = r; try { localStorage.setItem('psa-range', r); } catch(e){}
+    document.querySelectorAll('#tabs button').forEach(b => b.setAttribute('aria-selected', String(b.dataset.r===r)));
+    render();
+  }
+  $('tabs').addEventListener('click', e => { const b = e.target.closest('button[data-r]'); if (b) setRange(b.dataset.r); });
+  setInterval(freshness, 60000);
+
+  // stay unlocked across reloads in this tab only; closing the tab locks it again
+  const saved = store.get('psa-pw');
+  if (saved) unlock(saved, true); else $('pw').focus();
+})();
+</script>
+</body>
+</html>

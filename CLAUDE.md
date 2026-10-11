@@ -11,6 +11,9 @@ README.md has the full feature tour; this file is the working rules.
   JSON files and bake them into its page. Standard library only — don't add packages.
 - `build_today.py` → `today.json` (home feed), runs `botd.py` → `botd.json` (Bet of the Day).
 - `build_players.py` → `players/`, `health.py` → `health.json`, `post_daily.py` (Discord/Telegram).
+- `team_stats.py` → `team/stats.enc`: GoatCounter visitor totals, encrypted with the
+  `TEAM_DASH_PASSWORD` secret, for the password-protected team dashboard `team/index.html`
+  (hand-written, noindex, not in the sitemap). Totals only — no IPs or per-visitor data.
 - Shared helpers: `news.py`, `holds.py`, `kalshi.py`, `depth.py`.
 - `update_pass.sh` is one full pass; `.github/workflows/update.yml` runs it twice per scheduled run.
 - `app.js` / `app.css`: shared look and behavior for every page.
@@ -23,7 +26,7 @@ The bot overwrites these on every pass, so hand edits are lost and cause merge c
   `mlb.html` ← `mlb_template.html`. Edit the template (and the builder), never the output page.
 - `data.json`, `slate.json`, `picks.json`, `weekly.json`, `*_picks.json`, `*_stats.json`,
   `nba.json`, `nhl.json`, `mlb.json`, `today.json`, `botd.json`, `health.json`, `top_cache.json`,
-  `sitemap.xml`, `robots.txt`, `players/`.
+  `sitemap.xml`, `robots.txt`, `players/`, `team/stats.enc`.
 
 `index.html` (home page), `methodology.html`, and the legal pages are hand-written and safe to edit.
 
