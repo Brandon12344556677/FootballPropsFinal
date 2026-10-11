@@ -99,6 +99,30 @@ footer{color:var(--muted);font-size:13px}
 footer p{margin:0;max-width:80ch}
 @media (prefers-reduced-motion:no-preference){ .row .bar{transition:width .3s ease} }
 
+/* agents */
+.health.spike{border-color:rgba(34,208,127,.5)} .health.spike .hdot{background:var(--accent)}
+.agents{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px}
+@media (max-width:900px){ .agents{grid-template-columns:1fr} }
+.ag{min-width:0}
+.ag h3{margin:0 0 6px;font-size:15px;color:var(--fg)}
+.agp{margin:0;color:var(--soft);font-size:14px}
+.aglist{list-style:none;margin:10px 0 0;padding:0;display:grid;gap:8px;font-size:14px}
+.aglist li{min-width:0;overflow-wrap:anywhere}
+.aglist small{color:var(--muted)}
+.aglist .chip{margin-left:4px;font-size:11px;padding:1px 6px}
+.chip.bad{color:var(--down);border-color:rgba(235,111,125,.5)}
+.edwrap{overflow-x:auto;margin-top:12px}
+.edges{width:100%;border-collapse:collapse;font-size:14px;min-width:640px}
+.edges th{text-align:left;font-weight:600;color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.05em;padding:6px 8px;border-bottom:1px solid var(--line)}
+.edges td{padding:8px;border-bottom:1px solid var(--line);vertical-align:top}
+.edges .n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.edges small{color:var(--muted)}
+.posts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-top:12px}
+@media (max-width:760px){ .posts{grid-template-columns:1fr} }
+.post{min-width:0;display:grid;gap:8px}
+.post-h{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.post textarea{width:100%;box-sizing:border-box;background:var(--surface-2);color:var(--fg);border:1px solid var(--line);border-radius:8px;padding:10px;font:inherit;font-size:14px;resize:vertical}
+
 /* site health */
 .health{display:flex;gap:12px;align-items:flex-start;padding:12px 16px;border-radius:12px;border:1px solid var(--line);background:var(--surface)}
 .health .hdot{width:10px;height:10px;border-radius:50%;margin-top:6px;flex:none;background:var(--accent)}
@@ -176,6 +200,11 @@ footer p{margin:0;max-width:80ch}
     <div class="hbody"><b id="hTitle"></b> <span id="hSub"></span><ul id="hList"></ul></div>
   </section>
 
+  <section class="health spike" id="spikes" aria-live="polite" hidden>
+    <span class="hdot" aria-hidden="true"></span>
+    <div class="hbody"><b id="spTitle"></b> <span id="spSub"></span><ul id="spList"></ul></div>
+  </section>
+
   <div class="tabs" role="tablist" aria-label="Date range" id="tabs">
     <button role="tab" id="tab-d1" data-r="d1" aria-selected="false">Today</button>
     <button role="tab" id="tab-d7" data-r="d7" aria-selected="false">7 days</button>
@@ -198,6 +227,27 @@ footer p{margin:0;max-width:80ch}
   <section class="panel">
     <div class="panel-h"><h2>What to act on</h2><span class="label">From this range</span></div>
     <ul class="acts" id="acts"></ul>
+  </section>
+
+  <section class="panel">
+    <div class="panel-h"><h2>Today's agent report</h2><span class="label" id="agUpd"></span></div>
+    <div class="agents">
+      <div class="ag"><h3>Promo day</h3><p id="agPromo" class="agp"></p></div>
+      <div class="ag"><h3>Double-check before posting</h3><p class="hint">Featured picks whose injury or lineup news says the player might not play.</p><ul class="aglist" id="agFlags"></ul></div>
+      <div class="ag"><h3>Moving fast</h3><p class="hint">Featured props whose price moved 10¢ or more in the last hour, often injury news.</p><ul class="aglist" id="agFast"></ul></div>
+    </div>
+  </section>
+
+  <section class="panel" id="edPanel" hidden>
+    <div class="panel-h"><h2>Edge tracker</h2><span class="label" id="edUpd">Rebuilt daily</span></div>
+    <p class="hint">Every recorded pick with a market price, graded as a flat $1 bet at that price. The likely range is where the true return probably sits; treat an edge as real only once the whole range is above 0%.</p>
+    <div class="edwrap"><table class="edges"><thead><tr><th>Strategy</th><th class="n">Picks</th><th class="n">Hit</th><th class="n">Return</th><th class="n">Likely range</th><th class="n">Last 7 days</th><th>Verdict</th></tr></thead><tbody id="edRows"></tbody></table></div>
+  </section>
+
+  <section class="panel">
+    <div class="panel-h"><h2>Social posts</h2><span class="label">Copy, paste, post</span></div>
+    <p class="hint">Written from today's picks and the latest results, each with a tracked link for its app, so its visits show up under Tracked links.</p>
+    <div class="posts" id="posts"></div>
   </section>
 
   <div class="grid">
@@ -269,6 +319,7 @@ footer p{margin:0;max-width:80ch}
   'use strict';
   const ITERATIONS = 600000;   // must match ITERATIONS in team_stats.py
   const $ = id => document.getElementById(id);
+  const esc = s => String(s==null? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const fmt = n => (n||0).toLocaleString('en-US');
   const pct = (a,b) => b ? Math.round(a/b*100) : 0;
   const store = {
@@ -305,7 +356,7 @@ footer p{margin:0;max-width:80ch}
       snap = await load(pw);
       password = pw; store.set('psa-pw', pw);
       $('lock').hidden = true; $('app').hidden = false;
-      setRange(range); freshness(); loadHealth();
+      setRange(range); freshness(); loadHealth(); renderSpikes(); loadAgents(); loadEdges(pw);
       clearInterval(timer);
       timer = setInterval(refresh, 5*60*1000);
     } catch(e){
@@ -319,7 +370,7 @@ footer p{margin:0;max-width:80ch}
   }
   async function refresh(){
     if (!password) return;
-    try { snap = await load(password); freshness(); render(); loadHealth(); } catch(e){ if (e.code === 'wrong') lock(); }
+    try { snap = await load(password); freshness(); render(); loadHealth(); renderSpikes(); loadAgents(); loadEdges(password); } catch(e){ if (e.code === 'wrong') lock(); }
   }
   function lock(){
     password = null; snap = null; store.del('psa-pw'); clearInterval(timer);
@@ -633,6 +684,99 @@ footer p{margin:0;max-width:80ch}
     $('spCopied').textContent = ok ? 'Copied. Paste it into an email or pitch deck.' : 'Your browser blocked copying. The text is selected below: press Ctrl+C, or long-press on a phone.';
   });
 
+
+  // ---------- agents: traffic spikes, today's report, edge tracker, social posts ----------
+  const SP = {nfl:'🏈 NFL', nba:'🏀 NBA', nhl:'🏒 NHL', mlb:'⚾ MLB'};
+  const etDay = () => new Date().toLocaleDateString('en-CA', {timeZone:'America/New_York'});
+  const cents = p => Math.round(p*100)+'¢';
+  const betTxt = p => `${p.player} ${p.side} ${p.line} ${p.statText}`;
+  function li(html){ const l=document.createElement('li'); l.innerHTML=html; return l; }
+  // team_stats.spikes(): a source, page or day far above (or below) its usual
+  function renderSpikes(){
+    const el=$('spikes'), s=(snap && snap.spikes)||[];
+    el.hidden=!s.length; if(!s.length) return;
+    const up=s.some(x=>x.kind==='up');
+    el.className='health'+(up? ' spike' : ' warn');
+    $('spTitle').textContent= up? 'Traffic spike.' : 'Traffic drop.';
+    $('spSub').textContent= up? 'Something is working right now. Post again while it is fresh.' : 'Fewer visits than usual.';
+    const ul=$('spList'); ul.textContent='';
+    s.forEach(x=>{ const l=document.createElement('li'); l.textContent=`${x.what}: ${fmt(x.today)} (usually about ${fmt(Math.round(x.usual))} a day)`; ul.appendChild(l); });
+  }
+  async function loadAgents(){
+    const get=u=>fetch(u+'?t='+Date.now(),{cache:'no-store'}).then(r=>r.ok? r.json() : null).catch(()=>null);
+    const [t, b]=await Promise.all([get('../today.json'), get('../botd.json')]);
+    if(!t) return;
+    const up=p=>Date.parse(p.start)>Date.now();
+    // promo day (build_today.promo_day)
+    const pr=t.promo||{}, by=Object.entries(pr.by||{}).map(([s,n])=>`${(SP[s]||s).split(' ')[1]} ${n}`).join(', ');
+    const big=pr.avg && pr.n>=1.4*pr.avg, quiet=pr.avg && pr.n<=0.6*pr.avg;
+    $('agPromo').innerHTML= pr.n==null? 'No data yet.' :
+      `<b class="${big?'up':quiet?'down':''}">${big?'Big day: ':quiet?'Quiet day: ':''}${pr.n} Value spot${pr.n===1?'':'s'} today</b>${by? ' ('+esc(by)+')' : ''}. `+
+      (pr.avg? `A usual day has ${pr.avg} (last ${pr.days} days with picks)${big? '. Push hard on social today.' : quiet? '. Save the big push for a busier day.' : '.'}` : '');
+    // news flags (build_today.news_flags)
+    const fl=(t.flags||[]).filter(up), ul=$('agFlags'); ul.textContent='';
+    fl.forEach(f=>ul.appendChild(li(`<b>${esc(f.player)}</b> ${esc(f.side)} ${esc(f.line)} ${esc(f.statText)} <span class="chip">${f.lists.includes('V')?'Value':'Top 25'}</span><br><small>${esc(SP[f.sport]||'')} · ${esc(f.flag)}</small>`)));
+    if(!fl.length) ul.appendChild(li('<span class="empty">Nothing flagged. No featured player is on an injury report or missing from a lineup.</span>'));
+    // fast moves (build_today.fast_moves)
+    const fs=(t.fast||[]).filter(up), uf=$('agFast'); uf.textContent='';
+    fs.forEach(f=>uf.appendChild(li(`<b>${esc(f.player)}</b> ${esc(f.side)} ${esc(f.line)} ${esc(f.statText)}<br><small>${esc(SP[f.sport]||'')} · ${cents(f.was)} → ${cents(f.price)} in the last hour</small>`)));
+    if(!fs.length) uf.appendChild(li('<span class="empty">No featured price has moved 10¢ in the last hour.</span>'));
+    $('agUpd').textContent='Updated '+new Date(t.gen).toLocaleTimeString('en-US',{hour:'numeric', minute:'2-digit'});
+    renderPosts(t, b);
+  }
+  // ---------- social posts: captions from today.json and botd.json, each with its app's tracked link ----------
+  const link = src => `propstreaklab.com/?utm_source=${src}&utm_campaign=${src}-daily`;
+  function renderPosts(t, b){
+    const today=etDay(), picks=(t.picks||[]).filter(p=>Date.parse(p.start)>Date.now());
+    const vals=picks.filter(p=>p.kind==='value'), top=vals[0]||picks[0];
+    const bd=((b&&b.days)||[]).find(d=>d.date===today), lock=bd&&bd.lock, val=bd&&bd.value;
+    const recent=new Date(Date.now()-3*864e5).toISOString().slice(0,10), L=t.last||{};
+    const res=['nfl','nba','nhl','mlb'].filter(s=>L[s] && L[s].T && L[s].T.n>=5 && L[s].day>=recent);
+    const posts=[];
+    if(top) posts.push({title:'Story caption (Snapchat / Instagram)', text:
+      `Today's top pick 👇\n${SP[top.sport]} ${betTxt(top)}\nModel: ${Math.round(top.prob*100)}% · Price: ${cents(top.price)}`+
+      (lock? `\n🔒 Lock of the day: ${betTxt(lock)}` : '')+`\n\nFree on ${link('snapchat')}`});
+    if(vals.length){
+      const head="Today's best value spots 🧵\n\n", tail=`\n\nModel's chance vs the market price. Every pick graded in public:\n${link('x')}`;
+      let body='';
+      for(const p of vals){ const line=`${SP[p.sport].split(' ')[0]} ${betTxt(p)}: ${Math.round(p.prob*100)}% at ${cents(p.price)}\n`; if((head+body+line+tail).length>280) break; body+=line; }
+      if(body) posts.push({title:'X / Threads post', text:head+body.trim()+tail});
+    }
+    if(res.length){
+      const lines=res.map(s=>{ const r=L[s]; return `${SP[s]}: Top 25 ${r.T.hit}/${r.T.n} (${Math.round(100*r.T.hit/r.T.n)}%)`+
+        (r.V&&r.V.n? ` · Value ${r.V.hit}/${r.V.n} ${r.V.units>=0?'+':'−'}${Math.abs(r.V.units).toFixed(1)}u` : ''); });
+      posts.push({title:'Results post (any app)', text:`Latest results ✅\n\n${lines.join('\n')}\n\nEvery pick is recorded before the game, wins and losses.\n${link('instagram')}`});
+    }
+    if(lock||val) posts.push({title:'Bet of the Day', text:
+      `Bet of the Day 🎯\n`+(lock? `🔒 Lock: ${SP[lock.sport]} ${betTxt(lock)} (${Math.round(lock.prob*100)}%)\n` : '')+
+      (val? `💰 Value: ${SP[val.sport]} ${betTxt(val)} at ${cents(val.price)}\n` : '')+`\nResearch, not betting advice. ${link('tiktok')}`});
+    const box=$('posts'); box.textContent='';
+    if(!posts.length){ box.innerHTML='<p class="empty">No upcoming picks or recent results to write about right now.</p>'; return; }
+    posts.forEach(p=>{
+      const d=document.createElement('div'); d.className='post';
+      d.innerHTML=`<div class="post-h"><b>${esc(p.title)}</b><button class="btn ghost-btn" type="button">Copy</button></div><textarea readonly rows="${Math.min(9, p.text.split('\n').length+1)}"></textarea><span class="copied" role="status"></span>`;
+      const ta=d.querySelector('textarea'); ta.value=p.text;
+      d.querySelector('button').onclick=async()=>{ const m=d.querySelector('.copied');
+        try { await navigator.clipboard.writeText(p.text); m.textContent='Copied'; } catch(e){ ta.select(); m.textContent='Selected: press Copy on your keyboard'; }
+        setTimeout(()=>m.textContent='', 2500); };
+      box.appendChild(d);
+    });
+  }
+  // ---------- edge tracker: team/edges.enc (edge_report.py), same password as the stats ----------
+  async function loadEdges(pw){
+    try {
+      const r=await fetch('edges.enc?t='+Date.now(),{cache:'no-store'}); if(!r.ok) return;
+      const e=await decrypt(await r.text(), pw);
+      const p=v=> v==null? '–' : (v>=0?'+':'−')+Math.abs(v*100).toFixed(1)+'%';
+      const cls=v=> v==null? '' : v>0? 'up' : v<0? 'down' : '';
+      $('edRows').innerHTML=(e.strategies||[]).map(s=>`<tr><td>${esc(s.label)}</td><td class="n">${fmt(s.n)}</td><td class="n">${Math.round(s.hit*100)}%</td>`+
+        `<td class="n ${cls(s.roi)}"><b>${p(s.roi)}</b></td><td class="n">${p(s.lo)} to ${p(s.hi)}</td><td class="n ${cls(s.roi7)}">${p(s.roi7)}${s.n7? ' <small>('+s.n7+')</small>' : ''}</td>`+
+        `<td><span class="chip ${s.verdict==='Edge holding'?'do':s.verdict==='Losing'?'bad':''}">${esc(s.verdict)}</span></td></tr>`).join('');
+      $('edUpd').textContent=`${fmt(e.picks)} graded picks · ${new Date(e.day+'T12:00:00Z').toLocaleDateString('en-US',{month:'short', day:'numeric', timeZone:'UTC'})}`;
+      $('edPanel').hidden=false;
+    } catch(err){}
+  }
+
   // ---------- results image: today.json's latest graded day per sport, drawn on a 1080x1920 canvas ----------
   let imgBlob=null;
   async function makeImage(){
@@ -736,26 +880,29 @@ footer p{margin:0;max-width:80ch}
     const get=u=>fetch(u+'?t='+Date.now(),{cache:'no-store'}).then(r=>r.ok? r.json() : null).catch(()=>null);
     // The site watchdog (watchdog.py) keeps one open GitHub issue while it sees a problem on the live site.
     const dog=fetch('https://api.github.com/repos/Brandon12344556677/FootballPropsFinal/issues?state=open&per_page=50',{cache:'no-store'})
-      .then(r=>r.ok? r.json() : null).then(a=>a? (a.find(i=>(i.body||'').includes('<!-- watchdog -->') && !i.pull_request) || false) : null).catch(()=>null);
-    const [h, t, w]=await Promise.all([get('../health.json'), get('../today.json'), dog]);
+      .then(r=>r.ok? r.json() : null).catch(()=>null);
+    const [h, t, issues]=await Promise.all([get('../health.json'), get('../today.json'), dog]);
+    const find=m=> issues? (issues.find(i=>(i.body||'').includes(m) && !i.pull_request) || false) : null;
+    const w=find('<!-- watchdog -->'), sc=find('<!-- site-checks -->');   // sc: the daily search / sign-up check
     const el=$('health'); if(!h && !t) return;
     const age=t && isFinite(Date.parse(t.gen))? Math.round((Date.now()-Date.parse(t.gen))/60000) : null;
     const probs=Object.entries((h && h.problems)||{});
-    const level= (age!=null && age>90) || w? 'bad' : (probs.length || (age!=null && age>40))? 'warn' : 'ok';
+    const level= (age!=null && age>90) || w? 'bad' : (probs.length || sc || (age!=null && age>40))? 'warn' : 'ok';
     el.className='health'+(level==='ok'? '' : ' '+level);
     $('hTitle').textContent= age!=null && age>90? 'The site has stopped updating.' : w? 'The watchdog found a problem on the live site.' :
-      level==='warn'? 'Something needs a look.' : 'Everything is running.';
+      sc && !probs.length? 'The daily check found a search or sign-up link problem.' : level==='warn'? 'Something needs a look.' : 'Everything is running.';
     const ago= age==null? 'unknown' : age<60? age+' min ago' : Math.round(age/60)+' h ago';
     $('hSub').textContent=`Site data last updated ${ago} (updates about every 10 minutes).`+
       (age!=null && age>90? ' Check the "Update NFL data" runs on GitHub Actions.' : !probs.length && !w? ' All data sources are working.' : '')+
       (w===false? ' Watchdog: all live checks pass.' : '');
     const ul=$('hList'); ul.textContent='';
-    if(w){
-      (w.body||'').split('\n').filter(l=>l.startsWith('- ')).forEach(l=>{ const li=document.createElement('li'); li.textContent=l.slice(2); ul.appendChild(li); });
+    [[w, 'Open the watchdog issue on GitHub'], [sc, 'Open the site-checks issue on GitHub']].forEach(([iss, label])=>{
+      if(!iss) return;
+      (iss.body||'').split('\n').filter(l=>l.startsWith('- ')).forEach(l=>{ const li=document.createElement('li'); li.textContent=l.slice(2); ul.appendChild(li); });
       const li=document.createElement('li'), a=document.createElement('a');
-      a.href=w.html_url; a.target='_blank'; a.rel='noopener'; a.textContent='Open the watchdog issue on GitHub';
+      a.href=iss.html_url; a.target='_blank'; a.rel='noopener'; a.textContent=label;
       li.appendChild(a); ul.appendChild(li);
-    }
+    });
     probs.forEach(([key, p])=>{ const li=document.createElement('li');
       const since=p.first? new Date(p.first).toLocaleString('en-US',{month:'short', day:'numeric', hour:'numeric', minute:'2-digit', timeZone:'America/New_York'})+' ET' : '';
       li.textContent=`${p.msg||key} (${p.runs||1} update${p.runs===1?'':'s'} in a row${since? ', since '+since : ''}${p.alerted? ', alert email sent' : ''})`;

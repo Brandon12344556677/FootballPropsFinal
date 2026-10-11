@@ -24,6 +24,13 @@ import json
 import time
 import urllib.request
 
+# The price guard (guard()): a pending pick's price that jumps JUMP or more between two runs is
+# held at the old price until the next run sees about the same new price (within CONFIRM); a
+# price under FLOOR is never taken. A one-off spike like 52c -> 2c minutes before the game (a
+# stale or pulled book) would otherwise be what the pick is graded at.
+JUMP = 0.30
+CONFIRM = 0.05
+FLOOR = 0.05
 MIN_USD = 25.0           # dollars offered to buy the side...
 WITHIN = 0.02            # ...at the price shown or up to 2c worse
 PMUS_BOOK = "https://gateway.polymarket.us/v1/markets/{slug}/book"
@@ -113,6 +120,7 @@ def choose(p):
     """price / vn / th from the pick's two prices for its side (pp Polymarket, kp Kalshi) and the
     dollars offered within 2c of each (pd, kd): the cheaper exchange with MIN_USD+ offered;
     when neither has that much, the cheaper one, with th = 1 (thin: no Top 25 or Value)."""
+    prev = (p.get("price"), p.get("vn"), p.get("th"))
     have = [(px, d, vn) for px, d, vn in ((p.get("pp"), p.get("pd"), "P"), (p.get("kp"), p.get("kd"), "K"))
             if px is not None]
     ok = [o for o in have if deep(o[1])]
@@ -122,6 +130,32 @@ def choose(p):
         return
     px, _, vn = min(pool, key=lambda o: (o[0], o[2] != "P"))      # a tie stays on Polymarket
     p["price"], p["vn"], p["th"] = px, vn, (None if ok else 1)
+    guard(p, prev)
+
+
+def guard(p, prev):
+    """The price guard (see JUMP): p carries its new price/vn/th; prev is (price, vn, th) from the
+    last run. A jump of JUMP or more is held at prev until a second run confirms it (p["pj"]
+    remembers the unconfirmed price); a price under FLOOR is dropped (or held at prev). Prices
+    may be fractions or the NFL's cents."""
+    new, old = p.get("price"), prev[0]
+    if new is None:
+        p.pop("pj", None)
+        return
+    unit = 100.0 if max(new, old or 0) > 1 else 1.0
+    if new < FLOOR * unit:
+        p["price"], p["vn"], p["th"] = prev if old is not None and old >= FLOOR * unit else (None, None, None)
+        p.pop("pj", None)
+        return
+    if old is None or abs(new - old) < JUMP * unit:
+        p.pop("pj", None)
+        return
+    pj = p.get("pj")
+    if pj is not None and not p.get("_pjnew") and abs(new - pj) <= CONFIRM * unit:
+        p.pop("pj", None)            # two runs in a row agree: a real move
+        return
+    p["pj"], p["_pjnew"] = new, True  # _pjnew (not saved): a second choose() this same run can't confirm it
+    p["price"], p["vn"], p["th"] = prev
 
 
 def verify(picks, wanted, workers=4):

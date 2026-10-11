@@ -60,6 +60,7 @@ class NewsFlagTests(unittest.TestCase):
         self.assertEqual(botd.news_flag("mlb", {"lu": 0}), "not in the posted lineup")
         self.assertIsNone(botd.news_flag("mlb", {"lu": 3}))
         self.assertIsNone(botd.news_flag("nhl", None))
+        self.assertIsNone(botd.news_flag("nfl", {"st": "Active"}))    # on ESPN's report, but cleared
         wr = {"inj": ["", "Hamstring", "LP", 4]}
         self.assertEqual(botd.news_flag("nfl", {}, wr, 4), "practice: LP")
         self.assertIsNone(botd.news_flag("nfl", {}, wr, 5))                        # last week's report
