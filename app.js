@@ -2,7 +2,8 @@
    team colors, the live ticker (with countdowns), chance-ring animation, loading
    shimmer and the hover spotlight on pick cards. Pages call PS.teamVars(),
    PS.ticker(items) and PS.skeleton(n); everything else runs by itself. Pairs with
-   app.css. Its only network call is the anonymous time-on-page count to GoatCounter (bottom). */
+   app.css. Its only network calls are anonymous counts to GoatCounter: time on page and
+   clicks on links that leave the site (bottom). */
 window.PS = (function(){
   // [primary, secondary] per team, keyed by each dataset's own team codes.
   const TEAMS = {
@@ -506,4 +507,31 @@ window.PS = (function(){
     else if (!sent) since = Date.now();
   });
   addEventListener('pagehide', send);
+})();
+
+// ---- outbound clicks: one anonymous GoatCounter event per click on a link that leaves the site,
+// e.g. "click/polymarket-signup/nfl" (what was clicked, then which page). No ID or cookie.
+// team_stats.py reads these for the team dashboard and keeps them out of the visit counts.
+(function(){
+  const PAGE = (location.pathname.match(/\/(nfl|nba|nhl|mlb)\.html$/) || [])[1] || 'home';
+  function kind(u){
+    const h = u.hostname.replace(/^www\./,''), p = u.pathname;
+    if (/(^|\.)polymarket\.(us|com)$/.test(h)) return /^\/(join|squad)\b/.test(p) ? 'polymarket-signup' : 'polymarket-market';
+    if (/(^|\.)kalshi\.com$/.test(h)) return /^\/sign-?up/.test(p) ? 'kalshi-signup' : 'kalshi-market';
+    if (/(^|\.)instagram\.com$/.test(h)) return 'instagram-profile';
+    if (/(^|\.)tiktok\.com$/.test(h)) return 'tiktok-profile';
+    if (/^(x|twitter)\.com$/.test(h)) return 'x-profile';
+    if (/(^|\.)ncpgambling\.org$/.test(h)) return 'gambling-help';
+    return 'other-site';
+  }
+  function onClick(e){
+    const a = e.target && e.target.closest && e.target.closest('a[href]'); if (!a) return;
+    let u; try { u = new URL(a.href, location.href); } catch(_) { return; }
+    if (!/^https?:$/.test(u.protocol) || u.hostname === location.hostname) return;
+    const gc = window.goatcounter; if (!gc || typeof gc.count !== 'function') return;
+    const k = kind(u);
+    gc.count({path: 'click/' + k + '/' + PAGE, title: 'Clicked ' + k + ' on ' + PAGE, event: true});
+  }
+  document.addEventListener('click', onClick, true);
+  document.addEventListener('auxclick', e => { if (e.button === 1) onClick(e); }, true);   // middle-click: new tab
 })();

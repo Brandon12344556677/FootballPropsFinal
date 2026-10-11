@@ -58,6 +58,18 @@ def pick_link(p):
     return f"{SITE}/{p['sport']}.html#player/{quote(str(p['pid']), safe='')}/{p['stat']}/{p['line']}/{p['side']}/{slug(p['player'])}"
 
 
+def tag(url, source):
+    """Our own links get campaign tags, so the team dashboard credits each visit to its channel
+    (utm_source) and to this post (utm_campaign). The tags go before the #prop part."""
+    if not url.startswith(SITE):
+        return url
+    base, _, frag = url.partition("#")
+    if base == SITE:
+        base += "/"
+    base += ("&" if "?" in base else "?") + f"utm_source={source}&utm_campaign=daily-post"
+    return base + ("#" + frag if frag else "")
+
+
 def parse_utc(s):
     try:
         t = datetime.datetime.fromisoformat(str(s).replace("Z", "+00:00"))
@@ -134,8 +146,8 @@ def messages(picks, is_value, results, today):
         tail = f"model {round(p['prob'] * 100)}% · fair {round(fair * 100)}% · {round(p['price'] * 100)}¢ on {venue}"
         tail += f" · {when(p['start'], today)}"
         url = pick_link(p)
-        d.append(f"{SPORT[p['sport']]} [**{bet}**](<{url}>) — {tail}")
-        t.append(f"{SPORT[p['sport']]} <a href=\"{html.escape(url)}\"><b>{html.escape(bet)}</b></a> — {html.escape(tail)}")
+        d.append(f"{SPORT[p['sport']]} [**{bet}**](<{tag(url, 'discord')}>) — {tail}")
+        t.append(f"{SPORT[p['sport']]} <a href=\"{html.escape(tag(url, 'telegram'))}\"><b>{html.escape(bet)}</b></a> — {html.escape(tail)}")
     if not picks:
         d.append("No value spots on the board yet today — they post as the markets open.")
         t.append("No value spots on the board yet today — they post as the markets open.")
@@ -146,12 +158,12 @@ def messages(picks, is_value, results, today):
         t.append("")
         t.append("📊 <b>Yesterday's Value spots:</b> " + html.escape(" · ".join(parts)))
     d.append("")
-    d.append(f"Every pick is recorded before the game and graded in public → <{SITE}>")
+    d.append(f"Every pick is recorded before the game and graded in public → <{tag(SITE, 'discord')}>")
     d.append(f"🎁 $25 free on Polymarket with code **PROPSTREAKLAB** → <{REFERRAL}>")
     d.append(f"🎁 $25 free on Kalshi → <{REFERRAL_KALSHI}>")
     d.append("-# Research, not betting advice. 18+.")
     t.append("")
-    t.append(f"Every pick is recorded before the game and graded in public → {SITE}")
+    t.append(f"Every pick is recorded before the game and graded in public → {html.escape(tag(SITE, 'telegram'))}")
     t.append(f"🎁 $25 free on Polymarket with code <b>PROPSTREAKLAB</b> → {REFERRAL}")
     t.append(f"🎁 $25 free on Kalshi → {html.escape(REFERRAL_KALSHI)}")
     t.append("<i>Research, not betting advice. 18+.</i>")

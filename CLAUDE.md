@@ -14,6 +14,8 @@ README.md has the full feature tour; this file is the working rules.
 - `team_stats.py` → `team/stats.enc`: GoatCounter visitor totals, encrypted with the
   `TEAM_DASH_PASSWORD` secret, for the password-protected team dashboard `team/index.html`
   (hand-written, noindex, not in the sitemap). Totals only — no IPs or per-visitor data.
+  `app.js` feeds it two anonymous GoatCounter events, `time/<range>` and `click/<what>/<page>`;
+  their labels are mirrored in `team_stats.py` (TIME_RANGES, CLICK_RE) and `team/index.html`.
 - Shared helpers: `news.py`, `holds.py`, `kalshi.py`, `depth.py`.
 - `update_pass.sh` is one full pass; `.github/workflows/update.yml` runs it twice per scheduled run.
 - `app.js` / `app.css`: shared look and behavior for every page.
