@@ -2,7 +2,7 @@
    team colors, the live ticker (with countdowns), chance-ring animation, loading
    shimmer and the hover spotlight on pick cards. Pages call PS.teamVars(),
    PS.ticker(items) and PS.skeleton(n); everything else runs by itself. Pairs with
-   app.css. No network, no third parties. */
+   app.css. Its only network call is the anonymous time-on-page count to GoatCounter (bottom). */
 window.PS = (function(){
   // [primary, secondary] per team, keyed by each dataset's own team codes.
   const TEAMS = {
@@ -484,4 +484,26 @@ window.PS = (function(){
 
   return {teamVars, ticker, until, skeleton, esc, hashFor, pickHash, parsePickHash, syncHash, sharePick, toast, helpBtn, spark, verdict, icon, sheet, closeSheet, pickSheet,
           isTracked, toggleBet, renderBets, fairOf, setFair, pxMove, lockBadge, lockNote, venues, venueName, cap, capPick, thinOut};
+})();
+
+// ---- time on page: one anonymous GoatCounter event per page view, e.g. "time/1-3m" ----
+// Counts only the time the page is on screen, and sends the range the first time the visitor
+// switches away or leaves. No ID or cookie, just the range; team_stats.py reads these for the
+// team dashboard and keeps them out of the visit counts. Ranges must match TIME_RANGES there.
+(function(){
+  const RANGES = [[10,'0-10s'],[30,'10-30s'],[60,'30s-1m'],[180,'1-3m'],[600,'3-10m'],[Infinity,'10m+']];
+  let since = document.visibilityState === 'visible' ? Date.now() : 0, onScreen = 0, sent = false;
+  function send(){
+    if (since) { onScreen += Date.now() - since; since = 0; }
+    const gc = window.goatcounter;
+    if (sent || !onScreen || !gc || typeof gc.count !== 'function') return;  // never shown, or GoatCounter blocked
+    sent = true;
+    const label = RANGES.find(r => onScreen / 1000 < r[0])[1];
+    gc.count({path: 'time/' + label, title: 'Time on page: ' + label, event: true});
+  }
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') send();
+    else if (!sent) since = Date.now();
+  });
+  addEventListener('pagehide', send);
 })();

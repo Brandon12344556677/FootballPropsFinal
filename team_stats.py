@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Team audience stats → team/stats.enc, the data behind the password page at /team/.
 
-Pulls aggregate visitor counts from GoatCounter's API (totals only: pages, referrers,
+Pulls aggregate visitor counts from GoatCounter's API (totals only: pages, time-on-page ranges, referrers,
 campaigns, countries, browsers, systems, screen sizes; GoatCounter keeps no IPs) and
 encrypts them with the team password, so the file can sit in this public repo and the
 page shows nothing until the right password is entered.
@@ -17,6 +17,7 @@ ITERATIONS in team/index.html too.
 import datetime as dt
 import json
 import os
+import re
 import subprocess
 import sys
 import time
@@ -28,6 +29,8 @@ OUT = os.path.join("team", "stats.enc")
 ITERATIONS = 600000
 TOP_N = 15
 RANGES = {"d1": 1, "d7": 7, "d30": 30, "d90": 90}
+TIME_RANGES = ["0-10s", "10-30s", "30s-1m", "1-3m", "3-10m", "10m+"]   # same labels as app.js
+TIME_RE = re.compile(r"(?:^|/)time/([^/?#]+)$")
 SIZE_NAMES = {"phone": "Phone", "largephone": "Large phone", "tablet": "Tablet",
               "desktop": "Computer", "desktophd": "Large computer screen", "unknown": "(unknown)"}
 
@@ -58,20 +61,45 @@ def rows(stats, page):
     return out
 
 
+def time_rows(events):
+    """Time-on-page ranges from app.js's "time/<range>" events, in TIME_RANGES order."""
+    counts = {}
+    for h in events:
+        m = TIME_RE.search(h.get("path") or "")
+        if m and m.group(1) in TIME_RANGES:
+            counts[m.group(1)] = counts.get(m.group(1), 0) + int(h.get("count") or 0)
+    return [{"name": k, "n": counts.get(k, 0)} for k in TIME_RANGES] if counts else []
+
+
 def range_stats(token, now, days):
     q = {"start": hour(dt.datetime.combine(now.date() - dt.timedelta(days=days - 1), dt.time())),
          "end": hour(now + dt.timedelta(hours=1))}
     total = get(token, "/stats/total", **q)          # rejects a "limit" parameter
-    hits = get(token, "/stats/hits", limit=40, **q)  # room for ?v= test URLs, merged on the page
+    hits = get(token, "/stats/hits", limit=60, **q)  # room for ?v= test URLs (merged on the page) and events
+    hits = hits.get("hits") or []
+    events = [h for h in hits if h.get("event")]
+    # GoatCounter's totals include events (app.js sends one "time/<range>" event per page
+    # view), so take them back out to keep "visits" meaning page visits.
+    ev_day, ev_hour = {}, {}
+    for h in events:
+        for s in h.get("stats") or []:
+            ev_day[s["day"]] = ev_day.get(s["day"], 0) + int(s.get("daily") or 0)
+            ev_hour[s["day"]] = [a + int(b or 0) for a, b in
+                                 zip(ev_hour.get(s["day"], [0] * 24), s.get("hourly") or [0] * 24)]
     daily = total.get("stats") or []
     r = {
-        "total": int(total.get("total") or 0),
-        "daily": [{"day": d["day"], "n": int(d.get("daily") or 0)} for d in daily],
+        "total": max(0, int(total.get("total") or 0) - int(total.get("total_events") or 0)),
+        "daily": [{"day": d["day"], "n": max(0, int(d.get("daily") or 0) - ev_day.get(d["day"], 0))} for d in daily],
         "pages": [{"path": h["path"], "title": h.get("title", ""), "n": int(h.get("count") or 0)}
-                  for h in hits.get("hits") or [] if not h.get("event")],
+                  for h in hits if not h.get("event")],
+        "time": time_rows(events),
     }
-    if days == 1:
-        r["hourly"] = (daily[-1].get("hourly") if daily else None) or []
+    if days == 1 and daily:
+        last = daily[-1]
+        r["hourly"] = [max(0, int(a or 0) - b) for a, b in
+                       zip(last.get("hourly") or [], ev_hour.get(last["day"], [0] * 24))]
+    elif days == 1:
+        r["hourly"] = []
     for page in ("toprefs", "campaigns", "locations", "browsers", "systems", "sizes"):
         r[page] = rows(get(token, f"/stats/{page}", limit=TOP_N, **q).get("stats"), page)
     return r
