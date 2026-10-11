@@ -28,7 +28,7 @@ The bot overwrites these on every pass, so hand edits are lost and cause merge c
   `mlb.html` ← `mlb_template.html`. Edit the template (and the builder), never the output page.
 - `data.json`, `slate.json`, `picks.json`, `weekly.json`, `*_picks.json`, `*_stats.json`,
   `nba.json`, `nhl.json`, `mlb.json`, `today.json`, `botd.json`, `health.json`, `top_cache.json`,
-  `sitemap.xml`, `robots.txt`, `players/`, `team/stats.enc`.
+  `sitemap.xml`, `robots.txt`, `players/`, `team/stats.enc`, `*_picks_recent.json`.
 
 `index.html` (home page), `methodology.html`, and the legal pages are hand-written and safe to edit.
 

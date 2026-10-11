@@ -343,10 +343,31 @@ window.PS = (function(){
         `<div><b>${esc(o.name)}</b><span><span class="tbadge">${esc(o.team)}</span>${esc(o.vs||'')}${o.when? ' · '+esc(o.when) : ''}</span></div></div>`+
       `<div class="verdict" hidden></div>`+
       (v.length>=3? `<div class="ps-l10"><div class="ps-sub">Last ${v.length} games · cleared ${esc(o.line)} <b>${hits} of ${v.length}</b></div>${bigSpark(v, o.line, o.side)}</div>` : '')+
-      `<div class="ps-actions"><button type="button" class="btn ps-open">Full breakdown →</button></div>`,
+      `<div class="ps-actions"><button type="button" class="btn ps-open">Full breakdown →</button></div>`+
+      moreHtml(o.more),
       `${o.name} ${o.side} ${o.line} ${o.statText}`);
     verdict(w.querySelector('.verdict'), o);
     w.querySelector('.ps-open').onclick=()=>{ closeSheet(); if(o.onOpen) o.onOpen(); };
+    w.querySelectorAll('.ps-mi').forEach(b=>b.onclick=()=>{ const it=o.more[+b.dataset.g].items[+b.dataset.i]; closeSheet(); it.open(); });
+  }
+  // "More from this game" / "More for <player>": o.more = [{title, items:[{name, side, line, statText, prob, open}]}]
+  function moreHtml(groups){
+    return (groups||[]).map((g,gi)=> !(g.items||[]).length? '' :
+      `<div class="ps-more"><div class="ps-sub">${esc(g.title)}</div>`+g.items.map((it,i)=>
+        `<button type="button" class="ps-mi" data-g="${gi}" data-i="${i}"><span class="ps-mt"><b>${esc(it.name)}</b> <span class="leantag ${esc(it.side)}">${esc(it.side)}</span> ${esc(it.line)} ${esc(it.statText)}</span>`+
+        `<span class="ps-mp">${Math.round(it.prob*100)}%</span></button>`).join('')+`</div>`).join('');
+  }
+  // Same game, then same player, from a board's modeled picks; key() tells props apart, game() names the game.
+  function relatedPicks(r, pool, o){
+    const seen=new Set([o.key(r)]), uniq=[];
+    pool.forEach(x=>{ const k=o.key(x); if(!seen.has(k)){ seen.add(k); uniq.push(x); } });
+    const item=x=>({name:x.name, side:x.side, line:x.line, statText:x.statText, prob:x.prob, open:()=>o.open(x)});
+    // near-certain props (93%+) pay pennies, so they come after the rest; within each, likeliest first
+    const rank=(a,b)=>((a.prob>=0.93)-(b.prob>=0.93)) || (b.prob-a.prob);
+    const onePer=(rows, by)=>{ const s=new Set(); return rows.filter(x=>{ const k=by(x); if(s.has(k)) return false; s.add(k); return true; }); };
+    const gk=o.game(r), pk=String(o.pid(r));
+    return [{title:'More from this game', items:onePer(uniq.filter(x=>o.game(x)===gk && String(o.pid(x))!==pk).sort(rank), x=>String(o.pid(x))).slice(0,4).map(item)},
+            {title:`More for ${r.name}`, items:onePer(uniq.filter(x=>String(o.pid(x))===pk).sort(rank), x=>x.statText).slice(0,3).map(item)}];
   }
 
   // ---- one-time 18+ check. It carries the storage notice, so a first visit sees one pop-up, not two. ----
@@ -396,6 +417,7 @@ window.PS = (function(){
         `<span class="br-res">${LBL[res]}${r && r.actual!=null? ` · ${esc(num(r.actual))}` : ''}</span>`+
         `<button type="button" class="br-x" data-id="${esc(b.id)}" aria-label="Remove this bet">✕</button></div>`;
     });
+    if(!welcomed[sport]){ welcomed[sport]=true; welcomeBack(sport, mine.map(b=>{ let r=null; try{ r=resultFor(b); }catch(e){} return {b, res: r? r.res : 'pend'}; })); }
     const n=hit+miss;
     el.innerHTML=`<div class="betsum"><span><b>${hit}–${miss}${push? '–'+push : ''}</b> record</span>`+
       (n? `<span><b>${Math.round(100*hit/n)}%</b> hit</span>` : '')+
@@ -404,10 +426,111 @@ window.PS = (function(){
     el.querySelectorAll('.br-x').forEach(x=>x.onclick=()=>{ saveBets(loadBets().filter(b=>b.id!==x.dataset.id)); renderBets(el, sport, resultFor); });
   }
 
+  // which sport board this is (null on the home page and the other pages)
+  const PAGE_SPORT=(location.pathname.match(/\/(nfl|nba|nhl|mlb)\.html$/)||[])[1]||null;
+  const SPORT_LBL={nfl:'NFL', nba:'NBA', nhl:'NHL', mlb:'MLB'};
+
+  // ---- a small card at the bottom of the screen (welcome back, home-screen tip); one at a time ----
+  // actions: [{label, href?, tab?, primary?, run?}] — tab clicks that board tab instead of following the link
+  function note(html, actions, onClose){
+    if(document.getElementById('psnote')) return null;
+    const w=document.createElement('div'); w.id='psnote'; w.className='psnote'; w.setAttribute('role','status');
+    w.innerHTML=`<button type="button" class="psn-x" aria-label="Close">✕</button><p>${html}</p>`+
+      (actions&&actions.length? `<div class="psn-acts">${actions.map((a,i)=> a.href? `<a class="psn-b${a.primary?' go':''}" href="${esc(a.href)}" data-i="${i}">${esc(a.label)}</a>` : `<button type="button" class="psn-b${a.primary?' go':''}" data-i="${i}">${esc(a.label)}</button>`).join('')}</div>` : '');
+    const close=()=>{ w.remove(); if(onClose) onClose(); };
+    w.querySelector('.psn-x').onclick=close;
+    w.querySelectorAll('[data-i]').forEach(b=>b.onclick=e=>{ const a=actions[+b.dataset.i];
+      if(a.tab){ const t=document.querySelector(`.tab[data-tab="${a.tab}"]`); if(t){ e.preventDefault(); t.click(); } }
+      if(a.run){ e.preventDefault(); a.run(); }
+      close(); });
+    document.body.appendChild(w);
+    return w;
+  }
+  const quiet=()=> document.documentElement.classList.contains('ps-lock') || !!document.getElementById('psnote');
+
+  // ---- welcome back: tracked bets graded since this visitor last opened this board ----
+  // Remembers each bet's last-seen result on this device; anything newly graded gets one summary.
+  const SEEN_KEY='psl_bets_seen', welcomed={};
+  function welcomeBack(sport, rows){
+    let seen={}; try{ seen=JSON.parse(localStorage.getItem(SEEN_KEY)||'{}')||{}; }catch(e){}
+    const recent=Date.now()-14*864e5;
+    const fresh=rows.filter(x=>x.res!=='pend' && seen[x.b.id]!==x.res && Date.parse(x.b.at||0)>recent);
+    rows.forEach(x=>{ if(x.res!=='pend') seen[x.b.id]=x.res; });
+    try{ localStorage.setItem(SEEN_KEY, JSON.stringify(seen)); }catch(e){}
+    if(!fresh.length) return;
+    const c=k=>fresh.filter(x=>x.res===k).length, hit=c('hit'), miss=c('miss');
+    const bits=[hit? `<b>${hit} hit</b>` : '', miss? `${miss} missed` : '', c('push')? `${c('push')} pushed` : '', c('void')? `${c('void')} void` : ''].filter(Boolean).join(', ');
+    const go=()=>note(`<b>Welcome back.</b> ${fresh.length===1? 'One of your tracked bets was' : fresh.length+' of your tracked bets were'} graded since your last visit: ${bits}.`,
+      [{label:'See My bets', href:'#tools', tab:'tools', primary:true}]);
+    setTimeout(()=>{ if(!quiet()) go(); else setTimeout(()=>{ if(!quiet()) go(); }, 8000); }, 1200);
+  }
+  // Home page: remind a returning visitor what they're tracking, once per visit, with a link to each board.
+  function homeBets(){
+    if(PAGE_SPORT || !/\/(index\.html)?$/.test(location.pathname)) return;
+    try{ if(sessionStorage.getItem('psl_home_bets')) return; sessionStorage.setItem('psl_home_bets','1'); }catch(e){}
+    const mine=loadBets(); if(!mine.length) return;
+    const today=new Intl.DateTimeFormat('en-CA',{timeZone:'America/New_York'}).format(new Date());
+    const by={}; mine.forEach(b=>{ by[b.sport]=(by[b.sport]||0)+1; });
+    const done=mine.filter(b=> /^\d{4}-\d{2}-\d{2}$/.test(b.game||'')? b.game<today : Date.now()-Date.parse(b.at||0)>4*864e5).length;
+    const sports=Object.keys(by).sort((a,b)=>by[b]-by[a]);
+    const list=sports.map(s=>`${SPORT_LBL[s]||s} ${by[s]}`).join(' · ');
+    setTimeout(()=>{ if(quiet()) return;
+      note(`You're tracking <b>${mine.length} bet${mine.length===1?'':'s'}</b> (${esc(list)}).${done? ` ${done===1? 'One game has' : done+' games have'} finished: see how they did.` : ''}`,
+        sports.slice(0,2).map((s,i)=>({label:`${SPORT_LBL[s]||s} bets`, href:`./${s}.html#tools`, primary:i===0}))); }, 1500);
+  }
+
+  // ---- home-screen tip: phones only, for returning visitors, at most twice, never once dismissed ----
+  // Also counts opens from the home screen (one anonymous GoatCounter event per visit).
+  let installEvt=null;
+  addEventListener('beforeinstallprompt', e=>{ e.preventDefault(); installEvt=e; });
+  function homeScreen(){
+    const ua=navigator.userAgent||'', standalone=(window.matchMedia && matchMedia('(display-mode: standalone)').matches) || navigator.standalone===true;
+    const ss=k=>{ try{ return sessionStorage.getItem(k); }catch(e){ return '1'; } }, ssSet=k=>{ try{ sessionStorage.setItem(k,'1'); }catch(e){} };
+    if(standalone){
+      if(!ss('psl_app_open')){ ssSet('psl_app_open'); setTimeout(()=>{ const gc=window.goatcounter; if(gc && typeof gc.count==='function')
+        gc.count({path:'click/home-screen-open/'+(PAGE_SPORT||'home'), title:'Opened from the home screen', event:true}); }, 3000); }
+      return;
+    }
+    if(!/iPhone|iPad|iPod|Android/i.test(ua)) return;
+    let st={visits:0, shown:0, off:false}; try{ st=Object.assign(st, JSON.parse(localStorage.getItem('psl_a2hs')||'{}')); }catch(e){}
+    if(!ss('psl_a2hs_v')){ ssSet('psl_a2hs_v'); st.visits++; }
+    const save=()=>{ try{ localStorage.setItem('psl_a2hs', JSON.stringify(st)); }catch(e){} }; save();
+    if(st.off || st.shown>=2 || st.visits<2 || ss('psl_a2hs_s')) return;
+    const inApp=/Instagram|FBAN|FBAV|Snapchat|TikTok|musical_ly|Line\//i.test(ua), ios=/iPhone|iPad|iPod/i.test(ua);
+    setTimeout(()=>{ if(quiet()) return;
+      let html, acts=[{label:'Got it', run:()=>{ st.off=true; save(); }}];
+      if(inApp) html=`<b>Coming back often?</b> Open this page in ${ios? 'Safari' : 'Chrome'} and add it to your Home Screen. Prop Streak Lab then opens with one tap, like an app.`;
+      else if(ios) html=`<b>Add Prop Streak Lab to your Home Screen.</b> Tap the Share button (the square with the arrow), then <b>Add to Home Screen</b>. It opens with one tap, like an app.`;
+      else if(installEvt){ html=`<b>Add Prop Streak Lab to your Home Screen</b> so it opens with one tap, like an app.`;
+        acts=[{label:'Add to Home Screen', primary:true, run:()=>{ st.off=true; save(); installEvt.prompt(); }}, {label:'Not now'}]; }
+      else html=`<b>Add Prop Streak Lab to your Home Screen.</b> Tap the menu (⋮), then <b>Add to Home screen</b>. It opens with one tap, like an app.`;
+      if(note(html, acts)){ st.shown++; save(); ssSet('psl_a2hs_s'); }
+    }, 25000);
+  }
+  function engage(){ homeBets(); homeScreen(); }
+  if(document.readyState!=='loading') engage(); else document.addEventListener('DOMContentLoaded', engage);
+
   // ---- trust line under each hero: when the data last updated, and how many picks are graded in public ----
   // Both come from today.json, which the hourly job rewrites on every run.
   function ago(ms){ const m=Math.max(0, Math.round((Date.now()-ms)/60000));
     if(m<1) return 'just now'; if(m<60) return m+' min ago'; const h=Math.round(m/60); return h<48? h+(h===1?' hour':' hours')+' ago' : Math.round(h/24)+' days ago'; }
+  // The latest graded day's results (today.json "last", from build_today.py): on a sport board,
+  // that sport's Top 25 and Value record for the day; on the home page, each sport's Top 25 line.
+  const dayLbl=d=>new Date(d+'T12:00:00Z').toLocaleDateString('en-US',{weekday:'short', month:'short', day:'numeric', timeZone:'UTC'});
+  function lastResults(t){
+    const L=(t && t.last)||{};
+    if(PAGE_SPORT){
+      const r=L[PAGE_SPORT]; if(!r) return '';
+      const parts=[];
+      if(r.T) parts.push(`Top 25 Surest <b>${r.T.hit}/${r.T.n} hit</b>`);
+      if(r.V) parts.push(`Value <b>${r.V.hit}/${r.V.n}</b>${r.V.units!=null? ` (${r.V.units>=0?'+':'−'}${Math.abs(r.V.units).toFixed(1)}u)` : ''}`);
+      return `<span class="tr-res">${icon('circle-check')}Last results, ${esc(dayLbl(r.day))}: ${parts.join(' · ')} <a href="#past" data-tab-go="past">See every pick →</a></span>`;
+    }
+    const recent=new Date(Date.now()-3*864e5).toISOString().slice(0,10);
+    const parts=Object.keys(SPORT_LBL).filter(s=>L[s] && L[s].T && L[s].day>=recent)
+      .map(s=>`<a href="./${s}.html#past">${SPORT_LBL[s]} <b>${L[s].T.hit}/${L[s].T.n}</b></a>`);
+    return parts.length? `<span class="tr-res">${icon('circle-check')}Latest Top 25 results: ${parts.join(' · ')}</span>` : '';
+  }
   function trust(){
     const el=document.getElementById('pstrust'); if(!el) return;
     const paint=t=>{
@@ -416,8 +539,11 @@ window.PS = (function(){
       const tr=t && t.tracked, since=tr && tr.since? new Date(tr.since+'T12:00:00Z').toLocaleDateString('en-US',{month:'short', day:'numeric', year:'numeric'}) : '';
       el.innerHTML=(upd? `<span class="tr-upd"><i class="tr-dot" aria-hidden="true"></i>Updated <b data-ago="${upd}">${ago(upd)}</b></span>` : '')+
         (tr && tr.graded? `<span class="tr-grd">${icon('shield-check')}<b>${tr.graded.toLocaleString('en-US')} picks graded in public</b>${since? ' since '+esc(since) : ''}</span>` : '')+
+        lastResults(t)+
         `<a class="tr-how" href="methodology.html">How the model works →</a>`;
       el.hidden=false;
+      const go=el.querySelector('[data-tab-go]');
+      if(go) go.onclick=e=>{ const tab=document.querySelector(`.tab[data-tab="${go.dataset.tabGo}"]`); if(tab){ e.preventDefault(); tab.click(); } };
     };
     paint(null);
     fetch('today.json',{cache:'no-store'}).then(r=>r.ok? r.json() : null).then(t=>{ if(t){ paint(t); if(t.fair) setFair(t.fair.w); } }).catch(()=>{});
@@ -483,7 +609,7 @@ window.PS = (function(){
     return `<span class="lockbadge" title="${esc(`Locked${at}: the game starts within 30 minutes, so this pick is final \u2014 its Top 25 / Value status, its chance and its price won\u2019t change again.`)}">\ud83d\udd12 Locked</span>`;
   }
 
-  return {teamVars, ticker, until, skeleton, esc, hashFor, pickHash, parsePickHash, syncHash, sharePick, toast, helpBtn, spark, verdict, icon, sheet, closeSheet, pickSheet,
+  return {teamVars, ticker, until, skeleton, esc, hashFor, pickHash, parsePickHash, syncHash, sharePick, toast, helpBtn, spark, verdict, icon, sheet, closeSheet, pickSheet, relatedPicks,
           isTracked, toggleBet, renderBets, fairOf, setFair, pxMove, lockBadge, lockNote, venues, venueName, cap, capPick, thinOut};
 })();
 

@@ -35,8 +35,8 @@
 <link rel="manifest" href="/site.webmanifest">
 <script data-goatcounter="https://propstreaklive.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
 <link rel="stylesheet" href="fonts.css">
-<link rel="stylesheet" href="app.css?v=20261009a">
-<script src="app.js?v=20261011a"></script>
+<link rel="stylesheet" href="app.css?v=20261011b">
+<script src="app.js?v=20261011b"></script>
 <script src="/halloween.js?v=20261009a"></script>
 <style>
 :root{
@@ -319,6 +319,12 @@ h2 i{color:var(--green)}
 }
 
 /* promo strip at the top of the page */
+.pickbar{padding:18px 0 4px}
+.pickbar .wrap{display:grid;gap:10px}
+.pickbar-h{margin:0;font-family:var(--cond);font-size:14px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--green)}
+.pickbar .sports{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:0}
+.pickbar .sport{min-width:0}
+@media (max-width:620px){.pickbar{padding-top:12px}.pickbar .sports{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.pickbar .sport{padding:12px}}
 .promo{padding:16px 0 0}
 .promo .wrap{display:flex;flex-wrap:wrap;gap:10px;justify-content:center}
 .promo .ref,.promo .ref2{display:inline-flex;align-items:center;margin:0;max-width:none;border-radius:999px;padding:10px 20px;
@@ -417,6 +423,20 @@ footer .fine a{color:#8394ab}
 <div id="psticker" class="ticker" hidden aria-label="Live updates"></div>
 
 <main>
+  <!-- PICK A SPORT: the first thing on the page, so a visitor is one tap from a board.
+       Each tile's second line becomes that sport's Top 25 hit rate once today.json loads. -->
+  <section class="pickbar" aria-labelledby="pickbar-h">
+    <div class="wrap">
+      <h2 class="pickbar-h" id="pickbar-h">Pick a sport</h2>
+      <div class="sports">
+        <a class="sport" href="./nfl.html"><span class="ico" aria-hidden="true">🏈</span><span><b>NFL</b><small data-rec="nfl">Football props</small></span></a>
+        <a class="sport" href="./nba.html"><span class="ico" aria-hidden="true">🏀</span><span><b>NBA</b><small data-rec="nba">Basketball props</small></span></a>
+        <a class="sport" href="./nhl.html"><span class="ico" aria-hidden="true">🏒</span><span><b>NHL</b><small data-rec="nhl">Hockey props</small></span></a>
+        <a class="sport" href="./mlb.html"><span class="ico" aria-hidden="true">⚾</span><span><b>MLB</b><small data-rec="mlb">Baseball props</small></span></a>
+      </div>
+    </div>
+  </section>
+
   <!-- PROMO: Polymarket code + group, one slim row (socials live in the footer) -->
   <div class="promo">
     <div class="wrap">
@@ -438,12 +458,6 @@ footer .fine a{color:#8394ab}
         </div>
         <p class="lede rv d2">Real game logs, a <b>calibrated probability</b> for any prop, <b>priced against the market</b> — and every pick we make is <b>graded in public</b>.</p>
         <div id="pstrust" class="pstrust" hidden></div>
-        <div class="sports rv d3" aria-label="Choose a sport">
-          <a class="sport" href="./nfl.html"><span class="ico" aria-hidden="true">🏈</span><span><b>NFL</b><small>Football props</small></span></a>
-          <a class="sport" href="./nba.html"><span class="ico" aria-hidden="true">🏀</span><span><b>NBA</b><small>Basketball props</small></span></a>
-          <a class="sport" href="./nhl.html"><span class="ico" aria-hidden="true">🏒</span><span><b>NHL</b><small>Hockey props</small></span></a>
-          <a class="sport" href="./mlb.html"><span class="ico" aria-hidden="true">⚾</span><span><b>MLB</b><small>Baseball props</small></span></a>
-        </div>
         <div class="trust rv d3">
           <span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>$0, no account</span>
           <span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>Updated every 10 minutes</span>
@@ -480,15 +494,16 @@ footer .fine a{color:#8394ab}
     </div>
   </section>
 
-  <!-- STATS STRIP -->
-  <div class="strip" role="list" aria-label="At a glance">
+  <!-- TODAY: the best bets across all four sports, from today.json (rebuilt hourly) -->
+  <section id="today" aria-labelledby="today-h" hidden>
     <div class="wrap">
-      <div class="stat" role="listitem"><b data-count="4">4</b><span>Sports</span></div>
-      <div class="stat" role="listitem"><b><span data-count="3800">3,800</span><em>+</em></b><span>Players tracked</span></div>
-      <div class="stat" role="listitem"><b>Every 10 min</b><span>Auto-updated six times an hour</span></div>
-      <div class="stat" role="listitem"><b><em>$</em>0</b><span>100% free to use</span></div>
+      <p class="kicker">Right now · all four sports</p>
+      <h2 id="today-h">Today's best <i>value</i>.</h2>
+      <p class="sub">Where the model's chance beats the market price (the cheaper of Polymarket and Kalshi) by the most — NFL, NBA, NHL and MLB in one feed. Tap a pick for the game log, the live price and the full breakdown.</p>
+      <div class="app todayfeed"><div class="pickgrid" id="todaygrid"></div><div id="todaylock"></div></div>
+      <p class="todaynote" id="todaynote"></p>
     </div>
-  </div>
+  </section>
 
   <!-- BET OF THE DAY: a Lock and a Value Shot, from botd.json (botd.py): picked once a day, never swapped, graded in public -->
   <section id="botd" aria-labelledby="botd-h" hidden>
@@ -501,16 +516,15 @@ footer .fine a{color:#8394ab}
     </div>
   </section>
 
-  <!-- TODAY: the best bets across all four sports, from today.json (rebuilt hourly) -->
-  <section id="today" aria-labelledby="today-h" hidden>
+  <!-- STATS STRIP -->
+  <div class="strip" role="list" aria-label="At a glance">
     <div class="wrap">
-      <p class="kicker">Right now · all four sports</p>
-      <h2 id="today-h">Today's best <i>value</i>.</h2>
-      <p class="sub">Where the model's chance beats the market price (the cheaper of Polymarket and Kalshi) by the most — NFL, NBA, NHL and MLB in one feed. Tap a pick for the game log, the live price and the full breakdown.</p>
-      <div class="app todayfeed"><div class="pickgrid" id="todaygrid"></div><div id="todaylock"></div></div>
-      <p class="todaynote" id="todaynote"></p>
+      <div class="stat" role="listitem"><b data-count="4">4</b><span>Sports</span></div>
+      <div class="stat" role="listitem"><b><span data-count="3800">3,800</span><em>+</em></b><span>Players tracked</span></div>
+      <div class="stat" role="listitem"><b>Every 10 min</b><span>Auto-updated six times an hour</span></div>
+      <div class="stat" role="listitem"><b><em>$</em>0</b><span>100% free to use</span></div>
     </div>
-  </section>
+  </div>
 
   <!-- SPORT TABS -->
   <section id="sports" class="center" aria-labelledby="sports-h">
@@ -931,9 +945,16 @@ function countUp(el){ const to=+el.dataset.count; if(!to||el.dataset.done) retur
   get('botd.json').then(b=>{ if(!b) return; renderBotd(capBotd(b));
     setInterval(()=>{ if(!document.hidden) get('botd.json').then(n=>{ if(n){ b=capBotd(n); renderBotd(b); } }); }, 300000); });
 
+  // "Pick a sport" tiles: each sport's season Top 25 hit rate under its name, once there are enough graded picks
+  function pickbarRecords(t){
+    const R=(t&&t.record)||{};
+    document.querySelectorAll('.pickbar [data-rec]').forEach(el=>{ const r=(R[el.dataset.rec]||{}).T;
+      if(r && r.n>=20) el.textContent=`Top 25: ${Math.round(100*r.hit/r.n)}% hit`; });
+  }
   Promise.all([get('today.json'), get('weekly.json')]).then(([t,w])=>{
     PS.ticker(tickerItems(t, w));
     if(!t) return;
+    pickbarRecords(t);
     (t.picks||[]).forEach(PS.capPick);
     if(t.fair && t.fair.w>=0) FAIRW=t.fair.w;
     liveDemo(t);

@@ -609,8 +609,8 @@ table td,table th,thead th,tbody td,.edgetbl td,.edgetbl th,.caltbl td,.caltbl t
 .valrules .vrfoot b{color:#fff}
 </style>
 
-<link rel="stylesheet" href="app.css?v=20261009a">
-<script src="app.js?v=20261011a"></script>
+<link rel="stylesheet" href="app.css?v=20261011b">
+<script src="app.js?v=20261011b"></script>
 <script src="/halloween.js?v=20261009a"></script>
 
 <header class="apptop">
@@ -2234,6 +2234,7 @@ function openPickSheet(r){ if(!r.pl){ loadEdge(r); return; }
   PS.pickSheet({name:r.name, team:r.team, sport:'nfl', vs, prob:r.prob, lo:r.lo, hi:r.hi, neff:r.n, side:r.side, line:r.line, statText:r.statText,
     price:px, vn: r.locked? r.vn : (live!=null? liveVenueFor(r) : (r.vvn||null)), live:live!=null, vals:valuesOf(r.pl, r.sk), onOpen:()=>loadEdge(r),
     track:trackFor(betFor(r.pl, r.sk, r.line, r.side, r.prob, px)),
+    more:PS.relatedPicks(r, lockedRows.concat(edgeRows), {key:x=>[x.pl? x.pl.id : x.pid, x.sk, x.line, x.side].join("|"), game:x=>{ const g=x.game||{}; return g.away+"@"+g.home; }, pid:x=>x.pl? x.pl.id : x.pid, open:openPickSheet}),
     onShare:()=>PS.sharePick({player:r.pl, stat:r.sk, line:r.line, ou:r.side}, r.statText)}); }
 function wireLoad(el, rows){ el.querySelectorAll('.edgeload').forEach(b=>b.onclick=()=>openPickSheet(rows[+b.dataset.i]));
   // The whole card opens its details too (not just the button).

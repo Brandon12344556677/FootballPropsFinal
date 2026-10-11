@@ -351,7 +351,7 @@ footer p{margin:0;max-width:80ch}
   // what app.js calls each outside link (click/<what>/<page>)
   const CLICK_NAME = {'polymarket-signup':'Polymarket sign-up','kalshi-signup':'Kalshi sign-up','polymarket-market':'A Polymarket market',
     'kalshi-market':'A Kalshi market','instagram-profile':'Our Instagram','tiktok-profile':'Our TikTok','x-profile':'Our X (Twitter)',
-    'gambling-help':'Gambling help line','other-site':'Other sites'};
+    'gambling-help':'Gambling help line','other-site':'Other sites','home-screen-open':'Opened from the home screen'};
   const CLICK_PAGE = {home:'Home', nfl:'NFL', nba:'NBA', nhl:'NHL', mlb:'MLB'};
   const isSignup = w => /-signup$/.test(w);
   function clickRows(rows){
@@ -643,7 +643,7 @@ footer p{margin:0;max-width:80ch}
     const b = document.createElement('b'); b.textContent = l.c;
     const used = linkVisits(l.c);
     if (used) h.append('A link named ', b, ` already has ${fmt(used)} visits in the last 90 days. Use a new name to track this post on its own, or keep it to add to that count.`);
-    else h.append('Tracked as ', b, ' in Tracked links. Each visit through it counts there, and under ' + refName(l.src) + ' in "Where visitors come from".');
+    else h.append('Tracked as ', b, ' in Tracked links. Each visit through it counts there, and under ' + refName(l.src) + ' in "Where visitors come from". Visits show up within about 20 minutes, after the next site update.');
   }
   ['lbSource','lbPage','lbCamp'].forEach(id => $(id).addEventListener('input', buildLink));
   $('lb').addEventListener('submit', e => e.preventDefault());
