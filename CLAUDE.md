@@ -15,8 +15,9 @@ README.md has the full feature tour; this file is the working rules.
   `post_daily.py` (Discord/Telegram, and the daily picks email via Buttondown: `BUTTONDOWN_API_KEY`, sign-up form on the
   home page shown once `NEWSLETTER` is set in index.html), `watchdog.py` (own workflow, every 30 min: checks the live site and keeps one
   "Site watchdog" GitHub issue open while something is broken; the team dashboard reads it). `build_today.py` also writes `search.json` (home page player search).
-- `edge_report.py` → `team/edges.enc` (once a day: which strategies make money, encrypted like the stats);
+- `edge_report.py` → `team/edges.enc` (every pass: which strategies make money, encrypted like the stats);
   `site_checks.py` (own daily workflow: search basics and sign-up links, keeps a "Site checks" GitHub issue).
+  `dashboard_check.py` (in watchdog.yml, every 30 min: the team dashboard's page, encrypted numbers, edge tracker; "Team dashboard" issue).
   `depth.guard` holds a 30c+ price jump until a second run confirms it (the `pj` pick column).
 - `team_stats.py` → `team/stats.enc`: GoatCounter visitor totals (and traffic spikes), encrypted with the
   `TEAM_DASH_PASSWORD` secret, for the password-protected team dashboard `team/index.html`

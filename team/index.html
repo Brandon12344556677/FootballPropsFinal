@@ -110,6 +110,7 @@ footer p{margin:0;max-width:80ch}
 #app[data-cur="picks"] [data-view]:not([data-view="picks"]){display:none!important}
 #app[data-cur="social"] [data-view]:not([data-view="social"]){display:none!important}
 #app[data-cur="sponsors"] [data-view]:not([data-view="sponsors"]){display:none!important}
+#app[data-cur="picks"] #tabs, #app[data-cur="social"] #tabs{display:none}
 .stats.em{grid-template-columns:repeat(3,minmax(0,1fr))}
 @media (max-width:760px){ .stats.em{grid-template-columns:1fr} }
 /* agents */
@@ -288,7 +289,7 @@ footer p{margin:0;max-width:80ch}
   </section>
 
   <section data-view="picks" class="panel" id="edPanel" hidden>
-    <div class="panel-h"><h2>Edge tracker</h2><span class="label" id="edUpd">Rebuilt daily</span></div>
+    <div class="panel-h"><h2>Edge tracker</h2><span class="label" id="edUpd">Updates every 10 minutes</span></div>
     <p class="hint">Every recorded pick with a market price, graded as a flat $1 bet at that price. The likely range is where the true return probably sits; treat an edge as real only once the whole range is above 0%.</p>
     <div class="edwrap"><table class="edges"><thead><tr><th>Strategy</th><th class="n">Picks</th><th class="n">Hit</th><th class="n">Return</th><th class="n">Likely range</th><th class="n">Last 7 days</th><th>Verdict</th></tr></thead><tbody id="edRows"></tbody></table></div>
   </section>
@@ -765,8 +766,11 @@ footer p{margin:0;max-width:80ch}
   }
 
   // ---------- sponsor snapshot: last 30 days, ready to paste into an email ----------
+  const RANGE_DAYS = {d1:1, d7:7, d30:30, d90:90};
+  const RANGE_NAME = {d1:'today', d7:'last 7 days', d30:'last 30 days', d90:'last 90 days'};
   function sponsorFacts(){
-    const R = snap.d30; if (!R) return [];
+    const R = snap[range]; if (!R) return [];   // follows the date range picked above
+    const nDays = RANGE_DAYS[range] || 30;
     const total = R.total || 0;
     const locs = clean(R.locations), locN = locs.reduce((a,b)=>a+b.n,0), loc = locs[0];   // a share: see list()
     const sys = clean(R.systems), sysN = sys.reduce((a,b)=>a+b.n,0), mob = sys.filter(s=>/ios|android|ipados/i.test(s.name)).reduce((a,b)=>a+b.n,0);
@@ -777,7 +781,7 @@ footer p{margin:0;max-width:80ch}
     const V = R.views || {views:0, visitors:0, daily:[]}, vDays = Math.max(1, (V.daily || []).filter(d => d.views || d.visitors).length);
     const perDay = x => fmt(Math.round(x / vDays));
     return [
-      ['Visits', fmt(total), `about ${fmt(Math.round(total/30))} a day`, `${fmt(total)} visits (about ${fmt(Math.round(total/30))} a day)`],
+      ['Visits', fmt(total), nDays > 1 ? `about ${fmt(Math.round(total/nDays))} a day` : 'today so far', nDays > 1 ? `${fmt(total)} visits (about ${fmt(Math.round(total/nDays))} a day)` : `${fmt(total)} visits today so far`],
       ['Unique visitors', V.visitors ? perDay(V.visitors) + ' a day' : '–', V.visitors ? `${fmt(V.visitors)} in all · each person once a day` : 'Counting since Oct 12, 2026',
         V.visitors ? `${perDay(V.visitors)} unique visitors a day (${fmt(V.visitors)} in all)` : ''],
       ['Page views', V.views ? perDay(V.views) + ' a day' : '–', V.views ? `${fmt(V.views)} in all · ${(V.views / Math.max(1, V.visitors)).toFixed(1)} per visitor` : 'Counting since Oct 12, 2026',
@@ -794,6 +798,7 @@ footer p{margin:0;max-width:80ch}
   }
   function renderSponsor(){
     const el = $('sp'); el.textContent = '';
+    const nm = RANGE_NAME[range] || 'last 30 days'; $('spLabel').textContent = nm[0].toUpperCase() + nm.slice(1);
     for (const [k, v, s] of sponsorFacts()) {
       const d = document.createElement('div'); d.className = 'stat';
       const l = document.createElement('span'); l.className = 'label'; l.textContent = k;
@@ -805,7 +810,7 @@ footer p{margin:0;max-width:80ch}
   $('spCopy').addEventListener('click', async () => {
     if (!snap) return;
     const asOf = new Date(snap.generated_at).toLocaleDateString('en-US', {month:'long', day:'numeric', year:'numeric'});
-    const lines = [`Prop Streak Lab (propstreaklab.com): audience, last 30 days, as of ${asOf}`]
+    const lines = [`Prop Streak Lab (propstreaklab.com): audience, ${RANGE_NAME[range]}, as of ${asOf}`]
       .concat(sponsorFacts().filter(f => f[3]).map(f => '• ' + f[3]))
       .concat(['Free player-prop research with every pick graded in public.']);
     const text = lines.join('\n'), box = $('spText');
@@ -939,7 +944,7 @@ footer p{margin:0;max-width:80ch}
       $('edRows').innerHTML=(e.strategies||[]).map(s=>`<tr><td>${esc(s.label)}</td><td class="n">${fmt(s.n)}</td><td class="n">${Math.round(s.hit*100)}%</td>`+
         `<td class="n ${cls(s.roi)}"><b>${p(s.roi)}</b></td><td class="n">${p(s.lo)} to ${p(s.hi)}</td><td class="n ${cls(s.roi7)}">${p(s.roi7)}${s.n7? ' <small>('+s.n7+')</small>' : ''}</td>`+
         `<td><span class="chip ${s.verdict==='Edge holding'?'do':s.verdict==='Losing'?'bad':''}">${esc(s.verdict)}</span></td></tr>`).join('');
-      $('edUpd').textContent=`${fmt(e.picks)} graded picks · ${new Date(e.day+'T12:00:00Z').toLocaleDateString('en-US',{month:'short', day:'numeric', timeZone:'UTC'})}`;
+      $('edUpd').textContent=`${fmt(e.picks)} graded picks · updated ${new Date(e.generated_at).toLocaleString('en-US',{month:'short', day:'numeric', hour:'numeric', minute:'2-digit'})}`;
       $('edPanel').hidden=false;
     } catch(err){}
   }
