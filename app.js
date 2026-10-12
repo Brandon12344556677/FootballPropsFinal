@@ -355,13 +355,13 @@ window.PS = (function(){
   }
   // Sign-up offer at the moment of decision: the exchange with the cheaper price for this pick first.
   // data-place="sheet" makes the click count as "<exchange>-signup-sheet" on the team dashboard.
-  const REF={P:{name:'Polymarket', href:'https://polymarket.us/join/propstreaklab', deal:'$25 free with code PROPSTREAKLAB'},
-             K:{name:'Kalshi', href:'https://kalshi.com/sign-up/?referral=4373e9f9-0304-498c-8ca7-fccd3714b808&m=true&utm_source=mobile_app&utm_medium=share&utm_campaign=referral&utm_content=share_button&utm_term=referrals_pill', deal:'$25 free with our sign-up link'}};
+  const REF={P:{name:'Polymarket', href:'https://polymarket.us/join/propstreaklab', deal:''},
+             K:{name:'Kalshi', href:'https://kalshi.com/sign-up/?referral=4373e9f9-0304-498c-8ca7-fccd3714b808&m=true&utm_source=mobile_app&utm_medium=share&utm_campaign=referral&utm_content=share_button&utm_term=referrals_pill', deal:''}};
   function promoHtml(o){
     const a=REF[o.vn==='K'? 'K' : 'P'], b=REF[o.vn==='K'? 'P' : 'K'];
-    return `<div class="ps-promo"><a class="ps-ref" href="${esc(a.href)}" target="_blank" rel="noopener sponsored" data-place="sheet">${icon('gift')}<span>Bet this on <b>${a.name}</b>: ${esc(a.deal)}</span></a>`+
-      `<a class="ps-ref2" href="${esc(b.href)}" target="_blank" rel="noopener sponsored" data-place="sheet">or ${b.name}: $25 free →</a>`+
-      `<p class="ps-fine">For new users. Research, not betting advice.</p></div>`;
+    return `<div class="ps-promo"><a class="ps-ref" href="${esc(a.href)}" target="_blank" rel="noopener sponsored" data-place="sheet">${icon('gift')}<span>Find this prop on <b>${a.name}</b> →</span></a>`+
+      `<a class="ps-ref2" href="${esc(b.href)}" target="_blank" rel="noopener sponsored" data-place="sheet">or on ${b.name} →</a>`+
+      `<p class="ps-fine">Research, not betting advice.</p></div>`;
   }
   // "More from this game" / "More for <player>": o.more = [{title, items:[{name, side, line, statText, prob, open}]}]
   function moreHtml(groups){

@@ -626,7 +626,7 @@ tr.hit td{background:var(--hit-soft)} tr.miss td{background:var(--miss-soft)}
 .panel.collapsed{padding-bottom:14px}
 </style>
 <link rel="stylesheet" href="app.css?v=20261011e">
-<script src="app.js?v=20261012b"></script>
+<script src="app.js?v=20261012c"></script>
 <script src="/halloween.js?v=20261009a"></script>
 
 <header class="apptop">
@@ -639,8 +639,8 @@ tr.hit td{background:var(--hit-soft)} tr.miss td{background:var(--miss-soft)}
       <a href="./mlb.html" aria-current="page">⚾ MLB</a>
     </nav>
     <div class="appctas">
-      <a class="appcta pm" href="https://polymarket.us/join/propstreaklab" target="_blank" rel="noopener sponsored" title="$25 free on Polymarket with code PROPSTREAKLAB">Polymarket <small>$25 free</small></a>
-      <a class="appcta ks" href="https://kalshi.com/sign-up/?referral=4373e9f9-0304-498c-8ca7-fccd3714b808&amp;m=true&amp;utm_source=mobile_app&amp;utm_medium=share&amp;utm_campaign=referral&amp;utm_content=share_button&amp;utm_term=referrals_pill" target="_blank" rel="noopener sponsored" title="$25 free on Kalshi with our sign-up link">Kalshi <small>$25 free</small></a>
+      <a class="appcta pm" href="https://polymarket.us/join/propstreaklab" target="_blank" rel="noopener sponsored" title="Open Polymarket">Polymarket</a>
+      <a class="appcta ks" href="https://kalshi.com/sign-up/?referral=4373e9f9-0304-498c-8ca7-fccd3714b808&amp;m=true&amp;utm_source=mobile_app&amp;utm_medium=share&amp;utm_campaign=referral&amp;utm_content=share_button&amp;utm_term=referrals_pill" target="_blank" rel="noopener sponsored" title="Open Kalshi">Kalshi</a>
     </div>
   </div>
 </header>
@@ -1852,9 +1852,9 @@ async function scanSlip(blob){
 
 // ---- boot ----
 // ▼▼▼ Polymarket referral banners + social follow links — same as the NFL page. Leave a url "" to hide it. ▼▼▼
-const REFERRAL = { url: "https://polymarket.us/join/propstreaklab", text: "🎁 Get $25 FREE with code PROPSTREAKLAB — sign up & trade on Polymarket →" };
+const REFERRAL = { url: "https://polymarket.us/join/propstreaklab", text: "Open Polymarket →" };
 const REFERRAL2 = { url: "https://polymarket.us/squad/join/CDU9RMD97K7O1G95yAao?referrer=propstreaklab", text: "👥 Join our Polymarket group →" };
-const REFERRAL_KALSHI = { url: "https://kalshi.com/sign-up/?referral=4373e9f9-0304-498c-8ca7-fccd3714b808&m=true&utm_source=mobile_app&utm_medium=share&utm_campaign=referral&utm_content=share_button&utm_term=referrals_pill", text: "🎁 Get $25 FREE on Kalshi — sign up & trade on Kalshi →" };
+const REFERRAL_KALSHI = { url: "https://kalshi.com/sign-up/?referral=4373e9f9-0304-498c-8ca7-fccd3714b808&m=true&utm_source=mobile_app&utm_medium=share&utm_campaign=referral&utm_content=share_button&utm_term=referrals_pill", text: "Open Kalshi →" };
 const SOCIAL = { instagram: "https://www.instagram.com/propstreaklab", tiktok: "https://www.tiktok.com/@propstreaklab", x: "https://x.com/propstreaklab" };
 (function renderRef(){ const b=$('refbanner'); if(!b) return;
   if(REFERRAL.url){ b.href=REFERRAL.url; b.textContent=REFERRAL.text; b.hidden=false; } else b.hidden=true;

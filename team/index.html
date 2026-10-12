@@ -665,7 +665,7 @@ footer p{margin:0;max-width:80ch}
     if (sysTotal && pct(mobile, sysTotal) >= 60) acts.push(['Mobile', `${pct(mobile, sysTotal)}% of visitors are on a phone, mostly iPhone. Check new features on a phone first and keep tables usable at narrow widths.`]);
     const pages = mergePages(R.pages); const home = pages.find(p=>p.path==='/'); const boards = pages.filter(p=>/^\/(nfl|nba|nhl|mlb)\.html$/.test(p.path)).reduce((a,b)=>a+b.n,0);
     if (home && home.n > 0) acts.push(['Funnel', `For every 100 home page visits there were ${Math.round(boards/home.n*100)} visits to a sport board. A low number means people aren't clicking through from the home page.`]);
-    if (total >= 50 && clicks.length && !signups) acts.push(['Sign-ups', 'Nobody clicked a Polymarket or Kalshi sign-up button in this range. Try putting the $25 offer closer to the picks people open most.']);
+    if (total >= 50 && clicks.length && !signups) acts.push(['Sign-ups', 'Nobody clicked a Polymarket or Kalshi sign-up button in this range. Try putting the Polymarket and Kalshi links closer to the picks people open most.']);
     else if (signups) acts.push(['Sign-ups', `${fmt(signups)} clicks on sign-up buttons, ${(signups/Math.max(1,total)*100).toFixed(1)}% of visits. ${clicks.find(c=>isSignup(c.what)).name} gets the most.`]);
     const quick = time.length ? time[0].n : 0;
     if (timeN >= 20 && pct(quick, timeN) >= 40) acts.push(['Quick exits', `${pct(quick, timeN)}% of page views last under 10 seconds. Check what people see first on the pages they land on, especially on a phone.`]);

@@ -50,10 +50,10 @@ class Signup(unittest.TestCase):
         out, _ = self.run_with("Polymarket — PROPSTREAKLAB2 | Polymarket".replace("PROPSTREAKLAB2", "OTHER"))
         self.assertIn("signup: polymarket", out)
 
-    def test_offer_changed_and_a_page_lost_its_link(self):
+    def test_offer_wording_is_not_checked_but_lost_links_are(self):
         out, _ = self.run_with("Use your friend's code PROPSTREAKLAB and get $10", kalshi=404, carriers="join/propstreaklab")
         self.assertEqual(sorted(out), ["signup: /", "signup: /app.js", "signup: /guides/polymarket-and-kalshi.html",
-                                       "signup: kalshi", "signup: polymarket offer"])
+                                       "signup: kalshi"])
 
 
 if __name__ == "__main__":
