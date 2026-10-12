@@ -28,12 +28,11 @@ import team_stats
 OUT = os.path.join("team", "edges.enc")
 ET = ZoneInfo("America/New_York")
 FILES = [("nfl", "picks.json"), ("nhl", "nhl_picks.json"), ("mlb", "mlb_picks.json"), ("nba", "nba_picks.json")]
-NHL_REGULAR = "2026-10-07"     # NHL regular season: the preseason flattered the model
+NHL_REGULAR = "2026-10-07"     # NHL regular season: preseason picks are left out of every row (current season only)
 BOOT = 400
 
 STRATEGIES = [   # (key, label, sport or None, test)
-    ("nhl-value-reg", "NHL Value spots, regular season", "nhl", lambda p: "V" in p["lists"] and p["day"] >= NHL_REGULAR),
-    ("nhl-value", "NHL Value spots, all", "nhl", lambda p: "V" in p["lists"]),
+    ("nhl-value", "NHL Value spots", "nhl", lambda p: "V" in p["lists"]),
     ("nhl-top", "NHL Top 25 Surest", "nhl", lambda p: "T" in p["lists"]),
     ("nfl-value", "NFL Value spots", "nfl", lambda p: "V" in p["lists"]),
     ("nfl-top", "NFL Top 25 Surest", "nfl", lambda p: "T" in p["lists"]),
@@ -139,8 +138,14 @@ def summary(rows, today, rng):
             "daily": [[d, round(sum(byday[d]), 2)] for d in sorted(byday)][-30:]}
 
 
+def current_season(rows):
+    """This season's picks only: NHL preseason games are left out."""
+    return [p for p in rows if not (p["sport"] == "nhl" and p["day"] < NHL_REGULAR)]
+
+
 def build(rows, today, seed=1):
     rng = random.Random(seed)
+    rows = current_season(rows)
     out = []
     for key, label, sport, test in STRATEGIES:
         s = summary([p for p in rows if (sport is None or p["sport"] == sport) and test(p)], today, rng)
@@ -161,7 +166,7 @@ def main():
         doc = load(path)
         if doc:
             rows += graded(sport, doc)
-    report = {"generated_at": now.strftime("%Y-%m-%dT%H:%M:%SZ"), "day": today, "picks": len(rows),
+    report = {"generated_at": now.strftime("%Y-%m-%dT%H:%M:%SZ"), "day": today, "picks": len(current_season(rows)),
               "strategies": build(rows, today)}
     try:   # the same numbers as the last pass: leave the file alone (a new salt would change it every time)
         with open(OUT, encoding="ascii") as f:
