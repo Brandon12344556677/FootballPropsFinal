@@ -40,7 +40,8 @@ KALSHI_REF = f"https://kalshi.com/sign-up/?referral={KALSHI_REF_ID}"
 HAND_PAGES = ["/", "/methodology.html", "/guides/", "/guides/what-is-a-player-prop.html",
               "/guides/polymarket-and-kalshi.html", "/guides/how-to-read-the-model.html",
               "/best/", "/games/", "/privacy.html", "/terms.html", "/cookies.html"]
-REF_CARRIERS = ["/", "/app.js", "/guides/polymarket-and-kalshi.html"]   # every one carries both sign-up links
+REF_CARRIERS = ["/app.js", "/guides/polymarket-and-kalshi.html"]   # every one carries both sign-up links
+# (not the home page: its sign-up row was removed on purpose for Meta's ad review, Oct 12, 2026)
 NOINDEX_OK = re.compile(r"^/(team|p)/")
 HINTS = {
     "search": "Search engines can't read or reach a page. Generated pages (players/, games/, best/) come from "
