@@ -172,7 +172,7 @@ h2 i{color:var(--green)}
 .demo-go{display:block;margin-top:14px;color:var(--green);font-family:var(--cond);font-weight:700;text-transform:uppercase;letter-spacing:.1em;font-size:13px;text-decoration:none}
 .demo-go:hover{text-decoration:underline}
 
-/* bet of the day: two slots, each a pick card from app.css plus the record */
+/* pick of the day: two slots, each a pick card from app.css plus the record */
 #botd{padding:64px 0 8px}
 .botdgrid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:28px}
 .botdslot{background:var(--surface);border:1px solid var(--line);border-radius:22px;padding:18px;display:flex;flex-direction:column;gap:12px;min-width:0}
@@ -528,13 +528,6 @@ footer .fine a{color:#8394ab}
     </div>
   </section>
 
-  <!-- PROMO: Polymarket code + group, one slim row (socials live in the footer) -->
-  <div class="promo">
-    <div class="wrap">
-      <a class="ref" href="https://polymarket.us/join/propstreaklab" target="_blank" rel="noopener sponsored">Open Polymarket →</a>
-      <a class="ref" href="https://kalshi.com/sign-up/?referral=4373e9f9-0304-498c-8ca7-fccd3714b808&amp;m=true&amp;utm_source=mobile_app&amp;utm_medium=share&amp;utm_campaign=referral&amp;utm_content=share_button&amp;utm_term=referrals_pill" target="_blank" rel="noopener sponsored">Open Kalshi →</a>
-      <a class="ref2" href="https://polymarket.us/squad/join/CDU9RMD97K7O1G95yAao?referrer=propstreaklab" target="_blank" rel="noopener sponsored">👥 Join our Polymarket group →</a>
-    </div>
   </div>
 
   <!-- HERO -->
@@ -597,11 +590,11 @@ footer .fine a{color:#8394ab}
     </div>
   </section>
 
-  <!-- BET OF THE DAY: a Lock and a Value Shot, from botd.json (botd.py): picked once a day, never swapped, graded in public -->
+  <!-- PICK OF THE DAY: a Safe Pick and a Value Shot, from botd.json (botd.py): picked once a day, never swapped, graded in public -->
   <section id="botd" aria-labelledby="botd-h" hidden>
     <div class="wrap">
-      <p class="kicker" id="botdkick">Bet of the Day</p>
-      <h2 id="botd-h">Today's <i>Lock</i> &amp; <i>Value Shot</i>.</h2>
+      <p class="kicker" id="botdkick">Pick of the Day</p>
+      <h2 id="botd-h">Today's <i>Safe Pick</i> &amp; <i>Value Shot</i>.</h2>
       <p class="sub">One of each, picked from all four sports once a day, locked in when it posts and graded in public — the wins and the losses.</p>
       <div class="app botdgrid"><div class="botdslot lock" id="botd-lock"></div><div class="botdslot" id="botd-value"></div></div>
       <p class="todaynote" id="botdnote"></p>
@@ -615,7 +608,7 @@ footer .fine a{color:#8394ab}
         <div class="emailcopy">
           <p class="kicker">Free daily email</p>
           <h2 id="email-h">Today's best picks, <i>in your inbox</i>.</h2>
-          <p class="sub">Bet of the Day, the top Value spots and yesterday's results, every day around 11 AM ET. Free, one email a day, unsubscribe any time.</p>
+          <p class="sub">Pick of the Day, the top Value spots and yesterday's results, every day around 11 AM ET. Free, one email a day, unsubscribe any time.</p>
         </div>
         <form class="emailform" id="emailform" method="post" target="_blank" rel="noopener">
           <label class="sr" for="emailaddr">Email address</label>
@@ -1034,7 +1027,7 @@ function countUp(el){ const to=+el.dataset.count; if(!to||el.dataset.done) retur
 
   // Bet of the Day (botd.json, botd.py): today's entry from 11 AM ET; before that, yesterday's
   // picks with their results. A pick never changes once posted; the record counts every one.
-  const SLOT={lock:{t:'🔒 Lock of the Day', blurb:'The surest pick on the board: the market and the model both put it at 90%+. Small payout, the highest hit rate.'},
+  const SLOT={lock:{t:'✅ Safe Pick of the Day', blurb:'The surest pick on the board: the market and the model both put it at 90%+. Small payout, the highest hit rate.'},
               value:{t:'🎯 Value Shot', blurb:'Pays 2× or more. The model rates it well above the market — the riskier pick.'}};
   const etDay=d=>new Intl.DateTimeFormat('en-CA',{timeZone:'America/New_York'}).format(d);
   const fmtDay=iso=>new Date(iso+'T12:00:00Z').toLocaleDateString([], {weekday:'short', month:'short', day:'numeric', timeZone:'UTC'});
@@ -1080,9 +1073,9 @@ function countUp(el){ const to=+el.dataset.count; if(!to||el.dataset.done) retur
     const days=b.days||[], today=etDay(new Date());
     const day=days.find(d=>d.date===today), prev=[...days].reverse().find(d=>d.date<today);
     const show=day||(prev&&(prev.lock||prev.value)? prev : null);
-    document.getElementById('botdkick').textContent = day? `Bet of the Day · ${fmtDay(day.date)}`
-      : show? `Bet of the Day · yesterday’s results · today’s post at 11 AM ET` : 'Bet of the Day';
-    document.getElementById('botd-h').innerHTML = day||!show? 'Today\'s <i>Lock</i> &amp; <i>Value Shot</i>.' : 'Yesterday\'s <i>Lock</i> &amp; <i>Value Shot</i>.';
+    document.getElementById('botdkick').textContent = day? `Pick of the Day · ${fmtDay(day.date)}`
+      : show? `Pick of the Day · yesterday’s results · today’s post at 11 AM ET` : 'Pick of the Day';
+    document.getElementById('botd-h').innerHTML = day||!show? 'Today\'s <i>Safe Pick</i> &amp; <i>Value Shot</i>.' : 'Yesterday\'s <i>Safe Pick</i> &amp; <i>Value Shot</i>.';
     ['lock','value'].forEach(s=>{ document.getElementById('botd-'+s).innerHTML=bsSlot(s, show, b); });
     document.getElementById('botdnote').textContent='Picked from every sport’s upcoming props at the best price at that moment (the cheaper of Polymarket and Kalshi) and never swapped afterward, even if the price moves. A player who doesn’t play is a void. Research, not betting advice — 21+.';
     sec.hidden=false;

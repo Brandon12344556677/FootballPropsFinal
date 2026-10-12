@@ -11,7 +11,7 @@ class Email(unittest.TestCase):
              "stat": "pts", "prob": 0.8, "price": 0.55, "start": "2026-10-12T23:00:00Z", "vn": "P"}
         subject, body = post_daily.email_message([p], True, [("nhl", 9, 13, 3.58)], datetime.date(2026, 10, 12), lock=p)
         self.assertEqual(subject, "Today's best props (Mon, Oct 12): Jane Doe under 0.5 Points")
-        self.assertIn("## Bet of the Day", body)
+        self.assertIn("## Pick of the Day", body)
         self.assertIn("utm_source=email", body)
         self.assertIn("9/13 hit · +3.6 units", body)
         self.assertIn("Research, not betting advice", body)
