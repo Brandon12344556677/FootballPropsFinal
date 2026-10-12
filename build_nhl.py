@@ -1418,19 +1418,9 @@ def assign_lists(picks):
     vals.sort(key=lambda x: -x[0])
     for _, p in vals[:VALUE_N]:
         p["lists"] += "V"
-    # U = "Unders Edge": assist unders priced 65-80c, the NHL rule that held up on the graded record
-    # (edge_report.UNDER_RULES); one line per player-prop, the surest
-    seen = set()
-    for p in sorted((p for p in pending if under_edge(p)), key=lambda p: -p["prob"]):
-        k = (p["pid"], p["stat"], p["gid"])
-        if k not in seen:
-            seen.add(k)
-            p["lists"] += "U"
-
-
-def under_edge(p):
-    return (p.get("stat") == "a" and p.get("side") == "under" and p.get("price") is not None
-            and 0.65 <= p["price"] < 0.80 and not p.get("th"))
+    for p in picks:     # a list that was withdrawn before any of its picks were graded
+        if "U" in (p.get("lists") or ""):
+            p["lists"] = p["lists"].replace("U", "")
 
 
 def fit_temperature(picks):
