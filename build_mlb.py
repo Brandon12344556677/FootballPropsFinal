@@ -862,7 +862,8 @@ VALUE_MIN_EDGE = 0.15   # and the model has to be 15+ points higher
 # Value spots are unders only (since Oct 12, 2026): MLB Value overs went 30-47 (-6.6 units) from
 # Sep 30 to Oct 11 and lost in both halves of that stretch, as MLB overs did overall. The season
 # record counts the current rule (live_record): the overs listed before stay in the picks file
-# and Past picks (their result is kept as "Vpre", not shown); methodology.html notes the rule.
+# (their result is kept as "Vpre", not shown) but the board's Past picks drops their V tag
+# (valueRule in mlb_template.html); methodology.html notes the rule.
 VALUE_SIDES = ("under",)
 
 
