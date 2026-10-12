@@ -162,13 +162,9 @@ def messages(picks, is_value, results, today):
         t.append("📊 <b>Yesterday's Value spots:</b> " + html.escape(" · ".join(parts)))
     d.append("")
     d.append(f"Every pick is recorded before the game and graded in public → <{tag(SITE, 'discord')}>")
-    d.append(f"🎁 $25 free on Polymarket with code **PROPSTREAKLAB** → <{REFERRAL}>")
-    d.append(f"🎁 $25 free on Kalshi → <{REFERRAL_KALSHI}>")
     d.append("-# Research, not betting advice. 18+.")
     t.append("")
     t.append(f"Every pick is recorded before the game and graded in public → {html.escape(tag(SITE, 'telegram'))}")
-    t.append(f"🎁 $25 free on Polymarket with code <b>PROPSTREAKLAB</b> → {REFERRAL}")
-    t.append(f"🎁 $25 free on Kalshi → {html.escape(REFERRAL_KALSHI)}")
     t.append("<i>Research, not betting advice. 18+.</i>")
     return "\n".join(d)[:1990], "\n".join(t)[:4000]
 
@@ -209,7 +205,6 @@ def email_message(picks, is_value, results, today, lock=None, value=None):
             lines.append(f"- {SPORT[s]}: {h}/{n} hit · {'+' if u >= 0 else '−'}{abs(u):.1f} units")
         lines.append("")
     lines += [f"Every pick is recorded before the game and graded in public: [propstreaklab.com]({tag(SITE, 'email')})", "",
-              f"🎁 $25 free on Polymarket with code **PROPSTREAKLAB**: [sign up]({REFERRAL}) · $25 free on Kalshi: [sign up]({REFERRAL_KALSHI})", "",
               "*Research, not betting advice. 18+. If gambling stops being fun, call 1-800-GAMBLER.*"]
     first = picks[0] if picks else (lock or value)
     lead = f": {first['player']} {first['side']} {first['line']} {first['statText']}" if first else ""

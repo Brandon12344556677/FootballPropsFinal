@@ -8,8 +8,8 @@ Runs once a day in its own workflow (.github/workflows/site_checks.yml), from th
               allows crawling and points at the sitemap; links on the hand-written pages
               (home, methodology, guides, best props, games, legal) all lead somewhere.
               (indexnow.yml already sends every sitemap URL to Bing once a day.)
-  - signup:   the Polymarket referral page still shows the PROPSTREAKLAB code and the $25
-              offer the site promises; the Kalshi referral link still answers (Kalshi often
+  - signup:   the Polymarket referral page still shows the PROPSTREAKLAB code (so sign-ups are
+              still credited to the site); the Kalshi referral link still answers (Kalshi often
               blocks servers, which is noted, not alerted); every page and script that
               carries a sign-up link carries the same code.
 
@@ -35,7 +35,6 @@ TITLE = "Site checks: search engines or sign-up links need a look"
 MARK = "<!-- site-checks -->"
 POLY_REF = "https://polymarket.us/join/propstreaklab"
 POLY_CODE = "PROPSTREAKLAB"
-OFFER = "$25"
 KALSHI_REF_ID = "4373e9f9-0304-498c-8ca7-fccd3714b808"
 KALSHI_REF = f"https://kalshi.com/sign-up/?referral={KALSHI_REF_ID}"
 HAND_PAGES = ["/", "/methodology.html", "/guides/", "/guides/what-is-a-player-prop.html",
@@ -159,9 +158,6 @@ def check_signup():
         if POLY_CODE not in title.upper():
             out["signup: polymarket"] = (f"The Polymarket sign-up page no longer shows the code {POLY_CODE} "
                                          f"(its title is \"{title.strip()[:120]}\"): new users may not be credited to you.")
-        elif OFFER not in title:
-            out["signup: polymarket offer"] = (f"Polymarket's sign-up page no longer says {OFFER} (\"{title.strip()[:120]}\"), "
-                                               f"but the site promises {OFFER} free.")
     st, _ = fetch(KALSHI_REF, tries=2)
     if st in (403, 429, None):
         notes.append(f"Kalshi's sign-up link couldn't be checked from a server ({st or 'no answer'}); Kalshi blocks most bots.")
