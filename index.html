@@ -524,7 +524,7 @@ footer .fine a{color:#8394ab}
                role="combobox" aria-expanded="false" aria-controls="psres" aria-autocomplete="list" aria-label="Search any player">
         <ul id="psres" role="listbox" aria-label="Players" hidden></ul>
       </div>
-      <p class="pickbar-more"><a href="best/">Today's best props by sport</a> · <a href="guides/">New to player props? Start here</a></p>
+      <p class="pickbar-more"><a href="best/">Today's best props by sport</a> · <a href="guides/">New to player props? Start here</a><span class="pb-email" hidden> · <a href="#email">Free daily picks email</a></span></p>
     </div>
   </section>
 
@@ -608,6 +608,26 @@ footer .fine a{color:#8394ab}
     </div>
   </section>
 
+  <!-- DAILY EMAIL: sign-up for the daily picks email (Buttondown; post_daily.py sends it). Hidden until NEWSLETTER is set below. -->
+  <section id="email" aria-labelledby="email-h" hidden>
+    <div class="wrap">
+      <div class="emailbox">
+        <div class="emailcopy">
+          <p class="kicker">Free daily email</p>
+          <h2 id="email-h">Today's best picks, <i>in your inbox</i>.</h2>
+          <p class="sub">Bet of the Day, the top Value spots and yesterday's results, every day around 11 AM ET. Free, one email a day, unsubscribe any time.</p>
+        </div>
+        <form class="emailform" id="emailform" method="post" target="_blank" rel="noopener">
+          <label class="sr" for="emailaddr">Email address</label>
+          <input id="emailaddr" type="email" name="email" required placeholder="you@example.com" autocomplete="email">
+          <input type="hidden" name="tag" value="site">
+          <button class="btn btn-go" type="submit">Send me the picks</button>
+          <p class="emailfine">We'll email you a link to confirm. Your address is used only for this email and never sold. <a href="privacy.html">Privacy</a></p>
+        </form>
+      </div>
+    </div>
+  </section>
+
   <!-- LIVE NOW: today's Value and Top 25 picks (today.json "live") and your tracked bets, followed through the
        games from ESPN's live box scores in the browser (app.js PSLive) -->
   <section id="live" aria-labelledby="live-h" hidden>
@@ -629,26 +649,6 @@ footer .fine a{color:#8394ab}
         <div class="movecol" id="mvstreak"><h3>Hot streaks</h3><p class="mvnote">Cleared this exact line in each of their last games, and it still pays.</p><div class="mvlist"></div></div>
         <div class="movecol" id="mvmove"><h3>Market moving our way</h3><p class="mvnote">The price has risen since we recorded the pick: the market came around to it.</p><div class="mvlist"></div></div>
         <div class="movecol" id="mvfast" hidden><h3>Moving fast</h3><p class="mvnote">The price jumped 10¢ or more in the last hour, often a sign of injury or lineup news. Check before you bet.</p><div class="mvlist"></div></div>
-      </div>
-    </div>
-  </section>
-
-  <!-- DAILY EMAIL: sign-up for the daily picks email (Buttondown; post_daily.py sends it). Hidden until NEWSLETTER is set below. -->
-  <section id="email" aria-labelledby="email-h" hidden>
-    <div class="wrap">
-      <div class="emailbox">
-        <div class="emailcopy">
-          <p class="kicker">Free daily email</p>
-          <h2 id="email-h">Today's best picks, <i>in your inbox</i>.</h2>
-          <p class="sub">Bet of the Day, the top Value spots and yesterday's results, every day around 11 AM ET. Free, one email a day, unsubscribe any time.</p>
-        </div>
-        <form class="emailform" id="emailform" method="post" target="_blank" rel="noopener">
-          <label class="sr" for="emailaddr">Email address</label>
-          <input id="emailaddr" type="email" name="email" required placeholder="you@example.com" autocomplete="email">
-          <input type="hidden" name="tag" value="site">
-          <button class="btn btn-go" type="submit">Send me the picks</button>
-          <p class="emailfine">We'll email you a link to confirm. Your address is used only for this email and never sold. <a href="privacy.html">Privacy</a></p>
-        </form>
       </div>
     </div>
   </section>
@@ -1149,6 +1149,7 @@ function countUp(el){ const to=+el.dataset.count; if(!to||el.dataset.done) retur
     f.addEventListener('submit', ()=>{ const gc=window.goatcounter; if(gc && gc.count) gc.count({path:'click/email-list/home', title:'Joined the email list', event:true});
       setTimeout(()=>{ f.querySelector('.emailfine').textContent='Check your inbox for a confirmation link.'; }, 300); });
     sec.hidden=false;
+    document.querySelectorAll('.pb-email').forEach(x=>{ x.hidden=false; });
   })();
 
   // LIVE NOW: today's listed picks and your tracked bets, from ESPN's live box scores (app.js PSLive)
