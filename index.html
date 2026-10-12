@@ -338,7 +338,12 @@ h2 i{color:var(--green)}
 .psearch li a[aria-selected="true"],.psearch li a:hover{background:rgba(34,208,127,.12)}
 .psearch li small{color:var(--muted);font-size:13px;white-space:nowrap}
 .psearch li.empty{padding:10px 12px;color:var(--muted);font-size:14px}
-#email{padding:64px 0 8px}
+#email{padding:14px 0 4px}
+#email .emailbox{padding:16px 20px;gap:16px;border-color:rgba(34,208,127,.35)}
+#email .emailcopy h2{font-size:clamp(20px,2.4vw,26px);margin:2px 0 4px;line-height:1.15}
+#email .emailcopy .sub{margin:0;font-size:14px}
+#email .kicker{margin:0}
+@media (max-width:480px){#email .emailcopy .sub{display:none}}
 .emailbox{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);gap:24px;align-items:center;background:var(--surface);border:1px solid var(--line);border-radius:20px;padding:24px}
 @media (max-width:760px){.emailbox{grid-template-columns:1fr;padding:18px}}
 .emailcopy{min-width:0}
@@ -528,7 +533,25 @@ footer .fine a{color:#8394ab}
     </div>
   </section>
 
-  </div>
+  <!-- DAILY EMAIL: sign-up for the daily picks email (Buttondown; post_daily.py sends it). Hidden until NEWSLETTER is set below. -->
+  <section id="email" aria-labelledby="email-h" hidden>
+    <div class="wrap">
+      <div class="emailbox">
+        <div class="emailcopy">
+          <p class="kicker">Free daily email</p>
+          <h2 id="email-h">Today's best picks, <i>in your inbox</i>.</h2>
+          <p class="sub">Pick of the Day, the top Value spots and yesterday's results, every day around 11 AM ET. Free, one email a day, unsubscribe any time.</p>
+        </div>
+        <form class="emailform" id="emailform" method="post" target="_blank" rel="noopener">
+          <label class="sr" for="emailaddr">Email address</label>
+          <input id="emailaddr" type="email" name="email" required placeholder="you@example.com" autocomplete="email">
+          <input type="hidden" name="tag" value="site">
+          <button class="btn btn-go" type="submit">Send me the picks</button>
+          <p class="emailfine">We'll email you a link to confirm. Your address is used only for this email and never sold. <a href="privacy.html">Privacy</a></p>
+        </form>
+      </div>
+    </div>
+  </section>
 
   <!-- HERO -->
   <section class="hero" aria-labelledby="hero-h">
@@ -598,26 +621,6 @@ footer .fine a{color:#8394ab}
       <p class="sub">One of each, picked from all four sports once a day, locked in when it posts and graded in public — the wins and the losses.</p>
       <div class="app botdgrid"><div class="botdslot lock" id="botd-lock"></div><div class="botdslot" id="botd-value"></div></div>
       <p class="todaynote" id="botdnote"></p>
-    </div>
-  </section>
-
-  <!-- DAILY EMAIL: sign-up for the daily picks email (Buttondown; post_daily.py sends it). Hidden until NEWSLETTER is set below. -->
-  <section id="email" aria-labelledby="email-h" hidden>
-    <div class="wrap">
-      <div class="emailbox">
-        <div class="emailcopy">
-          <p class="kicker">Free daily email</p>
-          <h2 id="email-h">Today's best picks, <i>in your inbox</i>.</h2>
-          <p class="sub">Pick of the Day, the top Value spots and yesterday's results, every day around 11 AM ET. Free, one email a day, unsubscribe any time.</p>
-        </div>
-        <form class="emailform" id="emailform" method="post" target="_blank" rel="noopener">
-          <label class="sr" for="emailaddr">Email address</label>
-          <input id="emailaddr" type="email" name="email" required placeholder="you@example.com" autocomplete="email">
-          <input type="hidden" name="tag" value="site">
-          <button class="btn btn-go" type="submit">Send me the picks</button>
-          <p class="emailfine">We'll email you a link to confirm. Your address is used only for this email and never sold. <a href="privacy.html">Privacy</a></p>
-        </form>
-      </div>
     </div>
   </section>
 
