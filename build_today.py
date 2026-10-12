@@ -228,6 +228,7 @@ def graded(picks_doc):
 
 
 def last_results(sport, picks_doc, today, max_age=7):
+    import depth
     """The latest ET game day (on or before `today`, within `max_age` days) with graded live
     picks: {"day", "T": {n, hit}, "V": {n, hit, units}} for the results line under each page's
     hero. Pushes and voids don't count; units are 1 unit per Value spot at its recorded price."""
@@ -251,7 +252,7 @@ def last_results(sport, picks_doc, today, max_age=7):
         if "V" in lists:
             d["V"]["n"] += 1
             d["V"]["hit"] += hit
-            price = p.get("price")
+            price = p.get("price") if depth.real_price(p) else None   # a price that can't have been real: no units
             if price:
                 price = price / 100.0 if sport == "nfl" else price
                 d["V"]["units"] += (1 / price - 1) if hit else -1

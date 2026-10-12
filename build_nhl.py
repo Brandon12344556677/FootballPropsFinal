@@ -1470,7 +1470,8 @@ def live_record(picks):
             if p["res"] == "hit":
                 r["hit"] += 1
             # 1 unit on every priced pick; prices are fractions, so a win pays 1/price - 1.
-            if p.get("price"):
+            # A price that can't have been real (depth.real_price) stays out of the units.
+            if p.get("price") and depth.real_price(p):
                 r["priced"] += 1
                 r["units"] += (1.0 / p["price"] - 1) if p["res"] == "hit" else -1
     graded = [p for p in picks if p.get("res") in ("hit", "miss")]
