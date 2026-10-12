@@ -129,23 +129,8 @@
       if (svg) svg.innerHTML = PUMPKIN;
     });
 
-    var n = daysLeft();
-    var b = document.createElement('div');
-    b.className = 'hw-banner';
-    b.setAttribute('role', 'note');
-    b.innerHTML = '🎃 <b>Happy Halloween</b> from Prop Streak Lab 👻' +
-      '<em class="hw-count">' + (n > 0 ? '🍬 ' + n + ' day' + (n === 1 ? '' : 's') + ' to Halloween' : '🎃 It\'s Halloween!') + '</em>' +
-      '<span>No tricks, just the picks.</span>';
-    var h = document.querySelector('header');
-    if (h) h.insertAdjacentElement('afterend', b); else document.body.insertBefore(b, document.body.firstChild);
-
-    var h1 = document.querySelector('main h1, .apphero h1, h1');
-    if (h1) {
-      var badge = document.createElement('div');
-      badge.className = 'hw-badge';
-      badge.innerHTML = '🎃 Halloween Edition <small>through Oct 31</small>';
-      h1.insertAdjacentElement('beforebegin', badge);
-    }
+    // (no countdown banner under the header and no "Halloween Edition" badge: they pushed the
+    // picks down; the colors and the decorations stay)
 
     var deco = document.createElement('div');
     deco.className = 'hw-deco';

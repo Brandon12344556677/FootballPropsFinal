@@ -28,7 +28,7 @@ import team_stats
 OUT = os.path.join("team", "edges.enc")
 ET = ZoneInfo("America/New_York")
 FILES = [("nfl", "picks.json"), ("nhl", "nhl_picks.json"), ("mlb", "mlb_picks.json"), ("nba", "nba_picks.json")]
-NHL_REGULAR = "2026-10-07"     # NHL regular season: preseason picks are left out of every row (current season only)
+NHL_REGULAR = "2026-09-29"     # NHL 2026-27 regular season opener: anything earlier is left out (current season only)
 BOOT = 400
 
 STRATEGIES = [   # (key, label, sport or None, test)

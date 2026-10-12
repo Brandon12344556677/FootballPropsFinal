@@ -37,7 +37,7 @@
 <link rel="stylesheet" href="fonts.css">
 <link rel="stylesheet" href="app.css?v=20261011e">
 <script src="app.js?v=20261012d"></script>
-<script src="/halloween.js?v=20261009a"></script>
+<script src="/halloween.js?v=20261012a"></script>
 <style>
 :root{
   color-scheme:dark;
@@ -501,10 +501,9 @@ footer .fine a{color:#8394ab}
       <b>Prop <i>Streak</i> Lab</b>
     </a>
     <nav class="topnav" aria-label="Sections">
-      <a href="#sports">Sports</a>
-      <a href="#what">What it does</a>
-      <a href="#free">Why it's free</a>
-      <a href="#about">About</a>
+      <a href="#pickbar-h">Sports</a>
+      <a href="#why">Why trust it</a>
+      <a href="methodology.html">How it works</a>
     </nav>
     <a class="btn btn-go" href="./nfl.html"><span>Open <span class="hide-sm">the </span>board →</span></a>
   </div>
@@ -630,7 +629,7 @@ footer .fine a{color:#8394ab}
     <div class="wrap">
       <p class="kicker"><span class="livedot" aria-hidden="true"></span> Live now</p>
       <h2 id="live-h">Today's picks, <i>live</i>.</h2>
-      <p class="sub">Every Value spot and Top 25 pick in today's games, with the stat so far. Updates every minute while games are on.</p>
+      <p class="sub">Today's Value spots and Top 25 picks in games that have started, with the stat so far. Updates every minute while games are on.</p>
       <div class="app livegrid" id="livegrid"></div>
       <p class="todaynote" id="livenote"></p>
     </div>
@@ -672,192 +671,20 @@ footer .fine a{color:#8394ab}
   </div>
 
   <!-- SPORT TABS -->
-  <section id="sports" class="center" aria-labelledby="sports-h">
+  <!-- WHY TRUST IT: what the site does, how it's graded, why it's free, who built it -->
+  <section id="why" aria-labelledby="why-h">
     <div class="wrap">
-      <p class="kicker rv">Pick your sport</p>
-      <h2 id="sports-h" class="rv d1">One model. <i>Four</i> leagues.</h2>
-      <p class="sub rv d2">Same tools, same honesty on every board — switch sports anytime.</p>
-
-      <div class="tabs rv d2" role="tablist" aria-label="Sports">
-        <button class="tab" role="tab" id="t-nfl" aria-controls="p-nfl" aria-selected="true" tabindex="0">🏈 NFL</button>
-        <button class="tab" role="tab" id="t-nba" aria-controls="p-nba" aria-selected="false" tabindex="-1">🏀 NBA</button>
-        <button class="tab" role="tab" id="t-nhl" aria-controls="p-nhl" aria-selected="false" tabindex="-1">🏒 NHL</button>
-        <button class="tab" role="tab" id="t-mlb" aria-controls="p-mlb" aria-selected="false" tabindex="-1">⚾ MLB</button>
-      </div>
-
-      <div class="tabpanel rv d3" role="tabpanel" id="p-nfl" aria-labelledby="t-nfl">
-        <div>
-          <h3>NFL player props</h3>
-          <p>Every NFL player's game log with a calibrated chance for any line — adjusted for the Vegas spread and total and the opponent's defense. Then see which props the model likes most, and how they're priced.</p>
-          <ul class="stats-list"><li>Passing yds</li><li>Passing TDs</li><li>Rushing yds</li><li>Receiving yds</li><li>Receptions</li><li>Touchdowns</li><li>Fantasy pts</li></ul>
-          <a class="btn btn-go" href="./nfl.html">Open the NFL board →</a>
-        </div>
-        <div class="panel-side">
-          <div class="mini"><div class="ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></div><div><b>Top 25 Surest</b><span>The week's 25 highest model chances, side by side with the market price.</span></div></div>
-          <div class="mini"><div class="ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13 2 4 14h7l-1 8 9-12h-7z"/></svg></div><div><b>Value spots &amp; Good odds</b><span>Where the model's chance clearly beats what the market is charging.</span></div></div>
-          <div class="mini"><div class="ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3v18h18"/><path d="m7 15 4-4 3 3 5-6"/></svg></div><div><b>Past picks, graded</b><span>Every recorded pick with its result, calibration and profit tracker.</span></div></div>
-        </div>
-      </div>
-
-      <div class="tabpanel" role="tabpanel" id="p-nba" aria-labelledby="t-nba" hidden>
-        <div>
-          <h3>NBA player props</h3>
-          <p>Every NBA player's box-score history with a calibrated chance for any line — scaled for the game's pace and the opponent. Combos included, so points + rebounds + assists is one click.</p>
-          <ul class="stats-list"><li>Points</li><li>Rebounds</li><li>Assists</li><li>3-pointers</li><li>Steals</li><li>Blocks</li><li>Pts + Reb + Ast</li></ul>
-          <a class="btn btn-go" href="./nba.html">Open the NBA board →</a>
-        </div>
-        <div class="panel-side">
-          <div class="mini"><div class="ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></div><div><b>Top 25 Surest</b><span>The slate's surest plays by the numbers, before every tip-off.</span></div></div>
-          <div class="mini"><div class="ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2c-3 4-3 8 0 12m0-12c3 4 3 8 0 12M2 12h20"/><circle cx="12" cy="12" r="10"/></svg></div><div><b>Hit-streak leaderboard</b><span>Who's cleared their line the most games in a row right now.</span></div></div>
-          <div class="mini"><div class="ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h10"/></svg></div><div><b>Parlay builder &amp; slip scanner</b><span>Build legs from the board, or snap a bet slip and grade it.</span></div></div>
-        </div>
-      </div>
-
-      <div class="tabpanel" role="tabpanel" id="p-nhl" aria-labelledby="t-nhl" hidden>
-        <div>
-          <h3>NHL player props</h3>
-          <p>Every NHL skater's and goalie's game log with a calibrated chance for any line — adjusted for the opponent. Shots on goal, points and goalie saves are all here.</p>
-          <ul class="stats-list"><li>Points</li><li>Goals</li><li>Assists</li><li>Shots on goal</li><li>Blocked shots</li><li>Hits</li><li>Goalie saves</li></ul>
-          <a class="btn btn-go" href="./nhl.html">Open the NHL board →</a>
-        </div>
-        <div class="panel-side">
-          <div class="mini"><div class="ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></div><div><b>Top 25 Surest</b><span>The surest plays on the slate, posted before every puck drop.</span></div></div>
-          <div class="mini"><div class="ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></div><div><b>Skaters &amp; goalies</b><span>Separate models for skater production and goalie workload.</span></div></div>
-          <div class="mini"><div class="ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3v18h18"/><path d="m7 15 4-4 3 3 5-6"/></svg></div><div><b>Graded in public</b><span>Every NHL pick is tracked and graded once the game is final.</span></div></div>
-        </div>
-      </div>
-
-      <div class="tabpanel" role="tabpanel" id="p-mlb" aria-labelledby="t-mlb" hidden>
-        <div>
-          <h3>MLB player props</h3>
-          <p>Every MLB hitter's and pitcher's game log with a calibrated chance for any line — adjusted for the opposing pitching staff or lineup. Built for the playoffs, priced against Polymarket's and Kalshi's live MLB props.</p>
-          <ul class="stats-list"><li>Hits</li><li>Total bases</li><li>Hits + runs + RBIs</li><li>Home runs</li><li>RBIs</li><li>Pitcher strikeouts</li><li>Outs recorded</li></ul>
-          <a class="btn btn-go" href="./mlb.html">Open the MLB board →</a>
-        </div>
-        <div class="panel-side">
-          <div class="mini"><div class="ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></div><div><b>Top 25 Surest</b><span>The surest plays on the slate, posted before every first pitch.</span></div></div>
-          <div class="mini"><div class="ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13 2 4 14h7l-1 8 9-12h-7z"/></svg></div><div><b>Value spots</b><span>Where the model's chance clearly beats the Polymarket price.</span></div></div>
-          <div class="mini"><div class="ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3v18h18"/><path d="m7 15 4-4 3 3 5-6"/></svg></div><div><b>Graded in public</b><span>Every MLB pick is tracked and graded once the game is final.</span></div></div>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- WHAT IT DOES -->
-  <section id="what" aria-labelledby="what-h" style="padding-top:20px">
-    <div class="wrap">
-      <p class="kicker rv">What Prop Streak Lab does</p>
-      <h2 id="what-h" class="rv d1">The data behind every prop — <i>not</i> a hot take.</h2>
-      <p class="sub rv d2">Most prop "advice" is a guess with confidence. We show you the numbers and let you decide.</p>
+      <p class="kicker">Why trust it</p>
+      <h2 id="why-h">Free, and <i>graded in public</i>.</h2>
       <div class="grid4">
-        <article class="feat rv">
-          <div class="ic"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3v18h18"/><rect x="7" y="12" width="3" height="6"/><rect x="12" y="8" width="3" height="10"/><rect x="17" y="5" width="3" height="13"/></svg></div>
-          <h3>Every game log</h3>
-          <p>See how often any player has cleared any line — last 5, last 10, all season — with the misses shown right next to the hits.</p>
-        </article>
-        <article class="feat rv d1">
-          <div class="ic"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.5"/></svg></div>
-          <h3>A calibrated chance</h3>
-          <p>A recency-weighted model turns the log into a probability with an honest range, adjusted for the matchup — and it checks itself against its own track record.</p>
-        </article>
-        <article class="feat rv d2">
-          <div class="ic"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2v20M17 6.5c0-1.9-2.2-3-5-3s-5 1.1-5 3 2.2 2.6 5 3.5 5 1.6 5 3.5-2.2 3-5 3-5-1.1-5-3"/></svg></div>
-          <h3>Priced vs. the market</h3>
-          <p>We line the model up against live Polymarket and Kalshi prices so you can see the edge — or see that there isn't one.</p>
-        </article>
-        <article class="feat rv d3">
-          <div class="ic"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></div>
-          <h3>Graded in public</h3>
-          <p>Picks are recorded before the game and graded from the box score — wins <b>and</b> losses. Nothing gets deleted.</p>
-        </article>
-      </div>
-      <div class="steps">
-        <div class="step rv"><span class="n">1</span><div><b>Pick a sport</b><span>NFL, NBA, NHL or MLB — same tools on every board.</span></div></div>
-        <div class="step rv d1"><span class="n">2</span><div><b>Search a player, set a line</b><span>Say 62.5 receiving yards, over or under.</span></div></div>
-        <div class="step rv d2"><span class="n">3</span><div><b>See the chance, price &amp; edge</b><span>Then build a parlay or scan your bet slip.</span></div></div>
-      </div>
-    </div>
-  </section>
-
-  <!-- WHY FREE / ADVANTAGE -->
-  <section id="free" class="free" aria-labelledby="free-h">
-    <div class="wrap">
-      <div class="free-hero">
-        <div class="zero rv" aria-hidden="true"><sup>$</sup>0<small>per month · no subscription</small></div>
-        <div>
-          <p class="kicker rv">Our edge</p>
-          <h2 id="free-h" class="rv d1">Free. <i>Actually</i> free.</h2>
-          <p class="sub rv d2">Pick sellers charge a monthly fee for picks you can't check. We give away the whole toolkit — every sport, every model, every graded pick — for nothing.</p>
-          <ul class="checks">
-            <li class="rv d2"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg><span><b>No subscription, no paywall, no "VIP" tier.</b> Everything on the site is open to everyone.</span></li>
-            <li class="rv d3"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg><span><b>No account.</b> No email, no password, no tracking cookies — just open it and use it.</span></li>
-            <li class="rv d3"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg><span><b>Receipts, not screenshots.</b> Our whole record is public, including every miss.</span></li>
-          </ul>
-        </div>
-      </div>
-
-      <div class="compare rv" role="table" aria-label="Prop Streak Lab compared with typical paid pick services">
-        <div class="crow head" role="row"><div class="k" role="columnheader"><span class="sr">Feature</span></div><div class="them" role="columnheader">Typical paid pick service</div><div class="us" role="columnheader">Prop Streak Lab</div></div>
-        <div class="crow" role="row"><div class="k" role="rowheader">Price</div><div class="them" role="cell"><span class="x">✕</span> Monthly subscription</div><div class="us" role="cell"><span class="ok">✓</span> $0</div></div>
-        <div class="crow" role="row"><div class="k" role="rowheader">Account</div><div class="them" role="cell"><span class="x">✕</span> Sign-up required</div><div class="us" role="cell"><span class="ok">✓</span> None needed</div></div>
-        <div class="crow" role="row"><div class="k" role="rowheader">Track record</div><div class="them" role="cell"><span class="x">✕</span> Highlight reels of the wins</div><div class="us" role="cell"><span class="ok">✓</span> Every pick graded in public</div></div>
-        <div class="crow" role="row"><div class="k" role="rowheader">How picks are made</div><div class="them" role="cell"><span class="x">✕</span> Gut feel &amp; hype</div><div class="us" role="cell"><span class="ok">✓</span> A calibrated model, shown with its range</div></div>
-        <div class="crow" role="row"><div class="k" role="rowheader">What you get</div><div class="them" role="cell"><span class="x">✕</span> Just the pick</div><div class="us" role="cell"><span class="ok">✓</span> The game log, the chance, the price &amp; the edge</div></div>
-      </div>
-      <p class="howfree rv"><b>So how is it free?</b> Some links to Polymarket are referral links — if you sign up through them, we may get a referral bonus at no cost to you. That's it. It never changes what the model says.</p>
-    </div>
-  </section>
-
-  <!-- RECEIPTS -->
-  <section id="receipts" aria-labelledby="rec-h" style="padding-top:10px">
-    <div class="wrap">
-      <p class="kicker rv">Transparency</p>
-      <h2 id="rec-h" class="rv d1">We show our <i>receipts</i>.</h2>
-      <p class="sub rv d2">Every pick is locked in before the game starts and graded from the official box score afterward — so you can judge the model on its record, not its marketing.</p>
-      <a class="receipt rv" id="receipt" href="./nfl.html#past" style="text-decoration:none;color:inherit" hidden>
-        <div class="big" id="rc-units">+0.0u</div>
-        <div>
-          <div class="lbl" id="rc-lbl">⚡ Value spots · last graded week</div>
-          <p id="rc-line"></p>
-          <p class="fine">Past results, not a guarantee. Every pick is listed in Past picks — tap to see them all.</p>
-        </div>
-        <span class="btn btn-ghost">See every pick →</span>
-      </a>
-      <div class="pillars">
-        <div class="pill rv"><b>Recorded before the game</b><span>Picks are saved from the board before kickoff, tip-off or puck drop — no after-the-fact edits.</span></div>
-        <div class="pill rv d1"><b>Graded from the box score</b><span>Results come straight from the official stats, hits and misses alike.</span></div>
-        <div class="pill rv d2"><b>Checked for calibration</b><span>When the model says 70%, we check that those picks really hit about 70% of the time.</span></div>
-      </div>
-    </div>
-  </section>
-
-  <!-- ABOUT -->
-  <section id="about" aria-labelledby="about-h">
-    <div class="wrap about">
-      <div>
-        <p class="kicker rv">About us</p>
-        <h2 id="about-h" class="rv d1">Built by fans who <i>wanted the data</i>.</h2>
-        <p class="rv d2">Prop Streak Lab is an independent, fan-built project with a finance and data background behind it. We got tired of pick sellers charging every month for hot takes with no receipts — so we built the opposite.</p>
-        <p class="rv d2">A free tool that shows you the real game logs, puts an honest probability on every line, lines it up against the market, and grades itself in public. It rebuilds itself automatically every 10 minutes, for the NFL, NBA, NHL and MLB.</p>
-        <div class="values rv d3"><span>Free</span><span>Transparent</span><span>Data-first</span><span>Privacy-first</span></div>
-      </div>
-      <figure style="margin:0"><blockquote class="quote rv d2">“The best prop tool isn't the one that's most confident — it's the one that shows you its record.”</blockquote><figcaption class="cond rv d3" style="margin:14px 0 0 29px;color:var(--muted);font-size:13px">Our founding idea</figcaption></figure>
-    </div>
-  </section>
-
-  <!-- CTA -->
-  <section aria-labelledby="cta-h" style="padding-top:10px">
-    <div class="wrap">
-      <div class="cta rv">
-        <p class="kicker">Ready when you are</p>
-        <h2 id="cta-h">Pick a sport and <i>start digging</i>.</h2>
-        <p class="sub" style="margin:0 auto">No sign-up. No card. Just open a board.</p>
-        <div class="sports">
-          <a class="sport" href="./nfl.html"><span class="ico" aria-hidden="true">🏈</span><span><b>NFL</b><small>Open the board</small></span></a>
-          <a class="sport" href="./nba.html"><span class="ico" aria-hidden="true">🏀</span><span><b>NBA</b><small>Open the board</small></span></a>
-          <a class="sport" href="./nhl.html"><span class="ico" aria-hidden="true">🏒</span><span><b>NHL</b><small>Open the board</small></span></a>
-          <a class="sport" href="./mlb.html"><span class="ico" aria-hidden="true">⚾</span><span><b>MLB</b><small>Open the board</small></span></a>
-        </div>
+        <article class="feat"><h3>The data, not a hot take</h3>
+          <p>Every player's game log, with a calibrated chance for any line, adjusted for the matchup and lined up against live Polymarket and Kalshi prices.</p></article>
+        <article class="feat"><h3>Graded in public</h3>
+          <p>Picks are recorded before the game and graded from the official box score, wins <b>and</b> losses. <a href="methodology.html">How the model works →</a></p></article>
+        <article class="feat"><h3>Actually free</h3>
+          <p>No subscription and no account. Some links to Polymarket and Kalshi are referral links: if you sign up through them we may get a bonus, at no cost to you. It never changes a pick.</p></article>
+        <article class="feat"><h3>Built by fans</h3>
+          <p>An independent project with a finance and data background, rebuilt automatically every 10 minutes for the NFL, NBA, NHL and MLB.</p></article>
       </div>
     </div>
   </section>
@@ -1178,7 +1005,7 @@ function countUp(el){ const to=+el.dataset.count; if(!to||el.dataset.done) retur
     function official(r){ return r.res && OFFICIAL[r.res]? Object.assign({}, r, {status:OFFICIAL[r.res], state:'post', v: r.actual!=null? +r.actual : r.v, clock:'Final'}) : r; }
     function render(rows){
       rows=rows.map(official);
-      const shown=rows.filter(r=>r.state!=='none' || r.res);
+      const shown=rows.filter(r=>r.state==='in' || r.state==='post' || r.res);   // started games only: upcoming picks are in Today's best value
       const groups=[['mine','Your tracked bets'], ['value','Value spots'], ['top','Top 25 Surest']];
       const html=groups.map(([g, title])=>{
         const rs=shown.filter(r=>r.group===g).sort((a,b)=>order[a.status]-order[b.status]); if(!rs.length) return '';
