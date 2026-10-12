@@ -344,7 +344,7 @@ window.PS = (function(){
     const v=(o.vals||[]).filter(x=>x!=null && isFinite(x)).slice(-10), hits=v.filter(x=> o.side==='under'? x<+o.line : x>+o.line).length;
     const w=sheet(`<div class="ps-head" style="${teamVars(o.sport, o.team)}"><span class="av">${esc(initialsOf(o.name))}</span>`+
         `<div><b>${esc(o.name)}</b><span><span class="tbadge">${esc(o.team)}</span>${esc(o.vs||'')}${o.when? ' · '+esc(o.when) : ''}</span></div></div>`+
-      `<div class="verdict" hidden></div>`+fastHtml(o)+
+      `<div class="verdict" hidden></div>`+fastHtml(o)+reasonHtml(o)+
       (v.length>=3? `<div class="ps-l10"><div class="ps-sub">Last ${v.length} games · cleared ${esc(o.line)} <b>${hits} of ${v.length}</b></div>${bigSpark(v, o.line, o.side)}</div>` : '')+
       `<div class="ps-actions"><button type="button" class="btn ps-open">Full breakdown →</button></div>`+
       promoHtml(o)+moreHtml(o.more),
@@ -452,6 +452,26 @@ window.PS = (function(){
   let FAST=[];
   if(PAGE_SPORT) fetch('today.json',{cache:'no-store'}).then(r=>r.ok? r.json() : null)
     .then(d=>{ FAST=((d&&d.fast)||[]).filter(f=>f.sport===PAGE_SPORT); }).catch(()=>{});
+  // Plain-English reasons for a pick, from its own numbers: the last games against the line, the
+  // streak, the average against the line, and the model against the market price.
+  function reasonHtml(o){
+    const v=(o.vals||[]).filter(x=>x!=null && isFinite(x)).slice(-10), line=+o.line, under=o.side==='under';
+    if(v.length<3 || !isFinite(line)) return '';
+    const clears=x=> under? x<line : x>line, hits=v.filter(clears).length;
+    let streak=0; for(let i=v.length-1;i>=0 && clears(v[i]);i--) streak++;
+    const avg=v.reduce((a,b)=>a+b,0)/v.length, fmt=x=>Number.isInteger(x)? String(x) : x.toFixed(1);
+    const out=[`Cleared ${esc(o.line)} in <b>${hits} of the last ${v.length}</b> games${streak>=3? `, including <b>${streak} straight</b>` : ''}.`];
+    const gap=under? line-avg : avg-line;
+    out.push(`Averages <b>${fmt(avg)}</b> over those games, ${gap>=0? `${fmt(Math.abs(gap))} ${under?'under':'over'} the line` : `${fmt(Math.abs(gap))} on the wrong side of the line`}.`);
+    if(o.prob!=null && o.price!=null && isFinite(o.price)){
+      const p=Math.round(o.prob*100), c=Math.round(o.price*100), d=p-c;
+      out.push(d>=3? `The model gives it <b>${p}%</b> and the market price is <b>${c}¢</b>: the model rates it ${d} points higher.`
+             : d<=-3? `The model gives it <b>${p}%</b> but the market price is <b>${c}¢</b>: the market rates it higher, so the payout is thin.`
+             : `The model gives it <b>${p}%</b>, about the same as the market price (${c}¢).`);
+    }
+    if(o.neff!=null && isFinite(o.neff)) out.push(`Based on about <b>${Math.round(o.neff)}</b> games of history, weighted to the most recent.`);
+    return `<div class="ps-why"><b>Why</b><ul>${out.map(x=>`<li>${x}</li>`).join('')}</ul></div>`;
+  }
   function fastHtml(o){
     const f=FAST.find(x=>x.player===o.name && +x.line===+o.line && x.side===o.side);
     return f? `<div class="ps-fast"><b>Market moving fast:</b> ${Math.round(f.was*100)}¢ → ${Math.round(f.price*100)}¢ in the last hour. That's often injury or lineup news, so check it before you bet.</div>` : '';

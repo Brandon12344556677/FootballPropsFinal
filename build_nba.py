@@ -408,6 +408,105 @@ def fetch_markets():
     return games
 
 
+# Polymarket US (the CFTC exchange at polymarket.us, the one US users can trade) has its own
+# public gateway (no key, 20 req/s per IP). Its game events ("nba-okc-atl-2026-10-12") carry
+# the player props as "at least N" ladders, as for the NHL ("LeBron James 25+ points" = over
+# 24.5); live prices come from each market's BBO. Before the 2026-27 regular season it listed
+# only game lines, so this is written to the NHL format and does nothing until props appear.
+POLYUS_EVENTS = ("https://gateway.polymarket.us/v1/events?tagSlug=nba&active=true&closed=false"
+                 "&startDateMin={a}T00:00:00Z&startDateMax={b}T00:00:00Z&limit=100")
+POLYUS_EVENT = "https://gateway.polymarket.us/v1/events/slug/{slug}"
+POLYUS_BOOK = "https://gateway.polymarket.us/v1/markets/{slug}/book"   # best prices + depth (depth.py)
+US_SLUG = re.compile(r"^nba-([a-z]+)-([a-z]+)-(\d{4}-\d{2}-\d{2})$")
+US_TITLE = re.compile(r"^(.*?)\s+(\d+)\+\s")
+US_TEAM = {"uta": "UTAH", "was": "WSH", "wsh": "WSH", "nop": "NO", "pho": "PHX", "sas": "SA", "gsw": "GS", "nyk": "NY"}
+US_RUNGS = 3            # per player and stat, the rungs nearest his recent average (keeps the BBO calls down)
+
+
+def us_team(tok):
+    return US_TEAM.get(tok, tok.upper())
+
+
+def fetch_markets_us(players_by_key, today=None):
+    """Polymarket US NBA player props for games in [-1,+3] days, shaped like fetch_markets()
+    output with each market already parsed (key 'pm'). Only players we model are priced, and
+    only the US_RUNGS rungs nearest each player's last-10 average. Non-fatal."""
+    today = today or TODAY
+    a = (today - datetime.timedelta(days=1)).isoformat()
+    b = (today + datetime.timedelta(days=4)).isoformat()
+    try:
+        data = json.loads(http_get(POLYUS_EVENTS.format(a=a, b=b)))
+    except Exception as e:  # noqa: BLE001
+        print(f"  polymarket US: skipped ({e})")
+        return []
+    events = (data.get("events") if isinstance(data, dict) else None) or []
+    games, cands = [], {}
+    for ev in events:
+        m = US_SLUG.match(ev.get("slug", "") or "")
+        if not m:
+            continue
+        try:
+            d = datetime.date.fromisoformat(m.group(3))
+        except ValueError:
+            continue
+        if not (today - datetime.timedelta(days=1) <= d <= today + datetime.timedelta(days=3)):
+            continue
+        mkts = ev.get("markets")
+        if mkts is None:
+            try:
+                mkts = (json.loads(http_get(POLYUS_EVENT.format(slug=ev["slug"]))).get("event") or {}).get("markets")
+            except Exception:  # noqa: BLE001
+                mkts = []
+        g = {"slug": ev["slug"], "away": us_team(m.group(1)), "home": us_team(m.group(2)), "date": m.group(3), "markets": []}
+        for mk in mkts or []:
+            smt = mk.get("sportsMarketType") or ""
+            if "_player_" not in smt or mk.get("closed"):
+                continue
+            stat_text = smt.split("_player_", 1)[1].replace("_", " ")
+            sk = mkt_stat_key(stat_text)
+            tm = US_TITLE.match(mk.get("title") or "")
+            n = fnum(mk.get("line"))
+            if n is None and tm:
+                n = fnum(tm.group(2))
+            if not sk or not tm or n is None:
+                continue
+            pl = players_by_key.get(pkey(tm.group(1)))
+            if not pl or len(pl["g"]) < 5:
+                continue
+            vals = [stat_get(r, sk) for r in pl["g"][-10:]]
+            avg = sum(vals) / len(vals)
+            cands.setdefault((g["slug"], pl["id"], sk), []).append((abs(n - 0.5 - avg), g, mk.get("slug"), tm.group(1).strip(), stat_text, n - 0.5))
+        games.append(g)
+    todo = [c[1:] for rungs in cands.values() for c in sorted(rungs, key=lambda c: c[0])[:US_RUNGS]]
+
+    def bbo(item):
+        time.sleep(0.35)          # 6 workers x ~3/s stays under the 20 req/s limit
+        try:
+            return item, depth.pmus_book(json.loads(http_get(POLYUS_BOOK.format(slug=item[1]))).get("marketData") or {})
+        except Exception:  # noqa: BLE001
+            return item, None
+
+    def ok(p):
+        return p is not None and 0.02 < p < 0.98
+
+    from concurrent.futures import ThreadPoolExecutor
+    with ThreadPoolExecutor(max_workers=6) as ex:
+        for (g, _slug, name, stat_text, line), md in ex.map(bbo, todo):
+            if not md:
+                continue
+            ask, bid = md["ask"], md["bid"]
+            over = ask if ok(ask) else None                                    # buy Yes = over
+            under = (1 - bid) if bid is not None and ok(1 - bid) else None     # buy No = under
+            spread = (ask - bid) if ask is not None and bid is not None else None
+            tradeable = (over is not None or under is not None) and (spread is None or spread <= 0.15)
+            g["markets"].append({"pm": {"player": name, "statText": stat_text, "line": line,
+                                        "over": over, "under": under, "tradeable": tradeable,
+                                        "od": md["over"], "ud": md["under"]}})
+    games = [g for g in games if g["markets"]]
+    print(f"  polymarket US: {len(games)} NBA game(s), {sum(len(g['markets']) for g in games)} priced player props")
+    return games
+
+
 def season_year(d):
     """NBA season label = the calendar year the season tipped off (Oct)."""
     return d.year if d.month >= 9 else d.year - 1
@@ -1046,7 +1145,7 @@ def build_market_picks(picks, poly_games, players_by_key, espn_slate, defense, d
             continue            # locked: its picks stay as published
         gid = f"{g['date']}-{g['away']}-{g['home']}"
         for m in g.get("markets", []):
-            pm = parse_market(m)
+            pm = m.get("pm") or parse_market(m)     # Polymarket US markets arrive pre-parsed
             if not pm:
                 continue
             sk = mkt_stat_key(pm["statText"])
@@ -1505,6 +1604,10 @@ def main():
     except Exception as e:  # noqa: BLE001
         print(f"  polymarket: skipped ({e})")
         poly_games = []
+    try:
+        poly_games += fetch_markets_us(players_by_key)
+    except Exception as e:  # noqa: BLE001
+        print(f"  polymarket US: skipped ({e})")
 
     picks = load_picks()
     dropped = drop_preseason_picks(picks, store.get("pre", []) + PRE_GAMES)

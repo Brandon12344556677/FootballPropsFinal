@@ -129,7 +129,7 @@ def record(db):
     """The season record the sport page shows, as {tag: {n, hit, priced, units}}."""
     out = {}
     for tag, r in (db.get("record") or {}).items():
-        if tag not in ("T", "V") or not r.get("n"):
+        if tag not in ("T", "V", "U") or not r.get("n"):   # U: the Unders Edge list
             continue
         units = r.get("units")
         if units is None and r.get("roi") is not None and r.get("priced"):
@@ -529,10 +529,10 @@ def main():
             print(f"  {sport}: {len(got)} upcoming priced pick(s), record {rec[sport]}")
         except Exception as e:     # one bad sport never blanks the others
             print(f"  {sport}: skipped ({e})")
-    rec = [c for c in cands if recommendable(c)]   # what the home page, Pick of the Day and posts may feature
-    top = best(rec)
+    okc = [c for c in cands if recommendable(c)]   # what the home page, Pick of the Day and posts may feature
+    top = best(okc)
     picks = [{k: v for k, v in c.items() if k not in ("neff", "flag", "px0", "lists")} for c in top]
-    feat = featured(rec, top)
+    feat = featured(okc, top)
     try:
         fast, hist = fast_moves(feat, load(FAST_STATE) if os.path.exists(FAST_STATE) else {}, now)
         with open(FAST_STATE, "w", encoding="utf-8") as f:
@@ -545,7 +545,7 @@ def main():
     doc = {"gen": now.strftime("%Y-%m-%dT%H:%M:%SZ"), "record": rec, "picks": picks, "valueLive": value_live,
            "tracked": {"graded": n_graded, "since": since}, "fair": fair_weight(docs), "last": last,
            "calib": calibration(docs),
-           "streaks": streaks(rec), "moves": moves(rec), "fast": fast,
+           "streaks": streaks(okc), "moves": moves(okc), "fast": fast,
            "flags": news_flags(feat), "promo": promo_day(docs, today_et), "live": live}
     with open(OUT, "w", encoding="utf-8") as f:
         json.dump(doc, f, separators=(",", ":"), ensure_ascii=False)
@@ -558,7 +558,7 @@ def main():
     print(f"  {OUT}: {len(picks)} pick(s) ({kinds} value, {len(picks) - kinds} safe), {len(fast)} fast move(s), "
           f"{len(doc['flags'])} news flag(s), {doc['promo']['n']} value spot(s) today (usual {doc['promo']['avg']})")
     try:
-        botd.run(rec, docs, now)
+        botd.run(okc, docs, now)
     except Exception as e:     # never costs the home page its Today feed
         print(f"  {botd.OUT}: not updated ({e})")
 

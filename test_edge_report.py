@@ -47,6 +47,12 @@ class Summary(unittest.TestCase):
         self.assertEqual(out["all-nhl"]["n"], sum(1 for p in rows if p["day"] >= E.NHL_REGULAR))
         self.assertNotIn("nhl-value-reg", out)
 
+    def test_nba_rows_wait_for_the_season(self):
+        out = {s["key"]: s for s in E.build(self.rows(3, 3), "2026-10-10")}
+        self.assertEqual((out["nba-value"]["n"], out["nba-value"]["verdict"]), (0, "Waiting for games"))
+        self.assertIn("all-nba", out)
+        self.assertNotIn("nhl-top", out)          # other sports without picks still don't show
+
     def test_strategies_pick_their_rows(self):
         out = {s["key"]: s for s in E.build(self.rows(6, 4) + self.rows(3, 7, side="over", pr=0.6), "2026-10-10")}
         self.assertEqual(out["mlb-unders-mid"]["n"], 10)

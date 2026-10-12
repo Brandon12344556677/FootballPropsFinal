@@ -1214,6 +1214,16 @@ def assign_lists(picks):
             and p.get("side") in VALUE_SIDES and value_qualifies(p["prob"], p["price"])]
     for p in one_per_prop(sorted(vals, key=lambda p: -(p["prob"] - p["price"])))[:VALUE_N]:
         p["lists"] += "V"
+    # U = "Unders Edge": unders priced 50-65c and total bases under 1.5, the MLB rules that held up
+    # on the graded record (edge_report.UNDER_RULES)
+    for p in one_per_prop(sorted((p for p in pending if under_edge(p)), key=lambda p: -p["prob"])):
+        p["lists"] += "U"
+
+
+def under_edge(p):
+    if p.get("side") != "under" or p.get("price") is None or p.get("th"):
+        return False
+    return 0.50 <= p["price"] < 0.65 or (p.get("stat") == "tb" and p.get("line") == 1.5)
 
 
 def fit_temperature(picks):

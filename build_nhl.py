@@ -939,6 +939,10 @@ PICK_COLS = ["src", "gid", "season", "date", "pid", "player", "pos", "team", "op
 BOARD_STATS = ["pts", "sog", "g"]
 TOP_N = 25
 T_MIN_PROB = 0.90      # Top 25 Surest: the model has to give it 90%+ (and it needs a live price)
+# Goal unders aren't Top 25 picks: they hit about 93% at about 95c (-2.3% on 193 picks through
+# Oct 12, 2026, losing in the later half), while assist unders returned +7% on that list.
+def top_ok(p):
+    return not (p.get("stat") == "g" and p.get("side") == "under")
 VALUE_MIN_NEFF = 6.0
 # Value rules mirror build.py (NFL) so every sport's lists mean the same.
 VALUE_N = 200           # a safety cap only. At 50 it bound in busy weeks (NFL week 3: 27 picks that
@@ -952,7 +956,7 @@ def could_list(p):
     known to be enough (depth.verify reads the full book for these)."""
     if p.get("res") is not None or pick_locked(p) or not p.get("th"):
         return False
-    return any(px is not None and (p["prob"] >= T_MIN_PROB or
+    return any(px is not None and ((p["prob"] >= T_MIN_PROB and top_ok(p)) or
                                    (p["neff"] >= VALUE_MIN_NEFF and value_qualifies(p["prob"], px)))
                for px in (p.get("pp"), p.get("kp")))
 
@@ -1398,7 +1402,7 @@ def assign_lists(picks):
     for p in pending:
         p["lists"] = ""
     pending = [p for p in pending if not p.get("hd")]     # waiting on injury news (holds.py): no lists
-    ranked = sorted((p for p in pending if p["prob"] >= T_MIN_PROB and p.get("price") is not None and not p.get("th")),
+    ranked = sorted((p for p in pending if p["prob"] >= T_MIN_PROB and p.get("price") is not None and not p.get("th") and top_ok(p)),
                     key=lambda p: (-p["prob"], -p["neff"]))
     seen, top = set(), []     # Polymarket US lists 1+/2+/3+ ladders: keep one rung per player-prop
     for p in ranked:
@@ -1414,6 +1418,19 @@ def assign_lists(picks):
     vals.sort(key=lambda x: -x[0])
     for _, p in vals[:VALUE_N]:
         p["lists"] += "V"
+    # U = "Unders Edge": assist unders priced 65-80c, the NHL rule that held up on the graded record
+    # (edge_report.UNDER_RULES); one line per player-prop, the surest
+    seen = set()
+    for p in sorted((p for p in pending if under_edge(p)), key=lambda p: -p["prob"]):
+        k = (p["pid"], p["stat"], p["gid"])
+        if k not in seen:
+            seen.add(k)
+            p["lists"] += "U"
+
+
+def under_edge(p):
+    return (p.get("stat") == "a" and p.get("side") == "under" and p.get("price") is not None
+            and 0.65 <= p["price"] < 0.80 and not p.get("th"))
 
 
 def fit_temperature(picks):
