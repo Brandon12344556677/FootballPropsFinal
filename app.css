@@ -598,3 +598,7 @@ html body .pslcookie button{padding:7px 14px;font-size:13px;border-radius:999px;
 /* pick sheet: the price moved 10c+ in the last hour (app.js fastHtml) */
 .ps-fast{margin:10px 0 0;padding:10px 12px;border-radius:12px;border:1px solid rgba(232,181,74,.45);background:rgba(232,181,74,.08);font-size:13.5px;line-height:1.45}
 .ps-fast b{color:#e8b54a}
+/* pick sheet: plain-English reasons (app.js reasonHtml) */
+.ps-why{margin:10px 0 0;padding:10px 12px;border-radius:12px;border:1px solid var(--line, #22354f);background:rgba(255,255,255,.03);font-size:13.5px;line-height:1.45}
+.ps-why>b{display:block;font-size:12px;letter-spacing:.08em;text-transform:uppercase;opacity:.8;margin-bottom:4px}
+.ps-why ul{margin:0;padding-left:18px;display:grid;gap:3px}

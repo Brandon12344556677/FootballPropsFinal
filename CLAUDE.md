@@ -56,6 +56,9 @@ The bot overwrites these on every pass, so hand edits are lost and cause merge c
 - **Keep the public explanation in sync.** A change to a rule users see (list cutoffs, lock
   times, Bet of the Day windows, grading) also updates `methodology.html` and any on-page note
   in `app.js`/the templates, and the README if it describes it.
+- **The edge tracker follows every list change.** Adding, removing or changing a list, a list rule or what gets
+  recommended (Value, Top 25, Unders Edge, Pick of the Day, a new sport) also updates `edge_report.py` STRATEGIES in
+  the same PR, so the team dashboard's edge tracker shows it. The owner treats it as the most important number.
 - **Never rewrite recorded picks** (past entries in the picks files or `botd.json`) except
   through a builder's grading/void logic. The track record is the product.
 - **Non-NFL steps must not break the deploy.** Only `build.py` may exit non-zero in `update_pass.sh`.

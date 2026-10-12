@@ -164,3 +164,26 @@ class Agents(unittest.TestCase):
         nfl = {"cols": cols, "picks": [["live", "V", None, "2026-10-11", None], ["live", "", None, "2026-10-11", None]]}
         out = build_today.promo_day([("nhl", nhl), ("nfl", nfl)], "2026-10-11")
         self.assertEqual((out["n"], out["by"], out["avg"], out["days"], out["rank"]), (2, {"nhl": 1, "nfl": 1}, 1.5, 2, 0.5))
+
+
+class MainRecord(unittest.TestCase):
+    def test_record_stays_a_dict_of_sports(self):
+        """today.json "record" is {sport: {list: ...}}: a list of picks there broke the home page."""
+        import os, json, tempfile, shutil
+        src = os.getcwd()
+        out = tempfile.mkdtemp()
+        try:
+            for f in ("data.json", "picks.json", "template.html", "nhl.json", "nhl_picks.json", "nhl_template.html",
+                      "mlb.json", "mlb_picks.json", "mlb_template.html", "nba.json", "nba_picks.json", "nba_template.html", "botd.json"):
+                if os.path.exists(os.path.join(src, f)):
+                    shutil.copy(os.path.join(src, f), out)
+            os.chdir(out)
+            build_today.main()
+            with open("today.json", encoding="utf-8") as fh:
+                rec = json.load(fh)["record"]
+            self.assertIsInstance(rec, dict)
+            for v in rec.values():
+                self.assertIsInstance(v, dict)
+        finally:
+            os.chdir(src)
+            shutil.rmtree(out, ignore_errors=True)

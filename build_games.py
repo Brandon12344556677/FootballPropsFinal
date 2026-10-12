@@ -192,7 +192,7 @@ def index_page(listing, built):
 BEST = "best"      # best/<sport>.html: today's Value and Top 25 picks for one sport (fixed address, rebuilt each run)
 SHARE = "p"        # p/<sport>/<pid>-<stat>-<line>-<side>.html: a link preview for one listed pick (noindex)
 SHARE_DAYS = 14    # a share page outlives its game by this many days, so links already sent keep working
-GUIDES = ["guides/", "guides/what-is-a-player-prop.html", "guides/polymarket-and-kalshi.html",
+GUIDES = ["record.html", "guides/", "guides/what-is-a-player-prop.html", "guides/polymarket-and-kalshi.html",
           "guides/how-to-read-the-model.html"]   # hand-written pages, listed here for the sitemap
 
 
@@ -284,7 +284,7 @@ def update_sitemap(urls, day):
             sm = f.read()
     except OSError:
         return
-    sm = re.sub(r"\s*<url>\s*<loc>[^<]*/(games|best|guides)/[^<]*</loc>.*?</url>", "", sm, flags=re.S)
+    sm = re.sub(r"\s*<url>\s*<loc>[^<]*/((games|best|guides)/[^<]*|record\.html)</loc>.*?</url>", "", sm, flags=re.S)
     add = "".join(f"\n  <url><loc>{u}</loc><lastmod>{day}</lastmod><changefreq>hourly</changefreq><priority>0.6</priority></url>" for u in urls)
     with open("sitemap.xml", "w", encoding="utf-8") as f:
         f.write(sm.replace("</urlset>", add + "\n</urlset>"))

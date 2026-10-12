@@ -30,15 +30,22 @@ ET = ZoneInfo("America/New_York")
 FILES = [("nfl", "picks.json"), ("nhl", "nhl_picks.json"), ("mlb", "mlb_picks.json"), ("nba", "nba_picks.json")]
 NHL_REGULAR = "2026-09-29"     # NHL 2026-27 regular season opener: anything earlier is left out (current season only)
 BOOT = 400
+WAITING = {"nba"}       # rows shown even before their first graded pick (the NBA season starts Oct 2026)
+WAITING_KEYS = {"unders-list"}   # and lists that start posting later (the Unders Edge list, from Oct 12, 2026)
 
 STRATEGIES = [   # (key, label, sport or None, test)
     ("nhl-value", "NHL Value spots", "nhl", lambda p: "V" in p["lists"]),
     ("nhl-top", "NHL Top 25 Surest", "nhl", lambda p: "T" in p["lists"]),
+    ("nhl-top-rule", "NHL Top 25, current rule (no goal unders)", "nhl", lambda p: "T" in p["lists"] and not (p["stat"] == "g" and p["side"] == "under")),
+    ("unders-list", "Unders Edge list, as posted on the boards", None, lambda p: "U" in p["lists"]),
     ("nfl-value", "NFL Value spots", "nfl", lambda p: "V" in p["lists"]),
     ("nfl-top", "NFL Top 25 Surest", "nfl", lambda p: "T" in p["lists"]),
     ("mlb-value", "MLB Value spots (unders, the current rule)", "mlb", lambda p: "V" in p["lists"] and p["side"] == "under"),
     ("mlb-top", "MLB Top 25 Surest", "mlb", lambda p: "T" in p["lists"]),
     ("nba-value", "NBA Value spots", "nba", lambda p: "V" in p["lists"]),
+    ("nba-top", "NBA Top 25 Surest", "nba", lambda p: "T" in p["lists"]),
+    ("nba-unders", "NBA unders", "nba", lambda p: p["side"] == "under"),
+    ("nba-overs", "NBA overs", "nba", lambda p: p["side"] == "over"),
     ("unders", "Unders edge (the three rules below)", None,
      lambda p: any(f(p) for f in (UNDER_RULES[k] for k in UNDER_RULES))),
     ("mlb-unders-mid", "MLB unders priced 50-65c", "mlb", lambda p: UNDER_RULES["mlb-unders-mid"](p)),
@@ -47,6 +54,7 @@ STRATEGIES = [   # (key, label, sport or None, test)
     ("all-nhl", "Every NHL pick", "nhl", lambda p: True),
     ("all-mlb", "Every MLB pick", "mlb", lambda p: True),
     ("all-nfl", "Every NFL pick", "nfl", lambda p: True),
+    ("all-nba", "Every NBA pick", "nba", lambda p: True),
 ]
 UNDER_RULES = {
     "mlb-unders-mid": lambda p: p["sport"] == "mlb" and p["side"] == "under" and 0.50 <= p["pr"] < 0.65,
@@ -149,6 +157,8 @@ def build(rows, today, seed=1):
         s = summary([p for p in rows if (sport is None or p["sport"] == sport) and test(p)], today, rng)
         if s:
             out.append(dict(s, key=key, label=label, sport=sport))
+        elif sport in WAITING or key in WAITING_KEYS:   # not started yet: shown empty, fills in by itself
+            out.append({"key": key, "label": label, "sport": sport, "n": 0, "verdict": "Waiting for games"})
     return out
 
 
