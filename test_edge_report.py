@@ -41,6 +41,12 @@ class Summary(unittest.TestCase):
         self.assertEqual(E.summary(self.rows(30, 70), "2026-10-10", random.Random(1))["verdict"], "Losing")
         self.assertIsNone(E.summary([], "2026-10-10", random.Random(1)))
 
+    def test_nhl_preseason_left_out(self):
+        rows = self.rows(5, 5, sport="nhl", day="2026-10-0{}")      # days Oct 1-9: preseason until Oct 7
+        out = {s["key"]: s for s in E.build(rows, "2026-10-10")}
+        self.assertEqual(out["all-nhl"]["n"], sum(1 for p in rows if p["day"] >= E.NHL_REGULAR))
+        self.assertNotIn("nhl-value-reg", out)
+
     def test_strategies_pick_their_rows(self):
         out = {s["key"]: s for s in E.build(self.rows(6, 4) + self.rows(3, 7, side="over", pr=0.6), "2026-10-10")}
         self.assertEqual(out["mlb-unders-mid"]["n"], 10)
