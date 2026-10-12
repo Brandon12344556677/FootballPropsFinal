@@ -36,7 +36,7 @@
 <script data-goatcounter="https://propstreaklive.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
 <link rel="stylesheet" href="fonts.css">
 <link rel="stylesheet" href="app.css?v=20261011e">
-<script src="app.js?v=20261012a"></script>
+<script src="app.js?v=20261012b"></script>
 <script src="/halloween.js?v=20261009a"></script>
 <style>
 :root{
@@ -338,6 +338,42 @@ h2 i{color:var(--green)}
 .psearch li a[aria-selected="true"],.psearch li a:hover{background:rgba(34,208,127,.12)}
 .psearch li small{color:var(--muted);font-size:13px;white-space:nowrap}
 .psearch li.empty{padding:10px 12px;color:var(--muted);font-size:14px}
+#email{padding:64px 0 8px}
+.emailbox{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);gap:24px;align-items:center;background:var(--surface);border:1px solid var(--line);border-radius:20px;padding:24px}
+@media (max-width:760px){.emailbox{grid-template-columns:1fr;padding:18px}}
+.emailcopy{min-width:0}
+.emailcopy h2{margin-top:4px}
+.emailform{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;min-width:0}
+.emailform input[type=email]{min-width:0;padding:12px 14px;border-radius:12px;border:1px solid var(--line);background:var(--surface-2);color:#fff;font:inherit;font-size:16px}
+.emailform input[type=email]:focus-visible{outline:2px solid var(--green);outline-offset:2px}
+@media (max-width:480px){.emailform{grid-template-columns:1fr}}
+.emailfine{grid-column:1/-1;margin:0;color:var(--muted);font-size:12.5px}
+.emailfine a{color:inherit}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+#live{padding:64px 0 8px}
+.livedot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#eb6f7d;margin-right:6px;vertical-align:1px;animation:livepulse 1.6s ease-in-out infinite}
+@keyframes livepulse{50%{opacity:.35}}
+@media (prefers-reduced-motion:reduce){.livedot{animation:none}}
+.livegrid{display:grid;gap:18px;margin-top:22px}
+.livegroup{background:var(--surface);border:1px solid var(--line);border-radius:20px;padding:18px;min-width:0}
+.livegroup h3{margin:0 0 12px;font-family:var(--display);font-size:20px;color:#fff;display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+.livegroup h3 small{font-family:inherit;font-size:13px;color:var(--muted);font-weight:500}
+.lvlist{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+@media (max-width:760px){.lvlist{grid-template-columns:1fr}}
+.lv{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px 12px;align-items:center;padding:10px 12px;border-radius:12px;background:var(--surface-2);border:1px solid var(--line);color:inherit;text-decoration:none}
+.lv:hover{border-color:var(--green)}
+.lv-who{min-width:0}
+.lv-who b{display:block;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lv-who small{display:block;color:var(--muted);font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lv-st{font-family:var(--label,inherit);font-weight:700;font-size:12px;letter-spacing:.05em;text-transform:uppercase;padding:3px 8px;border-radius:999px;border:1px solid var(--line);color:var(--soft);white-space:nowrap}
+.lv-st.hit{color:#22d07f;border-color:rgba(34,208,127,.5);background:rgba(34,208,127,.1)}
+.lv-st.lost{color:#eb6f7d;border-color:rgba(235,111,125,.5)}
+.lv-st.live{color:#e8b54a;border-color:rgba(232,181,74,.5)}
+.lv-bar{grid-column:1/-1;height:6px;border-radius:999px;background:rgba(255,255,255,.08);position:relative;overflow:hidden}
+.lv-bar i{position:absolute;inset:0 auto 0 0;border-radius:999px;background:#e8b54a}
+.lv.hit .lv-bar i{background:#22d07f} .lv.lost .lv-bar i{background:#eb6f7d}
+.lv-line{grid-column:1/-1;display:flex;justify-content:space-between;gap:10px;font-size:13px;color:var(--soft);font-variant-numeric:tabular-nums}
+.lvmore{margin-top:10px}
 #move{padding:64px 0 8px}
 .movegrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px;margin-top:22px}
 .movecol{background:var(--surface);border:1px solid var(--line);border-radius:20px;padding:18px;min-width:0}
@@ -572,6 +608,18 @@ footer .fine a{color:#8394ab}
     </div>
   </section>
 
+  <!-- LIVE NOW: today's Value and Top 25 picks (today.json "live") and your tracked bets, followed through the
+       games from ESPN's live box scores in the browser (app.js PSLive) -->
+  <section id="live" aria-labelledby="live-h" hidden>
+    <div class="wrap">
+      <p class="kicker"><span class="livedot" aria-hidden="true"></span> Live now</p>
+      <h2 id="live-h">Today's picks, <i>live</i>.</h2>
+      <p class="sub">Every Value spot and Top 25 pick in today's games, with the stat so far. Updates every minute while games are on.</p>
+      <div class="app livegrid" id="livegrid"></div>
+      <p class="todaynote" id="livenote"></p>
+    </div>
+  </section>
+
   <!-- ON THE MOVE: hot streaks and prices moving toward a pick, from today.json "streaks" / "moves" (build_today.py) -->
   <section id="move" aria-labelledby="move-h" hidden>
     <div class="wrap">
@@ -581,6 +629,26 @@ footer .fine a{color:#8394ab}
         <div class="movecol" id="mvstreak"><h3>Hot streaks</h3><p class="mvnote">Cleared this exact line in each of their last games, and it still pays.</p><div class="mvlist"></div></div>
         <div class="movecol" id="mvmove"><h3>Market moving our way</h3><p class="mvnote">The price has risen since we recorded the pick: the market came around to it.</p><div class="mvlist"></div></div>
         <div class="movecol" id="mvfast" hidden><h3>Moving fast</h3><p class="mvnote">The price jumped 10¢ or more in the last hour, often a sign of injury or lineup news. Check before you bet.</p><div class="mvlist"></div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- DAILY EMAIL: sign-up for the daily picks email (Buttondown; post_daily.py sends it). Hidden until NEWSLETTER is set below. -->
+  <section id="email" aria-labelledby="email-h" hidden>
+    <div class="wrap">
+      <div class="emailbox">
+        <div class="emailcopy">
+          <p class="kicker">Free daily email</p>
+          <h2 id="email-h">Today's best picks, <i>in your inbox</i>.</h2>
+          <p class="sub">Bet of the Day, the top Value spots and yesterday's results, every day around 11 AM ET. Free, one email a day, unsubscribe any time.</p>
+        </div>
+        <form class="emailform" id="emailform" method="post" target="_blank" rel="noopener">
+          <label class="sr" for="emailaddr">Email address</label>
+          <input id="emailaddr" type="email" name="email" required placeholder="you@example.com" autocomplete="email">
+          <input type="hidden" name="tag" value="site">
+          <button class="btn btn-go" type="submit">Send me the picks</button>
+          <p class="emailfine">We'll email you a link to confirm. Your address is used only for this email and never sold. <a href="privacy.html">Privacy</a></p>
+        </form>
       </div>
     </div>
   </section>
@@ -1073,6 +1141,64 @@ function countUp(el){ const to=+el.dataset.count; if(!to||el.dataset.done) retur
   })();
 
   // On the move: hot streaks and prices moving toward a pick (today.json "streaks", "moves"); games still ahead only.
+  // DAILY EMAIL: the Buttondown newsletter's username (buttondown.com/<name>). Empty keeps the sign-up box hidden.
+  const NEWSLETTER='PropStreakLab';
+  (function(){
+    const sec=document.getElementById('email'), f=document.getElementById('emailform'); if(!sec || !NEWSLETTER) return;
+    f.action=`https://buttondown.com/api/emails/embed-subscribe/${encodeURIComponent(NEWSLETTER)}`;
+    f.addEventListener('submit', ()=>{ const gc=window.goatcounter; if(gc && gc.count) gc.count({path:'click/email-list/home', title:'Joined the email list', event:true});
+      setTimeout(()=>{ f.querySelector('.emailfine').textContent='Check your inbox for a confirmation link.'; }, 300); });
+    sec.hidden=false;
+  })();
+
+  // LIVE NOW: today's listed picks and your tracked bets, from ESPN's live box scores (app.js PSLive)
+  function renderLive(t){
+    const sec=document.getElementById('live'); if(!sec || !window.PSLive) return;
+    const picks=(t&&t.live||[]).map(p=>Object.assign({group: p.lists.includes('V')? 'value' : 'top'}, p));
+    // tracked bets on today's games: the game id carries the date (NFL ids carry the week, so a bet
+    // tracked in the last 6 days), so an old bet on a team that plays again today doesn't show
+    const today=new Date().toLocaleDateString('en-CA',{timeZone:'America/New_York'});
+    const isToday=b=>{ const d=String(b.game||'').match(/\d{4}-\d{2}-\d{2}/); return d? d[0]===today : Date.now()-Date.parse(b.at||0) < 6*864e5; };
+    const mine=(PS.loadBets? PS.loadBets() : []).filter(isToday).slice(-40).map(b=>Object.assign({group:'mine', player:b.name}, b));
+    const items=mine.concat(picks); if(!items.length) return;
+    const open={};
+    const fmtv=v=> v==null? '–' : Number.isInteger(v)? String(v) : v.toFixed(1);
+    const label={hit:'Hit', lost:'Lost', push:'Push', void:"Void · didn't play", live:'Live', nostat:'No stats yet', pre:'Later', none:''};
+    const order={live:0, hit:1, lost:1, push:1, void:1, nostat:2, pre:3, none:4};
+    function row(o){
+      const line=+o.line, v=o.v, pct=v==null? 0 : Math.min(100, Math.round(100*v/Math.max(line, 0.5)));
+      const need= o.status==='live'? (o.side==='under'? `${fmtv(Math.max(0, Math.ceil(line)-1-v))} to spare` : `needs ${fmtv(Math.floor(line)+1-v)} more`) : '';
+      const href=`./${o.sport}.html#${PS.hashFor(o.pid, o.stat, o.line, o.side, o.player)}`;
+      const when=o.status==='pre'? PS.until(Date.parse(o.start||'')) || o.clock : o.clock || '';
+      return `<a class="lv ${o.status}" href="${PS.esc(href)}"><span class="lv-who"><b>${PS.esc(o.player)}</b>`+
+        `<small><span class="leantag ${PS.esc(o.side)}">${PS.esc(o.side)}</span> ${PS.esc(o.line)} ${PS.esc(o.statText||o.stat)} · ${PS.esc(SPORT[o.sport]||'')}</small></span>`+
+        `<span class="lv-st ${o.status}">${label[o.status]||''}</span>`+
+        (o.status==='pre'? '' : `<span class="lv-bar"><i style="width:${pct}%"></i></span>`)+
+        `<span class="lv-line"><span>${o.status==='pre'? 'Starts '+PS.esc(when) : `<b>${fmtv(v)}</b> of ${PS.esc(o.line)}${need? ' · '+need : ''}`}</span><span>${o.status==='pre'? '' : PS.esc(when)}</span></span></a>`;
+    }
+    // a pick the site has already graded shows its official result (graded from the final box score)
+    const OFFICIAL={hit:'hit', miss:'lost', push:'push', dnp:'void', void:'void'};
+    function official(r){ return r.res && OFFICIAL[r.res]? Object.assign({}, r, {status:OFFICIAL[r.res], state:'post', v: r.actual!=null? +r.actual : r.v, clock:'Final'}) : r; }
+    function render(rows){
+      rows=rows.map(official);
+      const shown=rows.filter(r=>r.state!=='none' || r.res);
+      const groups=[['mine','Your tracked bets'], ['value','Value spots'], ['top','Top 25 Surest']];
+      const html=groups.map(([g, title])=>{
+        const rs=shown.filter(r=>r.group===g).sort((a,b)=>order[a.status]-order[b.status]); if(!rs.length) return '';
+        const hit=rs.filter(r=>r.status==='hit').length, lost=rs.filter(r=>r.status==='lost').length;
+        const cap=open[g]? rs.length : 8;
+        return `<div class="livegroup"><h3>${title}<small>${hit} hit · ${lost} lost · ${rs.length-hit-lost} to go</small></h3>`+
+          `<div class="lvlist">${rs.slice(0, cap).map(row).join('')}</div>`+
+          (rs.length>cap? `<button type="button" class="btn btn-ghost lvmore" data-g="${g}">Show all ${rs.length}</button>` : '')+`</div>`;
+      }).join('');
+      const grid=document.getElementById('livegrid'); grid.innerHTML=html;
+      grid.querySelectorAll('.lvmore').forEach(b=>b.onclick=()=>{ open[b.dataset.g]=true; render(rows); });
+      sec.hidden=!html;
+      document.getElementById('livenote').textContent= rows.some(r=>r.state==='in')? 'Live stats from ESPN box scores; the official result comes from the box score after the game.' : '';
+    }
+    PSLive.track(items, render);
+  }
+
   function renderMove(t){
     const sec=document.getElementById('move'); if(!sec) return;
     const up=p=>Date.parse(p.start)>Date.now();
@@ -1119,6 +1245,7 @@ function countUp(el){ const to=+el.dataset.count; if(!to||el.dataset.done) retur
     pickbarRecords(t);
     renderCalib(t);
     renderMove(t);
+    try { renderLive(t); } catch(e){}
     (t.picks||[]).forEach(PS.capPick);
     if(t.fair && t.fair.w>=0) FAIRW=t.fair.w;
     liveDemo(t);

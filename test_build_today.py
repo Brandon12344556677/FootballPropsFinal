@@ -107,6 +107,19 @@ class StreaksAndMoves(unittest.TestCase):
         self.assertEqual([r["pid"] for r in build_today.moves(c)], ["a", "c"])
 
 
+class TodaysListed(unittest.TestCase):
+    def test_value_and_top25_picks_of_today_started_or_not(self):
+        cols = ["src", "pid", "player", "team", "opp", "stat", "line", "side", "prob", "price", "lists", "start", "res", "actual"]
+        rows = [["live", 1, "A", "X", "Y", "pts", 0.5, "under", 0.8, 0.6, "V", "2026-10-11T17:00:00Z", "hit", 0],      # started, graded
+                ["live", 2, "B", "X", "Y", "pts", 0.5, "under", 0.9, 0.9, "T", "2026-10-11T23:00:00Z", None, None],
+                ["live", 3, "C", "X", "Y", "pts", 0.5, "over", 0.6, 0.5, "", "2026-10-11T23:00:00Z", None, None],      # not listed
+                ["live", 4, "D", "X", "Y", "pts", 0.5, "over", 0.6, 0.5, "V", "2026-10-12T23:00:00Z", None, None],     # tomorrow
+                ["live", 5, "E", "X", "Y", "pts", 0.5, "over", 0.6, 0.5, "TG", "2026-10-12T02:00:00Z", None, None]]    # 10 PM ET today
+        out = build_today.todays_listed("nhl", {}, {"cols": cols, "picks": rows}, {"pts": "Points"}, "2026-10-11")
+        self.assertEqual([(c["player"], c["lists"], c["res"]) for c in out], [("A", "V", "hit"), ("B", "T", None), ("E", "T", None)])
+        self.assertEqual(out[0]["statText"], "Points")
+
+
 class Agents(unittest.TestCase):
     """Fast price moves, news flags and the promo-day count (build_today)."""
     NOW = __import__("datetime").datetime(2026, 10, 11, 18, 0, tzinfo=__import__("datetime").timezone.utc)

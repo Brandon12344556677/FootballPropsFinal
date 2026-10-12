@@ -186,6 +186,31 @@ def upcoming(sport, db, picks_doc, labels, getters, now):
     return out
 
 
+def todays_listed(sport, db, picks_doc, labels, today):
+    """Every Value and Top 25 pick whose game is today (ET), started or not, for the home page's
+    live tracker (it follows them in the browser from live box scores) — {sport, player, team,
+    opp, stat, statText, line, side, prob, price, start, lists, res, actual}."""
+    cols = picks_doc["cols"]
+    kick = nfl_kickoffs(db) if sport == "nfl" else {}
+    cents = 100.0 if sport == "nfl" else 1.0
+    out = []
+    for row in picks_doc["picks"]:
+        p = dict(zip(cols, row))
+        lists = "".join(ch for ch in (p.get("lists") or "") if ch in "TV")
+        if p.get("src") != "live" or not lists:
+            continue
+        start = kick.get(p.get("gid")) if sport == "nfl" else parse_start(p.get("start"))
+        if start is None or start.astimezone(ET).date().isoformat() != today:
+            continue
+        out.append({"sport": sport, "pid": str(p["pid"]), "player": p["player"], "team": p.get("team"),
+                    "opp": p.get("opp"), "stat": p["stat"], "statText": labels.get(p["stat"], p["stat"]),
+                    "line": p["line"], "side": p.get("side") or "over", "prob": cap(p.get("prob")),
+                    "price": round(float(p["price"]) / cents, 3) if p.get("price") is not None else None,
+                    "start": start.strftime("%Y-%m-%dT%H:%M:%SZ"), "lists": lists,
+                    "res": p.get("res"), "actual": p.get("actual")})
+    return sorted(out, key=lambda c: (c["start"], "V" not in c["lists"], -(c["prob"] or 0)))
+
+
 def graded(picks_doc):
     """(live picks graded, first live pick date) — the "graded in public" badge counts only
     picks recorded before their game, never the backtest."""
@@ -464,7 +489,7 @@ def best(cands):
 
 def main():
     now = datetime.datetime.now(datetime.timezone.utc)
-    rec, cands, n_graded, since, docs, last, search = {}, [], 0, None, [], {}, []
+    rec, cands, n_graded, since, docs, last, search, live = {}, [], 0, None, [], {}, [], []
     today_et = now.astimezone(ET).date().isoformat()
     for sport, data_file, picks_file, template in SPORTS:
         if not all(os.path.exists(f) for f in (data_file, picks_file, template)):
@@ -476,6 +501,7 @@ def main():
             picks_doc = load(picks_file)
             docs.append((sport, picks_doc))
             got = upcoming(sport, db, picks_doc, stat_labels(template), stat_getters(template), now)
+            live += todays_listed(sport, db, picks_doc, stat_labels(template), today_et)
             g, first = graded(picks_doc)
             n_graded += g
             if first and (since is None or first < since):
@@ -510,7 +536,7 @@ def main():
            "tracked": {"graded": n_graded, "since": since}, "fair": fair_weight(docs), "last": last,
            "calib": calibration(docs),
            "streaks": streaks(cands), "moves": moves(cands), "fast": fast,
-           "flags": news_flags(feat), "promo": promo_day(docs, today_et)}
+           "flags": news_flags(feat), "promo": promo_day(docs, today_et), "live": live}
     with open(OUT, "w", encoding="utf-8") as f:
         json.dump(doc, f, separators=(",", ":"), ensure_ascii=False)
     if search:

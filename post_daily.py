@@ -13,6 +13,8 @@ and with none set the script does nothing:
 
   DISCORD_WEBHOOK_URL                  Discord: Server settings → Integrations → Webhooks
   TELEGRAM_BOT_TOKEN + TELEGRAM_CHAT_ID  Telegram: a bot from @BotFather, added to the channel
+  BUTTONDOWN_API_KEY                   the daily picks email to everyone on the list (buttondown.com:
+                                       Settings → API); the home page's sign-up form adds people to it
 
 posted.json remembers the last day posted so the hourly runs post once. POST_NOW=1
 (the workflow's "post" input) posts right away, for testing. `--dry-run` prints both
@@ -170,6 +172,59 @@ def messages(picks, is_value, results, today):
     return "\n".join(d)[:1990], "\n".join(t)[:4000]
 
 
+def botd_today(today):
+    """Today's Bet of the Day (botd.json): (lock, value), either None."""
+    for d in (load("botd.json", {}) or {}).get("days") or []:
+        if d.get("date") == today.isoformat():
+            return d.get("lock"), d.get("value")
+    return None, None
+
+
+def email_message(picks, is_value, results, today, lock=None, value=None):
+    """(subject, markdown body) for the daily picks email, or ("", "") when there's nothing to say."""
+    if not picks and not results and not (lock or value):
+        return "", ""
+    day = today.strftime("%a, %b ") + str(today.day)
+    lines = []
+    if lock or value:
+        lines.append("## Bet of the Day")
+        for label, p in (("🔒 Lock", lock), ("💰 Value Shot", value)):
+            if p:
+                bet = f"{p['player']} {p['side']} {p['line']} {p['statText']}"
+                lines.append(f"- {label}: **[{bet}]({tag(pick_link(p), 'email')})** — model {round(p['prob'] * 100)}% · "
+                             f"{round(p['price'] * 100)}¢ · {SPORT[p['sport']]}")
+        lines.append("")
+    if picks:
+        lines.append("## Today's best value" if is_value else "## Today's surest picks that still pay")
+        for p in picks:
+            bet = f"{p['player']} {p['side']} {p['line']} {p['statText']}"
+            venue = "Kalshi" if p.get("vn") == "K" else "Polymarket"
+            lines.append(f"- {SPORT[p['sport']]} **[{bet}]({tag(pick_link(p), 'email')})** — model {round(p['prob'] * 100)}% · "
+                         f"{round(p['price'] * 100)}¢ on {venue} · {when(p['start'], today)}")
+        lines.append("")
+    if results:
+        lines.append("## Yesterday's Value spots")
+        for s, h, n, u in results:
+            lines.append(f"- {SPORT[s]}: {h}/{n} hit · {'+' if u >= 0 else '−'}{abs(u):.1f} units")
+        lines.append("")
+    lines += [f"Every pick is recorded before the game and graded in public: [propstreaklab.com]({tag(SITE, 'email')})", "",
+              f"🎁 $25 free on Polymarket with code **PROPSTREAKLAB**: [sign up]({REFERRAL}) · $25 free on Kalshi: [sign up]({REFERRAL_KALSHI})", "",
+              "*Research, not betting advice. 18+. If gambling stops being fun, call 1-800-GAMBLER.*"]
+    first = picks[0] if picks else (lock or value)
+    lead = f": {first['player']} {first['side']} {first['line']} {first['statText']}" if first else ""
+    return f"Today's best props ({day}){lead}", "\n".join(lines)
+
+
+def send_email(key, subject, body):
+    """Sends to the whole list now (Buttondown: status about_to_send)."""
+    req = urllib.request.Request("https://api.buttondown.com/v1/emails",
+                                 data=json.dumps({"subject": subject, "body": body, "status": "about_to_send"}).encode(),
+                                 headers={"Authorization": f"Token {key}", "Content-Type": "application/json", "User-Agent": UA},
+                                 method="POST")
+    with urllib.request.urlopen(req, timeout=30) as r:
+        return r.status
+
+
 def send(url, payload):
     req = urllib.request.Request(url, data=json.dumps(payload).encode("utf-8"), method="POST",
                                  headers={"Content-Type": "application/json", "User-Agent": UA})
@@ -186,9 +241,10 @@ def main():
     discord = os.environ.get("DISCORD_WEBHOOK_URL", "").strip()
     tg_token = os.environ.get("TELEGRAM_BOT_TOKEN", "").strip()
     tg_chat = os.environ.get("TELEGRAM_CHAT_ID", "").strip()
+    email_key = os.environ.get("BUTTONDOWN_API_KEY", "").strip()
 
-    if not dry and not (discord or (tg_token and tg_chat)):
-        print("  daily post: no Discord/Telegram secrets set — skipped")
+    if not dry and not (discord or (tg_token and tg_chat) or email_key):
+        print("  daily post: no Discord/Telegram/email secrets set — skipped")
         return
     state = load(STATE, {}) or {}
     if not force:
@@ -202,11 +258,12 @@ def main():
     picks, is_value = todays_picks(now)
     results = yesterdays_results(today - datetime.timedelta(days=1))
     d_msg, t_msg = messages(picks, is_value, results, today)
-    if not d_msg:
+    subject, body = email_message(picks, is_value, results, today, *botd_today(today))
+    if not d_msg and not body:
         print("  daily post: nothing to post yet")
         return
     if dry:
-        print("----- Discord -----\n" + d_msg + "\n----- Telegram -----\n" + t_msg)
+        print("----- Discord -----\n" + d_msg + "\n----- Telegram -----\n" + t_msg + "\n----- Email -----\n" + subject + "\n\n" + body)
         return
 
     sent = []
@@ -225,6 +282,12 @@ def main():
             sent.append("Telegram")
         except Exception as e:
             print(f"  daily post: Telegram failed ({e})")
+    if email_key and body:
+        try:
+            send_email(email_key, subject, body)
+            sent.append("Email")
+        except Exception as e:
+            print(f"  daily post: email failed ({e})")
     if sent:
         with open(STATE, "w", encoding="utf-8") as f:
             json.dump({"date": today.isoformat(), "at": now.strftime("%Y-%m-%dT%H:%M:%SZ"), "to": sent}, f)
