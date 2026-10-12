@@ -23,7 +23,7 @@ README.md has the full feature tour; this file is the working rules.
   `TEAM_DASH_PASSWORD` secret, for the password-protected team dashboard `team/index.html`
   (hand-written, noindex, not in the sitemap). Totals only — no IPs or per-visitor data.
   The dashboard is split into tabs (Overview, Audience, Sign-ups, Picks & edges, Social, Sponsors: each panel has
-  `data-view`). `app.js` feeds it three anonymous GoatCounter events, `time/<range>`, `click/<what>/<page>` and `view/<n>`
+  `data-view`). `app.js` feeds it three anonymous GoatCounter events, `time/<range>`, `click/<what>/<page>`, `view/<n>` and `visitor/new|returning`
   (the visitor's n-th page today: page views and unique visitors); their labels are mirrored in `team_stats.py`
   (TIME_RANGES, CLICK_RE, VIEW_RE) and `team/index.html`. `view/<n>` is disclosed in privacy.html and cookies.html.
 - `team/ads.js`: the dashboard's Meta ads panel. Draws feed and story ads on a canvas from the public `today.json`
