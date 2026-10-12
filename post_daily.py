@@ -116,6 +116,8 @@ def yesterdays_results(yday):
             p = dict(zip(cols, row))
             if p.get("src") != "live" or "V" not in (p.get("lists") or "") or p.get("res") not in ("hit", "miss"):
                 continue
+            if sport == "mlb" and p.get("side") == "over":   # MLB Value is unders only (build_mlb.VALUE_SIDES)
+                continue
             t = parse_utc(p.get("start")) if p.get("start") else None
             day = t.astimezone(ET).date().isoformat() if t else p.get("date")   # NFL dates are already ET
             if day != yday.isoformat():

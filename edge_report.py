@@ -37,7 +37,7 @@ STRATEGIES = [   # (key, label, sport or None, test)
     ("nhl-top", "NHL Top 25 Surest", "nhl", lambda p: "T" in p["lists"]),
     ("nfl-value", "NFL Value spots", "nfl", lambda p: "V" in p["lists"]),
     ("nfl-top", "NFL Top 25 Surest", "nfl", lambda p: "T" in p["lists"]),
-    ("mlb-value", "MLB Value spots", "mlb", lambda p: "V" in p["lists"]),
+    ("mlb-value", "MLB Value spots (unders, the current rule)", "mlb", lambda p: "V" in p["lists"] and p["side"] == "under"),
     ("mlb-top", "MLB Top 25 Surest", "mlb", lambda p: "T" in p["lists"]),
     ("nba-value", "NBA Value spots", "nba", lambda p: "V" in p["lists"]),
     ("unders", "Unders edge (the three rules below)", None,

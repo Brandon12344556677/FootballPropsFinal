@@ -210,3 +210,16 @@ class NeverCertain(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class MLBValueUndersOnly(unittest.TestCase):
+    def test_record_counts_unders_and_shows_old_overs_beside_it(self):
+        def p(side, res, price):
+            return {"src": "live", "res": res, "lists": "V", "side": side, "price": price, "date": "2026-10-10",
+                    "rec": "2026-10-10T12:00:00Z"}
+        r = MLB.live_record([p("under", "hit", 0.5), p("under", "miss", 0.5), p("over", "hit", 0.4), p("over", "miss", 0.4)])
+        self.assertEqual((r["V"]["n"], r["V"]["hit"], r["V"]["units"]), (2, 1, 0.0))
+        self.assertEqual((r["Vpre"]["n"], r["Vpre"]["hit"], r["Vpre"]["units"]), (2, 1, 0.5))
+
+    def test_only_unders_can_be_value(self):
+        self.assertEqual(MLB.VALUE_SIDES, ("under",))
