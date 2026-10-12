@@ -129,7 +129,7 @@ def record(db):
     """The season record the sport page shows, as {tag: {n, hit, priced, units}}."""
     out = {}
     for tag, r in (db.get("record") or {}).items():
-        if tag not in ("T", "V", "U") or not r.get("n"):   # U: the Unders Edge list
+        if tag not in ("T", "V") or not r.get("n"):
             continue
         units = r.get("units")
         if units is None and r.get("roi") is not None and r.get("priced"):

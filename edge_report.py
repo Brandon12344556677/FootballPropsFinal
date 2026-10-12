@@ -31,13 +31,12 @@ FILES = [("nfl", "picks.json"), ("nhl", "nhl_picks.json"), ("mlb", "mlb_picks.js
 NHL_REGULAR = "2026-09-29"     # NHL 2026-27 regular season opener: anything earlier is left out (current season only)
 BOOT = 400
 WAITING = {"nba"}       # rows shown even before their first graded pick (the NBA season starts Oct 2026)
-WAITING_KEYS = {"unders-list"}   # and lists that start posting later (the Unders Edge list, from Oct 12, 2026)
+WAITING_KEYS = set()     # and rows for lists that start posting later
 
 STRATEGIES = [   # (key, label, sport or None, test)
     ("nhl-value", "NHL Value spots", "nhl", lambda p: "V" in p["lists"]),
     ("nhl-top", "NHL Top 25 Surest", "nhl", lambda p: "T" in p["lists"]),
     ("nhl-top-rule", "NHL Top 25, current rule (no goal unders)", "nhl", lambda p: "T" in p["lists"] and not (p["stat"] == "g" and p["side"] == "under")),
-    ("unders-list", "Unders Edge list, as posted on the boards", None, lambda p: "U" in p["lists"]),
     ("nfl-value", "NFL Value spots", "nfl", lambda p: "V" in p["lists"]),
     ("nfl-top", "NFL Top 25 Surest", "nfl", lambda p: "T" in p["lists"]),
     ("mlb-value", "MLB Value spots (unders, the current rule)", "mlb", lambda p: "V" in p["lists"] and p["side"] == "under"),

@@ -692,11 +692,6 @@ tr.hit td{background:var(--hit-soft)} tr.miss td{background:var(--miss-soft)}
     </div>
     <div id="valuebody"></div>
   </div>
-  <div class="panel" id="underspanel" hidden>
-    <div class="mkthead"><h2>🧊 Unders Edge</h2><span class="mktmuted">unders priced 50–65¢, and total bases under 1.5</span><span class="mktmuted" id="recU"></span></div>
-    <p class="mktnote" style="margin:0 0 8px">The unders that have made money across the whole graded record, picked by rule, not by gut. Each one is an under whose price sits where the market has kept underrating it.</p>
-    <div id="undersbody"></div>
-  </div>
   <div class="panel" id="edgepanel">
     <div class="mkthead">
       <h2>🔒 Top 25 Surest<button type="button" class="qhelp hq" data-help="surest" aria-expanded="false" aria-label="What is Top 25 Surest?"><span class="qi" aria-hidden="true">?</span></button></h2>
@@ -1292,7 +1287,6 @@ function scheduleNote(what){
 const SPORT_NAME='MLB', TIPOFF='first pitch';
 const SPORT_KEY=SPORT_NAME.toLowerCase();   // team colors in app.js are keyed by sport
 let edgeSort={key:'prob',dir:-1}, valueSort={key:'prob',dir:-1}, goodSort={key:'edge',dir:-1};
-let undersSort={key:'prob',dir:-1};
 function gameOf(p){ const m=/^\d{4}-\d{2}-\d{2}-([A-Z]+)-([A-Z]+)$/.exec(p.gid||'');
   return m? {away:m[1], home:m[2]} : {away:p.team, home:p.opp}; }
 function normPick(p){ const px=p.price==null? null : p.price;
@@ -1411,15 +1405,6 @@ function renderValue(){ const panel=$('valuepanel'), body=$('valuebody'); if(!pa
   wireTable(body, rows, valueSort, renderValue);
 }
 
-// ---- Unders Edge (lists "U", build_*.under_edge): hidden until the first one is listed ----
-function renderUnders(){ const panel=$('underspanel'), body=$('undersbody'); if(!panel||!body) return;
-  const all=PICKS===null? [] : listRows('U');
-  panel.hidden=!all.length; if(!all.length) return;
-  const rows=sortRows(all, undersSort.key, undersSort.dir).slice(0,50);
-  body.innerHTML=pickTable(rows, undersSort);
-  wireTable(body, rows, undersSort, renderUnders);
-}
-
 // ---- Hit streak leaderboard ----
 function computeStreak(vals, line){ let s=0; for(let i=vals.length-1;i>=0;i--){ if(vals[i]>line) s++; else break; } return s; }
 const LEADER_STATS=['h','tb','hrr','k'];
@@ -1489,7 +1474,7 @@ function loadFullPicks(){ if(PICKS_FULL||fullPicksLoading) return; fullPicksLoad
     .catch(()=>{ PICKS=PICKS||[]; PICKS_FULL=true; renderPickViews(); }).finally(()=>{ fullPicksLoading=false; });
 }
 let upSig=-1;
-function renderPickViews(){ paintVerdict(); renderEdges(); renderValue(); renderUnders(); renderValueWeek(); generateDigest(); renderPast(); renderApTeams(); PS.ticker(tickerItems()); upSig=upcomingPicks().length; }
+function renderPickViews(){ paintVerdict(); renderEdges(); renderValue(); renderValueWeek(); generateDigest(); renderPast(); renderApTeams(); PS.ticker(tickerItems()); upSig=upcomingPicks().length; }
 // Once a minute: when a game starts, its picks drop off the boards without a reload.
 setInterval(()=>{ if(PICKS!==null && !document.hidden && upcomingPicks().length!==upSig) renderPickViews(); }, 60000);
 function initPicks(){ renderPast(); loadFullPicks(); }   // Past tab opened: load the full history
@@ -1526,7 +1511,7 @@ function buildPickFilters(){
   const sel=(id,label,opts)=>`<div><label for="pk_${id}">${label}</label><select id="pk_${id}">${opts.map(o=>`<option value="${esc(o[0])}">${esc(o[1])}</option>`).join('')}</select></div>`;
   const pctOpts=[['','Any']]; for(let i=50;i<=100;i++) pctOpts.push([String(i), i+'%']);
   wrap.innerHTML=
-    sel('list','List',[['listed','Recommended (Top 25 Surest / Value)'],['T','Top 25 Surest'],['V','Value spots'],['U','Unders Edge'],['all','All tracked props']])+
+    sel('list','List',[['listed','Recommended (Top 25 Surest / Value)'],['T','Top 25 Surest'],['V','Value spots'],['all','All tracked props']])+
     sel('season','Season',[['','All']].concat(seasons.map(s=>[s,s])))+
     sel('week','Week',[['','All']])+
     sel('team','Team',[['','All']].concat(teams.map(t=>[t,t])))+
@@ -1592,7 +1577,7 @@ function recordRow(label, ps){
 function renderBreakdown(rows){
   const head=`<thead><tr><th>List</th><th>Graded</th><th>Hit</th><th>Model said</th><th>Gap</th></tr></thead><tbody>`;
   $('bylist').innerHTML=head+
-    recordRow('Top 25 Surest', rows.filter(p=>(p.lists||'').includes('T')))+recordRow('Value spots', rows.filter(p=>(p.lists||'').includes('V') && p.side==='under'))+recordRow('Unders Edge', rows.filter(p=>(p.lists||'').includes('U')))+
+    recordRow('Top 25 Surest', rows.filter(p=>(p.lists||'').includes('T')))+recordRow('Value spots', rows.filter(p=>(p.lists||'').includes('V') && p.side==='under'))+
     recordRow('Any recommended', rows.filter(p=>p.lists))+
     recordRow('Not recommended', rows.filter(p=>!p.lists))+'</tbody>';
   const stats=uniq(rows.map(p=>p.stat)).sort((a,b)=>statLabel(a).localeCompare(statLabel(b)));
@@ -1888,7 +1873,7 @@ PS.ticker(tickerItems());
 render();
 // Live record per list in the panel headers (T / V / G), like the NFL page.
 (function renderRecords(){ const R=DB.record||{};
-  [['recT','T'],['recV','V'],['recG','G'],['recU','U']].forEach(([id,k])=>{ const el=$(id); if(!el) return; const r=R[k];
+  [['recT','T'],['recV','V'],['recG','G']].forEach(([id,k])=>{ const el=$(id); if(!el) return; const r=R[k];
     if(!r||!r.n){ el.innerHTML='· live record: no graded picks yet — <a href="#past" onclick="showTab(\'past\');return false;">Past picks</a>'; return; }
     el.innerHTML=`· <b>live record ${r.hit}/${r.n} (${Math.round(100*r.hit/r.n)}%)</b> — <a href="#past" onclick="showTab('past');return false;">details</a>`+(r.clvN? ` · price moved its way on <b>${r.clvUp} of ${r.clvN}</b> (avg ${r.clv>=0?'+':''}${r.clv}¢)<button type="button" class="qhelp hq" data-help="clv" aria-expanded="false" aria-label="What is closing line value?"><span class="qi" aria-hidden="true">?</span></button>` : ''); }); })();
 // "Scan the board" re-pulls the latest recorded board and re-renders every table.
