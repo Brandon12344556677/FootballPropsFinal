@@ -210,3 +210,21 @@ class ViewsAndVisitors(unittest.TestCase):
             team_stats.get = old
         self.assertEqual([h["path"] for h in hits], ["/", "/nhl.html", "view/9"])
         self.assertEqual(calls, [None, "1,2"])
+
+
+class EmailStats(unittest.TestCase):
+    def test_counts_only_and_none_without_access(self):
+        import io, json as _json, urllib.error
+        from unittest import mock
+        counts = {"regular": 12, "unactivated": 3}
+
+        def opener(req, timeout=30):
+            kind = req.full_url.split("type=")[1]
+            return io.BytesIO(_json.dumps({"count": counts[kind], "results": [{"email": "x@y.z"}]}).encode())
+        with mock.patch.object(team_stats.urllib.request, "urlopen", side_effect=opener):
+            self.assertEqual(team_stats.email_stats("k"), {"subscribers": 12, "pending": 3})
+        def forbidden(req, timeout=30):
+            raise urllib.error.HTTPError(req.full_url, 403, "Forbidden", {}, None)
+        with mock.patch.object(team_stats.urllib.request, "urlopen", side_effect=forbidden):
+            self.assertIsNone(team_stats.email_stats("k"))
+        self.assertIsNone(team_stats.email_stats(""))
