@@ -136,11 +136,11 @@ class Agents(unittest.TestCase):
         self.assertEqual([x["pid"] for x in build_today.featured([a, b, c], [dict(c, kind="safe")])], ["a", "c"])
 
     def test_promo_day_against_a_usual_day(self):
-        cols = ["src", "lists", "start", "date"]
-        doc = {"cols": cols, "picks": [["live", "V", "2026-10-09T23:00:00Z", None], ["live", "TV", "2026-10-09T23:30:00Z", None],
-                                       ["live", "V", "2026-10-10T23:00:00Z", None], ["live", "T", "2026-10-10T23:00:00Z", None],
-                                       ["live", "V", "2026-10-11T23:00:00Z", None]]}
-        cands = [self.cand("a", 0.5, value=True), self.cand("b", 0.5, value=True, sport="nfl"),
-                 self.cand("c", 0.5, value=True, start="2026-10-12T23:00:00Z"), self.cand("d", 0.5)]
-        out = build_today.promo_day(cands, [("nhl", doc)], "2026-10-11")
+        cols = ["src", "lists", "start", "date", "res"]
+        nhl = {"cols": cols, "picks": [["live", "V", "2026-10-09T23:00:00Z", None, "hit"], ["live", "TV", "2026-10-09T23:30:00Z", None, "miss"],
+                                       ["live", "V", "2026-10-10T23:00:00Z", None, "hit"], ["live", "T", "2026-10-10T23:00:00Z", None, None],
+                                       ["live", "V", "2026-10-11T17:00:00Z", None, "hit"],     # today, game already over: still counts
+                                       ["live", "V", "2026-10-12T23:00:00Z", None, None]]}     # tomorrow: not today's
+        nfl = {"cols": cols, "picks": [["live", "V", None, "2026-10-11", None], ["live", "", None, "2026-10-11", None]]}
+        out = build_today.promo_day([("nhl", nhl), ("nfl", nfl)], "2026-10-11")
         self.assertEqual((out["n"], out["by"], out["avg"], out["days"], out["rank"]), (2, {"nhl": 1, "nfl": 1}, 1.5, 2, 0.5))
