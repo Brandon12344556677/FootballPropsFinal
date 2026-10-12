@@ -838,7 +838,7 @@ footer p{margin:0;max-width:80ch}
     const posts=[];
     if(top) posts.push({title:'Story caption (Snapchat / Instagram)', text:
       `Today's top pick 👇\n${SP[top.sport]} ${betTxt(top)}\nModel: ${Math.round(top.prob*100)}% · Price: ${cents(top.price)}`+
-      (lock? `\n🔒 Lock of the day: ${betTxt(lock)}` : '')+`\n\nFree on ${link('snapchat')}`});
+      (lock? `\n✅ Safe Pick of the day: ${betTxt(lock)}` : '')+`\n\nFree on ${link('snapchat')}`});
     if(vals.length){
       const head="Today's best value spots 🧵\n\n", tail=`\n\nModel's chance vs the market price. Every pick graded in public:\n${link('x')}`;
       let body='';
@@ -850,8 +850,8 @@ footer p{margin:0;max-width:80ch}
         (r.V&&r.V.n? ` · Value ${r.V.hit}/${r.V.n} ${r.V.units>=0?'+':'−'}${Math.abs(r.V.units).toFixed(1)}u` : ''); });
       posts.push({title:'Results post (any app)', text:`Latest results ✅\n\n${lines.join('\n')}\n\nEvery pick is recorded before the game, wins and losses.\n${link('instagram')}`});
     }
-    if(lock||val) posts.push({title:'Bet of the Day', text:
-      `Bet of the Day 🎯\n`+(lock? `🔒 Lock: ${SP[lock.sport]} ${betTxt(lock)} (${Math.round(lock.prob*100)}%)\n` : '')+
+    if(lock||val) posts.push({title:'Pick of the Day', text:
+      `Pick of the Day 🎯\n`+(lock? `✅ Safe Pick: ${SP[lock.sport]} ${betTxt(lock)} (${Math.round(lock.prob*100)}%)\n` : '')+
       (val? `💰 Value: ${SP[val.sport]} ${betTxt(val)} at ${cents(val.price)}\n` : '')+`\nResearch, not betting advice. ${link('tiktok')}`});
     const box=$('posts'); box.textContent='';
     if(!posts.length){ box.innerHTML='<p class="empty">No upcoming picks or recent results to write about right now.</p>'; return; }

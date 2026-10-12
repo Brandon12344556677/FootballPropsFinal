@@ -184,8 +184,8 @@ def email_message(picks, is_value, results, today, lock=None, value=None):
     day = today.strftime("%a, %b ") + str(today.day)
     lines = []
     if lock or value:
-        lines.append("## Bet of the Day")
-        for label, p in (("🔒 Lock", lock), ("💰 Value Shot", value)):
+        lines.append("## Pick of the Day")
+        for label, p in (("✅ Safe Pick", lock), ("💰 Value Shot", value)):
             if p:
                 bet = f"{p['player']} {p['side']} {p['line']} {p['statText']}"
                 lines.append(f"- {label}: **[{bet}]({tag(pick_link(p), 'email')})** — model {round(p['prob'] * 100)}% · "

@@ -9,7 +9,7 @@ README.md has the full feature tour; this file is the working rules.
 - `build.py` (NFL, the only fatal step), `build_nba.py`, `build_nhl.py`, `build_mlb.py`:
   download data, grade picks, price props off Polymarket/Kalshi, write the sport's
   JSON files and bake them into its page. Standard library only — don't add packages.
-- `build_today.py` → `today.json` (home feed), runs `botd.py` → `botd.json` (Bet of the Day).
+- `build_today.py` → `today.json` (home feed), runs `botd.py` → `botd.json` (Pick of the Day; called Bet of the Day before Oct 12, 2026).
 - `build_players.py` → `players/`, `build_games.py` → `games/` (one page per upcoming game), `best/` (today's best props
   per sport) and `p/` (link-preview pages for shared picks, kept 14 days after the game), `health.py` → `health.json`,
   `post_daily.py` (Discord/Telegram, and the daily picks email via Buttondown: `BUTTONDOWN_API_KEY`, sign-up form on the
