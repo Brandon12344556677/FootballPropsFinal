@@ -1458,9 +1458,13 @@ let PICKS=null;
 // First load: mlb_picks_recent.json (pending picks plus the latest results, written by build_today.py).
 // The full history loads only when the Past tab opens; with no recent file, the full one loads instead.
 let PICKS_FULL=false, fullPicksLoading=false;
+// Value spots are unders only (build_mlb.VALUE_SIDES): an over recorded on the Value list under the
+// old rule shows as an unlisted prop here, so Past picks and its profit follow the current rule.
+function valueRule(p){ if(p.side!=='under' && (p.lists||'').includes('V')) p.lists=p.lists.replace('V',''); return p; }
 function setPicks(d, full){
   if(!d||!d.picks){ PICKS=PICKS||[]; } else { const cols=d.cols; PICKS=d.picks.map(row=>PS.capPick(Object.fromEntries(cols.map((c,i)=>[c,row[i]]))))
-    .filter(p=>!PS.thinOut(p, {tMin:0.90})); }      // ruled out only for a thin market: never recommended
+    .filter(p=>!PS.thinOut(p, {tMin:0.90}))        // ruled out only for a thin market: never recommended
+    .map(valueRule); }
   if(full) PICKS_FULL=true;
   renderPickViews();
 }
