@@ -113,6 +113,29 @@ footer p{margin:0;max-width:80ch}
 #app[data-cur="picks"] #tabs, #app[data-cur="social"] #tabs{display:none}
 .stats.em{grid-template-columns:repeat(3,minmax(0,1fr))}
 @media (max-width:760px){ .stats.em{grid-template-columns:1fr} }
+/* insights */
+.stats.wk{grid-template-columns:repeat(5,minmax(0,1fr))}
+.stats.nr{grid-template-columns:repeat(3,minmax(0,1fr))}
+@media (max-width:760px){ .stats.wk{grid-template-columns:repeat(2,minmax(0,1fr))} .stats.nr{grid-template-columns:1fr} }
+.stat .s.up{color:var(--accent)} .stat .s.down{color:var(--down)}
+.goals{list-style:none;margin:0;padding:0;display:grid;gap:14px}
+.goal-h{display:flex;justify-content:space-between;gap:10px;font-size:14px}
+.goal-h span{color:var(--soft);font-variant-numeric:tabular-nums}
+.goal-bar{height:8px;border-radius:999px;background:var(--surface-2);margin:6px 0 4px;overflow:hidden}
+.goal-bar i{display:block;height:100%;border-radius:999px;background:var(--accent)}
+.goal small{color:var(--muted);font-size:12.5px}
+.goal-edit{display:flex;gap:8px;align-items:center;font-size:13px;color:var(--muted);margin-top:6px}
+.goal-edit input{width:110px;background:var(--surface-2);color:var(--fg);border:1px solid var(--line);border-radius:8px;padding:6px 8px;font:inherit}
+.bysport{display:grid;gap:10px}
+.sp-row{display:grid;grid-template-columns:90px 90px minmax(0,1fr) 120px;gap:12px;align-items:center;font-size:14px}
+@media (max-width:560px){ .sp-row{grid-template-columns:80px 80px minmax(0,1fr)} .sp-spark{display:none} }
+.sp-n{font-variant-numeric:tabular-nums} .sp-n small{color:var(--muted)}
+.sp-bar{height:8px;border-radius:999px;background:var(--surface-2);overflow:hidden} .sp-bar i{display:block;height:100%;background:var(--accent);border-radius:999px}
+.sp-spark{width:120px;height:28px}
+.kit{display:grid;grid-template-columns:minmax(0,200px) minmax(0,1fr);gap:14px;margin-top:12px}
+@media (max-width:560px){ .kit{grid-template-columns:1fr} }
+.kit img{width:100%;border-radius:10px;border:1px solid var(--line)}
+.kit textarea{width:100%;box-sizing:border-box;background:var(--surface-2);color:var(--fg);border:1px solid var(--line);border-radius:8px;padding:10px;font:inherit;font-size:14px;resize:vertical}
 /* agents */
 .health.spike{border-color:rgba(34,208,127,.5)} .health.spike .hdot{background:var(--accent)}
 .agents{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px}
@@ -275,6 +298,17 @@ footer p{margin:0;max-width:80ch}
   </section>
 
   <section data-view="overview" class="panel">
+    <div class="panel-h"><h2>This week vs last week</h2><span class="label">Last 7 days against the 7 before</span></div>
+    <div class="stats wk" id="wk"></div>
+  </section>
+
+  <section data-view="overview" class="panel">
+    <div class="panel-h"><h2>Goals</h2><button class="btn ghost-btn" id="goalEdit" type="button">Edit goals</button></div>
+    <ul class="goals" id="goals"></ul>
+    <p class="hint" style="margin-top:10px">Targets are saved on this device. Weekly goals count the last 7 days.</p>
+  </section>
+
+  <section data-view="overview" class="panel">
     <div class="panel-h"><h2>What to act on</h2><span class="label">From this range</span></div>
     <ul class="acts" id="acts"></ul>
   </section>
@@ -295,12 +329,28 @@ footer p{margin:0;max-width:80ch}
   </section>
 
   <section data-view="social" class="panel">
+    <div class="panel-h"><h2>Post kit</h2><span class="label">Image + caption + link</span></div>
+    <p class="hint">One tap: the latest results image and today's caption with its tracked link. On a phone, Share opens Snapchat, Instagram or any app with both.</p>
+    <div class="copyrow"><button class="btn" id="kitMake" type="button">Make post kit</button><button class="btn ghost-btn" id="kitShare" type="button" hidden>Share</button><button class="btn ghost-btn" id="kitCopy" type="button" hidden>Copy caption</button><span class="copied" id="kitMsg" role="status"></span></div>
+    <div class="kit"><img id="kitImg" alt="Post kit image" hidden><textarea id="kitText" rows="7" hidden aria-label="Caption"></textarea></div>
+  </section>
+
+  <section data-view="social" class="panel">
     <div class="panel-h"><h2>Social posts</h2><span class="label">Copy, paste, post</span></div>
     <p class="hint">Written from today's picks and the latest results, each with a tracked link for its app, so its visits show up under Tracked links.</p>
     <div class="posts" id="posts"></div>
   </section>
 
   <div class="grid">
+    <section data-view="audience" class="panel">
+      <div class="panel-h"><h2>Visitors by sport</h2><span class="label">Board, game, player and best-props pages</span></div>
+      <div class="bysport" id="bySport"></div>
+    </section>
+    <section data-view="audience" class="panel">
+      <div class="panel-h"><h2>New vs returning</h2><span class="label">This range</span></div>
+      <div class="stats nr" id="nr"></div>
+      <p class="hint" style="margin-top:10px">Each visitor counts once a day, as new (first time on the site) or returning. Counted anonymously since October 12, 2026; everyone counts as new at first.</p>
+    </section>
     <section data-view="audience" class="panel"><div class="panel-h"><h2>Time on page</h2><span class="label" id="timeMid">Page views</span></div><ul class="list" id="lTime"></ul></section>
     <section data-view="audience" class="panel"><div class="panel-h"><h2>Pages</h2><span class="label">Visits</span></div><ul class="list" id="lPages"></ul></section>
     <section data-view="audience" class="panel"><div class="panel-h"><h2>Where visitors come from</h2><span class="label">Visits</span></div><ul class="list" id="lRefs"></ul></section>
@@ -682,7 +732,7 @@ footer p{margin:0;max-width:80ch}
     const clicks = clickRows(R.clicks), signups = clicks.filter(c => isSignup(c.what)).reduce((a,b)=>a+b.n,0);
     $('clickRate').textContent = signups && total ? `Sign-up clicks: ${(signups/total*100).toFixed(1)}% of visits` : 'Clicks';
     list($('lClicks'), clicks, clicks.reduce((a,b)=>a+b.n,0), {empty:'No clicks yet. Clicks on the Polymarket and Kalshi sign-up buttons, market links and your social profiles start counting as visitors load the updated site.'});
-    renderViews(R, days); renderEmail(R); renderHeat(); renderSponsor(); buildLink();
+    renderViews(R, days); renderEmail(R); renderWeek(); renderGoals(); renderSports(R); renderReturning(R); renderHeat(); renderSponsor(); buildLink();
 
     // plain-language suggestions computed from this range
     const acts = [];
@@ -922,6 +972,7 @@ footer p{margin:0;max-width:80ch}
     if(lock||val) posts.push({title:'Pick of the Day', text:
       `Pick of the Day 🎯\n`+(lock? `✅ Safe Pick: ${SP[lock.sport]} ${betTxt(lock)} (${Math.round(lock.prob*100)}%)\n` : '')+
       (val? `💰 Value: ${SP[val.sport]} ${betTxt(val)} at ${cents(val.price)}\n` : '')+`\nResearch, not betting advice. ${link('tiktok')}`});
+    LAST_POSTS = posts;
     const box=$('posts'); box.textContent='';
     if(!posts.length){ box.innerHTML='<p class="empty">No upcoming picks or recent results to write about right now.</p>'; return; }
     posts.forEach(p=>{
@@ -994,6 +1045,113 @@ footer p{margin:0;max-width:80ch}
   }
   $('imgMake').addEventListener('click', makeImage);
   $('imgSave').addEventListener('click', saveImage);
+
+
+  // ---------- insights: this week vs last week, goals, visitors by sport, new vs returning, post kit ----------
+  const sumDays = (rows, key, from, to) => (rows||[]).filter(d => d.day >= from && d.day <= to).reduce((a,d) => a + (+d[key]||0), 0);
+  const dayStr = off => { const d = new Date(Date.now() - off*864e5); return d.toLocaleDateString('en-CA', {timeZone: snap && snap.tz || 'America/New_York'}); };
+  // the last 7 days (today included) against the 7 before, from the 90-day range
+  function weekNumbers(){
+    const R = snap.d90 || {}, t = dayStr(0), w1 = dayStr(6), p0 = dayStr(7), p1 = dayStr(13);
+    const visits = (R.daily||[]).map(d => ({day: d.day, n: d.n})), V = (R.views||{}).daily || [], C = R.clicks_daily || [], N = R.visitors_daily || [];
+    const pair = (rows, key) => [sumDays(rows, key, w1, t), sumDays(rows, key, p1, p0)];
+    return {
+      visits: pair(visits, 'n'), visitors: pair(V, 'visitors'), views: pair(V, 'views'),
+      email: pair(C, 'email'), signup: pair(C, 'signup'), returning: pair(N, 'returning'),
+    };
+  }
+  function renderWeek(){
+    const W = weekNumbers(), el = $('wk'); el.textContent = '';
+    const items = [['Visits', W.visits], ['Unique visitors', W.visitors], ['Page views', W.views], ['Email sign-ups', W.email], ['Sign-up clicks', W.signup]];
+    for (const [k, [cur, prev]] of items) {
+      const ch = prev ? Math.round((cur - prev) / prev * 100) : null;
+      const sub = ch === null ? (cur ? 'nothing the week before' : 'none yet') : `${ch >= 0 ? '▲' : '▼'} ${Math.abs(ch)}% vs last week (${fmt(prev)})`;
+      const d = document.createElement('div'); d.className = 'stat';
+      d.innerHTML = `<span class="label">${esc(k)}</span><span class="v">${fmt(cur)}</span><span class="s ${ch === null ? '' : ch >= 0 ? 'up' : 'down'}">${esc(sub)}</span>`;
+      el.appendChild(d);
+    }
+  }
+  // goals: targets kept on this device (Edit goals), progress from this week's numbers and the subscriber count
+  const GOAL_DEF = [
+    {k:'subs', label:'Email subscribers', target:100, unit:'confirmed subscribers'},
+    {k:'visits', label:'Visits this week', target:1000, unit:'visits in the last 7 days'},
+    {k:'visitors', label:'Unique visitors this week', target:300, unit:'people in the last 7 days'},
+    {k:'signup', label:'Sign-up clicks this week', target:25, unit:'Polymarket or Kalshi sign-up clicks'},
+  ];
+  const goalTargets = () => { try { return JSON.parse(localStorage.getItem('psa-goals') || '{}'); } catch(e){ return {}; } };
+  function renderGoals(){
+    const W = weekNumbers(), T = goalTargets(), E = snap.email;
+    const have = {subs: E && E.subscribers != null ? E.subscribers : null, visits: W.visits[0], visitors: W.visitors[0], signup: W.signup[0]};
+    const ul = $('goals'); ul.textContent = '';
+    for (const g of GOAL_DEF) {
+      const target = +T[g.k] || g.target, v = have[g.k], pctv = v == null ? 0 : Math.min(100, Math.round(v / target * 100));
+      const li = document.createElement('li'); li.className = 'goal' + (pctv >= 100 ? ' done' : '');
+      li.innerHTML = `<div class="goal-h"><b>${esc(g.label)}</b><span>${v == null ? '–' : fmt(v)} of ${fmt(target)}${pctv >= 100 ? ' · reached' : ''}</span></div>`+
+        `<div class="goal-bar"><i style="width:${pctv}%"></i></div><small>${esc(v == null && g.k === 'subs' ? 'Needs Buttondown access (Sign-ups tab explains how)' : g.unit)}</small>`+
+        `<label class="goal-edit" hidden>Target <input type="number" min="1" step="1" value="${target}" data-k="${g.k}"></label>`;
+      ul.appendChild(li);
+    }
+  }
+  $('goalEdit').addEventListener('click', () => {
+    const editing = $('goalEdit').textContent === 'Save goals';
+    if (editing) {
+      const T = goalTargets(); document.querySelectorAll('#goals input[data-k]').forEach(i => { if (+i.value > 0) T[i.dataset.k] = Math.round(+i.value); });
+      try { localStorage.setItem('psa-goals', JSON.stringify(T)); } catch(e){}
+      $('goalEdit').textContent = 'Edit goals'; renderGoals();
+    } else {
+      document.querySelectorAll('#goals .goal-edit').forEach(l => { l.hidden = false; });
+      $('goalEdit').textContent = 'Save goals';
+    }
+  });
+  // visitors by sport: each sport's board, game pages, player pages and best-props page
+  const SPORT_NAME = {nfl:'🏈 NFL', nba:'🏀 NBA', nhl:'🏒 NHL', mlb:'⚾ MLB'};
+  function renderSports(R){
+    const rows = R.sports_daily || [], el = $('bySport'); el.textContent = '';
+    const tot = s => rows.reduce((a,d) => a + (+d[s]||0), 0), all = ['nfl','nba','nhl','mlb'].reduce((a,s) => a + tot(s), 0);
+    if (!all) { el.innerHTML = '<p class="empty">No sport pages visited in this range yet.</p>'; return; }
+    const max = Math.max(1, ...rows.flatMap(d => ['nfl','nba','nhl','mlb'].map(s => +d[s]||0)));
+    for (const s of ['nfl','nba','nhl','mlb'].sort((a,b) => tot(b) - tot(a))) {
+      const n = tot(s), pts = rows.map(d => +d[s]||0);
+      const w = 120, h = 28, step = pts.length > 1 ? w / (pts.length - 1) : 0;
+      const line = pts.length > 1 ? pts.map((v,i) => `${i ? 'L' : 'M'}${(i*step).toFixed(1)},${(h - 2 - v/max*(h-4)).toFixed(1)}`).join('') : '';
+      const d = document.createElement('div'); d.className = 'sp-row';
+      d.innerHTML = `<span class="sp-name">${esc(SPORT_NAME[s])}</span><span class="sp-n"><b>${fmt(n)}</b> <small>${pct(n, all)}%</small></span>`+
+        `<span class="sp-bar"><i style="width:${pct(n, all)}%"></i></span>`+
+        (line ? `<svg class="sp-spark" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" aria-hidden="true"><path d="${line}" fill="none" stroke="var(--accent)" stroke-width="2" vector-effect="non-scaling-stroke"/></svg>` : '<span></span>');
+      el.appendChild(d);
+    }
+  }
+  // new vs returning (app.js "visitor/new" / "visitor/returning", once per visitor per day)
+  function renderReturning(R){
+    const rows = R.visitors_daily || [], nw = rows.reduce((a,d) => a + (+d.new||0), 0), rt = rows.reduce((a,d) => a + (+d.returning||0), 0), all = nw + rt;
+    const facts = [['New visitors', fmt(nw), 'first time on the site'], ['Returning visitors', fmt(rt), 'been here on an earlier day'],
+                   ['Coming back', all ? pct(rt, all) + '%' : '–', 'of visitors were returning']];
+    $('nr').innerHTML = facts.map(([k,v,sub]) => `<div class="stat"><span class="label">${esc(k)}</span><span class="v">${esc(v)}</span><span class="s">${esc(sub)}</span></div>`).join('');
+  }
+  // post kit: the results image, the best caption and its tracked link, shared in one tap
+  let LAST_POSTS = [];
+  async function makeKit(){
+    $('kitMsg').textContent = 'Making…';
+    await makeImage();
+    const post = LAST_POSTS.find(p => /Story/.test(p.title)) || LAST_POSTS[0];
+    $('kitText').value = post ? post.text : '';
+    $('kitText').hidden = !post; $('kitShare').hidden = false; $('kitCopy').hidden = !post;
+    if (imgBlob) { $('kitImg').src = URL.createObjectURL(imgBlob); $('kitImg').hidden = false; }
+    $('kitMsg').textContent = imgBlob || post ? 'Ready. On a phone, Share opens your apps with the image and caption together.' : 'Nothing to post yet: no recent results or upcoming picks.';
+  }
+  async function shareKit(){
+    const text = $('kitText').value, files = imgBlob ? [new File([imgBlob], 'prop-streak-lab.png', {type:'image/png'})] : [];
+    try { await navigator.clipboard.writeText(text); } catch(e){}
+    if (navigator.canShare && navigator.canShare(files.length ? {files, text} : {text})) {
+      try { await navigator.share(files.length ? {files, text} : {text}); $('kitMsg').textContent = 'Shared. The caption is also copied, in case the app drops it.'; return; }
+      catch(e){ if (e && e.name === 'AbortError') return; }
+    }
+    if (imgBlob) { const a = document.createElement('a'); a.href = URL.createObjectURL(imgBlob); a.download = 'prop-streak-lab.png'; document.body.appendChild(a); a.click(); a.remove(); }
+    $('kitMsg').textContent = 'Image saved and caption copied: paste the caption into your post.';
+  }
+  $('kitMake').addEventListener('click', makeKit);
+  $('kitShare').addEventListener('click', shareKit);
+  $('kitCopy').addEventListener('click', async () => { try { await navigator.clipboard.writeText($('kitText').value); $('kitMsg').textContent = 'Caption copied.'; } catch(e){ $('kitText').select(); } });
 
   // ---------- link builder + tracked links ----------
   // Every generated link carries its own campaign name (utm_campaign = "<source>-<link name>"),

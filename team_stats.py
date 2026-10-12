@@ -34,6 +34,9 @@ TIME_RANGES = ["0-10s", "10-30s", "30s-1m", "1-3m", "3-10m", "10m+"]   # same la
 TIME_RE = re.compile(r"(?:^|/)time/([^/?#]+)$")
 CLICK_RE = re.compile(r"(?:^|/)click/([a-z0-9-]+)/([a-z0-9-]+)$")   # app.js: click/<what>/<page>
 VIEW_RE = re.compile(r"(?:^|/)view/(\d+)$")   # app.js: view/<n>, the visitor's n-th page load today
+VISITOR_RE = re.compile(r"(?:^|/)visitor/(new|returning)$")   # app.js: once per visitor per day
+SPORT_RE = re.compile(r"^/(?:(nfl|nba|nhl|mlb)\.html|(?:games|players)/(nfl|nba|nhl|mlb)/|best/(nfl|nba|nhl|mlb)\.html)")
+SPORTS = ("nfl", "nba", "nhl", "mlb")
 HIT_PAGES = 4      # /stats/hits returns at most 100 paths a call; page through up to 400
 SIZE_NAMES = {"phone": "Phone", "largephone": "Large phone", "tablet": "Tablet",
               "desktop": "Computer", "desktophd": "Large computer screen", "unknown": "(unknown)"}
@@ -103,6 +106,40 @@ def view_stats(events):
             "daily": [{"day": d, "views": v[0], "visitors": v[1]} for d, v in sorted(days.items())]}
 
 
+def daily_by(hits, key_of):
+    """[{"day", <key>: n, ...}] summing each hit's daily stats under key_of(hit) (None skips it)."""
+    days = {}
+    for h in hits:
+        k = key_of(h)
+        if not k:
+            continue
+        for s in h.get("stats") or []:
+            d = days.setdefault(s["day"], {})
+            d[k] = d.get(k, 0) + int(s.get("daily") or 0)
+    return [dict({"day": d}, **v) for d, v in sorted(days.items())]
+
+
+def sport_of(h):
+    """Which sport a page belongs to: its board, its game pages, player pages and best-props page."""
+    if h.get("event"):
+        return None
+    m = SPORT_RE.match((h.get("path") or "").split("?")[0])
+    return next((g for g in m.groups() if g), None) if m else None
+
+
+def visitor_kind(h):
+    m = VISITOR_RE.search(h.get("path") or "") if h.get("event") else None
+    return m.group(1) if m else None
+
+
+def click_kind(h):
+    """"signup" for Polymarket/Kalshi sign-up clicks, "email" for the daily email sign-up."""
+    m = CLICK_RE.search(h.get("path") or "") if h.get("event") else None
+    if not m:
+        return None
+    return "email" if m.group(1) == "email-list" else "signup" if re.search(r"-signup(-|$)", m.group(1)) else None
+
+
 def time_rows(events):
     """Time-on-page ranges from app.js's "time/<range>" events, in TIME_RANGES order."""
     counts = {}
@@ -161,6 +198,10 @@ def range_stats(token, now, days, tz=dt.timezone.utc):
         "time": time_rows(events),
         "clicks": click_rows(events),
         "views": view_stats(events),
+        # per day, for week-over-week and the by-sport chart
+        "sports_daily": daily_by(hits, sport_of),
+        "visitors_daily": daily_by(hits, visitor_kind),
+        "clicks_daily": daily_by(hits, click_kind),
     }
     if days == 1 and daily:
         last = daily[-1]

@@ -791,7 +791,8 @@ window.PSLive=(function(){
 // where n is this browser's page load today (1, 2, 3 ...; from local storage, reset each day).
 // GoatCounter counts each path once per visitor per day, so "view/1" is the day's unique visitors
 // and all "view/<n>" together are its page views (up to VIEW_CAP a visitor). Only the number is
-// sent: no ID, no cookie. team_stats.py reads these (VIEW_RE) for the team dashboard.
+// sent: no ID, no cookie. team_stats.py reads these (VIEW_RE) for the team dashboard. On the day's
+// first page it also sends "visitor/new" or "visitor/returning" (VISITOR_RE).
 (function(){
   const VIEW_CAP = 25;
   const day = new Date().toLocaleDateString('en-CA', {timeZone: 'America/New_York'});
@@ -802,11 +803,19 @@ window.PSLive=(function(){
     localStorage.setItem('psl_views', JSON.stringify({d: day, n}));
   } catch(e) { n = 1; }       // storage blocked: still counted as a visitor
   if (n > VIEW_CAP) return;
+  // new or returning: on the first page of the day, whether this browser has been here before
+  // (the date of its first visit stays in local storage; only "new" or "returning" is sent)
+  let kind = null;
+  if (n === 1) {
+    kind = 'new';
+    try { const first = localStorage.getItem('psl_first'); if (first && first !== day) kind = 'returning'; if (!first) localStorage.setItem('psl_first', day); } catch(e) {}
+  }
   let tries = 0;
   (function send(){
     const gc = window.goatcounter;
     if (gc && typeof gc.count === 'function') {
       gc.count({path: 'view/' + n, title: 'Page view ' + n + ' today', event: true});
+      if (kind) gc.count({path: 'visitor/' + kind, title: (kind === 'new' ? 'New' : 'Returning') + ' visitor', event: true});
     } else if (++tries < 40) setTimeout(send, 250);   // count.js loads async; give up after 10 s (blocked)
   })();
 })();
