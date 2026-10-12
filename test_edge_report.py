@@ -51,7 +51,7 @@ class Summary(unittest.TestCase):
         out = {s["key"]: s for s in E.build(self.rows(6, 4) + self.rows(3, 7, side="over", pr=0.6), "2026-10-10")}
         self.assertEqual(out["mlb-unders-mid"]["n"], 10)
         self.assertEqual(out["mlb-tb-under"]["n"], 10)
-        self.assertEqual(out["mlb-overs"]["n"], 10)
+        self.assertNotIn("mlb-overs", out)
         self.assertEqual(out["unders"]["n"], 10)
         self.assertNotIn("nhl-top", out)
 
