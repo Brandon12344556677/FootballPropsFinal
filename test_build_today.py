@@ -107,6 +107,13 @@ class StreaksAndMoves(unittest.TestCase):
         self.assertEqual([r["pid"] for r in build_today.moves(c)], ["a", "c"])
 
 
+class Recommendable(unittest.TestCase):
+    def test_mlb_overs_never_featured(self):
+        self.assertFalse(build_today.recommendable({"sport": "mlb", "side": "over"}))
+        self.assertTrue(build_today.recommendable({"sport": "mlb", "side": "under"}))
+        self.assertTrue(build_today.recommendable({"sport": "nhl", "side": "over"}))
+
+
 class TodaysListed(unittest.TestCase):
     def test_value_and_top25_picks_of_today_started_or_not(self):
         cols = ["src", "pid", "player", "team", "opp", "stat", "line", "side", "prob", "price", "lists", "start", "res", "actual"]

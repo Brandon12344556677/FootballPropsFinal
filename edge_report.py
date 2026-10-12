@@ -44,8 +44,6 @@ STRATEGIES = [   # (key, label, sport or None, test)
     ("mlb-unders-mid", "MLB unders priced 50-65c", "mlb", lambda p: UNDER_RULES["mlb-unders-mid"](p)),
     ("nhl-assist-unders", "NHL assist unders priced 65-80c", "nhl", lambda p: UNDER_RULES["nhl-assist-unders"](p)),
     ("mlb-tb-under", "MLB total bases under 1.5", "mlb", lambda p: UNDER_RULES["mlb-tb-under"](p)),
-    ("mlb-overs", "MLB overs (were losing)", "mlb", lambda p: p["side"] == "over"),
-    ("mlb-hrr-overs", "MLB hits+runs+RBI overs (were losing)", "mlb", lambda p: p["side"] == "over" and p["stat"] == "hrr"),
     ("all-nhl", "Every NHL pick", "nhl", lambda p: True),
     ("all-mlb", "Every MLB pick", "mlb", lambda p: True),
     ("all-nfl", "Every NFL pick", "nfl", lambda p: True),

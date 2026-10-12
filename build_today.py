@@ -463,6 +463,13 @@ def fair_weight(docs):
             "brierModel": round(brier(1.0), 4), "brierMarket": round(brier(0.0), 4)}
 
 
+def recommendable(c):
+    """Whether the site may feature a pick (Today's picks, Pick of the Day, hot streaks, moves,
+    fast moves): MLB overs lost money as recommendations, so they're never featured; they stay on
+    the MLB board for research."""
+    return not (c.get("sport") == "mlb" and c.get("side") == "over")
+
+
 def best(cands):
     """Every value spot (by edge) before any safe-but-paying pick (by chance); one per
     player. Within each kind, no more than PER_SPORT from one sport until the others
@@ -522,9 +529,10 @@ def main():
             print(f"  {sport}: {len(got)} upcoming priced pick(s), record {rec[sport]}")
         except Exception as e:     # one bad sport never blanks the others
             print(f"  {sport}: skipped ({e})")
-    top = best(cands)
+    rec = [c for c in cands if recommendable(c)]   # what the home page, Pick of the Day and posts may feature
+    top = best(rec)
     picks = [{k: v for k, v in c.items() if k not in ("neff", "flag", "px0", "lists")} for c in top]
-    feat = featured(cands, top)
+    feat = featured(rec, top)
     try:
         fast, hist = fast_moves(feat, load(FAST_STATE) if os.path.exists(FAST_STATE) else {}, now)
         with open(FAST_STATE, "w", encoding="utf-8") as f:
@@ -537,7 +545,7 @@ def main():
     doc = {"gen": now.strftime("%Y-%m-%dT%H:%M:%SZ"), "record": rec, "picks": picks, "valueLive": value_live,
            "tracked": {"graded": n_graded, "since": since}, "fair": fair_weight(docs), "last": last,
            "calib": calibration(docs),
-           "streaks": streaks(cands), "moves": moves(cands), "fast": fast,
+           "streaks": streaks(rec), "moves": moves(rec), "fast": fast,
            "flags": news_flags(feat), "promo": promo_day(docs, today_et), "live": live}
     with open(OUT, "w", encoding="utf-8") as f:
         json.dump(doc, f, separators=(",", ":"), ensure_ascii=False)
@@ -550,7 +558,7 @@ def main():
     print(f"  {OUT}: {len(picks)} pick(s) ({kinds} value, {len(picks) - kinds} safe), {len(fast)} fast move(s), "
           f"{len(doc['flags'])} news flag(s), {doc['promo']['n']} value spot(s) today (usual {doc['promo']['avg']})")
     try:
-        botd.run(cands, docs, now)
+        botd.run(rec, docs, now)
     except Exception as e:     # never costs the home page its Today feed
         print(f"  {botd.OUT}: not updated ({e})")
 
