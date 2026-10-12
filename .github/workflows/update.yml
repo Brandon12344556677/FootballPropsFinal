@@ -17,8 +17,17 @@ on:
     # builder records or changes a pick once its game has started, so a pass mid-game is
     # safe. Off the top of the hour, where GitHub delays scheduled runs the most.
     - cron: "5,25,45 * * * *"
+  # Each run also starts the next one when it ends (the last step), so the site keeps updating
+  # when GitHub's scheduler stalls: on 2026-10-11 it started nothing from 22:56 to past 00:26 UTC.
+  # The schedule above stays as a backup that restarts the chain if a run is ever lost. The
+  # concurrency group below keeps one run going and at most one waiting, so the chain and the
+  # schedule merge instead of piling up.
   workflow_dispatch:
     inputs:
+      chain:
+        description: "Set by the previous run when it starts this one (two passes, then the next run)"
+        required: false
+        default: ""
       probe:
         description: "Set to 1 to log an NBA endpoint connectivity probe"
         required: false
@@ -30,6 +39,7 @@ on:
 
 permissions:
   contents: write
+  actions: write    # the last step starts the next run (workflow_dispatch)
 
 concurrency:
   group: update-data
@@ -52,7 +62,8 @@ jobs:
           python-version: "3.12"
 
       # Two passes of update_pass.sh (every builder, the health check, commit + push), the
-      # second 10 minutes after the first began. A manual run does one pass.
+      # second 10 minutes after the first began; a chained run then waits out the rest of 20
+      # minutes, so passes stay ~10 minutes apart. A manual run does one pass.
       - name: Update the site (two passes, 10 minutes apart)
         env:
           NBA_PROBE: ${{ github.event.inputs.probe }}
@@ -67,12 +78,28 @@ jobs:
         run: |
           start=$(date +%s)
           bash update_pass.sh
-          if [ "${{ github.event_name }}" = "schedule" ]; then
+          if [ "${{ github.event_name }}" = "schedule" ] || [ "${{ github.event.inputs.chain }}" = "1" ]; then
             wait=$(( start + 600 - $(date +%s) ))
             if [ "$wait" -gt 0 ]; then sleep "$wait"; fi
             git pull --rebase --autostash origin main || true    # anything merged meanwhile
             bash update_pass.sh
+            if [ "${{ github.event.inputs.chain }}" = "1" ]; then
+              wait=$(( start + 1140 - $(date +%s) ))             # the next run takes ~1 min to start
+              if [ "$wait" -gt 0 ]; then sleep "$wait"; fi
+            fi
           fi
+
+      # Start the next run, even after a failed pass (only a cancelled run ends the chain: a newer
+      # one replaced it). A run started by GITHUB_TOKEN through workflow_dispatch does run.
+      - name: Start the next run
+        if: ${{ !cancelled() }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          curl -sS -o /dev/null -w "next run requested: HTTP %{http_code}\n" -X POST \
+            -H "Authorization: Bearer $GH_TOKEN" -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/${{ github.repository }}/actions/workflows/update.yml/dispatches" \
+            -d '{"ref":"main","inputs":{"chain":"1"}}' || true
 
       # Last, after the site is pushed: turns the run red (so GitHub emails you) when a
       # problem has lasted ~3 hours (18 passes in a row), then at most once a day while it lasts.
