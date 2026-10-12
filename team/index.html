@@ -159,6 +159,24 @@ footer p{margin:0;max-width:80ch}
 #imgPrev{display:block;width:min(270px,100%);margin-top:14px;border-radius:14px;border:1px solid var(--line)}
 .ghost-btn{background:none;color:var(--fg);border:1px solid var(--line)}
 
+/* meta ads */
+.adform{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:12px}
+.adform .wide{grid-column:1/-1}
+@media (max-width:760px){ .adform{grid-template-columns:1fr} .adform .wide{grid-column:auto} }
+#adPrev{display:block;width:min(360px,100%);margin-top:14px;border-radius:14px;border:1px solid var(--line)}
+#adPrev.story{width:min(240px,100%)}
+#adCopy{display:grid;gap:10px;margin-top:14px;max-width:720px}
+.adc{display:grid;gap:5px;min-width:0}
+.adgal{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:14px;margin-top:12px}
+.adgal figure{margin:0;display:grid;gap:6px;min-width:0}
+.adgal img{width:100%;aspect-ratio:1;object-fit:cover;object-position:top;border-radius:10px;border:1px solid var(--line);background:var(--bg)}
+.adgal figcaption{font-size:13px;color:var(--soft);line-height:1.35}
+.adgal a{font-size:13px;color:var(--accent);text-decoration:none}
+.adgal a:hover{text-decoration:underline}
+.adrules{margin:8px 0 0;padding-left:18px;font-size:13px;color:var(--muted);display:grid;gap:4px}
+.adrules b{color:var(--soft);font-weight:600}
+.adsub{font:700 15px var(--f-display);margin:22px 0 0;color:var(--fg)}
+
 /* sponsor snapshot */
 #sp{grid-template-columns:repeat(5,minmax(0,1fr))}
 .stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:1px;background:var(--line);border:1px solid var(--line);border-radius:12px;overflow:hidden}
@@ -311,6 +329,48 @@ footer p{margin:0;max-width:80ch}
     <p class="hint">Makes a story-sized image of the latest results for each sport, ready for Snapchat or Instagram. Add your tagged link from the Link builder as a link sticker.</p>
     <div class="copyrow"><button class="btn" id="imgMake" type="button">Make results image</button><button class="btn ghost-btn" id="imgSave" type="button" hidden>Save or share</button><span class="copied" id="imgMsg" role="status"></span></div>
     <img id="imgPrev" alt="Results image preview" hidden>
+  </section>
+
+  <section class="panel">
+    <div class="panel-h"><h2>Meta ads</h2><span class="label">Facebook &amp; Instagram</span></div>
+    <p class="hint">Makes a ready-to-upload ad from today's live numbers, with the text to paste into Ads Manager and a tracked link, so ad visits show up under Facebook in Tracked links. Feed is 1080 × 1080, Story / Reel is 1080 × 1920.</p>
+    <form class="form adform" id="adForm" autocomplete="off" onsubmit="return false">
+      <label for="adKind"><span>Ad</span>
+        <select id="adKind">
+          <option value="gap">Today's biggest gap (model vs. market)</option>
+          <option value="proof">Calibration (proof)</option>
+          <option value="record">Season record (one sport)</option>
+          <option value="streak">Hit streak</option>
+        </select>
+      </label>
+      <label for="adFmt"><span>Size</span>
+        <select id="adFmt"><option value="feed">Feed · 1080 × 1080</option><option value="story">Story / Reel · 1080 × 1920</option></select>
+      </label>
+      <label class="wide" for="adPick" id="adPickWrap"><span id="adPickLbl">Prop </span><select id="adPick"></select></label>
+    </form>
+    <div class="copyrow"><button class="btn" id="adMake" type="button">Make ad</button><button class="btn ghost-btn" id="adSave" type="button" hidden>Download PNG</button><span class="copied" id="adMsg" role="status"></span></div>
+    <img id="adPrev" alt="Meta ad preview" hidden>
+    <div id="adCopy" hidden></div>
+
+    <h3 class="adsub">Example ads</h3>
+    <p class="hint">The first six concepts, made Oct 11 with that day's numbers. C1 is a one-day example; make a fresh one above.</p>
+    <div class="adgal">
+      <figure><img src="ads/a1-calibration.png" alt="A1 · Proof example ad" loading="lazy"><figcaption>A1 · Proof: "When we say 75%, it hits 76%"</figcaption><a href="ads/a1-calibration.png" download="prop-streak-lab-a1-calibration.png">Download PNG</a></figure>
+      <figure><img src="ads/a2-receipts.png" alt="A2 · Proof example ad" loading="lazy"><figcaption>A2 · Proof: "We post the misses too"</figcaption><a href="ads/a2-receipts.png" download="prop-streak-lab-a2-receipts.png">Download PNG</a></figure>
+      <figure><img src="ads/b1-hit-rates.png" alt="B1 · Problem example ad" loading="lazy"><figcaption>B1 · Problem: "7 of his last 10" is not 70%</figcaption><a href="ads/b1-hit-rates.png" download="prop-streak-lab-b1-hit-rates.png">Download PNG</a></figure>
+      <figure><img src="ads/b2-parlay.png" alt="B2 · Problem example ad" loading="lazy"><figcaption>B2 · Problem: same-game parlay legs</figcaption><a href="ads/b2-parlay.png" download="prop-streak-lab-b2-parlay.png">Download PNG</a></figure>
+      <figure><img src="ads/c1-todays-gap.png" alt="C1 · Daily example ad" loading="lazy"><figcaption>C1 · Daily: model vs. market</figcaption><a href="ads/c1-todays-gap.png" download="prop-streak-lab-c1-todays-gap.png">Download PNG</a></figure>
+      <figure><img src="ads/d1-story.png" alt="D1 · Story / Reel, 9:16 example ad" loading="lazy"><figcaption>D1 · Story / Reel, 9:16</figcaption><a href="ads/d1-story.png" download="prop-streak-lab-d1-story.png">Download PNG</a></figure>
+    </div>
+
+    <h3 class="adsub">Before you run them</h3>
+    <ul class="adrules">
+      <li><b>Meta treats real-money gambling ads as restricted.</b> Keep ads about research and the public record: no "bet", "lock", "free money" or exchange names, and say "21+" on the ad (every ad here does).</li>
+      <li><b>Target 21+ only,</b> and decide which states to leave out before the first campaign.</li>
+      <li><b>Hit rates need their price.</b> Top 25 picks hit often because they're priced 85¢+. Keep the units line on record ads, and never write "guaranteed".</li>
+      <li><b>The landing page shows the Kalshi / Polymarket sign-up pills.</b> Meta's review may count those as gambling promotion. Consider hiding them for visitors arriving from Facebook.</li>
+      <li><b>Start small:</b> 3–4 ad kinds, 2–3 versions each, about $20–30 a day per ad set. After 5 days, cut the weakest and make more of the best.</li>
+    </ul>
   </section>
 
   <section class="panel">
@@ -975,5 +1035,6 @@ footer p{margin:0;max-width:80ch}
   if (saved) unlock(saved, true); else $('pw').focus();
 })();
 </script>
+<script src="ads.js?v=20261011b"></script>
 </body>
 </html>
