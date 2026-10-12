@@ -681,14 +681,14 @@ tr.hit td{background:var(--hit-soft)} tr.miss td{background:var(--miss-soft)}
     <div id="digestbody"></div>
   </div>
   <div class="panel" id="valuepanel" hidden>
-    <div class="mkthead"><h2>⚡ Value spots<button type="button" class="qhelp hq" data-help="value" aria-expanded="false" aria-label="What are Value spots?"><span class="qi" aria-hidden="true">?</span></button></h2><span class="mktmuted">market gives it 30%+, model is 15+ points better — overs and unders both</span><span class="mktmuted" id="recV"></span></div>
+    <div class="mkthead"><h2>⚡ Value spots<button type="button" class="qhelp hq" data-help="value" aria-expanded="false" aria-label="What are Value spots?"><span class="qi" aria-hidden="true">?</span></button></h2><span class="mktmuted">market gives it 30%+, model is 15+ points better — unders only</span><span class="mktmuted" id="recV"></span></div>
     <div class="valrules">
       <div class="vrhead">What counts as a value spot — both rules have to be true</div>
       <ol class="vrlist">
         <li><span class="vrnum">1</span><span class="vrtxt"><b>The market gives it at least a 30% chance.</b> The price you'd pay has to be <b>30¢ or more</b>. <span class="vrwhy">This is the rule that keeps penny longshots off the list — a 6¢ ask against an 11% model chance looks like a huge edge in percentage terms and is still a bad bet.</span></span></li>
         <li><span class="vrnum">2</span><span class="vrtxt"><b>Our model puts it at least 15 points higher.</b> <span class="vreg">30¢ ask → needs 45%</span> · <span class="vreg">50¢ → 65%</span> · <span class="vreg">70¢ → 85%</span>. <span class="vrwhy">The gap between the two, in percentage points, is the <b>edge</b> shown in the Polymarket column.</span></span></li>
       </ol>
-      <div class="vrfoot">Both rules are tested against the <b>cheaper of the Polymarket and Kalshi prices for the side the model takes</b> that has at least <b>$25</b> offered at it (or within 2¢) — the price you'd actually pay; a thinner price would move when you bet — and a prop also needs <b>6+ effective games</b> of history behind it. Everything clearing both rules is listed, ranked by that edge. Prices come from Polymarket's MLB player-prop markets, so this list stays empty until those are posted. Props <b>waiting on news</b> stay off this list and Top 25 Surest: when the hitter, or a regular in his team's lineup, is day-to-day on ESPN's injury report — until the lineup is posted (a hitter not in it is off too) or he's ruled out or cleared.</div>
+      <div class="vrfoot">Both rules are tested against the <b>cheaper of the Polymarket and Kalshi prices for the side the model takes</b> that has at least <b>$25</b> offered at it (or within 2¢) — the price you'd actually pay; a thinner price would move when you bet — and a prop also needs <b>6+ effective games</b> of history behind it. On this board only <b>unders</b> qualify (since October 12, 2026): MLB Value overs lost money while they were listed, so the season record counts unders only and shows the earlier overs beside it. Everything clearing both rules is listed, ranked by that edge. Prices come from Polymarket's MLB player-prop markets, so this list stays empty until those are posted. Props <b>waiting on news</b> stay off this list and Top 25 Surest: when the hitter, or a regular in his team's lineup, is day-to-day on ESPN's injury report — until the lineup is posted (a hitter not in it is off too) or he's ruled out or cleared.</div>
     </div>
     <div id="valuebody"></div>
   </div>
@@ -1577,7 +1577,8 @@ function recordRow(label, ps){
 function renderBreakdown(rows){
   const head=`<thead><tr><th>List</th><th>Graded</th><th>Hit</th><th>Model said</th><th>Gap</th></tr></thead><tbody>`;
   $('bylist').innerHTML=head+
-    recordRow('Top 25 Surest', rows.filter(p=>(p.lists||'').includes('T')))+recordRow('Value spots', rows.filter(p=>(p.lists||'').includes('V')))+
+    recordRow('Top 25 Surest', rows.filter(p=>(p.lists||'').includes('T')))+recordRow('Value spots (unders, the current rule)', rows.filter(p=>(p.lists||'').includes('V') && p.side==='under'))+
+    recordRow('Value overs (off the list since Oct 12)', rows.filter(p=>(p.lists||'').includes('V') && p.side!=='under'))+
     recordRow('Any recommended', rows.filter(p=>p.lists))+
     recordRow('Not recommended', rows.filter(p=>!p.lists))+'</tbody>';
   const stats=uniq(rows.map(p=>p.stat)).sort((a,b)=>statLabel(a).localeCompare(statLabel(b)));
@@ -1910,7 +1911,8 @@ function renderValueWeek(){
       `<span class="lbl">⚡ Value spots · this season</span>`+
       `<span class="big">${up?'▲':'▼'} ${u} units</span>`+
       `<span class="lbl">${r.hit}/${r.n} hit · ${roi>=0?'+':''}${Math.round(roi*100)}% ROI</span>`+
-      `<span class="sub">Every Value pick recorded before ${TIPOFF} and graded from the box score — tap for the full record.</span>`;
+      `<span class="sub">Every Value pick recorded before ${TIPOFF} and graded from the box score — tap for the full record.`+
+      (DB.record.Vpre && DB.record.Vpre.n ? ` Unders only, the current rule; the ${DB.record.Vpre.n} overs listed before Oct 12 went ${DB.record.Vpre.hit}–${DB.record.Vpre.n-DB.record.Vpre.hit} (${(+DB.record.Vpre.units).toFixed(1)}u) and stay in Past picks.` : '')+`</span>`;
     el.onclick=()=>{ showTab('past'); return false; };
     el.hidden=false; return;
   }

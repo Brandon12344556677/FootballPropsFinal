@@ -859,6 +859,11 @@ VALUE_N = 200           # a safety cap only. At 50 it bound in busy weeks (NFL w
                         # cleared the rule went unrecorded), so the record now holds every pick that clears it
 VALUE_MIN_PRICE = 0.30  # the market has to give it at least 30%
 VALUE_MIN_EDGE = 0.15   # and the model has to be 15+ points higher
+# Value spots are unders only (since Oct 12, 2026): MLB Value overs went 30-47 (-6.6 units) from
+# Sep 30 to Oct 11 and lost in both halves of that stretch, as MLB overs did overall. The season
+# record counts the current rule (live_record): the overs listed before stay in the picks file
+# and Past picks, and their result is shown beside it ("Vpre").
+VALUE_SIDES = ("under",)
 
 
 def could_list(p):
@@ -867,7 +872,8 @@ def could_list(p):
     if p.get("res") is not None or pick_locked(p) or not p.get("th"):
         return False
     return any(px is not None and (p["prob"] >= T_MIN_PROB or
-                                   (p["neff"] >= VALUE_MIN_NEFF and value_qualifies(p["prob"], px)))
+                                   (p["neff"] >= VALUE_MIN_NEFF and p.get("side") in VALUE_SIDES
+                                    and value_qualifies(p["prob"], px)))
                for px in (p.get("pp"), p.get("kp")))
 
 
@@ -1205,7 +1211,7 @@ def assign_lists(picks):
         p["lists"] += "T"
     vals = [p for p in pending
             if p.get("price") is not None and not p.get("th") and p["neff"] >= VALUE_MIN_NEFF
-            and value_qualifies(p["prob"], p["price"])]
+            and p.get("side") in VALUE_SIDES and value_qualifies(p["prob"], p["price"])]
     for p in one_per_prop(sorted(vals, key=lambda p: -(p["prob"] - p["price"])))[:VALUE_N]:
         p["lists"] += "V"
 
@@ -1242,6 +1248,8 @@ def live_record(picks):
         if p.get("res") not in ("hit", "miss"):
             continue
         for tag in p.get("lists", ""):
+            if tag == "V" and p.get("side") not in VALUE_SIDES:
+                tag = "Vpre"      # a Value over from before the unders-only rule: shown beside the record, not in it
             r = out.setdefault(tag, {"n": 0, "hit": 0, "priced": 0, "units": 0.0})
             r["n"] += 1
             if p["res"] == "hit":
@@ -1253,7 +1261,10 @@ def live_record(picks):
     graded = [p for p in picks if p.get("res") in ("hit", "miss")]
     for tag, r in out.items():
         r["units"] = round(r["units"], 2)
-        r.update(clv_stats([p for p in graded if tag in (p.get("lists") or "")]))
+        if tag == "Vpre":
+            continue
+        r.update(clv_stats([p for p in graded if tag in (p.get("lists") or "")
+                            and not (tag == "V" and p.get("side") not in VALUE_SIDES)]))
     out["clv"] = clv_stats(graded)      # every graded pick, listed or not
     return out
 
