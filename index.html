@@ -1142,7 +1142,7 @@ function countUp(el){ const to=+el.dataset.count; if(!to||el.dataset.done) retur
 
   // On the move: hot streaks and prices moving toward a pick (today.json "streaks", "moves"); games still ahead only.
   // DAILY EMAIL: the Buttondown newsletter's username (buttondown.com/<name>). Empty keeps the sign-up box hidden.
-  const NEWSLETTER='';
+  const NEWSLETTER='PropStreakLab';
   (function(){
     const sec=document.getElementById('email'), f=document.getElementById('emailform'); if(!sec || !NEWSLETTER) return;
     f.action=`https://buttondown.com/api/emails/embed-subscribe/${encodeURIComponent(NEWSLETTER)}`;
