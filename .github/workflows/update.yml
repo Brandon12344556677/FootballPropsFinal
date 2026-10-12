@@ -71,6 +71,7 @@ jobs:
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          BUTTONDOWN_API_KEY: ${{ secrets.BUTTONDOWN_API_KEY }}   # the daily picks email (post_daily.py)
           POST_NOW: ${{ github.event.inputs.post }}
           # team_stats.py: GoatCounter API key ("Read statistics" only) and the /team/ page password
           GOATCOUNTER_TOKEN: ${{ secrets.GOATCOUNTER_TOKEN }}

@@ -637,7 +637,132 @@ window.PS = (function(){
   }
 
   return {teamVars, ticker, until, skeleton, esc, hashFor, pickHash, parsePickHash, syncHash, sharePick, toast, helpBtn, spark, verdict, icon, sheet, closeSheet, pickSheet, relatedPicks,
-          isTracked, toggleBet, renderBets, fairOf, setFair, pxMove, lockBadge, lockNote, venues, venueName, cap, capPick, thinOut};
+          isTracked, toggleBet, renderBets, loadBets, fairOf, setFair, pxMove, lockBadge, lockNote, venues, venueName, cap, capPick, thinOut};
+})();
+
+// ---- live tracker: follows picks through today's games from ESPN's public box scores ----
+// PSLive.track(items, onUpdate): items are picks or tracked bets ({sport, player|name, team, stat,
+// line, side}); onUpdate gets each with {state: 'pre'|'in'|'post'|'none', v (the stat so far),
+// clock, status: 'hit'|'lost'|'push'|'live'|'nostat'|'pre'}. Polls every minute while a game
+// is on and the page is visible. Stats it can't read from a box score are left as 'nostat'.
+window.PSLive=(function(){
+  const PATH={nfl:'football/nfl', nba:'basketball/nba', nhl:'hockey/nhl', mlb:'baseball/mlb'};
+  const ALIAS={nfl:{LA:'LAR', WAS:'WSH'}, nhl:{UTA:'UTAH'}, mlb:{AZ:'ARI', CWS:'CHW'}, nba:{}};   // site code -> ESPN code
+  const HOST='https://site.api.espn.com/apis/site/v2/sports/';
+  const MLB_PITCH=new Set(['k','outs','ha','er','pbb']);
+  const norm=n=>String(n||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase()
+    .replace(/\b(jr|sr|ii|iii|iv)\b\.?/g,'').replace(/[^a-z ]/g,' ').replace(/\s+/g,' ').trim();
+  const etDay=()=>new Date().toLocaleDateString('en-CA',{timeZone:'America/New_York'}).replace(/-/g,'');
+  const num=x=>{ const v=parseFloat(x); return isFinite(v)? v : 0; };
+  const part=(x,i)=>num(String(x||'').split(/[\/-]/)[i]);
+  const get=u=>fetch(u,{cache:'no-store'}).then(r=>r.ok? r.json() : null).catch(()=>null);
+  function codes(sport, t){ const a=ALIAS[sport]||{}, s=new Set([t]); if(a[t]) s.add(a[t]); return s; }
+  // box score -> {players: {normalized name: {category: {key: value}}}, details: {doubles|triples|stolenBases: {name: n}}}
+  function parseBox(sum){
+    const players={}, details={};
+    for(const team of (sum.boxscore && sum.boxscore.players) || []){
+      for(const cat of team.statistics || []){
+        const keys=cat.keys || [];
+        const name=cat.name || (keys.includes('fullInnings.partInnings')? 'pitching' : keys.includes('atBats')? 'batting' : 'stats');
+        for(const a of cat.athletes || []){
+          const ath=a.athlete || {}, rec={};
+          keys.forEach((k,i)=>{ rec[k]=(a.stats||[])[i]; });
+          for(const nm of new Set([norm(ath.displayName), norm(ath.shortName)])){
+            if(!nm) continue;
+            (players[nm]=players[nm] || {})[name]=rec;
+          }
+        }
+      }
+    }
+    // MLB: doubles, triples and steals are only in the game notes, e.g. "Pages (1, Gausman); E. Hernández 2 (5, ...)"
+    for(const team of (sum.boxscore && sum.boxscore.teams) || []){
+      for(const grp of team.details || []){
+        for(const st of grp.stats || []){
+          if(!/^(doubles|triples|stolenBases)$/.test(st.name)) continue;
+          const m=details[st.name]=details[st.name] || {};
+          for(const ent of String(st.displayValue||'').split(';')){
+            const mm=ent.trim().match(/^(.+?)(?:\s+(\d+))?\s*\(/) || ent.trim().match(/^(.+?)(?:\s+(\d+))?$/);
+            if(mm) m[norm(mm[1])]=(m[norm(mm[1])]||0)+(mm[2]? +mm[2] : 1);
+          }
+        }
+      }
+    }
+    return {players, details};
+  }
+  function findPlayer(box, name){
+    const n=norm(name), w=n.split(' '), last=w[w.length-1], init=(w[0]||'')[0];
+    if(box.players[n]) return box.players[n];
+    const k=Object.keys(box.players).find(x=>{ const v=x.split(' '); return v[v.length-1]===last && (v[0]||'')[0]===init; });
+    return k? box.players[k] : null;
+  }
+  function noteCount(box, kind, name){
+    const m=box.details[kind] || {}, n=norm(name), w=n.split(' '), last=w[w.length-1];
+    return m[n] || m[(w[0]||'')[0]+' '+last] || m[last] || 0;
+  }
+  // the stat so far, or null when the box score doesn't carry it
+  function statValue(sport, stat, p, box, name){
+    if(!p) return null;
+    if(sport==='nfl'){
+      const P=p.passing||{}, R=p.rushing||{}, C=p.receiving||{};
+      return {pass_yds:num(P.passingYards), pass_td:num(P.passingTouchdowns), pass_cmp:part(P['completions/passingAttempts'],0),
+        pass_att:part(P['completions/passingAttempts'],1), pass_int:num(P.interceptions), rush_yds:num(R.rushingYards), rush_att:num(R.rushingAttempts),
+        rec:num(C.receptions), rec_yds:num(C.receivingYards)}[stat] ?? null;
+    }
+    if(sport==='nba'){
+      const s=Object.values(p)[0]||{}, pts=num(s.points), reb=num(s.rebounds), ast=num(s.assists);
+      return {pts, reb, ast, tpm:part(s['threePointFieldGoalsMade-threePointFieldGoalsAttempted'],0), stl:num(s.steals), blk:num(s.blocks),
+        to:num(s.turnovers), pra:pts+reb+ast, pr:pts+reb, pa:pts+ast, ra:reb+ast}[stat] ?? null;
+    }
+    if(sport==='nhl'){
+      const s=p.forwards||p.defenses||p.skaters||null; if(!s) return null;
+      return {g:num(s.goals), a:num(s.assists), pts:num(s.goals)+num(s.assists), sog:num(s.shotsTotal)}[stat] ?? null;
+    }
+    if(sport==='mlb'){
+      if(MLB_PITCH.has(stat)){
+        const s=p.pitching; if(!s) return null;
+        const ip=String(s['fullInnings.partInnings']||'0').split('.');
+        return {k:num(s.strikeouts), outs:num(ip[0])*3+num(ip[1]), ha:num(s.hits), er:num(s.earnedRuns), pbb:num(s.walks)}[stat] ?? null;
+      }
+      const s=p.batting; if(!s) return null;
+      const h=num(s.hits), hr=num(s.homeRuns), d2=noteCount(box,'doubles',name), d3=noteCount(box,'triples',name);
+      return {h, hr, rbi:num(s.RBIs), r:num(s.runs), hrr:h+num(s.runs)+num(s.RBIs), tb:h+d2+2*d3+3*hr, sb:noteCount(box,'stolenBases',name)}[stat] ?? null;
+    }
+    return null;
+  }
+  function judge(it, v, state){
+    if(state==='pre') return 'pre';
+    if(v==null) return 'nostat';
+    const line=+it.line, done=state==='post';
+    if(it.side==='under'){ if(v>line) return 'lost'; if(done) return v<line? 'hit' : 'push'; return 'live'; }
+    if(v>line) return 'hit'; if(done) return v<line? 'lost' : 'push'; return 'live';
+  }
+  let timer=null;
+  function track(items, onUpdate){
+    clearTimeout(timer);
+    async function poll(){
+      const sports=[...new Set(items.map(i=>i.sport))].filter(s=>PATH[s]);
+      const boards={}, sums={};
+      await Promise.all(sports.map(async s=>{ boards[s]=await get(`${HOST}${PATH[s]}/scoreboard?dates=${etDay()}`); }));
+      const out=[];
+      for(const it of items){
+        const sb=boards[it.sport], cs=codes(it.sport, it.team);
+        const ev=sb && (sb.events||[]).find(e=>(((e.competitions||[])[0]||{}).competitors||[]).some(c=>cs.has((c.team||{}).abbreviation)));
+        if(!ev){ out.push(Object.assign({}, it, {state:'none', status:'none'})); continue; }
+        const st=ev.status.type, state=st.state, clock=st.shortDetail;
+        if(state==='pre'){ out.push(Object.assign({}, it, {state, clock, status:'pre', v:null})); continue; }
+        const key=it.sport+ev.id;
+        if(!(key in sums)) sums[key]=get(`${HOST}${PATH[it.sport]}/summary?event=${ev.id}`).then(s=>s? parseBox(s) : null);
+        const box=await sums[key], name=it.player||it.name;
+        const v=box? statValue(it.sport, it.stat, findPlayer(box, name), box, name) : null;
+        out.push(Object.assign({}, it, {state, clock, v, status:judge(it, v, state)}));
+      }
+      onUpdate(out);
+      const live=out.some(o=>o.state==='in'), later=out.some(o=>o.state==='pre');
+      if(live || later) timer=setTimeout(function again(){ if(document.hidden){ timer=setTimeout(again, 15000); return; } poll(); }, live? 60000 : 300000);
+    }
+    poll();
+  }
+  return {track, statValue, judge, parseBox, findPlayer, norm};
 })();
 
 // ---- time on page: one anonymous GoatCounter event per page view, e.g. "time/1-3m" ----
