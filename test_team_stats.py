@@ -180,3 +180,33 @@ class Spikes(unittest.TestCase):
         self.assertEqual([s["what"] for s in out],
                          ["Visits from no referrer (direct, apps)", "Visits from snapchat.com", "Visits yesterday"])
         self.assertEqual((out[1]["today"], out[1]["usual"]), (30, 5.0))
+
+
+class ViewsAndVisitors(unittest.TestCase):
+    def test_view_events_give_page_views_and_unique_visitors(self):
+        events = [{"path": "view/1", "count": 10, "event": True, "stats": [{"day": "2026-10-11", "daily": 4}, {"day": "2026-10-12", "daily": 6}]},
+                  {"path": "view/2", "count": 6, "event": True, "stats": [{"day": "2026-10-12", "daily": 6}]},
+                  {"path": "view/12", "count": 1, "event": True, "stats": [{"day": "2026-10-12", "daily": 1}]},
+                  {"path": "time/1-3m", "count": 9, "event": True, "stats": [{"day": "2026-10-12", "daily": 9}]}]
+        v = team_stats.view_stats(events)
+        self.assertEqual((v["views"], v["visitors"]), (17, 10))
+        self.assertEqual(v["daily"], [{"day": "2026-10-11", "views": 4, "visitors": 4},
+                                      {"day": "2026-10-12", "views": 13, "visitors": 6}])
+        self.assertEqual(team_stats.view_stats([]), {"views": 0, "visitors": 0, "daily": []})
+
+    def test_hits_are_paged_past_100(self):
+        calls = []
+
+        def get(token, path, **q):
+            calls.append(q.get("exclude_paths"))
+            if q.get("exclude_paths"):
+                return {"hits": [{"path_id": 3, "path": "view/9", "count": 1, "event": True}], "more": False}
+            return {"hits": [{"path_id": 1, "path": "/"}, {"path_id": 2, "path": "/nhl.html"}], "more": True}
+        old = team_stats.get
+        team_stats.get = get
+        try:
+            hits = team_stats.all_hits("t", {"start": "a", "end": "b"})
+        finally:
+            team_stats.get = old
+        self.assertEqual([h["path"] for h in hits], ["/", "/nhl.html", "view/9"])
+        self.assertEqual(calls, [None, "1,2"])

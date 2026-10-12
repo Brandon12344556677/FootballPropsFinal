@@ -33,6 +33,8 @@ RANGES = {"d1": 1, "d7": 7, "d30": 30, "d90": 90}
 TIME_RANGES = ["0-10s", "10-30s", "30s-1m", "1-3m", "3-10m", "10m+"]   # same labels as app.js
 TIME_RE = re.compile(r"(?:^|/)time/([^/?#]+)$")
 CLICK_RE = re.compile(r"(?:^|/)click/([a-z0-9-]+)/([a-z0-9-]+)$")   # app.js: click/<what>/<page>
+VIEW_RE = re.compile(r"(?:^|/)view/(\d+)$")   # app.js: view/<n>, the visitor's n-th page load today
+HIT_PAGES = 4      # /stats/hits returns at most 100 paths a call; page through up to 400
 SIZE_NAMES = {"phone": "Phone", "largephone": "Large phone", "tablet": "Tablet",
               "desktop": "Computer", "desktophd": "Large computer screen", "unknown": "(unknown)"}
 
@@ -61,6 +63,44 @@ def rows(stats, page):
             row["kind"] = s["ref_scheme"]
         out.append(row)
     return out
+
+
+def all_hits(token, q):
+    """Every path's hits for the range, paging past the API's 100 a call with exclude_paths
+    (the path IDs already seen, comma-separated), so low-count events aren't cut off."""
+    hits, seen = [], []
+    for _ in range(HIT_PAGES):
+        extra = {"exclude_paths": ",".join(seen)} if seen else {}
+        page = get(token, "/stats/hits", limit=100, **q, **extra)
+        got = page.get("hits") or []
+        hits += got
+        seen += [str(h["path_id"]) for h in got if h.get("path_id") is not None]
+        if not page.get("more") or not got:
+            break
+    return hits
+
+
+def view_stats(events):
+    """Page views and unique visitors from app.js's "view/<n>" events: GoatCounter counts each
+    path once per visitor per day, so view/1 = that day's unique visitors and the sum over all n =
+    page views (up to app.js's VIEW_CAP a visitor). {"views", "visitors", "daily": [{day, views, visitors}]}"""
+    days = {}
+    views = visitors = 0
+    for h in events:
+        m = VIEW_RE.search(h.get("path") or "")
+        if not m:
+            continue
+        first = m.group(1) == "1"
+        n = int(h.get("count") or 0)
+        views += n
+        visitors += n if first else 0
+        for s in h.get("stats") or []:
+            d = days.setdefault(s["day"], [0, 0])
+            k = int(s.get("daily") or 0)
+            d[0] += k
+            d[1] += k if first else 0
+    return {"views": views, "visitors": visitors,
+            "daily": [{"day": d, "views": v[0], "visitors": v[1]} for d, v in sorted(days.items())]}
 
 
 def time_rows(events):
@@ -100,8 +140,7 @@ def range_stats(token, now, days, tz=dt.timezone.utc):
     start = dt.datetime.combine(local_day, dt.time(), tzinfo=tz).astimezone(dt.timezone.utc).replace(tzinfo=None)
     q = {"start": hour(start), "end": hour(now + dt.timedelta(hours=1))}
     total = get(token, "/stats/total", **q)          # rejects a "limit" parameter
-    hits = get(token, "/stats/hits", limit=100, **q)  # room for ?v= test URLs (merged on the page) and events
-    hits = hits.get("hits") or []
+    hits = all_hits(token, q)   # every path, including ?v= test URLs (merged on the page) and events
     events = [h for h in hits if h.get("event")]
     # GoatCounter's totals include events (app.js sends "time/<range>" and "click/<what>/<page>"),
     # so take them back out to keep "visits" meaning page visits.
@@ -118,9 +157,10 @@ def range_stats(token, now, days, tz=dt.timezone.utc):
         "total": max(0, int(total.get("total") or 0) - int(total.get("total_events") or 0)),
         "daily": [{"day": d["day"], "n": max(0, int(d.get("daily") or 0) - ev_day.get(d["day"], 0))} for d in daily],
         "pages": [{"path": h["path"], "title": h.get("title", ""), "n": int(h.get("count") or 0)}
-                  for h in hits if not h.get("event")],
+                  for h in hits if not h.get("event")][:100],
         "time": time_rows(events),
         "clicks": click_rows(events),
+        "views": view_stats(events),
     }
     if days == 1 and daily:
         last = daily[-1]
