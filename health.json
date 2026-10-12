@@ -2,7 +2,7 @@
  "problems": {
   "post_daily: daily post: email": {
    "first": "2026-10-12T01:18:56Z",
-   "runs": 1,
+   "runs": 2,
    "alerted": null,
    "msg": "post_daily.py: daily post: email failed (HTTP Error 400: Bad Request)"
   }
