@@ -208,6 +208,25 @@ def spikes(snap):
     return sorted(out, key=lambda s: -s["today"] / max(s["usual"], 1))[:6]
 
 
+def email_stats(key):
+    """Confirmed and waiting-to-confirm subscriber counts from Buttondown (the daily picks email),
+    or None without a key or without its Subscribers: Read permission. Only the two numbers
+    are kept, never an address."""
+    if not key:
+        return None
+    out = {}
+    for name, kind in (("subscribers", "regular"), ("pending", "unactivated")):
+        req = urllib.request.Request(f"https://api.buttondown.com/v1/subscribers?type={kind}",
+                                     headers={"Authorization": f"Token {key}", "User-Agent": "propstreaklab-team-stats"})
+        try:
+            with urllib.request.urlopen(req, timeout=30) as r:
+                out[name] = int(json.load(r).get("count") or 0)
+        except Exception as e:   # 403: the key has no Subscribers permission; the dashboard explains how to add it
+            print(f"  team stats: Buttondown {name} count unavailable ({type(e).__name__}: {getattr(e, 'code', e)})")
+            return None
+    return out
+
+
 def openssl(args, data, password):
     env = dict(os.environ, TEAM_DASH_PASSWORD=password)
     return subprocess.run(["openssl", "enc", "-aes-256-cbc", "-pbkdf2", "-md", "sha256",
@@ -249,6 +268,7 @@ def main():
     for key, days in RANGES.items():
         snap[key] = range_stats(token, now, days, tz)
     snap["spikes"] = spikes(snap)
+    snap["email"] = email_stats(os.environ.get("BUTTONDOWN_API_KEY", "").strip())
     if unchanged(snap, password):
         print(f"team stats: no new visits since the last pass ({snap['d90']['total']} in 90 days)")
         return 0

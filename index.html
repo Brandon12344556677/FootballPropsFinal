@@ -1137,7 +1137,9 @@ function countUp(el){ const to=+el.dataset.count; if(!to||el.dataset.done) retur
   (function(){
     const sec=document.getElementById('email'), f=document.getElementById('emailform'); if(!sec || !NEWSLETTER) return;
     f.action=`https://buttondown.com/api/emails/embed-subscribe/${encodeURIComponent(NEWSLETTER)}`;
-    f.addEventListener('submit', ()=>{ const gc=window.goatcounter; if(gc && gc.count) gc.count({path:'click/email-list/home', title:'Joined the email list', event:true});
+    const cameByLink=location.hash==='#email';   // arrived from a "Free daily email" link on another page
+    f.addEventListener('submit', ()=>{ const from=cameByLink? 'link' : location.hash==='#email'? 'home-link' : 'home';
+      const gc=window.goatcounter; if(gc && gc.count) gc.count({path:'click/email-list/'+from, title:'Joined the email list ('+from+')', event:true});
       setTimeout(()=>{ f.querySelector('.emailfine').textContent='Check your inbox for a confirmation link.'; }, 300); });
     sec.hidden=false;
     document.querySelectorAll('.pb-email').forEach(x=>{ x.hidden=false; });

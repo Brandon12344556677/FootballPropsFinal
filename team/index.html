@@ -99,6 +99,19 @@ footer{color:var(--muted);font-size:13px}
 footer p{margin:0;max-width:80ch}
 @media (prefers-reduced-motion:no-preference){ .row .bar{transition:width .3s ease} }
 
+/* section menu: one section at a time (#app data-cur), the rest hidden */
+.views{display:flex;gap:6px;flex-wrap:wrap;position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);padding:8px 0;margin:-8px 0 0}
+.views button{font:inherit;font-weight:600;font-size:14px;padding:9px 14px;border-radius:999px;border:1px solid var(--line);background:var(--surface);color:var(--soft);cursor:pointer}
+.views button[aria-selected="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.views button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+#app[data-cur="overview"] [data-view]:not([data-view="overview"]){display:none!important}
+#app[data-cur="audience"] [data-view]:not([data-view="audience"]){display:none!important}
+#app[data-cur="signups"] [data-view]:not([data-view="signups"]){display:none!important}
+#app[data-cur="picks"] [data-view]:not([data-view="picks"]){display:none!important}
+#app[data-cur="social"] [data-view]:not([data-view="social"]){display:none!important}
+#app[data-cur="sponsors"] [data-view]:not([data-view="sponsors"]){display:none!important}
+.stats.em{grid-template-columns:repeat(3,minmax(0,1fr))}
+@media (max-width:760px){ .stats.em{grid-template-columns:1fr} }
 /* agents */
 .health.spike{border-color:rgba(34,208,127,.5)} .health.spike .hdot{background:var(--accent)}
 .agents{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px}
@@ -203,7 +216,7 @@ footer p{margin:0;max-width:80ch}
   </form>
 </div>
 
-<div class="wrap" id="app" hidden>
+<div class="wrap" id="app" data-cur="overview" hidden>
   <header>
     <div class="brand">
       <span class="label">Prop Streak Lab · team only</span>
@@ -214,6 +227,15 @@ footer p{margin:0;max-width:80ch}
       <button class="ghost" id="lockBtn" type="button">Lock</button>
     </div>
   </header>
+
+  <nav class="views" role="tablist" aria-label="Dashboard sections" id="views">
+    <button role="tab" data-v="overview">Overview</button>
+    <button role="tab" data-v="audience">Audience</button>
+    <button role="tab" data-v="signups">Sign-ups</button>
+    <button role="tab" data-v="picks">Picks &amp; edges</button>
+    <button role="tab" data-v="social">Social</button>
+    <button role="tab" data-v="sponsors">Sponsors</button>
+  </nav>
 
   <section class="health" id="health" aria-live="polite" hidden>
     <span class="hdot" aria-hidden="true"></span>
@@ -232,31 +254,31 @@ footer p{margin:0;max-width:80ch}
     <button role="tab" id="tab-d90" data-r="d90" aria-selected="false">90 days</button>
   </div>
 
-  <section class="kpis" aria-label="Headline numbers">
+  <section data-view="overview" class="kpis" aria-label="Headline numbers">
     <div class="kpi"><span class="label">Visits</span><span class="v" id="kVisits">–</span><span class="s" id="kVisitsS"></span></div>
     <div class="kpi"><span class="label">Per day</span><span class="v" id="kAvg">–</span><span class="s" id="kAvgS"></span></div>
     <div class="kpi"><span class="label">On a phone</span><span class="v" id="kMobile">–</span><span class="s" id="kMobileS"></span></div>
     <div class="kpi"><span class="label">Top source</span><span class="v sm" id="kSrc">–</span><span class="s" id="kSrcS"></span></div>
   </section>
 
-  <section class="panel">
+  <section data-view="overview" class="panel">
     <div class="panel-h"><h2 id="chartTitle">Visits per day</h2><span class="label" id="chartPeak"></span></div>
     <div class="chart" id="chart"></div>
   </section>
 
-  <section class="panel">
+  <section data-view="overview" class="panel">
     <div class="panel-h"><h2>Page views and unique visitors</h2><span class="label" id="vwLabel"></span></div>
     <div class="stats" id="vw"></div>
     <div class="edwrap"><table class="edges vwt"><thead><tr><th>Day</th><th class="n">Unique visitors</th><th class="n">Page views</th><th class="n">Pages per visitor</th></tr></thead><tbody id="vwRows"></tbody></table></div>
     <p class="hint" style="margin-top:10px">Page views: every page opened. Unique visitors: different people, each counted once a day (a person who comes back tomorrow counts again). Counted anonymously by the site, with no IP addresses or IDs. Page views count up to 25 per person a day. Counting started October 12, 2026.</p>
   </section>
 
-  <section class="panel">
+  <section data-view="overview" class="panel">
     <div class="panel-h"><h2>What to act on</h2><span class="label">From this range</span></div>
     <ul class="acts" id="acts"></ul>
   </section>
 
-  <section class="panel">
+  <section data-view="picks" class="panel">
     <div class="panel-h"><h2>Today's agent report</h2><span class="label" id="agUpd"></span></div>
     <div class="agents">
       <div class="ag"><h3>Promo day</h3><p id="agPromo" class="agp"></p></div>
@@ -265,29 +287,36 @@ footer p{margin:0;max-width:80ch}
     </div>
   </section>
 
-  <section class="panel" id="edPanel" hidden>
+  <section data-view="picks" class="panel" id="edPanel" hidden>
     <div class="panel-h"><h2>Edge tracker</h2><span class="label" id="edUpd">Rebuilt daily</span></div>
     <p class="hint">Every recorded pick with a market price, graded as a flat $1 bet at that price. The likely range is where the true return probably sits; treat an edge as real only once the whole range is above 0%.</p>
     <div class="edwrap"><table class="edges"><thead><tr><th>Strategy</th><th class="n">Picks</th><th class="n">Hit</th><th class="n">Return</th><th class="n">Likely range</th><th class="n">Last 7 days</th><th>Verdict</th></tr></thead><tbody id="edRows"></tbody></table></div>
   </section>
 
-  <section class="panel">
+  <section data-view="social" class="panel">
     <div class="panel-h"><h2>Social posts</h2><span class="label">Copy, paste, post</span></div>
     <p class="hint">Written from today's picks and the latest results, each with a tracked link for its app, so its visits show up under Tracked links.</p>
     <div class="posts" id="posts"></div>
   </section>
 
   <div class="grid">
-    <section class="panel"><div class="panel-h"><h2>Time on page</h2><span class="label" id="timeMid">Page views</span></div><ul class="list" id="lTime"></ul></section>
-    <section class="panel"><div class="panel-h"><h2>Pages</h2><span class="label">Visits</span></div><ul class="list" id="lPages"></ul></section>
-    <section class="panel"><div class="panel-h"><h2>Where visitors come from</h2><span class="label">Visits</span></div><ul class="list" id="lRefs"></ul></section>
-    <section class="panel"><div class="panel-h"><h2>Tracked links</h2><span class="label">Visits from each link</span></div><ul class="list" id="lCamp"></ul></section>
-    <section class="panel"><div class="panel-h"><h2>Countries</h2><span class="label">Share of visits</span></div><ul class="list" id="lLoc"></ul></section>
-    <section class="panel"><div class="panel-h"><h2>Operating systems</h2><span class="label">Share of visits</span></div><ul class="list" id="lSys"></ul></section>
-    <section class="panel"><div class="panel-h"><h2>Browsers</h2><span class="label">Share of visits</span></div><ul class="list" id="lBrw"></ul></section>
-    <section class="panel"><div class="panel-h"><h2>Screen sizes</h2><span class="label">Share of visits</span></div><ul class="list" id="lSize"></ul></section>
-    <section class="panel"><div class="panel-h"><h2>Clicks to sign-ups and markets</h2><span class="label" id="clickRate">Clicks</span></div><ul class="list" id="lClicks"></ul></section>
-    <section class="panel">
+    <section data-view="audience" class="panel"><div class="panel-h"><h2>Time on page</h2><span class="label" id="timeMid">Page views</span></div><ul class="list" id="lTime"></ul></section>
+    <section data-view="audience" class="panel"><div class="panel-h"><h2>Pages</h2><span class="label">Visits</span></div><ul class="list" id="lPages"></ul></section>
+    <section data-view="audience" class="panel"><div class="panel-h"><h2>Where visitors come from</h2><span class="label">Visits</span></div><ul class="list" id="lRefs"></ul></section>
+    <section data-view="signups" class="panel">
+      <div class="panel-h"><h2>Email sign-ups</h2><span class="label" id="emLabel">This range</span></div>
+      <div class="stats em" id="em"></div>
+      <ul class="list" id="lEmail" style="margin-top:12px"></ul>
+      <p class="hint" id="emNote" style="margin-top:10px"></p>
+    </section>
+    <section data-view="signups" class="panel"><div class="panel-h"><h2>Tracked links</h2><span class="label">Visits from each link</span></div><ul class="list" id="lCamp"></ul></section>
+    <section data-view="audience" class="panel"><div class="panel-h"><h2>Countries</h2><span class="label">Share of visits</span></div><ul class="list" id="lLoc"></ul></section>
+    <section data-view="audience" class="panel"><div class="panel-h"><h2>Operating systems</h2><span class="label">Share of visits</span></div><ul class="list" id="lSys"></ul></section>
+    <section data-view="audience" class="panel"><div class="panel-h"><h2>Browsers</h2><span class="label">Share of visits</span></div><ul class="list" id="lBrw"></ul></section>
+    <section data-view="audience" class="panel"><div class="panel-h"><h2>Screen sizes</h2><span class="label">Share of visits</span></div><ul class="list" id="lSize"></ul></section>
+    
+    <section data-view="signups" class="panel"><div class="panel-h"><h2>Clicks to sign-ups and markets</h2><span class="label" id="clickRate">Clicks</span></div><ul class="list" id="lClicks"></ul></section>
+    <section data-view="signups" class="panel">
       <div class="panel-h"><h2>Link builder</h2><span class="label">Tag every post</span></div>
       <form class="form" id="lb" autocomplete="off">
         <div class="two">
@@ -317,21 +346,21 @@ footer p{margin:0;max-width:80ch}
     </section>
   </div>
 
-  <section class="panel">
+  <section data-view="social" class="panel">
     <div class="panel-h"><h2>Best time to post</h2><span class="label" id="heatLabel">Last 4 weeks</span></div>
     <p class="hint" id="heatTop"></p>
     <div class="heat-wrap" style="margin-top:12px"><div class="heat" id="heat"></div></div>
     <div class="heat-key"><span>Fewer visits</span><i></i><span>More</span><span id="heatMax"></span></div>
   </section>
 
-  <section class="panel">
+  <section data-view="social" class="panel">
     <div class="panel-h"><h2>Results image for social</h2><span class="label">1080 × 1920 story</span></div>
     <p class="hint">Makes a story-sized image of the latest results for each sport, ready for Snapchat or Instagram. Add your tagged link from the Link builder as a link sticker.</p>
     <div class="copyrow"><button class="btn" id="imgMake" type="button">Make results image</button><button class="btn ghost-btn" id="imgSave" type="button" hidden>Save or share</button><span class="copied" id="imgMsg" role="status"></span></div>
     <img id="imgPrev" alt="Results image preview" hidden>
   </section>
 
-  <section class="panel">
+  <section data-view="social" class="panel">
     <div class="panel-h"><h2>Meta ads</h2><span class="label">Facebook &amp; Instagram</span></div>
     <p class="hint">Makes a ready-to-upload ad from today's live numbers, with the text to paste into Ads Manager and a tracked link, so ad visits show up under Facebook in Tracked links. Feed is 1080 × 1080, Story / Reel is 1080 × 1920.</p>
     <form class="form adform" id="adForm" autocomplete="off" onsubmit="return false">
@@ -373,7 +402,7 @@ footer p{margin:0;max-width:80ch}
     </ul>
   </section>
 
-  <section class="panel">
+  <section data-view="sponsors" class="panel">
     <div class="panel-h"><h2>Sponsor snapshot</h2><span class="label" id="spLabel">Last 30 days</span></div>
     <div class="stats" id="sp"></div>
     <div class="copyrow"><button class="btn" id="spCopy" type="button">Copy as text</button><span class="copied" id="spCopied" role="status"></span></div>
@@ -652,7 +681,7 @@ footer p{margin:0;max-width:80ch}
     const clicks = clickRows(R.clicks), signups = clicks.filter(c => isSignup(c.what)).reduce((a,b)=>a+b.n,0);
     $('clickRate').textContent = signups && total ? `Sign-up clicks: ${(signups/total*100).toFixed(1)}% of visits` : 'Clicks';
     list($('lClicks'), clicks, clicks.reduce((a,b)=>a+b.n,0), {empty:'No clicks yet. Clicks on the Polymarket and Kalshi sign-up buttons, market links and your social profiles start counting as visitors load the updated site.'});
-    renderViews(R, days); renderHeat(); renderSponsor(); buildLink();
+    renderViews(R, days); renderEmail(R); renderHeat(); renderSponsor(); buildLink();
 
     // plain-language suggestions computed from this range
     const acts = [];
@@ -787,6 +816,41 @@ footer p{margin:0;max-width:80ch}
     $('spCopied').textContent = ok ? 'Copied. Paste it into an email or pitch deck.' : 'Your browser blocked copying. The text is selected below: press Ctrl+C, or long-press on a phone.';
   });
 
+
+  // ---------- section menu: Overview / Audience / Sign-ups / Picks / Social / Sponsors ----------
+  const VIEWS = ['overview','audience','signups','picks','social','sponsors'];
+  function setView(v, push){
+    if (!VIEWS.includes(v)) v = 'overview';
+    $('app').dataset.cur = v;
+    document.querySelectorAll('#views button').forEach(b => b.setAttribute('aria-selected', String(b.dataset.v === v)));
+    try { localStorage.setItem('psa-view', v); } catch(e){}
+    if (push) history.replaceState(null, '', '#' + v);
+    if (snap) render();   // charts measure their width, so draw them once visible
+    window.scrollTo(0, 0);
+  }
+  $('views').addEventListener('click', e => { const b = e.target.closest('button[data-v]'); if (b) setView(b.dataset.v, true); });
+  addEventListener('hashchange', () => setView(location.hash.slice(1)));
+  (function(){ let v = location.hash.slice(1); if (!VIEWS.includes(v)) { try { v = localStorage.getItem('psa-view') || ''; } catch(e){ v = ''; } } setView(v); })();
+
+  // ---------- email sign-ups: form submits from GoatCounter ("click/email-list/<from>"), confirmed
+  // subscribers from Buttondown (team_stats.py "email") ----------
+  const EMAIL_FROM = {link:'From a "Free daily email" link on another page', 'home-link':'From the link at the top of the home page', home:'Scrolled to the box on the home page'};
+  function renderEmail(R){
+    const rows = (R.clicks||[]).filter(c => c.what === 'email-list');
+    const total = rows.reduce((a,b)=>a+b.n,0), E = snap.email || null;
+    const fromLinks = rows.filter(r => r.page !== 'home').reduce((a,b)=>a+b.n,0);
+    const facts = [
+      ['Sign-ups', fmt(total), 'email address entered (this range)'],
+      ['From the email links', fmt(fromLinks), total ? pct(fromLinks, total) + '% of sign-ups' : 'the "Free daily email" links'],
+      ['Subscribers', E && E.subscribers != null ? fmt(E.subscribers) : '–', E && E.subscribers != null ? `confirmed, all time${E.pending ? ' · ' + fmt(E.pending) + ' waiting to confirm' : ''}` : 'needs Buttondown access, see below'],
+    ];
+    $('em').innerHTML = facts.map(([k,v,sub]) => `<div class="stat"><span class="label">${esc(k)}</span><span class="v">${esc(v)}</span><span class="s">${esc(sub)}</span></div>`).join('');
+    list($('lEmail'), rows.map(r => ({name: EMAIL_FROM[r.page] || r.page, n: r.n})).sort((a,b)=>b.n-a.n), total,
+         {empty: 'No sign-ups in this range yet. Each email entered in the sign-up box counts here.'});
+    $('emNote').textContent = (E && E.subscribers != null ? '' :
+      'To see confirmed subscribers here, open Buttondown → API → Keys, edit the "Prop Streak Lab site" key and set Subscribers to "Read". ') +
+      'Sign-ups count people who entered an email; they become subscribers once they click the confirmation link Buttondown sends.';
+  }
 
   // ---------- agents: traffic spikes, today's report, edge tracker, social posts ----------
   const SP = {nfl:'🏈 NFL', nba:'🏀 NBA', nhl:'🏒 NHL', mlb:'⚾ MLB'};
