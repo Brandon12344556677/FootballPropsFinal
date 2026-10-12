@@ -23,7 +23,8 @@ README.md has the full feature tour; this file is the working rules.
   `app.js` feeds it two anonymous GoatCounter events, `time/<range>` and `click/<what>/<page>`;
   their labels are mirrored in `team_stats.py` (TIME_RANGES, CLICK_RE) and `team/index.html`.
 - Shared helpers: `news.py`, `holds.py`, `kalshi.py`, `depth.py`.
-- `update_pass.sh` is one full pass; `.github/workflows/update.yml` runs it twice per scheduled run.
+- `update_pass.sh` is one full pass; `.github/workflows/update.yml` runs it twice per run, and each run starts
+  the next one when it ends (the 20-minute schedule is only a backup: GitHub's scheduler stalls).
 - `app.js` / `app.css`: shared look and behavior for every page.
 
 ## Generated files — never edit by hand
