@@ -25,6 +25,7 @@ import html
 import json
 import os
 import sys
+import urllib.error
 import urllib.request
 from zoneinfo import ZoneInfo
 
@@ -286,6 +287,9 @@ def main():
         try:
             send_email(email_key, subject, body)
             sent.append("Email")
+        except urllib.error.HTTPError as e:   # Buttondown says why in the body, e.g. {"code": ..., "detail": ...}
+            why = " ".join(e.read().decode("utf-8", "replace").split())[:300]
+            print(f"  daily post: email failed (HTTP {e.code}: {why})")
         except Exception as e:
             print(f"  daily post: email failed ({e})")
     if sent:
