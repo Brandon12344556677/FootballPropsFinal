@@ -662,6 +662,30 @@ window.PS = (function(){
   addEventListener('pagehide', send);
 })();
 
+// ---- page views and unique visitors: one anonymous GoatCounter event per page load, "view/<n>",
+// where n is this browser's page load today (1, 2, 3 ...; from local storage, reset each day).
+// GoatCounter counts each path once per visitor per day, so "view/1" is the day's unique visitors
+// and all "view/<n>" together are its page views (up to VIEW_CAP a visitor). Only the number is
+// sent: no ID, no cookie. team_stats.py reads these (VIEW_RE) for the team dashboard.
+(function(){
+  const VIEW_CAP = 25;
+  const day = new Date().toLocaleDateString('en-CA', {timeZone: 'America/New_York'});
+  let n = 1;
+  try {
+    const v = JSON.parse(localStorage.getItem('psl_views') || 'null');
+    n = v && v.d === day ? v.n + 1 : 1;
+    localStorage.setItem('psl_views', JSON.stringify({d: day, n}));
+  } catch(e) { n = 1; }       // storage blocked: still counted as a visitor
+  if (n > VIEW_CAP) return;
+  let tries = 0;
+  (function send(){
+    const gc = window.goatcounter;
+    if (gc && typeof gc.count === 'function') {
+      gc.count({path: 'view/' + n, title: 'Page view ' + n + ' today', event: true});
+    } else if (++tries < 40) setTimeout(send, 250);   // count.js loads async; give up after 10 s (blocked)
+  })();
+})();
+
 // ---- outbound clicks: one anonymous GoatCounter event per click on a link that leaves the site,
 // e.g. "click/polymarket-signup/nfl" (what was clicked, then which page). No ID or cookie.
 // team_stats.py reads these for the team dashboard and keeps them out of the visit counts.

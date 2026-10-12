@@ -333,14 +333,12 @@ def news_flags(cands):
             for c in sorted(cands, key=lambda c: c["start"]) if c.get("flag")]
 
 
-def promo_day(cands, docs, today, days=30):
-    """How today's Value spots compare with a usual day: today's count (games today, ET) by sport,
-    and the average Value spots per day over the last `days` days that had any."""
+def promo_day(docs, today, days=30):
+    """How today's Value spots compare with a usual day: every Value spot whose game is today (ET),
+    by sport, counted from the picks files so games that already started still count (the
+    upcoming-only list empties as the day goes on), and the average per day over the last
+    `days` days that had any."""
     by = {}
-    for c in cands:
-        t = parse_start(c["start"])
-        if c["value"] and t and t.astimezone(ET).date().isoformat() == today:
-            by[c["sport"]] = by.get(c["sport"], 0) + 1
     start = (datetime.date.fromisoformat(today) - datetime.timedelta(days=days)).isoformat()
     per = {}
     for sport, doc in docs:
@@ -351,7 +349,9 @@ def promo_day(cands, docs, today, days=30):
                 continue
             t = parse_start(p.get("start"))
             d = t.astimezone(ET).date().isoformat() if t else p.get("date")
-            if d and start <= d < today:
+            if d == today:
+                by[sport] = by.get(sport, 0) + 1
+            elif d and start <= d < today:
                 per[d] = per.get(d, 0) + 1
     avg = round(sum(per.values()) / len(per), 1) if per else None
     n = sum(by.values())
@@ -510,7 +510,7 @@ def main():
            "tracked": {"graded": n_graded, "since": since}, "fair": fair_weight(docs), "last": last,
            "calib": calibration(docs),
            "streaks": streaks(cands), "moves": moves(cands), "fast": fast,
-           "flags": news_flags(feat), "promo": promo_day(cands, docs, today_et)}
+           "flags": news_flags(feat), "promo": promo_day(docs, today_et)}
     with open(OUT, "w", encoding="utf-8") as f:
         json.dump(doc, f, separators=(",", ":"), ensure_ascii=False)
     if search:

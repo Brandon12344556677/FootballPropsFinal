@@ -112,6 +112,7 @@ footer p{margin:0;max-width:80ch}
 .aglist .chip{margin-left:4px;font-size:11px;padding:1px 6px}
 .chip.bad{color:var(--down);border-color:rgba(235,111,125,.5)}
 .edwrap{overflow-x:auto;margin-top:12px}
+.edges.vwt{min-width:0}
 .edges{width:100%;border-collapse:collapse;font-size:14px;min-width:640px}
 .edges th{text-align:left;font-weight:600;color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.05em;padding:6px 8px;border-bottom:1px solid var(--line)}
 .edges td{padding:8px;border-bottom:1px solid var(--line);vertical-align:top}
@@ -159,11 +160,12 @@ footer p{margin:0;max-width:80ch}
 .ghost-btn{background:none;color:var(--fg);border:1px solid var(--line)}
 
 /* sponsor snapshot */
+#sp{grid-template-columns:repeat(5,minmax(0,1fr))}
 .stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:1px;background:var(--line);border:1px solid var(--line);border-radius:12px;overflow:hidden}
 .stat{background:var(--surface);padding:14px 16px;display:grid;gap:2px;align-content:start;min-width:0}
 .stat .v{font-family:var(--f-display);font-weight:800;font-size:22px;line-height:1.2;overflow-wrap:anywhere}
 .stat .s{font-size:13px;color:var(--muted)}
-@media (max-width:760px){ .stats{grid-template-columns:repeat(2,minmax(0,1fr))} }
+@media (max-width:760px){ .stats, #sp{grid-template-columns:repeat(2,minmax(0,1fr))} }
 .copyrow{display:flex;align-items:center;gap:12px;margin-top:14px;flex-wrap:wrap}
 .copied{color:var(--accent);font-size:13px}
 #spText{width:100%;margin-top:10px;font:13px/1.5 var(--f-body);color:var(--soft);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:10px}
@@ -222,6 +224,13 @@ footer p{margin:0;max-width:80ch}
   <section class="panel">
     <div class="panel-h"><h2 id="chartTitle">Visits per day</h2><span class="label" id="chartPeak"></span></div>
     <div class="chart" id="chart"></div>
+  </section>
+
+  <section class="panel">
+    <div class="panel-h"><h2>Page views and unique visitors</h2><span class="label" id="vwLabel"></span></div>
+    <div class="stats" id="vw"></div>
+    <div class="edwrap"><table class="edges vwt"><thead><tr><th>Day</th><th class="n">Unique visitors</th><th class="n">Page views</th><th class="n">Pages per visitor</th></tr></thead><tbody id="vwRows"></tbody></table></div>
+    <p class="hint" style="margin-top:10px">Page views: every page opened. Unique visitors: different people, each counted once a day (a person who comes back tomorrow counts again). Counted anonymously by the site, with no IP addresses or IDs. Page views count up to 25 per person a day. Counting started October 12, 2026.</p>
   </section>
 
   <section class="panel">
@@ -583,7 +592,7 @@ footer p{margin:0;max-width:80ch}
     const clicks = clickRows(R.clicks), signups = clicks.filter(c => isSignup(c.what)).reduce((a,b)=>a+b.n,0);
     $('clickRate').textContent = signups && total ? `Sign-up clicks: ${(signups/total*100).toFixed(1)}% of visits` : 'Clicks';
     list($('lClicks'), clicks, clicks.reduce((a,b)=>a+b.n,0), {empty:'No clicks yet. Clicks on the Polymarket and Kalshi sign-up buttons, market links and your social profiles start counting as visitors load the updated site.'});
-    renderHeat(); renderSponsor(); buildLink();
+    renderViews(R, days); renderHeat(); renderSponsor(); buildLink();
 
     // plain-language suggestions computed from this range
     const acts = [];
@@ -642,6 +651,30 @@ footer p{margin:0;max-width:80ch}
     }
   }
 
+  // ---------- page views and unique visitors (team_stats.view_stats, app.js "view/<n>" events) ----------
+  function renderViews(R, days){
+    const V = R.views || {views:0, visitors:0, daily:[]}, el = $('vw'); el.textContent = '';
+    const counted = (V.daily || []).filter(d => d.views || d.visitors);
+    const n = Math.max(1, counted.length);   // days with data: counting started mid-range
+    const busy = counted.slice().sort((a,b) => b.visitors - a.visitors)[0];
+    const dayName = d => new Date(d + 'T12:00:00Z').toLocaleDateString('en-US', {weekday:'short', month:'short', day:'numeric', timeZone:'UTC'});
+    const facts = [
+      ['Unique visitors', fmt(V.visitors), counted.length ? `about ${fmt(Math.round(V.visitors / n))} a day` : 'No data yet'],
+      ['Page views', fmt(V.views), counted.length ? `about ${fmt(Math.round(V.views / n))} a day` : 'No data yet'],
+      ['Pages per visitor', V.visitors ? (V.views / V.visitors).toFixed(1) : '–', 'pages opened per visit'],
+      ['Busiest day', busy ? fmt(busy.visitors) : '–', busy ? dayName(busy.day) + ' · unique visitors' : ''],
+    ];
+    for (const [k, v, sub] of facts) {
+      const d = document.createElement('div'); d.className = 'stat';
+      d.innerHTML = `<span class="label">${esc(k)}</span><span class="v">${esc(v)}</span><span class="s">${esc(sub)}</span>`;
+      el.appendChild(d);
+    }
+    $('vwLabel').textContent = counted.length < days ? `${counted.length} day${counted.length === 1 ? '' : 's'} counted so far` : 'This range';
+    $('vwRows').innerHTML = counted.slice(-14).reverse().map(d => `<tr><td>${esc(dayName(d.day))}</td><td class="n">${fmt(d.visitors)}</td>`+
+      `<td class="n">${fmt(d.views)}</td><td class="n">${d.visitors ? (d.views / d.visitors).toFixed(1) : '–'}</td></tr>`).join('') ||
+      '<tr><td colspan="4" class="empty">No data yet. It fills in as visitors load the updated site.</td></tr>';
+  }
+
   // ---------- sponsor snapshot: last 30 days, ready to paste into an email ----------
   function sponsorFacts(){
     const R = snap.d30; if (!R) return [];
@@ -652,8 +685,14 @@ footer p{margin:0;max-width:80ch}
     const signups = (R.clicks||[]).filter(c => isSignup(c.what)).reduce((a,b)=>a+b.n,0);
     const chans = mergeRefs(R.toprefs).filter(r => r.name !== 'No referrer').slice(0,3).map(r => r.name);
     const typ = typicalTime(R.time);
+    const V = R.views || {views:0, visitors:0, daily:[]}, vDays = Math.max(1, (V.daily || []).filter(d => d.views || d.visitors).length);
+    const perDay = x => fmt(Math.round(x / vDays));
     return [
       ['Visits', fmt(total), `about ${fmt(Math.round(total/30))} a day`, `${fmt(total)} visits (about ${fmt(Math.round(total/30))} a day)`],
+      ['Unique visitors', V.visitors ? perDay(V.visitors) + ' a day' : '–', V.visitors ? `${fmt(V.visitors)} in all · each person once a day` : 'Counting since Oct 12, 2026',
+        V.visitors ? `${perDay(V.visitors)} unique visitors a day (${fmt(V.visitors)} in all)` : ''],
+      ['Page views', V.views ? perDay(V.views) + ' a day' : '–', V.views ? `${fmt(V.views)} in all · ${(V.views / Math.max(1, V.visitors)).toFixed(1)} per visitor` : 'Counting since Oct 12, 2026',
+        V.views ? `${perDay(V.views)} page views a day (${fmt(V.views)} in all, ${(V.views / Math.max(1, V.visitors)).toFixed(1)} pages per visitor)` : ''],
       ['Audience', loc ? pct(loc.n, locN) + '%' : '–', loc ? loc.name : 'No location data', loc ? `${pct(loc.n, locN)}% from ${/^(United|Netherlands|Philippines)/.test(loc.name) ? "the " : ""}${loc.name}` : ''],
       ['On a phone', sysN ? pct(mob, sysN) + '%' : '–', 'iPhone and Android', sysN ? `${pct(mob, sysN)}% on phones (iPhone and Android)` : ''],
       ['Most visited board', board ? board.name.replace(' board','') : '–', board ? fmt(board.n) + ' visits' : '', board ? `Most visited: ${board.name} (${fmt(board.n)} visits)` : ''],
