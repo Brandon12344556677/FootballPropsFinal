@@ -35,3 +35,12 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: python watchdog.py
+
+      # The team dashboard (dashboard_check.py): page, encrypted numbers (opened with the team
+      # password), edge tracker and feeds. Runs even when the step above turned the run red.
+      - name: Check the team dashboard
+        if: ${{ !cancelled() }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TEAM_DASH_PASSWORD: ${{ secrets.TEAM_DASH_PASSWORD }}
+        run: python dashboard_check.py

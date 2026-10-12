@@ -110,6 +110,7 @@ footer p{margin:0;max-width:80ch}
 #app[data-cur="picks"] [data-view]:not([data-view="picks"]){display:none!important}
 #app[data-cur="social"] [data-view]:not([data-view="social"]){display:none!important}
 #app[data-cur="sponsors"] [data-view]:not([data-view="sponsors"]){display:none!important}
+#app[data-cur="picks"] #tabs, #app[data-cur="social"] #tabs{display:none}
 .stats.em{grid-template-columns:repeat(3,minmax(0,1fr))}
 @media (max-width:760px){ .stats.em{grid-template-columns:1fr} }
 /* agents */
@@ -765,8 +766,11 @@ footer p{margin:0;max-width:80ch}
   }
 
   // ---------- sponsor snapshot: last 30 days, ready to paste into an email ----------
+  const RANGE_DAYS = {d1:1, d7:7, d30:30, d90:90};
+  const RANGE_NAME = {d1:'today', d7:'last 7 days', d30:'last 30 days', d90:'last 90 days'};
   function sponsorFacts(){
-    const R = snap.d30; if (!R) return [];
+    const R = snap[range]; if (!R) return [];   // follows the date range picked above
+    const nDays = RANGE_DAYS[range] || 30;
     const total = R.total || 0;
     const locs = clean(R.locations), locN = locs.reduce((a,b)=>a+b.n,0), loc = locs[0];   // a share: see list()
     const sys = clean(R.systems), sysN = sys.reduce((a,b)=>a+b.n,0), mob = sys.filter(s=>/ios|android|ipados/i.test(s.name)).reduce((a,b)=>a+b.n,0);
@@ -777,7 +781,7 @@ footer p{margin:0;max-width:80ch}
     const V = R.views || {views:0, visitors:0, daily:[]}, vDays = Math.max(1, (V.daily || []).filter(d => d.views || d.visitors).length);
     const perDay = x => fmt(Math.round(x / vDays));
     return [
-      ['Visits', fmt(total), `about ${fmt(Math.round(total/30))} a day`, `${fmt(total)} visits (about ${fmt(Math.round(total/30))} a day)`],
+      ['Visits', fmt(total), nDays > 1 ? `about ${fmt(Math.round(total/nDays))} a day` : 'today so far', nDays > 1 ? `${fmt(total)} visits (about ${fmt(Math.round(total/nDays))} a day)` : `${fmt(total)} visits today so far`],
       ['Unique visitors', V.visitors ? perDay(V.visitors) + ' a day' : '–', V.visitors ? `${fmt(V.visitors)} in all · each person once a day` : 'Counting since Oct 12, 2026',
         V.visitors ? `${perDay(V.visitors)} unique visitors a day (${fmt(V.visitors)} in all)` : ''],
       ['Page views', V.views ? perDay(V.views) + ' a day' : '–', V.views ? `${fmt(V.views)} in all · ${(V.views / Math.max(1, V.visitors)).toFixed(1)} per visitor` : 'Counting since Oct 12, 2026',
@@ -794,6 +798,7 @@ footer p{margin:0;max-width:80ch}
   }
   function renderSponsor(){
     const el = $('sp'); el.textContent = '';
+    const nm = RANGE_NAME[range] || 'last 30 days'; $('spLabel').textContent = nm[0].toUpperCase() + nm.slice(1);
     for (const [k, v, s] of sponsorFacts()) {
       const d = document.createElement('div'); d.className = 'stat';
       const l = document.createElement('span'); l.className = 'label'; l.textContent = k;
@@ -805,7 +810,7 @@ footer p{margin:0;max-width:80ch}
   $('spCopy').addEventListener('click', async () => {
     if (!snap) return;
     const asOf = new Date(snap.generated_at).toLocaleDateString('en-US', {month:'long', day:'numeric', year:'numeric'});
-    const lines = [`Prop Streak Lab (propstreaklab.com): audience, last 30 days, as of ${asOf}`]
+    const lines = [`Prop Streak Lab (propstreaklab.com): audience, ${RANGE_NAME[range]}, as of ${asOf}`]
       .concat(sponsorFacts().filter(f => f[3]).map(f => '• ' + f[3]))
       .concat(['Free player-prop research with every pick graded in public.']);
     const text = lines.join('\n'), box = $('spText');
