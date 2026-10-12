@@ -1,11 +1,4 @@
 {
- "problems": {
-  "team_stats: GoatCounter team stats": {
-   "first": "2026-10-12T12:42:27Z",
-   "runs": 1,
-   "alerted": null,
-   "msg": "team_stats.py: GoatCounter team stats failed (URLError: <urlopen error [Errno 101] Network is unreachable>)"
-  }
- },
+ "problems": {},
  "alert": []
 }
