@@ -27,6 +27,8 @@ import os
 import sys
 import urllib.error
 import urllib.request
+
+import depth
 from zoneinfo import ZoneInfo
 
 SITE = "https://propstreaklab.com"
@@ -123,7 +125,7 @@ def yesterdays_results(yday):
             if day != yday.isoformat():
                 continue
             n += 1
-            price = p.get("price")
+            price = p.get("price") if depth.real_price(p) else None   # a price that can't have been real: no units
             if price:
                 price = price / 100.0 if sport == "nfl" else price             # NFL records cents
             if p["res"] == "hit":

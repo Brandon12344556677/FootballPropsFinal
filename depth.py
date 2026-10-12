@@ -112,6 +112,24 @@ def unchecked(p):
     return bool(p.get("lists")) and str(p.get("date")) == RULE_DAY and p.get("vn") is None and not p.get("th")
 
 
+# A recorded price that can't have been a real one: under REAL_MIN, or REAL_JUMP+ away from the price
+# the pick was first recorded at (a stale or pulled book, like 52c -> 2c minutes before a game).
+# Such picks still count in a record's wins and losses but not in its units (depth.guard stops new
+# ones from being recorded). Prices may be fractions or the NFL's cents.
+REAL_MIN = 0.10
+REAL_JUMP = 0.35
+
+
+def real_price(p):
+    pr, p0 = p.get("price"), p.get("px0")
+    if not pr:
+        return False
+    unit = 100.0 if max(pr, p0 or 0) > 1 else 1.0
+    if pr < REAL_MIN * unit:
+        return False
+    return p0 is None or abs(pr - p0) <= REAL_JUMP * unit
+
+
 def deep(usd):
     return usd is not None and usd >= MIN_USD
 

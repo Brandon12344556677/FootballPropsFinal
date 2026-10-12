@@ -1921,7 +1921,7 @@ def live_record(picks):
     for k in ("T", "V", "all"):
         ps = [p for p in picks if p["src"] == "live" and p["res"] in ("hit", "miss") and (k == "all" or k in (p["lists"] or ""))]
         hits = sum(1 for p in ps if p["res"] == "hit")
-        priced = [p for p in ps if p.get("price")]
+        priced = [p for p in ps if p.get("price") and depth.real_price(p)]   # a price that can't have been real stays out of the ROI
         roi = (sum((100.0 / p["price"] - 1) if p["res"] == "hit" else -1 for p in priced) / len(priced)) if priced else None
         out[k] = {"n": len(ps), "hit": hits, "roi": round(roi, 3) if roi is not None else None, "priced": len(priced),
                   **clv_stats(ps)}

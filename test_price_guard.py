@@ -53,3 +53,14 @@ class Guard(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class RealPrice(unittest.TestCase):
+    def test_impossible_prices_are_not_real(self):
+        self.assertTrue(depth.real_price({"price": 0.62, "px0": 0.55}))
+        self.assertFalse(depth.real_price({"price": 0.02, "px0": 0.52}))      # 52c -> 2c: a pulled book
+        self.assertFalse(depth.real_price({"price": 0.05}))                    # under 10c
+        self.assertFalse(depth.real_price({"price": 0.15, "px0": 0.60}))      # 45c away from the first price
+        self.assertTrue(depth.real_price({"price": 63, "px0": 58}))            # NFL cents
+        self.assertFalse(depth.real_price({"price": 3, "px0": 40}))
+        self.assertFalse(depth.real_price({"price": None}))
