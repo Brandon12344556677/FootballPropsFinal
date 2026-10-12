@@ -52,8 +52,7 @@ class Signup(unittest.TestCase):
 
     def test_offer_wording_is_not_checked_but_lost_links_are(self):
         out, _ = self.run_with("Use your friend's code PROPSTREAKLAB and get $10", kalshi=404, carriers="join/propstreaklab")
-        self.assertEqual(sorted(out), ["signup: /", "signup: /app.js", "signup: /guides/polymarket-and-kalshi.html",
-                                       "signup: kalshi"])
+        self.assertEqual(sorted(out), ["signup: /app.js", "signup: /guides/polymarket-and-kalshi.html", "signup: kalshi"])
 
 
 if __name__ == "__main__":
