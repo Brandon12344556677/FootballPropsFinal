@@ -24,6 +24,9 @@ README.md has the full feature tour; this file is the working rules.
   `app.js` feeds it three anonymous GoatCounter events, `time/<range>`, `click/<what>/<page>` and `view/<n>`
   (the visitor's n-th page today: page views and unique visitors); their labels are mirrored in `team_stats.py`
   (TIME_RANGES, CLICK_RE, VIEW_RE) and `team/index.html`. `view/<n>` is disclosed in privacy.html and cookies.html.
+- `team/ads.js`: the dashboard's Meta ads panel. Draws feed and story ads on a canvas from the public `today.json`
+  (`calib`, `record`, `picks`, `streaks`) and writes the Ads Manager text; `team/ads/` holds the example PNGs.
+  Ad copy avoids "bet", "lock" and exchange names and carries a 21+ line (Meta restricts gambling ads).
 - Shared helpers: `news.py`, `holds.py`, `kalshi.py`, `depth.py`.
 - `update_pass.sh` is one full pass; `.github/workflows/update.yml` runs it twice per run, and each run starts
   the next one when it ends (the 20-minute schedule is only a backup: GitHub's scheduler stalls).
