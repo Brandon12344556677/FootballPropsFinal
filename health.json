@@ -1,11 +1,4 @@
 {
- "problems": {
-  "post_daily: daily post: email": {
-   "first": "2026-10-12T01:18:56Z",
-   "runs": 5,
-   "alerted": null,
-   "msg": "post_daily.py: daily post: email failed (HTTP 400: {\"code\":\"sending_requires_confirmation\",\"detail\":\"Creating an email with status 'about_to_send' requires the X-Buttondown-Live-Dangerously header. Thi)"
-  }
- },
+ "problems": {},
  "alert": []
 }
