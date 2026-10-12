@@ -10,7 +10,7 @@ outside:
   - stats:  team/stats.enc is a valid encrypted file; with TEAM_DASH_PASSWORD it decrypts to the
             numbers the dashboard draws (every date range, with visits, pages, sources, clicks,
             views) and they were refreshed in the last STATS_STALE_H hours
-  - edges:  team/edges.enc (the edge tracker) decrypts and was rebuilt in the last EDGES_STALE_D days
+  - edges:  team/edges.enc (the edge tracker) decrypts and was rebuilt in the last EDGES_STALE_H hours
   - feeds:  today.json still carries the fields the dashboard's panels read
 
 A problem opens one "Team dashboard" GitHub issue, updated as it changes and closed when it's
@@ -35,7 +35,7 @@ from watchdog import SITE, fetch
 TITLE = "Team dashboard: something needs a look"
 MARK = "<!-- dashboard-check -->"
 STATS_STALE_H = 18     # stats.enc only changes when the numbers do; overnight can be quiet for hours
-EDGES_STALE_D = 2      # edges.enc is rebuilt once per Eastern day
+EDGES_STALE_H = 6      # edges.enc is rebuilt every pass when graded picks change; a quiet night can go hours
 RANGES = ("d1", "d7", "d30", "d90")
 RANGE_KEYS = ("total", "daily", "pages", "toprefs", "clicks", "views")
 PAGE_IDS = ("lockForm", "pw", "app", "views", "tabs", "chart", "sp", "em", "edRows", "posts", "health")
@@ -126,21 +126,15 @@ def check_edges(now, password):
         rep = json.loads(team_stats.decrypt(blob.strip(), password))
     except Exception as e:
         return {"edges: decrypt": f"edges.enc doesn't open with the team password ({type(e).__name__})."}
-    try:
-        day = datetime.date.fromisoformat(rep.get("day", ""))
-    except ValueError:
-        return {"edges: fresh": "edges.enc has no build day."}
-    age = (now.astimezone(watchdog_et()).date() - day).days
-    if age > EDGES_STALE_D:
-        return {"edges: fresh": f"The edge tracker was last rebuilt {age} days ago ({day})."}
+    gen = parse_time(rep.get("generated_at"))
+    if gen is None:
+        return {"edges: fresh": "edges.enc has no update time."}
+    if now - gen > datetime.timedelta(hours=EDGES_STALE_H):
+        hours = int((now - gen).total_seconds() // 3600)
+        return {"edges: fresh": f"The edge tracker was last rebuilt {hours} hours ago ({gen:%Y-%m-%d %H:%M} UTC)."}
     if not rep.get("strategies"):
         return {"edges: contents": "The edge tracker has no strategies in it."}
     return {}
-
-
-def watchdog_et():
-    from zoneinfo import ZoneInfo
-    return ZoneInfo("America/New_York")
 
 
 def check_feeds():

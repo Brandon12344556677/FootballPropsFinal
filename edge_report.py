@@ -12,7 +12,8 @@ Prices that can't have been real are left out: under 10c, or 35c+ away from the 
 first price (a stale or pulled book; depth.guard stops new ones from being recorded).
 
 Writes team/edges.enc, encrypted like team/stats.enc (team_stats.encrypt, TEAM_DASH_PASSWORD),
-for the team dashboard. Runs from update_pass.sh; rebuilds once per Eastern day. Without
+for the team dashboard. Runs from update_pass.sh every pass (~10 minutes); the file is rewritten
+only when the numbers changed (the bootstrap is seeded, so the same picks give the same report). Without
 the password it does nothing. Standard library only; never fails the deploy.
 """
 import datetime
@@ -155,14 +156,6 @@ def main():
         return 0
     now = datetime.datetime.now(datetime.timezone.utc)
     today = now.astimezone(ET).date().isoformat()
-    try:
-        with open(OUT, encoding="ascii") as f:
-            old = json.loads(team_stats.decrypt(f.read().strip(), password))
-        if old.get("day") == today and "--force" not in sys.argv:
-            print(f"edge report: already built today ({today})")
-            return 0
-    except Exception:
-        pass
     rows = []
     for sport, path in FILES:
         doc = load(path)
@@ -170,6 +163,14 @@ def main():
             rows += graded(sport, doc)
     report = {"generated_at": now.strftime("%Y-%m-%dT%H:%M:%SZ"), "day": today, "picks": len(rows),
               "strategies": build(rows, today)}
+    try:   # the same numbers as the last pass: leave the file alone (a new salt would change it every time)
+        with open(OUT, encoding="ascii") as f:
+            old = json.loads(team_stats.decrypt(f.read().strip(), password))
+        if {k: v for k, v in old.items() if k != "generated_at"} == {k: v for k, v in report.items() if k != "generated_at"}:
+            print(f"edge report: no change ({len(rows)} graded priced picks)")
+            return 0
+    except Exception:
+        pass
     os.makedirs(os.path.dirname(OUT), exist_ok=True)
     with open(OUT, "w", encoding="ascii") as f:
         f.write(team_stats.encrypt(json.dumps(report, separators=(",", ":")), password) + "\n")

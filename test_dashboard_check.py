@@ -52,15 +52,16 @@ class Stats(unittest.TestCase):
 
 
 class Edges(unittest.TestCase):
-    def run_with(self, day, strategies=True):
-        blob = team_stats.encrypt(json.dumps({"day": day, "strategies": [{"key": "x"}] if strategies else []}), PW)
+    def run_with(self, hours_ago, strategies=True):
+        gen = (NOW - datetime.timedelta(hours=hours_ago)).strftime("%Y-%m-%dT%H:%M:%SZ")
+        blob = team_stats.encrypt(json.dumps({"generated_at": gen, "strategies": [{"key": "x"}] if strategies else []}), PW)
         with mock.patch.object(D, "fetch", side_effect=fake({"/team/edges.enc": (200, blob)})):
             return D.check_edges(NOW, PW)
 
     def test_fresh_stale_and_empty(self):
-        self.assertEqual(self.run_with("2026-10-11"), {})
-        self.assertIn("edges: fresh", self.run_with("2026-10-07"))
-        self.assertIn("edges: contents", self.run_with("2026-10-12", strategies=False))
+        self.assertEqual(self.run_with(1), {})
+        self.assertIn("edges: fresh", self.run_with(7))
+        self.assertIn("edges: contents", self.run_with(0, strategies=False))
 
 
 class Page(unittest.TestCase):

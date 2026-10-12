@@ -31,7 +31,7 @@ python post_daily.py 2>&1 | tee "$LOGDIR/post_daily.log" || echo "daily post ski
 # GOATCOUNTER_TOKEN and TEAM_DASH_PASSWORD secrets, does nothing without them).
 timeout 2m python team_stats.py 2>&1 | tee "$LOGDIR/team_stats.log" || echo "team stats not refreshed this run"
 
-# Once a day: which strategies are making money (team/edges.enc, encrypted like the stats).
+# Every pass: which strategies are making money (team/edges.enc, encrypted like the stats; rewritten only on a change).
 timeout 2m python edge_report.py 2>&1 | tee "$LOGDIR/edge_report.log" || echo "edge report not refreshed this run"
 
 # Reads those logs: any data source that failed, a builder that crashed, a data file gone

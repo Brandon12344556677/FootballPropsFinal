@@ -289,7 +289,7 @@ footer p{margin:0;max-width:80ch}
   </section>
 
   <section data-view="picks" class="panel" id="edPanel" hidden>
-    <div class="panel-h"><h2>Edge tracker</h2><span class="label" id="edUpd">Rebuilt daily</span></div>
+    <div class="panel-h"><h2>Edge tracker</h2><span class="label" id="edUpd">Updates every 10 minutes</span></div>
     <p class="hint">Every recorded pick with a market price, graded as a flat $1 bet at that price. The likely range is where the true return probably sits; treat an edge as real only once the whole range is above 0%.</p>
     <div class="edwrap"><table class="edges"><thead><tr><th>Strategy</th><th class="n">Picks</th><th class="n">Hit</th><th class="n">Return</th><th class="n">Likely range</th><th class="n">Last 7 days</th><th>Verdict</th></tr></thead><tbody id="edRows"></tbody></table></div>
   </section>
@@ -944,7 +944,7 @@ footer p{margin:0;max-width:80ch}
       $('edRows').innerHTML=(e.strategies||[]).map(s=>`<tr><td>${esc(s.label)}</td><td class="n">${fmt(s.n)}</td><td class="n">${Math.round(s.hit*100)}%</td>`+
         `<td class="n ${cls(s.roi)}"><b>${p(s.roi)}</b></td><td class="n">${p(s.lo)} to ${p(s.hi)}</td><td class="n ${cls(s.roi7)}">${p(s.roi7)}${s.n7? ' <small>('+s.n7+')</small>' : ''}</td>`+
         `<td><span class="chip ${s.verdict==='Edge holding'?'do':s.verdict==='Losing'?'bad':''}">${esc(s.verdict)}</span></td></tr>`).join('');
-      $('edUpd').textContent=`${fmt(e.picks)} graded picks · ${new Date(e.day+'T12:00:00Z').toLocaleDateString('en-US',{month:'short', day:'numeric', timeZone:'UTC'})}`;
+      $('edUpd').textContent=`${fmt(e.picks)} graded picks · updated ${new Date(e.generated_at).toLocaleString('en-US',{month:'short', day:'numeric', hour:'numeric', minute:'2-digit'})}`;
       $('edPanel').hidden=false;
     } catch(err){}
   }
