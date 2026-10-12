@@ -220,7 +220,10 @@ def send_email(key, subject, body):
     """Sends to the whole list now (Buttondown: status about_to_send)."""
     req = urllib.request.Request("https://api.buttondown.com/v1/emails",
                                  data=json.dumps({"subject": subject, "body": body, "status": "about_to_send"}).encode(),
-                                 headers={"Authorization": f"Token {key}", "Content-Type": "application/json", "User-Agent": UA},
+                                 # Buttondown sends right away (status about_to_send) only with this header, its
+                                 # guard against an integration mailing the list by accident
+                                 headers={"Authorization": f"Token {key}", "Content-Type": "application/json", "User-Agent": UA,
+                                          "X-Buttondown-Live-Dangerously": "true"},
                                  method="POST")
     with urllib.request.urlopen(req, timeout=30) as r:
         return r.status
