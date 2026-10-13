@@ -22,10 +22,16 @@ README.md has the full feature tour; this file is the working rules.
 - `team_stats.py` → `team/stats.enc`: GoatCounter visitor totals (and traffic spikes), encrypted with the
   `TEAM_DASH_PASSWORD` secret, for the password-protected team dashboard `team/index.html`
   (hand-written, noindex, not in the sitemap). Totals only — no IPs or per-visitor data.
-  The dashboard is split into tabs (Overview, Audience, Sign-ups, Picks & edges, Social, Sponsors: each panel has
-  `data-view`). `app.js` feeds it three anonymous GoatCounter events, `time/<range>`, `click/<what>/<page>`, `view/<n>` and `visitor/new|returning`
-  (the visitor's n-th page today: page views and unique visitors); their labels are mirrored in `team_stats.py`
-  (TIME_RANGES, CLICK_RE, VIEW_RE) and `team/index.html`. `view/<n>` is disclosed in privacy.html and cookies.html.
+  The dashboard is split into tabs (Overview, Audience, Sign-ups, Picks & edges, Social, Sponsors, Affiliates: each panel has
+  `data-view`). `app.js` feeds it anonymous GoatCounter events, `time/<range>`, `click/<what>/<page>`, `view/<n>`, `visitor/new|returning`
+  (the visitor's n-th page today: page views and unique visitors) and `ref/<code>/visit|new`; their labels are mirrored in `team_stats.py`
+  (TIME_RANGES, CLICK_RE, VIEW_RE, REF_RE) and `team/index.html`. `view/<n>` and `ref/` are disclosed in privacy.html and cookies.html.
+- Affiliate program (private: no public page; the team recruits affiliates and they sign an agreement): links are `/?ref=<code>`. `app.js` sends `ref/<code>/visit` on
+  arrival and `ref/<code>/new` once a never-seen browser has had the site on screen 20 seconds; affiliates are paid $0.20 per
+  `new`, every 2 weeks, $10 minimum (rolls over), $50 cap, 15 a week to avoid a warning. The dashboard's Affiliates tab
+  (`AFF_*` constants) does the math, keeps the team's affiliate list (code, name, email, phone, warnings sent) in
+  `affiliates.enc` on the `team-data` branch via `expenses.js`'s `window.psaTeamData`, and flags last week's under-15s
+  with the warning email. Keep the dashboard constants, the warning email text and the signed agreement in sync.
 - `team/ads.js`: the dashboard's Meta ads panel. Draws feed and story ads on a canvas from the public `today.json`
   (`calib`, `record`, `picks`, `streaks`) and writes the Ads Manager text; `team/ads/` holds the example PNGs.
   Ad copy avoids "bet", "lock" and exchange names and carries an 18+ line (Meta restricts gambling ads).

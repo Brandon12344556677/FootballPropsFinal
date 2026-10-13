@@ -826,6 +826,47 @@ window.PSLive=(function(){
   addEventListener('pagehide', send);
 })();
 
+// ---- affiliate links: "?ref=<code>" (the team dashboard makes them; the affiliate agreement sets the pay). Every arrival
+// through one sends "ref/<code>/visit". A browser that has never been here before also sends
+// "ref/<code>/new" once the site has been on its screen for 20 seconds, counted across this visit's
+// pages and paused while hidden; affiliates are paid per "new". Only the code is sent: no ID, no
+// cookie. team_stats.py reads these (REF_RE). Runs before the block below, which marks the browser
+// as seen (psl_views, psl_first).
+(function(){
+  const NEED = 20000, KEY = 'psl_ref';
+  function count(path, title){
+    let tries = 0;
+    (function send(){
+      const gc = window.goatcounter;
+      if (gc && typeof gc.count === 'function') gc.count({path, title, event: true});
+      else if (++tries < 40) setTimeout(send, 250);   // count.js loads async; give up after 10 s (blocked)
+    })();
+  }
+  function save(){ try { sessionStorage.setItem(KEY, JSON.stringify(st)); } catch(e) {} }
+  let st = null;
+  try { st = JSON.parse(sessionStorage.getItem(KEY) || 'null'); } catch(e) {}
+  let code = '';
+  try { code = (new URLSearchParams(location.search).get('ref') || '').trim().toLowerCase(); } catch(e) {}
+  if (/^[a-z0-9-]{2,24}$/.test(code)) {
+    count('ref/' + code + '/visit', 'Affiliate visit: ' + code);
+    let seen = true;   // storage blocked: can't tell new from returning, so not counted as new
+    try { seen = !!(localStorage.getItem('psl_views') || localStorage.getItem('psl_first')); } catch(e) {}
+    if (!seen && !st) { st = {c: code, ms: 0}; save(); }
+  }
+  if (!st || st.done || !/^[a-z0-9-]{2,24}$/.test(st.c || '')) return;
+  let since = 0, timer = 0;
+  function start(){ if (since) return; since = Date.now(); timer = setTimeout(done, Math.max(0, NEED - st.ms)); }
+  function stop(){ if (!since) return; st.ms += Date.now() - since; since = 0; clearTimeout(timer); save(); }
+  function done(){
+    stop(); if (st.done) return;
+    st.done = true; save();
+    count('ref/' + st.c + '/new', 'New viewer from affiliate ' + st.c);
+  }
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') stop(); else if (!st.done) start(); });
+  addEventListener('pagehide', stop);
+  if (document.visibilityState === 'visible') start();
+})();
+
 // ---- page views and unique visitors: one anonymous GoatCounter event per page load, "view/<n>",
 // where n is this browser's page load today (1, 2, 3 ...; from local storage, reset each day).
 // GoatCounter counts each path once per visitor per day, so "view/1" is the day's unique visitors
