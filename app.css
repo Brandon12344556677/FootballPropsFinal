@@ -604,3 +604,15 @@ html body .pslcookie button{padding:7px 14px;font-size:13px;border-radius:999px;
 .ps-why{margin:10px 0 0;padding:10px 12px;border-radius:12px;border:1px solid var(--line, #22354f);background:rgba(255,255,255,.03);font-size:13.5px;line-height:1.45}
 .ps-why>b{display:block;font-size:12px;letter-spacing:.08em;text-transform:uppercase;opacity:.8;margin-bottom:4px}
 .ps-why ul{margin:0;padding-left:18px;display:grid;gap:3px}
+
+/* "New here?" key above the board tabs (app.js newHere) */
+.psnew{border:1px solid rgba(34,208,127,.35);background:rgba(34,208,127,.06);border-radius:14px;padding:14px 16px;margin:0 0 16px}
+.psnew-h{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:8px}
+.psnew-h b{font-size:16px}
+.psnew-x{flex:none;border:1px solid rgba(255,255,255,.25);background:transparent;color:inherit;border-radius:999px;padding:6px 14px;font:inherit;font-size:13px;font-weight:600;cursor:pointer}
+.psnew-x:hover{border-color:#22d07f;color:#22d07f}
+.psnew ul{list-style:none;margin:0;padding:0;display:grid;gap:6px}
+.psnew li{font-size:14.5px;line-height:1.45;color:#c9d6e6}
+.psnew li .k{display:inline-block;min-width:8.2em;color:#fff}
+@media (max-width:620px){.psnew li .k{display:block;min-width:0}}
+.psnew-f{margin:8px 0 0;font-size:13px;color:#9fb0c6}
