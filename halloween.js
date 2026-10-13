@@ -22,7 +22,7 @@
   }
   var css = document.createElement('link');
   css.rel = 'stylesheet';
-  css.href = '/halloween.css?v=20261008d';
+  css.href = '/halloween.css?v=20261013a';
   document.head.appendChild(css);
 
   // ---- every green -> pumpkin orange (home page): style sheets, then attributes, then anything drawn later
@@ -150,8 +150,8 @@
       html += '<span class="hw-bat' + v[4] + '" style="--y:' + v[0] + '%;--d:' + v[1] + 's;--delay:' + v[2] +
         's;--s:' + v[3] + ';--x:' + (12 + i * 19) + 'vw">' + BAT + '</span>';
     });
-    // ghosts: left, top, seconds per drift, size; the last one skips phones
-    [[3, 38, 9, 1], [90, 62, 11, .8], [47, 84, 13, .7, ' hw-m']].forEach(function (v) {
+    // ghosts: left, top, seconds per drift, size. Both stay at the sides, out of the content column.
+    [[3, 38, 9, 1], [90, 62, 11, .8]].forEach(function (v) {
       html += '<span class="hw-ghost' + (v[4] || '') + '" style="--x:' + v[0] + '%;--y:' + v[1] + '%;--d:' + v[2] +
         's;--s:' + v[3] + '">' + GHOST + '</span>';
     });
