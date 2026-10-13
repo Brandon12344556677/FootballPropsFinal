@@ -110,7 +110,24 @@ footer p{margin:0;max-width:80ch}
 #app[data-cur="picks"] [data-view]:not([data-view="picks"]){display:none!important}
 #app[data-cur="social"] [data-view]:not([data-view="social"]){display:none!important}
 #app[data-cur="sponsors"] [data-view]:not([data-view="sponsors"]){display:none!important}
-#app[data-cur="picks"] #tabs, #app[data-cur="social"] #tabs{display:none}
+#app[data-cur="expenses"] [data-view]:not([data-view="expenses"]){display:none!important}
+#app[data-cur="picks"] #tabs, #app[data-cur="social"] #tabs, #app[data-cur="expenses"] #tabs{display:none}
+/* expenses (expenses.js) */
+.exform{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:10px;align-items:end}
+.exform label{display:grid;gap:4px;font-size:13px;color:var(--muted);min-width:0}
+.exform input,.exform select,.extok input{width:100%;font:500 15px var(--f-body);color:var(--fg);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:9px 10px}
+.exform .wide{grid-column:span 2}
+@media (max-width:760px){ .exform{grid-template-columns:repeat(2,minmax(0,1fr))} .exform .wide{grid-column:1/-1} }
+#exMsg{font-size:14px;color:var(--accent);min-height:1.4em;margin:10px 0 0} #exMsg.bad{color:var(--down)}
+.extbl-wrap{overflow-x:auto}
+.extbl{width:100%;border-collapse:collapse;font-size:14px}
+.extbl th{text-align:left;color:var(--muted);font-weight:600;font-size:13px;padding:6px 8px;border-bottom:1px solid var(--line)}
+.extbl td{padding:8px;border-bottom:1px solid var(--line);vertical-align:top}
+.extbl td small{display:block;color:var(--muted);font-size:12.5px}
+.extbl .n{text-align:right;font-weight:600;white-space:nowrap}
+.extok{display:grid;gap:8px;max-width:640px;margin-top:10px}
+.extok ol{margin:0;padding-left:20px;color:var(--soft);font-size:14px;display:grid;gap:4px}
+.extok .copyrow{margin-top:0}
 .stats.em{grid-template-columns:repeat(3,minmax(0,1fr))}
 @media (max-width:760px){ .stats.em{grid-template-columns:1fr} }
 /* insights */
@@ -260,6 +277,7 @@ footer p{margin:0;max-width:80ch}
     <button role="tab" data-v="picks">Picks &amp; edges</button>
     <button role="tab" data-v="social">Social</button>
     <button role="tab" data-v="sponsors">Sponsors</button>
+    <button role="tab" data-v="expenses">Expenses</button>
   </nav>
 
   <section class="health" id="health" aria-live="polite" hidden>
@@ -314,6 +332,41 @@ footer p{margin:0;max-width:80ch}
     <ul class="acts" id="acts"></ul>
   </section>
 
+
+  <section data-view="expenses" class="kpis" id="exKpis" aria-label="Money totals"></section>
+  <section data-view="expenses" class="panel" id="exPanel">
+    <div class="panel-h"><h2>Add an expense or money in</h2><span class="label">Shared with the team</span></div>
+    <form class="exform" id="exForm" autocomplete="off">
+      <label>Date<input type="date" id="exDate" required></label>
+      <label>Type<select id="exType"><option value="expense">Expense</option><option value="income">Money in</option></select></label>
+      <label>Category<select id="exCat"></select></label>
+      <label class="wide">Description<input id="exDesc" maxlength="120" placeholder="e.g. Instagram boost, 5 days"></label>
+      <label>Amount ($)<input id="exAmt" inputmode="decimal" placeholder="0.00"></label>
+      <label>Paid by / from<select id="exBy"></select></label>
+      <div><button class="btn" type="submit">Save</button></div>
+    </form>
+    <p id="exMsg" role="status"></p>
+  </section>
+  <div class="grid" data-view="expenses">
+    <section data-view="expenses" class="panel"><div class="panel-h"><h2>Spending by category</h2><span class="label">All time</span></div><ul class="list" id="exCats"></ul></section>
+    <section data-view="expenses" class="panel">
+      <div class="panel-h"><h2>Saving from this device</h2></div>
+      <p class="hint" id="exConn"></p>
+      <div class="extok" id="exTokWrap" hidden>
+        <ol>
+          <li>Sign in to GitHub with the account that has access to the site's repo.</li>
+          <li>Open <a href="https://github.com/settings/tokens/new?scopes=public_repo&amp;description=Prop%20Streak%20Lab%20dashboard" target="_blank" rel="noopener">New token (classic)</a>. The "public_repo" box is already ticked; pick an expiration and click Generate token.</li>
+          <li>Copy the token and paste it below. It stays in this browser only. Never send it to anyone.</li>
+        </ol>
+        <div class="copyrow"><input type="password" id="exTok" placeholder="Paste your GitHub token" aria-label="GitHub token" autocomplete="off"><button class="btn" id="exTokSave" type="button">Connect</button></div>
+      </div>
+      <p class="hint">The list is encrypted with the team password before it leaves your browser.</p>
+    </section>
+  </div>
+  <section data-view="expenses" class="panel">
+    <div class="panel-h"><h2>Every entry</h2><button class="btn ghost-btn" id="exCsv" type="button">Download CSV</button></div>
+    <div class="extbl-wrap"><table class="extbl"><thead><tr><th>Date</th><th>What</th><th class="n">Amount</th><th></th></tr></thead><tbody id="exRows"></tbody></table></div>
+  </section>
   <section data-view="picks" class="panel">
     <div class="panel-h"><h2>Today's agent report</h2><span class="label" id="agUpd"></span></div>
     <div class="agents">
@@ -507,6 +560,7 @@ footer p{margin:0;max-width:80ch}
       password = pw; store.set('psa-pw', pw);
       $('lock').hidden = true; $('app').hidden = false;
       setRange(range); freshness(); loadHealth(); renderSpikes(); loadAgents(); loadEdges(pw);
+      window.dispatchEvent(new CustomEvent('psa-unlock', {detail: {pw}}));   // expenses.js
       clearInterval(timer);
       timer = setInterval(refresh, 5*60*1000);
     } catch(e){
@@ -520,10 +574,11 @@ footer p{margin:0;max-width:80ch}
   }
   async function refresh(){
     if (!password) return;
-    try { snap = await load(password); freshness(); render(); loadHealth(); renderSpikes(); loadAgents(); loadEdges(password); } catch(e){ if (e.code === 'wrong') lock(); }
+    try { snap = await load(password); freshness(); render(); loadHealth(); renderSpikes(); loadAgents(); loadEdges(password); window.dispatchEvent(new Event('psa-refresh')); } catch(e){ if (e.code === 'wrong') lock(); }
   }
   function lock(){
     password = null; snap = null; store.del('psa-pw'); clearInterval(timer);
+    window.dispatchEvent(new Event('psa-lock'));
     $('app').hidden = true; $('lock').hidden = false; $('pw').value = ''; $('pw').focus();
   }
   $('lockForm').addEventListener('submit', e => { e.preventDefault(); const pw = $('pw').value; if (pw) unlock(pw); });
@@ -874,7 +929,7 @@ footer p{margin:0;max-width:80ch}
 
 
   // ---------- section menu: Overview / Audience / Sign-ups / Picks / Social / Sponsors ----------
-  const VIEWS = ['overview','audience','signups','picks','social','sponsors'];
+  const VIEWS = ['overview','audience','signups','picks','social','sponsors','expenses'];
   function setView(v, push){
     if (!VIEWS.includes(v)) v = 'overview';
     $('app').dataset.cur = v;
@@ -1265,5 +1320,6 @@ footer p{margin:0;max-width:80ch}
 })();
 </script>
 <script src="ads.js?v=20261011b"></script>
+<script src="expenses.js?v=20261013a"></script>
 </body>
 </html>
