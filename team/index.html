@@ -176,7 +176,9 @@ footer p{margin:0;max-width:80ch}
 .edges .ed-wait td{color:var(--muted)}
 .edges .aff-due{color:var(--accent);font-weight:600} .edges .aff-low{color:var(--down);font-weight:600}
 .edges .aff-url{font:500 13px ui-monospace,"Cascadia Mono",Consolas,monospace;color:var(--soft);white-space:nowrap}
-.edges .aff-code,#affList td:last-child{white-space:nowrap}
+.edges .aff-code,#affList td:last-child,#affFlags td:last-child,.edges .aff-contact{white-space:nowrap}
+.edges .aff-contact .ghost{padding:2px 8px;font-size:12px;margin-left:6px}
+.edges .aff-sent td{color:var(--muted)}
 .edges td .ghost{white-space:nowrap} #aflMsg.bad{color:var(--down)}
 .posts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-top:12px}
 @media (max-width:760px){ .posts{grid-template-columns:1fr} }
@@ -458,6 +460,11 @@ footer p{margin:0;max-width:80ch}
   </div>
 
   <section data-view="affiliates" class="panel">
+    <div class="panel-h"><h2>Flagged: under 15 new viewers last week</h2><span class="label" id="affFlagLabel">Last week</span></div>
+    <div class="edwrap"><table class="edges"><thead><tr><th>Affiliate</th><th class="n">Last week</th><th>Warnings before this</th><th>Contact</th><th></th></tr></thead><tbody id="affFlags"></tbody></table></div>
+    <p class="hint" style="margin-top:10px">Each row needs a written warning by email (agreement sections 4 and 6). <b>Open email</b> starts it in your mail app with the right warning filled in, or <b>Copy email</b> copies the same text. Press <b>Mark warning sent</b> once it's gone out, so it counts toward the two warnings and nobody gets it twice. A third breach gets the ending notice instead.</p>
+  </section>
+  <section data-view="affiliates" class="panel">
     <div class="panel-h"><h2>Affiliate pay</h2><span class="label" id="affLabel">Pay periods</span></div>
     <div class="edwrap"><table class="edges"><thead><tr><th>Code</th><th class="n">This period</th><th class="n">Last period</th>
       <th class="n">This week</th><th class="n">Last week</th><th class="n">Visits, 30 days</th><th class="n">New per visit</th></tr></thead><tbody id="affRows"></tbody></table></div>
@@ -470,8 +477,16 @@ footer p{margin:0;max-width:80ch}
         <label for="aflCode">Affiliate code
           <input id="aflCode" type="text" placeholder="for example sam or jordan-k" maxlength="24">
         </label>
-        <label for="aflWho">Who it's for (optional)
-          <input id="aflWho" type="text" placeholder="name or handle" maxlength="60">
+        <label for="aflWho">Name or handle
+          <input id="aflWho" type="text" placeholder="for example Sam R, @samprops" maxlength="60">
+        </label>
+      </div>
+      <div class="two">
+        <label for="aflEmail">Email
+          <input id="aflEmail" type="email" placeholder="name@example.com" maxlength="120">
+        </label>
+        <label for="aflPhone">Phone
+          <input id="aflPhone" type="tel" placeholder="(555) 123-4567" maxlength="30">
         </label>
       </div>
       <div class="out">
@@ -479,12 +494,12 @@ footer p{margin:0;max-width:80ch}
         <button class="btn" id="aflCopy" type="button">Save and copy</button>
       </div>
       <p id="aflMsg" class="hint" role="status"></p>
-      <p class="hint">Codes are 2 to 24 letters, numbers or dashes. Saved links go on the team list below, encrypted with the team password like Expenses; saving needs GitHub connected on this device (Expenses tab).</p>
+      <p class="hint">Codes are 2 to 24 letters, numbers or dashes. To change someone's details, press Edit on their row below. Everything here is saved to the team list, encrypted with the team password like Expenses; saving needs GitHub connected on this device (Expenses tab).</p>
     </form>
   </section>
   <section data-view="affiliates" class="panel">
     <div class="panel-h"><h2>Affiliate links we're tracking</h2><span class="label" id="affListLabel">Team list</span></div>
-    <div class="edwrap"><table class="edges"><thead><tr><th>Code</th><th>Who</th><th>Link</th><th>Created</th><th class="n">New viewers, 90 days</th><th></th></tr></thead><tbody id="affList"></tbody></table></div>
+    <div class="edwrap"><table class="edges"><thead><tr><th>Affiliate</th><th>Email</th><th>Phone</th><th>Link</th><th>Created</th><th class="n">New viewers, 90 days</th><th>Warnings</th><th></th></tr></thead><tbody id="affList"></tbody></table></div>
   </section>
 
   <section data-view="social" class="panel">
@@ -1281,6 +1296,7 @@ footer p{margin:0;max-width:80ch}
       `<td class="n">${fmt(r.r30.visit)}</td><td class="n">${r.r30.visit ? pct(r.r30.new, r.r30.visit) + '%' : '–'}</td></tr>`).join('') ||
       '<tr><td colspan="7" class="empty">No affiliate links yet. Create one below and give it to an affiliate; their visits show up here within about 20 minutes.</td></tr>';
     renderAffList(R);
+    renderAffFlags(rows, lastWk, wk);
     $('affNote').textContent = `$${AFF_RATE.toFixed(2)} per new viewer (a first-time browser that kept the site on screen 20 seconds), capped at ${money(AFF_CAP)} a period. ` +
       `Last period (${shortDay(prev)} – ${shortDay(prev + 13)}) is payable within 5 days when it reaches ${money(AFF_MIN)}; add any rolled-over balance yourself before deciding. ` +
       `Weeks run Monday to Sunday; last week was ${shortDay(lastWk)} – ${shortDay(wk - 1)}. A low "new per visit" share can mean repeat or fake traffic: look before paying.`;
@@ -1291,6 +1307,45 @@ footer p{margin:0;max-width:80ch}
   let affList = [], affLoaded = false, affBusy = false;
   const affName = c => (affList.find(a => a.code === c) || {}).name || '';
   const affAdded = c => (affList.find(a => a.code === c) || {}).added || '';
+  const affGet = c => affList.find(a => a.code === c) || null;
+  const isoDay = n => new Date(n * 864e5).toISOString().slice(0, 10);
+  const todayIso = () => new Date().toLocaleDateString('en-CA', {timeZone: snap && snap.tz || 'America/New_York'});
+  const EMAIL_RE = /^[^\s@<>"]+@[^\s@<>"]+\.[^\s@<>"]+$/;
+  const contact = (v, kind) => v ? `${esc(v)}<button type="button" class="ghost affcp" data-v="${esc(v)}" aria-label="Copy ${kind}">Copy</button>` : '<small>–</small>';
+  const warnLabel = a => { const k = (a.warnings || []).length; return k >= 3 ? 'Ended' : k ? `${k} of 2` : 'None'; };
+  // The warning email for an affiliate under the weekly minimum: warning 1, warning 2, or the ending notice.
+  function affEmail(a, n, lastWk, wk){
+    const k = (a.warnings || []).length, hi = a.name ? a.name.replace(/^@/, '') : 'there';
+    const week = `${shortDay(lastWk)} – ${shortDay(wk - 1)}`, link = affUrl(a.code).replace('https://', '');
+    const said = `Your affiliate link (${link}) brought in ${n} qualified new viewer${n === 1 ? '' : 's'} last week (${week}). The affiliate agreement (section 4) requires at least ${AFF_WEEK_MIN} every week, so this counts as a breach.`;
+    if (k >= 2) return {subject: 'Prop Streak Lab affiliate agreement: ending notice',
+      body: `Hi ${hi},\n\n${said}\n\nYou have already had two written warnings, so under section 6 of the agreement this third breach ends the agreement today. Any unpaid commission, including rolled-over balances, is forfeited.\n\nPlease remove your referral link and our logo from your posts, profiles and pages within 7 days. Thank you for the time you put in.\n\nProp Streak Lab\ninfo@propstreaklab.com`};
+    const which = k === 1 ? 'second and final' : 'first';
+    const next = k === 1 ? 'One more breach ends the agreement, and any unpaid commission, including rolled-over balances, is forfeited.'
+                         : 'After two warnings, a third breach ends the agreement and any unpaid commission is forfeited.';
+    return {subject: `Prop Streak Lab affiliate program: warning ${k + 1} of 2`,
+      body: `Hi ${hi},\n\n${said} This email is your ${which} written warning under section 6.\n\nPlease get back to at least ${AFF_WEEK_MIN} new viewers a week. ${next}\n\nQuestions? Just reply to this email.\n\nProp Streak Lab\ninfo@propstreaklab.com`};
+  }
+  let affFlagRows = [];
+  function renderAffFlags(rows, lastWk, wk){
+    $('affFlagLabel').textContent = `Week of ${shortDay(lastWk)} – ${shortDay(wk - 1)}`;
+    const week = isoDay(lastWk);
+    affFlagRows = rows.map(r => ({r, a: affGet(r.code)}))
+      .filter(({r, a}) => a && r.judged && r.last < AFF_WEEK_MIN && ((a.warnings || []).length < 3 || (a.warnings || []).some(w => w.week === week)))
+      .map(({r, a}) => ({a, n: r.last, sent: (a.warnings || []).find(w => w.week === week), mail: affEmail({...a, warnings: (a.warnings || []).filter(w => w.week !== week)}, r.last, lastWk, wk), week}));
+    affFlagRows.sort((x, y) => !!x.sent - !!y.sent || x.n - y.n);
+    $('affFlags').innerHTML = affFlagRows.map((f, i) => {
+      const before = (f.a.warnings || []).filter(w => w.week !== f.week).length;
+      const mailto = f.a.email && EMAIL_RE.test(f.a.email) ? `mailto:${f.a.email}?subject=${encodeURIComponent(f.mail.subject)}&body=${encodeURIComponent(f.mail.body)}` : '';
+      const acts = f.sent
+        ? `<small>Sent ${esc(shortDay(dayNum(f.sent.sent)))}</small> <button type="button" class="ghost" data-act="undo" data-i="${i}">Undo</button>`
+        : (mailto ? `<a class="ghost" href="${esc(mailto)}" style="text-decoration:none;display:inline-block">Open email</a> ` : '') +
+          `<button type="button" class="ghost" data-act="copy" data-i="${i}">Copy email</button> <button type="button" class="ghost" data-act="sent" data-i="${i}">Mark warning sent</button>`;
+      return `<tr class="${f.sent ? 'aff-sent' : ''}"><td class="aff-code">${esc(f.a.code)}${f.a.name ? `<br><small>${esc(f.a.name)}</small>` : ''}</td>` +
+        `<td class="n aff-low">${fmt(f.n)}</td><td>${before ? before + ' of 2' : 'None'}${before >= 2 && !f.sent ? '<br><small>this one ends it</small>' : ''}</td>` +
+        `<td class="aff-contact">${f.a.email ? contact(f.a.email, 'email') : '<small>no email saved</small>'}${f.a.phone ? '<br>' + contact(f.a.phone, 'phone') : ''}</td><td>${acts}</td></tr>`;
+    }).join('') || `<tr><td colspan="5" class="empty">${affLoaded ? 'Nobody to warn: every affiliate reached ' + AFF_WEEK_MIN + ' last week, or their link is newer than that week.' : 'Loading…'}</td></tr>`;
+  }
   function affMsg(t, bad){ const m = $('aflMsg'); m.textContent = t || ''; m.classList.toggle('bad', !!bad); }
   function affErr(e){
     return e.status === 0 ? 'Not saved: connect GitHub in the Expenses tab first. The link is copied, so you can still send it.' :
@@ -1309,13 +1364,15 @@ footer p{margin:0;max-width:80ch}
   function renderAffList(R){
     const seen = new Map((R.refs || []).map(r => [r.code, r.new]));
     const rows = affList.map(a => ({...a, saved: true})).sort((a, b) => (b.added || '').localeCompare(a.added || '') || a.code.localeCompare(b.code));
-    for (const r of R.refs || []) if (!affList.some(a => a.code === r.code)) rows.push({code: r.code, name: '', added: '', saved: false});
+    for (const r of R.refs || []) if (!affList.some(a => a.code === r.code)) rows.push({code: r.code, name: '', email: '', phone: '', added: '', saved: false});
     $('affListLabel').textContent = rows.length ? `${rows.length} link${rows.length === 1 ? '' : 's'}` : 'Team list';
-    $('affList').innerHTML = rows.map(a => `<tr><td class="aff-code">${esc(a.code)}</td><td>${esc(a.name) || '<small>–</small>'}</td>` +
+    $('affList').innerHTML = rows.map(a => `<tr><td class="aff-code">${esc(a.code)}${a.name ? `<br><small>${esc(a.name)}</small>` : ''}</td>` +
+      `<td class="aff-contact">${contact(a.email, 'email')}</td><td class="aff-contact">${contact(a.phone, 'phone')}</td>` +
       `<td class="aff-url">${esc(affUrl(a.code))}</td><td>${a.added ? esc(shortDay(dayNum(a.added))) : '<small>not on the list</small>'}</td>` +
-      `<td class="n">${fmt(seen.get(a.code) || 0)}</td><td><button type="button" class="ghost affcopy" data-c="${esc(a.code)}">Copy</button>` +
-      (a.saved ? ` <button type="button" class="ghost affdel" data-c="${esc(a.code)}">Remove</button>` : '') + `</td></tr>`).join('') ||
-      `<tr><td colspan="6" class="empty">${affLoaded ? 'No affiliate links yet. Create one above.' : 'Loading…'}</td></tr>`;
+      `<td class="n">${fmt(seen.get(a.code) || 0)}</td><td>${a.saved ? warnLabel(a) : ''}</td><td><button type="button" class="ghost affcopy" data-c="${esc(a.code)}">Copy link</button>` +
+      (a.saved ? ` <button type="button" class="ghost affedit" data-c="${esc(a.code)}">Edit</button> <button type="button" class="ghost affdel" data-c="${esc(a.code)}">Remove</button>`
+               : ` <button type="button" class="ghost affedit" data-c="${esc(a.code)}">Add details</button>`) + `</td></tr>`).join('') ||
+      `<tr><td colspan="8" class="empty">${affLoaded ? 'No affiliate links yet. Create one above.' : 'Loading…'}</td></tr>`;
   }
   function affLink(){
     const c = slugify($('aflCode').value).slice(0, 24);
@@ -1328,27 +1385,63 @@ footer p{margin:0;max-width:80ch}
     catch(e){ return e; }
     finally { affBusy = false; renderAffiliates(); }
   }
-  $('aflCode').addEventListener('input', () => { affLink(); affMsg(''); });
+  let affEditing = '';   // the code whose details are loaded into the form by Edit
+  function affForm(a){
+    $('aflCode').value = a ? a.code : ''; $('aflWho').value = a ? a.name || '' : '';
+    $('aflEmail').value = a ? a.email || '' : ''; $('aflPhone').value = a ? a.phone || '' : '';
+    affEditing = a ? a.code : ''; $('aflCopy').textContent = affEditing ? 'Save changes' : 'Save and copy'; affLink();
+  }
+  $('aflCode').addEventListener('input', () => { affLink(); affMsg(''); if (affEditing && slugify($('aflCode').value) !== affEditing) { affEditing = ''; $('aflCopy').textContent = 'Save and copy'; } });
   $('afl').addEventListener('submit', e => e.preventDefault());
   $('aflCopy').addEventListener('click', async () => {
     const code = affLink(); if (!code) { affMsg('Enter a code of at least 2 letters or numbers.', true); $('aflCode').focus(); return; }
-    const copied = await copyText(affUrl(code), $('aflOut'));
-    if (affList.some(a => a.code === code)) { affMsg(`"${code}" is already on the list${copied ? '; link copied' : ''}.`); return; }
+    const name = $('aflWho').value.trim().slice(0, 60), email = $('aflEmail').value.trim().slice(0, 120);
+    const phone = $('aflPhone').value.trim().replace(/[^0-9+()\-.\s]/g, '').slice(0, 30);
+    if (email && !EMAIL_RE.test(email)) { affMsg('That email address doesn’t look right.', true); $('aflEmail').focus(); return; }
+    const old = affGet(code), editing = affEditing === code;
+    const copied = editing ? false : await copyText(affUrl(code), $('aflOut'));
     affMsg('Saving…');
-    const name = $('aflWho').value.trim().slice(0, 60);
-    const err = await affSave(items => items.some(i => i.code === code) ? items :
-      items.concat({code, name, added: new Date().toLocaleDateString('en-CA', {timeZone: snap && snap.tz || 'America/New_York'})}));
-    if (err) affMsg(affErr(err), true);
-    else if (copied) { affMsg(`Saved and copied. "${code}" is on the team list below.`); $('aflCode').value = ''; $('aflWho').value = ''; affLink(); }
-    else affMsg(`Saved. "${code}" is on the team list below; copy the link from there or press Ctrl+C.`);
+    // Typing an existing code adds the details you filled in; Edit replaces them (so they can be cleared).
+    const pick = (now, was) => editing ? now : now || was || '';
+    const err = await affSave(items => {
+      const cur = items.find(i => i.code === code);
+      if (!cur) return items.concat({code, name, email, phone, added: todayIso(), warnings: []});
+      return items.map(i => i.code === code ? {...i, name: pick(name, i.name), email: pick(email, i.email), phone: pick(phone, i.phone)} : i);
+    });
+    if (err) { affMsg(affErr(err), true); return; }
+    affMsg(old ? `Updated ${code}.` + (copied ? ' Link copied.' : '') : copied ? `Saved and copied. "${code}" is on the team list below.` : `Saved. "${code}" is on the team list below; copy the link from there.`);
+    affForm(null);
   });
   $('affList').addEventListener('click', async e => {
     const b = e.target.closest('button'); if (!b) return;
     const code = b.dataset.c;
-    if (b.classList.contains('affcopy')) { const ok = await copyText(affUrl(code)); b.textContent = ok ? 'Copied' : 'Copy failed'; setTimeout(() => { if (b.isConnected) b.textContent = 'Copy'; }, 2000); return; }
+    if (b.classList.contains('affcp') || b.classList.contains('affcopy')) {
+      const ok = await copyText(b.classList.contains('affcp') ? b.dataset.v : affUrl(code)), was = b.textContent;
+      b.textContent = ok ? 'Copied' : 'Copy failed'; setTimeout(() => { if (b.isConnected) b.textContent = was; }, 2000); return;
+    }
+    if (b.classList.contains('affedit')) {
+      affForm(affGet(code) || {code}); affMsg(`Editing ${code}: change the details and press Save changes.`);
+      $('afl').scrollIntoView({behavior: 'smooth', block: 'center'}); $('aflWho').focus(); return;
+    }
     if (b.dataset.sure !== '1') { b.dataset.sure = '1'; b.textContent = 'Sure?'; setTimeout(() => { if (b.isConnected) { b.dataset.sure = ''; b.textContent = 'Remove'; } }, 3000); return; }
     const err = await affSave(items => items.filter(i => i.code !== code));
     affMsg(err ? affErr(err) : `Removed "${code}" from the list. Visits through its link still count until the affiliate takes it down.`, !!err);
+  });
+  $('affFlags').addEventListener('click', async e => {
+    const b = e.target.closest('button'); if (!b) return;
+    if (b.classList.contains('affcp')) { const ok = await copyText(b.dataset.v); b.textContent = ok ? 'Copied' : 'Copy failed'; setTimeout(() => { if (b.isConnected) b.textContent = 'Copy'; }, 2000); return; }
+    const f = affFlagRows[+b.dataset.i]; if (!f) return;
+    if (b.dataset.act === 'copy') {
+      const ok = await copyText(`Subject: ${f.mail.subject}\n\n${f.mail.body}`);
+      b.textContent = ok ? 'Copied' : 'Copy failed'; setTimeout(() => { if (b.isConnected) b.textContent = 'Copy email'; }, 2000); return;
+    }
+    const code = f.a.code, week = f.week;
+    const err = await affSave(items => items.map(i => {
+      if (i.code !== code) return i;
+      const ws = (i.warnings || []).filter(w => w.week !== week);
+      return {...i, warnings: b.dataset.act === 'sent' ? ws.concat({week, sent: todayIso(), n: f.n}) : ws};
+    }));
+    if (err) affMsg(affErr(err), true);
   });
 
   // ---------- link builder + tracked links ----------
