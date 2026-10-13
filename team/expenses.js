@@ -5,10 +5,12 @@
    encrypted file; only the team password opens it. Saving needs a GitHub token from someone with
    write access to the repo, kept in that browser only (localStorage). The `team-data` branch holds
    nothing else, so these commits never touch main or the update bot.
-   index.html sends the password with a "psa-unlock" event and clears it with "psa-lock". */
+   index.html sends the password with a "psa-unlock" event and clears it with "psa-lock".
+   window.psaTeamData shares the same storage with the rest of the dashboard (the Affiliates tab
+   keeps affiliates.enc next to expenses.enc). */
 (function(){
   const REPO = 'Brandon12344556677/FootballPropsFinal', BRANCH = 'team-data', PATH = 'expenses.enc';
-  const API = `https://api.github.com/repos/${REPO}/contents/${PATH}`;
+  const apiFor = path => `https://api.github.com/repos/${REPO}/contents/${path}`;
   const ITERATIONS = 600000;   // must match index.html and team_stats.py
   const TOKEN_KEY = 'psa-gh-token';
   const CATS = {expense: ['Advertising', 'Software & web', 'Filing & legal', 'Equipment', 'Other'],
@@ -45,32 +47,35 @@
   // ---------- GitHub storage ----------
   function token(){ try { return localStorage.getItem(TOKEN_KEY) || ''; } catch(e){ return ''; } }
   function headers(){ const h = {Accept: 'application/vnd.github+json'}; const t = token(); if (t) h.Authorization = 'Bearer ' + t; return h; }
-  async function fetchList(){
-    const r = await fetch(`${API}?ref=${BRANCH}&t=${Date.now()}`, {headers: headers(), cache: 'no-store'});
+  async function fetchList(path = PATH){
+    const r = await fetch(`${apiFor(path)}?ref=${BRANCH}&t=${Date.now()}`, {headers: headers(), cache: 'no-store'});
     if (r.status === 404) return {doc: {v: 1, items: []}, sha: null};
     if (!r.ok) throw Object.assign(new Error('read'), {status: r.status});
     const j = await r.json();
     return {doc: await decrypt(new TextDecoder().decode(unb64(j.content)), pw), sha: j.sha};
   }
-  async function saveList(doc, prevSha){
+  async function saveList(doc, prevSha, path = PATH){
     const body = {message: 'Update team data', branch: BRANCH, content: b64(new TextEncoder().encode(await encrypt(doc, pw)))};
     if (prevSha) body.sha = prevSha;
-    const r = await fetch(API, {method: 'PUT', headers: Object.assign({'Content-Type': 'application/json'}, headers()), body: JSON.stringify(body)});
+    const r = await fetch(apiFor(path), {method: 'PUT', headers: Object.assign({'Content-Type': 'application/json'}, headers()), body: JSON.stringify(body)});
     if (!r.ok) throw Object.assign(new Error('save'), {status: r.status});
     return (await r.json()).content.sha;
   }
-  // Change the list: re-read the latest copy first, so two people saving don't overwrite each other.
+  // Change a list: re-read the latest copy first, so two people saving don't overwrite each other.
+  async function update(path, fn){
+    for (let tries = 0; ; tries++){
+      const cur = await fetchList(path);
+      const doc = fn(JSON.parse(JSON.stringify(cur.doc)));
+      try { return {doc, sha: await saveList(doc, cur.sha, path)}; }
+      catch(e){ if (e.status !== 409 && e.status !== 422 || tries === 2) throw e; }   // someone saved in between: retry on top of theirs
+    }
+  }
   async function change(fn){
     if (busy) return;
     if (!token()) { msg('Connect GitHub below to save changes.', true); return; }
     busy = true; msg('Saving…');
     try {
-      for (let tries = 0; tries < 3; tries++){
-        const cur = await fetchList();
-        const doc = fn(JSON.parse(JSON.stringify(cur.doc)));
-        try { sha = await saveList(doc, cur.sha); data = doc; break; }
-        catch(e){ if (e.status !== 409 && e.status !== 422 || tries === 2) throw e; }   // someone saved in between: retry on top of theirs
-      }
+      const r = await update(PATH, fn); sha = r.sha; data = r.doc;
       msg('Saved. Your teammate sees it on their next refresh.');
       render();
     } catch(e){
@@ -165,6 +170,15 @@
     });
     $('exCsv').addEventListener('click', csv);
   }
+
+  // For other panels: read(path) → {v, items}, update(path, fn) → saved doc. Errors carry .status
+  // (401 bad token, 403/404 no write access); a missing token throws {status: 0}.
+  window.psaTeamData = {
+    ready: () => !!pw,
+    canSave: () => !!token(),
+    read: async path => (await fetchList(path)).doc,
+    update: async (path, fn) => { if (!token()) throw Object.assign(new Error('token'), {status: 0}); return (await update(path, fn)).doc; }
+  };
 
   window.addEventListener('psa-unlock', e => { pw = e.detail && e.detail.pw; wire(); render(); reload(); who(); });
   window.addEventListener('psa-lock', () => { pw = null; data = {v: 1, items: []}; sha = null; loaded = false; });

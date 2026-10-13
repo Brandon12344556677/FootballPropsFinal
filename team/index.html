@@ -175,6 +175,9 @@ footer p{margin:0;max-width:80ch}
 .edges small{color:var(--muted)}
 .edges .ed-wait td{color:var(--muted)}
 .edges .aff-due{color:var(--accent);font-weight:600} .edges .aff-low{color:var(--down);font-weight:600}
+.edges .aff-url{font:500 13px ui-monospace,"Cascadia Mono",Consolas,monospace;color:var(--soft);white-space:nowrap}
+.edges .aff-code,#affList td:last-child{white-space:nowrap}
+.edges td .ghost{white-space:nowrap} #aflMsg.bad{color:var(--down)}
 .posts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-top:12px}
 @media (max-width:760px){ .posts{grid-template-columns:1fr} }
 .post{min-width:0;display:grid;gap:8px}
@@ -461,17 +464,27 @@ footer p{margin:0;max-width:80ch}
     <p class="hint" id="affNote" style="margin-top:10px"></p>
   </section>
   <section data-view="affiliates" class="panel">
-    <div class="panel-h"><h2>Affiliate link</h2><span class="label">One per affiliate</span></div>
+    <div class="panel-h"><h2>Create an affiliate link</h2><span class="label">One per affiliate</span></div>
     <form class="form" id="afl" autocomplete="off">
-      <label for="aflCode">Affiliate code
-        <input id="aflCode" type="text" placeholder="for example sam or jordan-k" maxlength="24">
-      </label>
+      <div class="two">
+        <label for="aflCode">Affiliate code
+          <input id="aflCode" type="text" placeholder="for example sam or jordan-k" maxlength="24">
+        </label>
+        <label for="aflWho">Who it's for (optional)
+          <input id="aflWho" type="text" placeholder="name or handle" maxlength="60">
+        </label>
+      </div>
       <div class="out">
         <input id="aflOut" type="text" readonly aria-label="Affiliate link">
-        <button class="btn" id="aflCopy" type="button">Copy</button>
+        <button class="btn" id="aflCopy" type="button">Save and copy</button>
       </div>
-      <p class="hint">Codes are 2 to 24 letters, numbers or dashes. Keep the list of who owns which code, their warnings and any rolled-over balance off this page: only codes are published.</p>
+      <p id="aflMsg" class="hint" role="status"></p>
+      <p class="hint">Codes are 2 to 24 letters, numbers or dashes. Saved links go on the team list below, encrypted with the team password like Expenses; saving needs GitHub connected on this device (Expenses tab).</p>
     </form>
+  </section>
+  <section data-view="affiliates" class="panel">
+    <div class="panel-h"><h2>Affiliate links we're tracking</h2><span class="label" id="affListLabel">Team list</span></div>
+    <div class="edwrap"><table class="edges"><thead><tr><th>Code</th><th>Who</th><th>Link</th><th>Created</th><th class="n">New viewers, 90 days</th><th></th></tr></thead><tbody id="affList"></tbody></table></div>
   </section>
 
   <section data-view="social" class="panel">
@@ -1249,8 +1262,12 @@ footer p{margin:0;max-width:80ch}
     const sum = (r, a, b) => (r.daily || []).reduce((t, d) => { const n = dayNum(d.day); return t + (n >= a && n < b ? d.new : 0); }, 0);
     const pay = n => Math.min(n * AFF_RATE, AFF_CAP);
     const visits = new Map((R30.refs || []).map(r => [r.code, r]));
-    const rows = (R.refs || []).map(r => ({code: r.code, cur: sum(r, cur, cur + 14), prev: sum(r, prev, cur), wk: sum(r, wk, wk + 7),
-      last: sum(r, lastWk, wk), r30: visits.get(r.code) || {new: 0, visit: 0}}));
+    const refs = (R.refs || []).slice();
+    for (const a of affList) if (!refs.some(r => r.code === a.code)) refs.push({code: a.code, new: 0, visit: 0, daily: []});
+    const rows = refs.map(r => ({code: r.code, cur: sum(r, cur, cur + 14), prev: sum(r, prev, cur), wk: sum(r, wk, wk + 7),
+      last: sum(r, lastWk, wk), r30: visits.get(r.code) || {new: 0, visit: 0},
+      // a week counts toward the 15-a-week rule only if the link existed for all of it
+      judged: !affAdded(r.code) || dayNum(affAdded(r.code)) <= lastWk}));
     rows.sort((a, b) => b.cur - a.cur || b.prev - a.prev || a.code.localeCompare(b.code));
     const period = (n, done) => {
       const v = pay(n), cls = done ? (v >= AFF_MIN ? 'aff-due' : '') : '';
@@ -1258,27 +1275,80 @@ footer p{margin:0;max-width:80ch}
       return `<td class="n ${cls}">${fmt(n)} · ${money(v)}${note ? `<br><small>${note}</small>` : ''}</td>`;
     };
     $('affLabel').textContent = `This period ${shortDay(cur)} – ${shortDay(cur + 13)}`;
-    $('affRows').innerHTML = rows.map(r => `<tr><td>${esc(r.code)}</td>${period(r.cur, false)}${period(r.prev, true)}` +
+    $('affRows').innerHTML = rows.map(r => `<tr><td class="aff-code">${esc(r.code)}${affName(r.code) ? `<br><small>${esc(affName(r.code))}</small>` : ''}</td>${period(r.cur, false)}${period(r.prev, true)}` +
       `<td class="n">${fmt(r.wk)}<br><small>so far</small></td>` +
-      `<td class="n ${r.last < AFF_WEEK_MIN ? 'aff-low' : ''}">${fmt(r.last)}${r.last < AFF_WEEK_MIN ? '<br><small>under ' + AFF_WEEK_MIN + ': warning</small>' : ''}</td>` +
+      `<td class="n ${r.judged && r.last < AFF_WEEK_MIN ? 'aff-low' : ''}">${fmt(r.last)}${!r.judged ? '<br><small>new link</small>' : r.last < AFF_WEEK_MIN ? '<br><small>under ' + AFF_WEEK_MIN + ': warning</small>' : ''}</td>` +
       `<td class="n">${fmt(r.r30.visit)}</td><td class="n">${r.r30.visit ? pct(r.r30.new, r.r30.visit) + '%' : '–'}</td></tr>`).join('') ||
-      '<tr><td colspan="7" class="empty">No affiliate visits yet. Make a link below, give it to an affiliate, and their visits show up here within about 20 minutes.</td></tr>';
+      '<tr><td colspan="7" class="empty">No affiliate links yet. Create one below and give it to an affiliate; their visits show up here within about 20 minutes.</td></tr>';
+    renderAffList(R);
     $('affNote').textContent = `$${AFF_RATE.toFixed(2)} per new viewer (a first-time browser that kept the site on screen 20 seconds), capped at ${money(AFF_CAP)} a period. ` +
       `Last period (${shortDay(prev)} – ${shortDay(prev + 13)}) is payable within 5 days when it reaches ${money(AFF_MIN)}; add any rolled-over balance yourself before deciding. ` +
       `Weeks run Monday to Sunday; last week was ${shortDay(lastWk)} – ${shortDay(wk - 1)}. A low "new per visit" share can mean repeat or fake traffic: look before paying.`;
   }
+  // The team's list of affiliate links: affiliates.enc on the team-data branch, through expenses.js
+  // (window.psaTeamData). Codes that show up in the stats without being on the list are listed too.
+  const AFF_PATH = 'affiliates.enc', affUrl = c => 'https://propstreaklab.com/?ref=' + c;
+  let affList = [], affLoaded = false, affBusy = false;
+  const affName = c => (affList.find(a => a.code === c) || {}).name || '';
+  const affAdded = c => (affList.find(a => a.code === c) || {}).added || '';
+  function affMsg(t, bad){ const m = $('aflMsg'); m.textContent = t || ''; m.classList.toggle('bad', !!bad); }
+  function affErr(e){
+    return e.status === 0 ? 'Not saved: connect GitHub in the Expenses tab first. The link is copied, so you can still send it.' :
+      e.status === 401 ? 'GitHub rejected the token. Reconnect it in the Expenses tab.' :
+      e.status === 403 || e.status === 404 ? 'This GitHub account can’t write to the repo.' : 'Couldn’t save. Check your connection and try again.';
+  }
+  async function loadAffList(){
+    const S = window.psaTeamData; if (!S || !S.ready()) return;
+    try { const doc = await S.read(AFF_PATH); affList = doc.items || []; }
+    catch(e){ affMsg(e.message === 'format' || e.name === 'OperationError' ? 'The saved list doesn’t open with this password.' : 'Couldn’t load the team list. Refresh to try again.', true); }
+    affLoaded = true; if (snap) renderAffiliates();
+  }
+  addEventListener('psa-unlock', () => setTimeout(loadAffList, 0));   // after expenses.js has the password
+  addEventListener('psa-refresh', () => { if (!affBusy) loadAffList(); });
+  addEventListener('psa-lock', () => { affList = []; affLoaded = false; });
+  function renderAffList(R){
+    const seen = new Map((R.refs || []).map(r => [r.code, r.new]));
+    const rows = affList.map(a => ({...a, saved: true})).sort((a, b) => (b.added || '').localeCompare(a.added || '') || a.code.localeCompare(b.code));
+    for (const r of R.refs || []) if (!affList.some(a => a.code === r.code)) rows.push({code: r.code, name: '', added: '', saved: false});
+    $('affListLabel').textContent = rows.length ? `${rows.length} link${rows.length === 1 ? '' : 's'}` : 'Team list';
+    $('affList').innerHTML = rows.map(a => `<tr><td class="aff-code">${esc(a.code)}</td><td>${esc(a.name) || '<small>–</small>'}</td>` +
+      `<td class="aff-url">${esc(affUrl(a.code))}</td><td>${a.added ? esc(shortDay(dayNum(a.added))) : '<small>not on the list</small>'}</td>` +
+      `<td class="n">${fmt(seen.get(a.code) || 0)}</td><td><button type="button" class="ghost affcopy" data-c="${esc(a.code)}">Copy</button>` +
+      (a.saved ? ` <button type="button" class="ghost affdel" data-c="${esc(a.code)}">Remove</button>` : '') + `</td></tr>`).join('') ||
+      `<tr><td colspan="6" class="empty">${affLoaded ? 'No affiliate links yet. Create one above.' : 'Loading…'}</td></tr>`;
+  }
   function affLink(){
     const c = slugify($('aflCode').value).slice(0, 24);
-    $('aflOut').value = c.length >= 2 ? 'https://propstreaklab.com/?ref=' + c : '';
-    return $('aflOut').value;
+    $('aflOut').value = c.length >= 2 ? affUrl(c) : '';
+    return c.length >= 2 ? c : '';
   }
-  $('aflCode').addEventListener('input', affLink);
+  async function affSave(fn){
+    affBusy = true;
+    try { affList = (await window.psaTeamData.update(AFF_PATH, doc => { doc.items = fn(doc.items || []); return doc; })).items; return null; }
+    catch(e){ return e; }
+    finally { affBusy = false; renderAffiliates(); }
+  }
+  $('aflCode').addEventListener('input', () => { affLink(); affMsg(''); });
   $('afl').addEventListener('submit', e => e.preventDefault());
   $('aflCopy').addEventListener('click', async () => {
-    const url = affLink(); if (!url) { $('aflCode').focus(); return; }
-    const ok = await copyText(url, $('aflOut'));
-    $('aflCopy').textContent = ok ? 'Copied' : 'Press Ctrl+C';
-    setTimeout(() => { $('aflCopy').textContent = 'Copy'; }, 2200);
+    const code = affLink(); if (!code) { affMsg('Enter a code of at least 2 letters or numbers.', true); $('aflCode').focus(); return; }
+    const copied = await copyText(affUrl(code), $('aflOut'));
+    if (affList.some(a => a.code === code)) { affMsg(`"${code}" is already on the list${copied ? '; link copied' : ''}.`); return; }
+    affMsg('Saving…');
+    const name = $('aflWho').value.trim().slice(0, 60);
+    const err = await affSave(items => items.some(i => i.code === code) ? items :
+      items.concat({code, name, added: new Date().toLocaleDateString('en-CA', {timeZone: snap && snap.tz || 'America/New_York'})}));
+    if (err) affMsg(affErr(err), true);
+    else if (copied) { affMsg(`Saved and copied. "${code}" is on the team list below.`); $('aflCode').value = ''; $('aflWho').value = ''; affLink(); }
+    else affMsg(`Saved. "${code}" is on the team list below; copy the link from there or press Ctrl+C.`);
+  });
+  $('affList').addEventListener('click', async e => {
+    const b = e.target.closest('button'); if (!b) return;
+    const code = b.dataset.c;
+    if (b.classList.contains('affcopy')) { const ok = await copyText(affUrl(code)); b.textContent = ok ? 'Copied' : 'Copy failed'; setTimeout(() => { if (b.isConnected) b.textContent = 'Copy'; }, 2000); return; }
+    if (b.dataset.sure !== '1') { b.dataset.sure = '1'; b.textContent = 'Sure?'; setTimeout(() => { if (b.isConnected) { b.dataset.sure = ''; b.textContent = 'Remove'; } }, 3000); return; }
+    const err = await affSave(items => items.filter(i => i.code !== code));
+    affMsg(err ? affErr(err) : `Removed "${code}" from the list. Visits through its link still count until the affiliate takes it down.`, !!err);
   });
 
   // ---------- link builder + tracked links ----------
@@ -1391,6 +1461,6 @@ footer p{margin:0;max-width:80ch}
 })();
 </script>
 <script src="ads.js?v=20261013a"></script>
-<script src="expenses.js?v=20261013a"></script>
+<script src="expenses.js?v=20261013b"></script>
 </body>
 </html>
