@@ -626,8 +626,8 @@ details.valrules>summary{cursor:pointer}
 .panel.collapsed > *:not(:first-child){display:none!important}
 .panel.collapsed{padding-bottom:14px}
 </style>
-<link rel="stylesheet" href="app.css?v=20261013f">
-<script src="app.js?v=20261013f"></script>
+<link rel="stylesheet" href="app.css?v=20261013g">
+<script src="app.js?v=20261013g"></script>
 <script src="/halloween.js?v=20261013a"></script>
 
 <header class="apptop">
@@ -1311,7 +1311,7 @@ function pickTable(rows, sort){
   let h=`<div class="sortbar"><span class="sortlab">Sort</span>${pills}</div><div class="pickgrid">`;
   rows.forEach((r,idx)=>{
     const tier=r.prob>=0.9?'hi':r.prob>=0.7?'mid':'lo', pv=Math.round(r.prob*100);
-    h+=`<article class="pickcard ${tier}${r.lk?' locked':''}" style="${PS.teamVars(SPORT_KEY, r.team)}">`+
+    h+=`<article class="pickcard ${tier}${r.lk?' locked':''}" style="${PS.teamVars(SPORT_KEY, r.team)}">`+(r.lk? PS.lockRibbon(r.lk) : '')+
       `<div class="pc-top"><span class="av">${esc(initials(r.name))}</span>`+
         `<div class="pc-who"><b>${esc(r.name)}</b><span><span class="tbadge">${esc(r.team)}</span>${r.team===r.game.home? "vs "+esc(r.game.away) : r.team===r.game.away? "@ "+esc(r.game.home) : esc(r.game.away)+" @ "+esc(r.game.home)}</span></div>`+
         `<div class="pc-prob"><div class="ring" style="--p:${pv}"><b>${pv}<small>%</small></b></div><span title="80% range ${Math.round(r.lo*100)}–${Math.round(r.hi*100)}%, from ${r.n} games">chance</span></div></div>`+

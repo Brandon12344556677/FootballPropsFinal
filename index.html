@@ -35,8 +35,8 @@
 <link rel="manifest" href="/site.webmanifest">
 <script data-goatcounter="https://propstreaklive.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
 <link rel="stylesheet" href="fonts.css">
-<link rel="stylesheet" href="app.css?v=20261013f">
-<script src="app.js?v=20261013f"></script>
+<link rel="stylesheet" href="app.css?v=20261013g">
+<script src="app.js?v=20261013g"></script>
 <script src="/halloween.js?v=20261013a"></script>
 <style>
 :root{
@@ -709,7 +709,7 @@ const reduce = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)
     const fair=Math.round(100*(FAIRW*p.prob+(1-FAIRW)*p.price));
     const kind=p.kind==='value'? `<span class="pc-kind">⚡ Value · fair ${fair}%</span>`
                                : `<span class="pc-kind safe">🎯 Safe bet that pays</span>`;
-    return `<a class="pickcard ${tier}${p.lk?' locked':''}" href="${esc(href)}" style="${PS.teamVars(p.sport, p.team)}">`+
+    return `<a class="pickcard ${tier}${p.lk?' locked':''}" href="${esc(href)}" style="${PS.teamVars(p.sport, p.team)}">`+(p.lk? PS.lockRibbon(p.lk) : '')+
       `<div class="pc-top"><span class="av">${esc(initials(p.player))}</span>`+
         `<div class="pc-who"><b>${esc(p.player)}</b><span><span class="tbadge">${esc(p.team)}</span>vs ${esc(p.opp)}</span><span>${SPORT[p.sport]||''} · <span class="cd" data-cd="${esc(p.start)}">${PS.until(Date.parse(p.start))}</span></span>${p.lk? PS.lockBadge(p.lk) : ''}</div>`+
         `<div class="pc-prob"><div class="ring" style="--p:${pv}"><b>${pv}<small>%</small></b></div><span>chance</span></div></div>`+

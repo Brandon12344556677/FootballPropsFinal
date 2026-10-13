@@ -746,13 +746,18 @@ window.PS = (function(){
   function lockNote(){
     return `<p class="mktnote locknote"><span class="lockbadge">\ud83d\udd12 Locked</span><span>The game starts within 30 minutes, so the pick is final: its Top 25 / Value status, its chance and its price won\u2019t change again. The site updates about every 10 minutes, so picks lock at least 10 minutes before the start.</span></p>`;
   }
+  // A strip across the top of a locked pick's card, so a final pick reads as final at a glance.
+  function lockRibbon(lk){
+    const t=Date.parse(lk), at=isFinite(t)? ' at '+new Date(t).toLocaleTimeString([], {hour:'numeric', minute:'2-digit'}) : '';
+    return `<div class="lockribbon" title="${esc(`Locked${at}: the game starts within 30 minutes, so this pick is final.`)}"><b>🔒 Locked</b><span>Final pick · won’t change</span></div>`;
+  }
   function lockBadge(lk){
     const t=Date.parse(lk), at=isFinite(t)? ' at '+new Date(t).toLocaleTimeString([], {hour:'numeric', minute:'2-digit'}) : '';
     return `<span class="lockbadge" title="${esc(`Locked${at}: the game starts within 30 minutes, so this pick is final \u2014 its Top 25 / Value status, its chance and its price won\u2019t change again.`)}">\ud83d\udd12 Locked</span>`;
   }
 
   return {teamVars, ticker, until, skeleton, esc, hashFor, pickHash, parsePickHash, syncHash, sharePick, toast, helpBtn, spark, verdict, icon, sheet, closeSheet, pickSheet, relatedPicks,
-          isTracked, toggleBet, renderBets, loadBets, fairOf, setFair, pxMove, lockBadge, lockNote, venues, venueName, cap, capPick, thinOut, getView, setView};
+          isTracked, toggleBet, renderBets, loadBets, fairOf, setFair, pxMove, lockBadge, lockRibbon, lockNote, venues, venueName, cap, capPick, thinOut, getView, setView};
 })();
 
 // ---- live tracker: follows picks through today's games from ESPN's public box scores ----
