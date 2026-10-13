@@ -627,9 +627,9 @@ details.valrules>summary{cursor:pointer}
 .panel.collapsed{padding-bottom:14px}
 </style>
 
-<link rel="stylesheet" href="app.css?v=20261013c">
-<script src="app.js?v=20261013e"></script>
-<script src="/halloween.js?v=20261012a"></script>
+<link rel="stylesheet" href="app.css?v=20261013g">
+<script src="app.js?v=20261013g"></script>
+<script src="/halloween.js?v=20261013a"></script>
 
 <header class="apptop">
   <div class="apptop-in">
@@ -1297,7 +1297,7 @@ function priceCell(r){
   if(r.price==null) return `<span class="pmdim" title="Neither Polymarket nor Kalshi lists this exact prop right now — the price appears here automatically once one does">no market yet</span>`;
   const signed=v=>(v>=0?'+':'−')+Math.abs(Math.round(v*100));
   const cls=r.edge==null? '' : r.edge>=0.04? 'pos' : r.edge<=-0.04? 'neg' : '';
-  return `<span class="pmpx ${cls}">${Math.round(r.price*100)}¢</span> <span class="rng">${r.edge==null?'':signed(r.edge)+' edge · '}${(1/r.price).toFixed(2)}×</span>`+PS.pxMove(r.px0, r.price)+PS.venues(r.pp, r.kp, r.vn, r.pd!=null && r.pd<25, r.kd!=null && r.kd<25); }
+  return `<span class="pmpx ${cls}">${Math.round(r.price*100)}¢</span> <span class="rng">${r.edge==null?'':'<span class="edgebit">'+signed(r.edge)+' edge · </span>'}${(1/r.price).toFixed(2)}×</span>`+PS.pxMove(r.px0, r.price)+PS.venues(r.pp, r.kp, r.vn, r.pd!=null && r.pd<25, r.kd!=null && r.kd<25); }
 // Avatar initials for a pick card: "Fernando Tatis Jr." -> "FT".
 const initials=n=>{ const w=String(n||"").replace(/\s+(Jr|Sr|II|III|IV)\.?$/i,"").trim().split(/\s+/); return ((w[0]||"")[0]||"")+(w.length>1? (w[w.length-1][0]||"") : ""); };
 // Pick cards (Top 25 Surest, Value spots): one card per prop — who, the bet in words, the
@@ -1308,7 +1308,7 @@ function pickTable(rows, sort){
   let h=`<div class="sortbar"><span class="sortlab">Sort</span>${pills}</div><div class="pickgrid">`;
   rows.forEach((r,idx)=>{
     const tier=r.prob>=0.9?'hi':r.prob>=0.7?'mid':'lo', pv=Math.round(r.prob*100);
-    h+=`<article class="pickcard ${tier}${r.lk?' locked':''}" style="${PS.teamVars(SPORT_KEY, r.team)}">`+
+    h+=`<article class="pickcard ${tier}${r.lk?' locked':''}" style="${PS.teamVars(SPORT_KEY, r.team)}">`+(r.lk? PS.lockRibbon(r.lk) : '')+
       `<div class="pc-top"><span class="av">${esc(initials(r.name))}</span>`+
         `<div class="pc-who"><b>${esc(r.name)}</b><span><span class="tbadge">${esc(r.team)}</span>${r.team===r.game.home? "vs "+esc(r.game.away) : r.team===r.game.away? "@ "+esc(r.game.home) : esc(r.game.away)+" @ "+esc(r.game.home)}</span></div>`+
         `<div class="pc-prob"><div class="ring" style="--p:${pv}"><b>${pv}<small>%</small></b></div><span title="80% range ${Math.round(r.lo*100)}–${Math.round(r.hi*100)}%, from ${r.n} games">chance</span></div></div>`+
@@ -1858,7 +1858,7 @@ render();
 (function renderRecords(){ const R=DB.record||{};
   [['recT','T'],['recV','V'],['recG','G']].forEach(([id,k])=>{ const el=$(id); if(!el) return; const r=R[k];
     if(!r||!r.n){ el.innerHTML='· live record: no graded picks yet — <a href="#past" onclick="showTab(\'past\');return false;">Past picks</a>'; return; }
-    el.innerHTML=`· <b>live record ${r.hit}/${r.n} (${Math.round(100*r.hit/r.n)}%)</b> — <a href="#past" onclick="showTab('past');return false;">details</a>`+(r.clvN? ` · price moved its way on <b>${r.clvUp} of ${r.clvN}</b> (avg ${r.clv>=0?'+':''}${r.clv}¢)<button type="button" class="qhelp hq" data-help="clv" aria-expanded="false" aria-label="What is closing line value?"><span class="qi" aria-hidden="true">?</span></button>` : ''); }); })();
+    el.innerHTML=`· <b>live record ${r.hit}/${r.n} (${Math.round(100*r.hit/r.n)}%)</b> — <a href="#past" onclick="showTab('past');return false;">details</a>`+(r.clvN? `<span class="clvbit"> · price moved its way on <b>${r.clvUp} of ${r.clvN}</b> (avg ${r.clv>=0?'+':''}${r.clv}¢)<button type="button" class="qhelp hq" data-help="clv" aria-expanded="false" aria-label="What is closing line value?"><span class="qi" aria-hidden="true">?</span></button></span>` : ''); }); })();
 // "Scan the board" re-pulls the latest recorded board and re-renders every table.
 (function(){ const b=$('edgescan'); if(!b) return;
   b.onclick=()=>{ const st=$('edgestatus'); if(st) st.textContent='Scanning the board…'; loadPicks(); }; })();
