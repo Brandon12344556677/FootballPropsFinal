@@ -35,8 +35,8 @@
 <link rel="manifest" href="/site.webmanifest">
 <script data-goatcounter="https://propstreaklive.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
 <link rel="stylesheet" href="fonts.css">
-<link rel="stylesheet" href="app.css?v=20261012a">
-<script src="app.js?v=20261012e"></script>
+<link rel="stylesheet" href="app.css?v=20261013a">
+<script src="app.js?v=20261013a"></script>
 <script src="/halloween.js?v=20261012a"></script>
 <style>
 :root{
@@ -303,21 +303,6 @@ h2 i{color:var(--green)}
   border-radius:999px;padding:11px 20px;font-family:var(--body);font-weight:600;font-size:14.5px;transition:all .15s ease}
 .social a:hover{border-color:var(--green);color:var(--green);transform:translateY(-2px)}
 
-/* "it's free" badge right under the headline */
-.freebadge{display:flex;align-items:center;gap:16px;margin:0 0 22px;padding:14px 20px 14px 14px;border-radius:20px;max-width:36em;
-  background:linear-gradient(90deg,rgba(34,208,127,.2),rgba(34,208,127,.04));border:1px solid rgba(34,208,127,.55);box-shadow:0 7px 20px rgba(34,208,127,0.08)}
-.fb-price{flex:none;display:flex;align-items:center;justify-content:center;width:74px;height:74px;border-radius:50%;
-  background:var(--green);color:var(--green-ink);font-family:var(--num);font-weight:800;font-size:36px;line-height:1;
-  box-shadow:0 0 0 6px rgba(34,208,127,.15)}
-.fb-price sup{font-size:.5em;line-height:1;align-self:flex-start;margin:17px 1px 0 0}
-.fb-text{font-size:17px;color:var(--soft);line-height:1.45}
-.fb-text b{display:block;font-family:var(--display);font-weight:800;letter-spacing:-.02em;font-size:22px;color:#fff;margin-bottom:2px;line-height:1.15}
-@media (max-width:620px){
-  .freebadge{gap:13px;padding:12px 14px 12px 12px}
-  .fb-price{width:58px;height:58px;font-size:33px}.fb-price sup{margin-top:13px}
-  .fb-text{font-size:15px}.fb-text b{font-size:21px}
-}
-
 /* promo strip at the top of the page */
 .pickbar{padding:18px 0 4px}
 .pickbar .wrap{display:grid;gap:10px}
@@ -325,7 +310,15 @@ h2 i{color:var(--green)}
 .pickbar .sports{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:0}
 .pickbar .sport{min-width:0}
 @media (max-width:620px){.pickbar{padding-top:12px}.pickbar .sports{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.pickbar .sport{padding:12px}}
+.pickbar h1{margin:10px 0 0;font-size:clamp(30px,4.2vw,50px);text-wrap:balance}
+.pickbar .lede{margin:0 0 6px;font-size:clamp(16px,1.5vw,18px)}
 .pickbar-more{margin:0;font-size:14px;color:var(--muted)}
+.calibmore{margin-top:14px}
+.calibmore summary{cursor:pointer;color:#86e6b6;font-weight:600;font-size:15px}
+.whylist{list-style:none;padding:0;margin:22px 0 0;display:grid;gap:12px;max-width:780px}
+.whylist li{color:var(--soft);font-size:16px;line-height:1.55;padding-left:16px;border-left:3px solid rgba(34,208,127,.45)}
+.whylist b{color:#fff}
+.whylist a{color:#86e6b6}
 .pickbar-more a{color:#86e6b6;text-decoration:none;font-weight:600}
 .pickbar-more a:hover{text-decoration:underline}
 .psearch{position:relative}
@@ -508,14 +501,14 @@ footer .fine a{color:#8394ab}
     <a class="btn btn-go" href="./nfl.html"><span>Open <span class="hide-sm">the </span>board →</span></a>
   </div>
 </header>
-<div id="psticker" class="ticker" hidden aria-label="Live updates"></div>
 
 <main>
-  <!-- PICK A SPORT: the first thing on the page, so a visitor is one tap from a board.
+  <!-- TOP: what the site is in one line, then the sports, so a visitor is one tap from a board.
        Each tile's second line becomes that sport's Top 25 hit rate once today.json loads. -->
   <section class="pickbar" aria-labelledby="pickbar-h">
     <div class="wrap">
-      <h2 class="pickbar-h" id="pickbar-h">Pick a sport</h2>
+      <h1 id="pickbar-h">Today's best player props, <i>graded in public</i>.</h1>
+      <p class="lede">A model checks every player's game log against the market price for the NFL, NBA, NHL and MLB. Free, no account.</p>
       <div class="sports">
         <a class="sport" href="./nfl.html"><span class="ico" aria-hidden="true">🏈</span><span><b>NFL</b><small data-rec="nfl">Football props</small></span></a>
         <a class="sport" href="./nba.html"><span class="ico" aria-hidden="true">🏀</span><span><b>NBA</b><small data-rec="nba">Basketball props</small></span></a>
@@ -528,7 +521,7 @@ footer .fine a{color:#8394ab}
                role="combobox" aria-expanded="false" aria-controls="psres" aria-autocomplete="list" aria-label="Search any player">
         <ul id="psres" role="listbox" aria-label="Players" hidden></ul>
       </div>
-      <p class="pickbar-more"><a href="best/">Today's best props by sport</a> · <a href="guides/">New to player props? Start here</a><span class="pb-email" hidden> · <a href="#email">Free daily picks email</a></span></p>
+      <p class="pickbar-more"><a href="guides/">New to player props? Start here →</a></p>
     </div>
   </section>
 
@@ -552,51 +545,14 @@ footer .fine a{color:#8394ab}
     </div>
   </section>
 
-  <!-- HERO -->
-  <section class="hero" aria-labelledby="hero-h">
+  <!-- PICK OF THE DAY: a Safe Pick and a Value Shot, from botd.json (botd.py): picked once a day, never swapped, graded in public -->
+  <section id="botd" aria-labelledby="botd-h" hidden>
     <div class="wrap">
-      <div>
-        <span class="eyebrow rv"><span class="dot"></span><span>100% free player-prop analytics<span class="hide-sm"> · NFL · NBA · NHL · MLB</span></span></span>
-        <h1 id="hero-h" class="rv d1">Know how often a player <i>actually</i> clears the line.</h1>
-        <div class="freebadge rv d1" role="note">
-          <span class="fb-price" aria-hidden="true"><sup>$</sup>0</span>
-          <span class="fb-text"><b>It's 100% free.</b> No subscription, no signup, no paywall — every sport and every tool, open to everyone.</span>
-        </div>
-        <p class="lede rv d2">Real game logs, a <b>calibrated probability</b> for any prop, <b>priced against the market</b> — and every pick we make is <b>graded in public</b>.</p>
-        <div id="pstrust" class="pstrust" hidden></div>
-        <div class="trust rv d3">
-          <span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>$0, no account</span>
-          <span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>Updated every 10 minutes</span>
-          <span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>Every pick graded</span>
-        </div>
-      </div>
-
-      <div class="stage rv d2" id="stage" aria-label="Example of a prop readout">
-        <div class="glow" aria-hidden="true"></div>
-        <div class="chip c2"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>Recorded before kickoff</div>
-        <div class="demo">
-          <div class="demo-top"><span class="tag" id="demotag">Example</span><span class="demo-sport" id="demosport">🏈 NFL · Receiving yards</span></div>
-          <div class="demo-q" id="demoq">Wide receiver over <b>62.5</b> receiving yards?</div>
-          <div class="demo-main">
-            <div class="ring">
-              <svg width="132" height="132" viewBox="0 0 132 132" aria-hidden="true">
-                <circle cx="66" cy="66" r="54" fill="none" stroke="rgba(255,255,255,.08)" stroke-width="11"/>
-                <circle class="arc" id="arc" cx="66" cy="66" r="54" fill="none" stroke="#22d07f" stroke-width="11" stroke-linecap="round" stroke-dasharray="339.3" stroke-dashoffset="339.3"/>
-              </svg>
-              <div class="num"><b id="ringnum">0%</b><small>model chance</small></div>
-            </div>
-            <div class="dstats">
-              <div><b id="ds-range">61–80%</b><span>80% range</span></div>
-              <div><b id="ds-last">9 / 12</b><span id="ds-lastlab">last 12 games</span></div>
-              <div><b id="ds-price">55¢</b><span>market price</span></div>
-              <div class="pos"><b id="ds-edge">+16</b><span id="ds-edgelab">model edge</span></div>
-            </div>
-          </div>
-          <div class="bars" id="bars" aria-hidden="true"></div>
-          <a class="demo-go" id="demogo" href="#" hidden>Open this pick — game log, live price, the full breakdown →</a>
-        </div>
-        <div class="chip c1"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>Graded from the box score</div>
-      </div>
+      <p class="kicker" id="botdkick">Pick of the Day</p>
+      <h2 id="botd-h">Today's <i>Safe Pick</i> &amp; <i>Value Shot</i>.</h2>
+      <p class="sub">One sure pick and one bigger payout, picked once a day from all four sports and graded in public.</p>
+      <div class="app botdgrid"><div class="botdslot lock" id="botd-lock"></div><div class="botdslot" id="botd-value"></div></div>
+      <p class="todaynote" id="botdnote"></p>
     </div>
   </section>
 
@@ -609,17 +565,6 @@ footer .fine a{color:#8394ab}
       <div class="app todayfeed"><div class="pickgrid" id="todaygrid"></div><div id="todaylock"></div></div>
       <p class="todaynote" id="todaynote"></p>
       <p class="todaynote"><a href="games/">Browse every game's props →</a> · <a href="best/">Today's best props by sport →</a></p>
-    </div>
-  </section>
-
-  <!-- PICK OF THE DAY: a Safe Pick and a Value Shot, from botd.json (botd.py): picked once a day, never swapped, graded in public -->
-  <section id="botd" aria-labelledby="botd-h" hidden>
-    <div class="wrap">
-      <p class="kicker" id="botdkick">Pick of the Day</p>
-      <h2 id="botd-h">Today's <i>Safe Pick</i> &amp; <i>Value Shot</i>.</h2>
-      <p class="sub">One of each, picked from all four sports once a day, locked in when it posts and graded in public — the wins and the losses.</p>
-      <div class="app botdgrid"><div class="botdslot lock" id="botd-lock"></div><div class="botdslot" id="botd-value"></div></div>
-      <p class="todaynote" id="botdnote"></p>
     </div>
   </section>
 
@@ -654,38 +599,23 @@ footer .fine a{color:#8394ab}
       <p class="kicker">Honest numbers</p>
       <h2 id="calib-h">When we say <i>70%</i>, it hits about <i>70%</i>.</h2>
       <p class="sub" id="calibsub"></p>
-      <div class="calib" id="calibrows" role="list"></div>
-      <div class="calib-key" aria-hidden="true"><span><i class="k-bar"></i>How often it hit</span><span><i class="k-said"></i>What the model said</span></div>
-      <p class="todaynote">Every pick recorded before its game and graded from the box score. Pushes and players who didn't play are left out.</p>
+      <details class="calibmore"><summary>See every range</summary>
+        <div class="calib" id="calibrows" role="list"></div>
+        <div class="calib-key" aria-hidden="true"><span><i class="k-bar"></i>How often it hit</span><span><i class="k-said"></i>What the model said</span></div>
+        <p class="todaynote">Every pick recorded before its game and graded from the box score. Pushes and players who didn't play are left out.</p>
+      </details>
     </div>
   </section>
 
-  <!-- STATS STRIP -->
-  <div class="strip" role="list" aria-label="At a glance">
-    <div class="wrap">
-      <div class="stat" role="listitem"><b data-count="4">4</b><span>Sports</span></div>
-      <div class="stat" role="listitem"><b><span data-count="3800">3,800</span><em>+</em></b><span>Players tracked</span></div>
-      <div class="stat" role="listitem"><b>Every 10 min</b><span>Auto-updated six times an hour</span></div>
-      <div class="stat" role="listitem"><b><em>$</em>0</b><span>100% free to use</span></div>
-    </div>
-  </div>
-
-  <!-- SPORT TABS -->
   <!-- WHY TRUST IT: what the site does, how it's graded, why it's free, who built it -->
   <section id="why" aria-labelledby="why-h">
     <div class="wrap">
-      <p class="kicker">Why trust it</p>
-      <h2 id="why-h">Free, and <i>graded in public</i>.</h2>
-      <div class="grid4">
-        <article class="feat"><h3>The data, not a hot take</h3>
-          <p>Every player's game log, with a calibrated chance for any line, adjusted for the matchup and lined up against live Polymarket and Kalshi prices.</p></article>
-        <article class="feat"><h3>Graded in public</h3>
-          <p>Picks are recorded before the game and graded from the official box score, wins <b>and</b> losses. <a href="methodology.html">How the model works →</a></p></article>
-        <article class="feat"><h3>Actually free</h3>
-          <p>No subscription and no account. Some links to Polymarket and Kalshi are referral links: if you sign up through them we may get a bonus, at no cost to you. It never changes a pick.</p></article>
-        <article class="feat"><h3>Built by fans</h3>
-          <p>An independent project with a finance and data background, rebuilt automatically every 10 minutes for the NFL, NBA, NHL and MLB.</p></article>
-      </div>
+      <h2 id="why-h">Why trust it</h2>
+      <ul class="whylist">
+        <li><b>Graded in public.</b> Every pick is recorded before the game and graded from the official box score, wins and losses. <a href="methodology.html">How the model works →</a></li>
+        <li><b>Real data.</b> Each player's game log, adjusted for the matchup and checked against live Polymarket and Kalshi prices.</li>
+        <li><b>Free.</b> No subscription, no account. Some Polymarket and Kalshi links are referral links: we may get a bonus if you sign up, at no cost to you, and it never changes a pick.</li>
+      </ul>
     </div>
   </section>
 </main>
@@ -730,40 +660,14 @@ footer .fine a{color:#8394ab}
 
 const reduce = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-// Hero card: starts as the example (9 of 12 over 62.5, 71%) and becomes today's top pick
-// once today.json arrives (liveDemo, below).
-const DEMO={vals:[48,71,90,55,80,102,66,74,95,73,88,59], line:62.5, side:'over', pct:71, shown:0};
-function drawBars(){ const box=document.getElementById('bars'); if(!box) return;
-  const {vals, line, side}=DEMO, max=Math.max(line*1.6, ...vals, 1)*1.08;
-  const clears=v=> side==='under'? v<line : v>line;
-  box.innerHTML=vals.map((v,i)=>`<i class="${clears(v)?'':'u'}" style="height:${Math.max(4, v/max*100).toFixed(1)}%;transition-delay:${(i*55)}ms"></i>`).join('')+
-    `<div class="line" style="bottom:${(line/max*100).toFixed(1)}%"><em>${line}</em></div>`;
-  if(box.classList.contains('go')){ box.classList.remove('go'); void box.offsetWidth; box.classList.add('go'); }
-}
-drawBars();
-function playDemo(){ const arc=document.getElementById('arc'), bars=document.getElementById('bars');
-  if(!arc||arc.dataset.done) return; arc.dataset.done='1'; bars.classList.add('go'); ringTo(DEMO.pct); }
-// Sweep the ring and count the number from wherever they are to pct.
-function ringTo(pct){ const arc=document.getElementById('arc'), num=document.getElementById('ringnum'); if(!arc) return;
-  const C=339.3, from=DEMO.shown; DEMO.shown=pct; arc.style.strokeDashoffset=(C*(1-pct/100)).toFixed(1);
-  if(reduce){ num.textContent=pct+'%'; return; }
-  const t0=performance.now(); (function tick(t){ const k=Math.max(0,Math.min(1,(t-t0)/1500)), e=1-Math.pow(1-k,3);
-    num.textContent=Math.round(from+(pct-from)*e)+'%'; if(k<1) requestAnimationFrame(tick); })(t0); }
-
-// Count-up numbers in the stats strip.
-function countUp(el){ const to=+el.dataset.count; if(!to||el.dataset.done) return; el.dataset.done='1';
-  if(reduce){ el.textContent=to.toLocaleString(); return; }
-  const t0=performance.now(); (function tick(t){ const k=Math.max(0,Math.min(1,(t-t0)/1300)), e=1-Math.pow(1-k,3);
-    el.textContent=Math.round(to*e).toLocaleString(); if(k<1) requestAnimationFrame(tick); })(t0); }
-
 // Reveal-on-scroll, with a safety net: if the observer hasn't fired within ~1.2s
 // (some in-app browsers, link previewers), just show everything.
-(function(){ const els=[...document.querySelectorAll('.rv, [data-count], .stage')];
-  const showAll=()=>{ els.forEach(e=>{ e.classList.add('in'); if(e.dataset&&e.dataset.count) countUp(e); }); playDemo(); };
+(function(){ const els=[...document.querySelectorAll('.rv')];
+  const showAll=()=>{ els.forEach(e=>e.classList.add('in')); };
   if(!('IntersectionObserver' in window) || reduce){ showAll(); return; }
   let fired=false;
   const io=new IntersectionObserver(es=>{ fired=true; es.forEach(en=>{ if(!en.isIntersecting) return; const el=en.target;
-    el.classList.add('in'); if(el.dataset.count) countUp(el); if(el.classList.contains('stage')) setTimeout(playDemo,250); io.unobserve(el); }); },
+    el.classList.add('in'); io.unobserve(el); }); },
     {threshold:0, rootMargin:'0px 0px -40px 0px'});
   els.forEach(e=>io.observe(e));
   setTimeout(()=>{ if(!fired){ io.disconnect(); showAll(); } }, 1200); })();
@@ -776,34 +680,13 @@ function countUp(el){ const to=+el.dataset.count; if(!to||el.dataset.done) retur
     t.addEventListener('keydown',e=>{ let j=null; if(e.key==='ArrowRight') j=(i+1)%tabs.length; if(e.key==='ArrowLeft') j=(i-1+tabs.length)%tabs.length;
       if(j!=null){ e.preventDefault(); tabs[j].focus(); select(tabs[j]); } }); }); })();
 
-// Live ticker under the header (app.js) and the Today feed, from today.json and weekly.json
-// (both rebuilt hourly). The ticker leads with each sport's season record, then what's live
-// now, then the latest NFL week's Value receipts — wins and losses — and the evergreen lines.
+// The Today feed and the sections below it, from today.json (rebuilt every 10 minutes).
 (function(){ if(!window.PS) return;
   const esc=PS.esc, SPORT={nfl:'🏈 NFL', nba:'🏀 NBA', nhl:'🏒 NHL', mlb:'⚾ MLB'};
-  const base=[
-    {ic:'🏟️', html:'<b>4 boards</b> — NFL · NBA · NHL · MLB, rebuilt every 10 minutes'},
-    {ic:'📒', html:'<b>Every pick graded in public</b> — the wins and the losses'},
-    {ic:'💯', html:'<b>100% free</b> — no signup, no paywall'}];
-  PS.ticker(base);
   const get=u=>fetch(u,{cache:'no-store'}).then(r=>r.ok?r.json():null).catch(()=>null);
   const ahead=p=>Date.parse(p.start)>Date.now();
   let FAIRW=0.1;   // the model's weight in the fair chance (today.json refits it hourly)
   const initials=n=>{ const w=String(n||'').replace(/\s+(Jr|Sr|II|III|IV)\.?$/i,'').trim().split(/\s+/); return ((w[0]||'')[0]||'')+(w.length>1? (w[w.length-1][0]||'') : ''); };
-
-  function tickerItems(t, w){
-    const R=(t&&t.record)||{}, it=[];
-    Object.keys(R).filter(s=>R[s].T&&R[s].T.n).sort((a,b)=>R[b].T.n-R[a].T.n).forEach(s=>{ const r=R[s].T;
-      it.push({ic:'🔒', cls:'up', html:`<b>${SPORT[s]} Top 25 Surest: ${r.hit}/${r.n} hit (${Math.round(100*r.hit/r.n)}%)</b> this season`}); });
-    const live=((t&&t.valueLive)||[]).filter(v=>Date.parse(v[1])>Date.now());
-    if(live.length){ const sp=[...new Set(live.map(v=>v[0]))].map(s=>SPORT[s]).join(' · ');
-      it.push({ic:'⚡', cls:'up', html:`<b>${live.length} value spot${live.length===1?'':'s'} live now</b> — ${sp}`}); }
-    Object.keys(R).filter(s=>R[s].V&&R[s].V.n&&R[s].V.units!=null).sort((a,b)=>R[b].V.units-R[a].V.units).forEach(s=>{ const r=R[s].V, u=r.units;
-      it.push({ic:'⚡', cls:u>=0?'up':'', html:`${SPORT[s]} Value spots: <b>${r.hit}/${r.n} hit · ${u>=0?'+':'−'}${Math.abs(u).toFixed(1)}u</b> this season`}); });
-    if(w&&w.n){ const roi=w.priced? w.units/w.priced : null;
-      it.push({ic:'📊', html:`NFL Value spots, week ${esc(w.week)}: <b>${esc(w.hit)}/${esc(w.n)} hit</b>${roi==null?'':` · ${roi>=0?'+':''}${Math.round(roi*100)}% ROI`}`}); }
-    return it.concat(base);
-  }
 
   function card(p){
     const pv=Math.round(p.prob*100), tier=p.prob>=0.9?'hi':p.prob>=0.7?'mid':'lo';
@@ -833,26 +716,6 @@ function countUp(el){ const to=+el.dataset.count; if(!to||el.dataset.done) retur
     const at=new Date(t.gen); const when=isFinite(at)? at.toLocaleTimeString([], {hour:'numeric', minute:'2-digit'}) : 'the last update';
     document.getElementById('todaynote').textContent=`Prices as of ${when} — tap a pick for the live price. Picks leave this list when their game starts. Research, not betting advice.`;
     sec.hidden=false;
-  }
-
-  // Hero: today's top pick in place of the example — real numbers, linked to the pick.
-  function liveDemo(t){
-    const p=((t&&t.picks)||[]).filter(ahead).find(x=>(x.l10||[]).length>=5); if(!p) return;
-    const v=p.l10.slice(-12), line=+p.line, pv=Math.round(p.prob*100), c=Math.round(p.price*100), e=Math.round(p.edge*100);
-    const hits=v.filter(x=> p.side==='under'? x<line : x>line).length;
-    const set=(id,h)=>{ const el=document.getElementById(id); if(el) el.innerHTML=h; };
-    const tag=document.getElementById('demotag'); if(tag){ tag.textContent=p.kind==='value'? 'Live · top value pick' : 'Live · today'; tag.classList.add('live'); }
-    set('demosport', `${SPORT[p.sport]||''} · ${esc(p.statText)} · vs ${esc(p.opp)} · <span data-cd="${esc(p.start)}">${PS.until(Date.parse(p.start))}</span>`);
-    set('demoq', `${esc(p.player)} ${esc(p.side)} <b>${esc(p.line)}</b> ${esc(String(p.statText).toLowerCase())}?`);
-    if(p.lo!=null && p.hi!=null) set('ds-range', `${Math.round(p.lo*100)}–${Math.round(p.hi*100)}%`);
-    set('ds-last', `${hits} / ${v.length}`); set('ds-lastlab', `last ${v.length} games`);
-    set('ds-price', `${c}¢`);
-    set('ds-edge', `${Math.round(100*(FAIRW*p.prob+(1-FAIRW)*p.price))}%`); set('ds-edgelab', 'fair chance');
-    const go=document.getElementById('demogo');
-    if(go){ go.href=`./${p.sport}.html#${PS.hashFor(p.pid, p.stat, p.line, p.side, p.player)}`; go.hidden=false; }
-    const st=document.getElementById('stage'); if(st) st.setAttribute('aria-label', `Today's top pick: ${p.player} ${p.side} ${p.line} ${p.statText}, model ${pv}%`);
-    DEMO.vals=v; DEMO.line=line; DEMO.side=p.side; DEMO.pct=pv; drawBars();
-    const arc=document.getElementById('arc'); if(arc && arc.dataset.done) ringTo(pv);   // already animated the example: sweep to the real number
   }
 
   // Bet of the Day (botd.json, botd.py): today's entry from 11 AM ET; before that, yesterday's
@@ -1010,7 +873,7 @@ function countUp(el){ const to=+el.dataset.count; if(!to||el.dataset.done) retur
       const html=groups.map(([g, title])=>{
         const rs=shown.filter(r=>r.group===g).sort((a,b)=>order[a.status]-order[b.status]); if(!rs.length) return '';
         const hit=rs.filter(r=>r.status==='hit').length, lost=rs.filter(r=>r.status==='lost').length;
-        const cap=open[g]? rs.length : 8;
+        const cap=open[g]? rs.length : 4;
         return `<div class="livegroup"><h3>${title}<small>${hit} hit · ${lost} lost · ${rs.length-hit-lost} to go</small></h3>`+
           `<div class="lvlist">${rs.slice(0, cap).map(row).join('')}</div>`+
           (rs.length>cap? `<button type="button" class="btn btn-ghost lvmore" data-g="${g}">Show all ${rs.length}</button>` : '')+`</div>`;
@@ -1063,8 +926,7 @@ function countUp(el){ const to=+el.dataset.count; if(!to||el.dataset.done) retur
     document.querySelectorAll('.pickbar [data-rec]').forEach(el=>{ const r=(R[el.dataset.rec]||{}).T;
       if(r && r.n>=20) el.textContent=`Top 25: ${Math.round(100*r.hit/r.n)}% hit`; });
   }
-  Promise.all([get('today.json'), get('weekly.json')]).then(([t,w])=>{
-    PS.ticker(tickerItems(t, w));
+  get('today.json').then(t=>{
     if(!t) return;
     pickbarRecords(t);
     renderCalib(t);
@@ -1072,18 +934,10 @@ function countUp(el){ const to=+el.dataset.count; if(!to||el.dataset.done) retur
     try { renderLive(t); } catch(e){}
     (t.picks||[]).forEach(PS.capPick);
     if(t.fair && t.fair.w>=0) FAIRW=t.fair.w;
-    liveDemo(t);
     renderToday(t);
-    setInterval(()=>{ if(!document.hidden){ renderToday(t); PS.ticker(tickerItems(t, w)); } }, 60000);
+    setInterval(()=>{ if(!document.hidden) renderToday(t); }, 60000);
   });
 })();
-(function(){ fetch('weekly.json',{cache:'no-store'}).then(r=>r.ok?r.json():null).then(d=>{
-  if(!d||!d.n) return; const el=document.getElementById('receipt'); if(!el) return;
-  const up=d.units>=0, roi=d.priced? d.units/d.priced : null;
-  document.getElementById('rc-units').textContent=(up?'+':'')+(+d.units).toFixed(1)+'u';
-  document.getElementById('rc-lbl').textContent=`⚡ Value spots · NFL ${d.season} · Week ${d.week}`;
-  document.getElementById('rc-line').innerHTML=`<b>${d.hit}/${d.n}</b> hit${roi==null?'':` · <b>${roi>=0?'+':''}${Math.round(roi*100)}% ROI</b>`} betting 1 unit on each at the recorded price.`;
-  el.hidden=false; }).catch(()=>{}); })();
 </script>
 </body>
 </html>
