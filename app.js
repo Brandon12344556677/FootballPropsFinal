@@ -353,14 +353,14 @@ window.PS = (function(){
     w.querySelector('.ps-open').onclick=()=>{ closeSheet(); if(o.onOpen) o.onOpen(); };
     w.querySelectorAll('.ps-mi').forEach(b=>b.onclick=()=>{ const it=o.more[+b.dataset.g].items[+b.dataset.i]; closeSheet(); it.open(); });
   }
-  // Sign-up offer at the moment of decision: the exchange with the cheaper price for this pick first.
-  // data-place="sheet" makes the click count as "<exchange>-signup-sheet" on the team dashboard.
-  const REF={P:{name:'Polymarket', href:'https://polymarket.us/join/propstreaklab', deal:''},
-             K:{name:'Kalshi', href:'https://kalshi.com/sign-up/?referral=4373e9f9-0304-498c-8ca7-fccd3714b808&m=true&utm_source=mobile_app&utm_medium=share&utm_campaign=referral&utm_content=share_button&utm_term=referrals_pill', deal:''}};
+  // Where to find the pick: the exchange with the cheaper price for this pick first. Plain links, no referral codes.
+  // data-place="sheet" makes the click count as "<exchange>-site-sheet" on the team dashboard.
+  const REF={P:{name:'Polymarket', href:'https://polymarket.us'},
+             K:{name:'Kalshi', href:'https://kalshi.com'}};
   function promoHtml(o){
     const a=REF[o.vn==='K'? 'K' : 'P'], b=REF[o.vn==='K'? 'P' : 'K'];
-    return `<div class="ps-promo"><a class="ps-ref" href="${esc(a.href)}" target="_blank" rel="noopener sponsored" data-place="sheet">${icon('gift')}<span>Find this prop on <b>${a.name}</b> →</span></a>`+
-      `<a class="ps-ref2" href="${esc(b.href)}" target="_blank" rel="noopener sponsored" data-place="sheet">or on ${b.name} →</a>`+
+    return `<div class="ps-promo"><a class="ps-ref" href="${esc(a.href)}" target="_blank" rel="noopener" data-place="sheet"><span>Find this prop on <b>${a.name}</b> →</span></a>`+
+      `<a class="ps-ref2" href="${esc(b.href)}" target="_blank" rel="noopener" data-place="sheet">or on ${b.name} →</a>`+
       `<p class="ps-fine">Research, not betting advice.</p></div>`;
   }
   // "More from this game" / "More for <player>": o.more = [{title, items:[{name, side, line, statText, prob, open}]}]
@@ -901,14 +901,14 @@ window.PSLive=(function(){
 })();
 
 // ---- outbound clicks: one anonymous GoatCounter event per click on a link that leaves the site,
-// e.g. "click/polymarket-signup/nfl" (what was clicked, then which page). No ID or cookie.
+// e.g. "click/polymarket-site/nfl" (what was clicked, then which page). No ID or cookie.
 // team_stats.py reads these for the team dashboard and keeps them out of the visit counts.
 (function(){
   const PAGE = (location.pathname.match(/\/(nfl|nba|nhl|mlb)\.html$/) || [])[1] || 'home';
   function kind(u){
     const h = u.hostname.replace(/^www\./,''), p = u.pathname;
-    if (/(^|\.)polymarket\.(us|com)$/.test(h)) return /^\/(join|squad)\b/.test(p) ? 'polymarket-signup' : 'polymarket-market';
-    if (/(^|\.)kalshi\.com$/.test(h)) return /^\/sign-?up/.test(p) ? 'kalshi-signup' : 'kalshi-market';
+    if (/(^|\.)polymarket\.(us|com)$/.test(h)) return /^\/(join|squad)\b/.test(p) ? 'polymarket-signup' : p === '/' ? 'polymarket-site' : 'polymarket-market';
+    if (/(^|\.)kalshi\.com$/.test(h)) return /^\/sign-?up/.test(p) ? 'kalshi-signup' : p === '/' ? 'kalshi-site' : 'kalshi-market';
     if (/(^|\.)instagram\.com$/.test(h)) return 'instagram-profile';
     if (/(^|\.)tiktok\.com$/.test(h)) return 'tiktok-profile';
     if (/^(x|twitter)\.com$/.test(h)) return 'x-profile';
@@ -920,7 +920,7 @@ window.PSLive=(function(){
     let u; try { u = new URL(a.href, location.href); } catch(_) { return; }
     if (!/^https?:$/.test(u.protocol) || u.hostname === location.hostname) return;
     const gc = window.goatcounter; if (!gc || typeof gc.count !== 'function') return;
-    const k = kind(u) + (a.dataset.place ? '-' + a.dataset.place : '');   // e.g. polymarket-signup-sheet
+    const k = kind(u) + (a.dataset.place ? '-' + a.dataset.place : '');   // e.g. polymarket-site-sheet
     gc.count({path: 'click/' + k + '/' + PAGE, title: 'Clicked ' + k + ' on ' + PAGE, event: true});
   }
   document.addEventListener('click', onClick, true);

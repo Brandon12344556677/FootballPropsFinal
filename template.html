@@ -77,7 +77,7 @@ h2{margin:0}
 .tab[aria-selected=true]{background:var(--ink);color:#fff}
 .tab:hover{transform:translate(-1px,-1px)}
 
-/* referral CTA */
+/* exchange buttons */
 .refbanner{display:flex;align-items:center;justify-content:center;text-align:center;gap:8px;
   margin:0 0 22px;padding:15px 18px;border:2.5px solid var(--ink);border-radius:14px;text-decoration:none;
   background:var(--gold);color:var(--ink);font-family:var(--display);font-size:clamp(16px,2.6vw,23px);
@@ -398,7 +398,7 @@ a{color:var(--gold)}
 .tab:hover{color:var(--text);border-color:rgba(34,208,127,.6);transform:none}
 .tab[aria-selected=true]{background:var(--gold);color:#0a1628;border-color:var(--gold)}
 
-/* referral banners */
+/* exchange banners */
 .refbanner{border-radius:8px;border:1px solid var(--gold);color:#0a1628;background:var(--gold);
   box-shadow:0 10px 24px rgba(34,208,127,0.1);letter-spacing:1px;text-shadow:none}
 .refbanner:hover{transform:translateY(-2px);box-shadow:0 12px 30px rgba(34,208,127,0.16)}
@@ -621,7 +621,7 @@ details.valrules>summary{cursor:pointer}
 </style>
 
 <link rel="stylesheet" href="app.css?v=20261013c">
-<script src="app.js?v=20261013d"></script>
+<script src="app.js?v=20261013e"></script>
 <script src="/halloween.js?v=20261012a"></script>
 
 <header class="apptop">
@@ -634,8 +634,8 @@ details.valrules>summary{cursor:pointer}
       <a href="./mlb.html">⚾ MLB</a>
     </nav>
     <div class="appctas">
-      <a class="appcta pm" href="https://polymarket.us/join/propstreaklab" target="_blank" rel="noopener sponsored" title="Open Polymarket">Polymarket</a>
-      <a class="appcta ks" href="https://kalshi.com/sign-up/?referral=4373e9f9-0304-498c-8ca7-fccd3714b808&amp;m=true&amp;utm_source=mobile_app&amp;utm_medium=share&amp;utm_campaign=referral&amp;utm_content=share_button&amp;utm_term=referrals_pill" target="_blank" rel="noopener sponsored" title="Open Kalshi">Kalshi</a>
+      <a class="appcta pm" href="https://polymarket.us" target="_blank" rel="noopener" title="Open Polymarket">Polymarket</a>
+      <a class="appcta ks" href="https://kalshi.com" target="_blank" rel="noopener" title="Open Kalshi">Kalshi</a>
     </div>
   </div>
 </header>
@@ -655,7 +655,7 @@ details.valrules>summary{cursor:pointer}
 
   <div class="promo">
     <a id="refbanner" class="refbanner" href="#" target="_blank" rel="noopener" hidden></a>
-    <a id="refbannerk" class="refbanner" href="#" target="_blank" rel="noopener sponsored" hidden></a>
+    <a id="refbannerk" class="refbanner" href="#" target="_blank" rel="noopener" hidden></a>
     <a id="refbanner2" class="refbanner group" href="#" target="_blank" rel="noopener" hidden></a>
     <a class="refbanner group" href="./#email">📧 Free daily picks email →</a>
   </div>
@@ -934,7 +934,7 @@ details.valrules>summary{cursor:pointer}
     </details>
     <div style="margin-top:16px;padding-top:12px;border-top:1px solid var(--line)">
       <a href="./#email">Free daily email</a> · <a href="players/">Players</a> · <a href="methodology.html">How the model works</a> · <a href="privacy.html">Privacy Policy</a> · <a href="terms.html">Terms &amp; Conditions</a> · <a href="cookies.html">Cookies Policy</a> · <a href="mailto:info@propstreaklab.com">Contact</a> · <a href="games/">Games</a> · <a href="best/">Best props</a> · <a href="guides/">Guides</a> · <a href="team/">Team</a><br>
-      <span style="color:var(--muted)">Informational and entertainment use only — not betting or financial advice. Some links to Polymarket and Kalshi are affiliate or referral links. © 2026 Prop Streak Lab.</span><br>
+      <span style="color:var(--muted)">Informational and entertainment use only — not betting or financial advice. © 2026 Prop Streak Lab.</span><br>
       <span style="color:var(--muted);font-size:11px;opacity:.8">Data accuracy: stats, lines, injury reports and prices come from third-party sources (nflverse, ESPN, Polymarket, Kalshi) and may be delayed, incomplete, or occasionally wrong. Model outputs are estimates, not guarantees — verify independently before relying on anything here.</span><br>
       <span style="color:var(--muted);font-size:11px;opacity:.8">For adults, 18+. If gambling stops being fun, stop — call 1-800-522-4700 (US, National Problem Gambling Helpline) or visit <a href="https://www.ncpgambling.org" rel="noopener" target="_blank">ncpgambling.org</a>. Prop Streak Lab does not accept bets or facilitate wagering.</span>
     </div>
@@ -964,12 +964,8 @@ var ok=document.getElementById('pslcookieok');if(ok)ok.onclick=function(){el.hid
 <script>
 const DB = __DATA__;
 
-// ▼▼▼ PASTE YOUR POLYMARKET REFERRAL LINK HERE so visitors sign up with your code ▼▼▼
-const REFERRAL = { url: "https://polymarket.us/join/propstreaklab", text: "Open Polymarket →" };
-// ▲ e.g. url: "https://polymarket.com/@yourhandle" or your invite URL. Leave "" to hide the banner. ▲
-// Second banner: join our Polymarket squad/group. Leave url "" to hide it.
+// Banner to join our Polymarket squad/group. Leave url "" to hide it.
 const REFERRAL2 = { url: "", text: "" };   // the Polymarket group link, off for Meta ad review
-const REFERRAL_KALSHI = { url: "https://kalshi.com/sign-up/?referral=4373e9f9-0304-498c-8ca7-fccd3714b808&m=true&utm_source=mobile_app&utm_medium=share&utm_campaign=referral&utm_content=share_button&utm_term=referrals_pill", text: "Open Kalshi →" };
 // ▼▼▼ SOCIAL FOLLOW LINKS — put your full profile URLs here (placeholders below; replace with your real handles). Leave "" to hide a button. ▼▼▼
 const SOCIAL = { instagram: "https://www.instagram.com/propstreaklab", tiktok: "https://www.tiktok.com/@propstreaklab", x: "https://x.com/propstreaklab" };
 
@@ -1718,7 +1714,7 @@ function parseMarket(m){
 
 /* ===== Live Polymarket odds on the player page =====
    Prices come from Polymarket US (gateway.polymarket.us: public, no key, CORS-open),
-   the exchange the referral links point to. The global gamma-api book the board scan
+   the exchange the site links to. The global gamma-api book the board scan
    reads is mostly one-sided for NFL props, so its Under prices can't be trusted here.
    Polymarket US props are "N+" markets, i.e. Over/Under N-0.5. The game's markets are
    listed once, then the chosen market's best bid/ask is re-polled while it's on screen. */
@@ -1842,7 +1838,7 @@ function pmDraw(){
 
 /* ===== Live Polymarket prices for the week's boards =====
    Top 25 Surest, Value spots and the hit-streak leaderboard all share one cache.
-   Prices come from Polymarket US (the exchange the referral links point to), and
+   Prices come from Polymarket US (the exchange the site links to), and
    one request per game prices every prop in it, so a refresh costs ~1 call per
    game rather than one per row. Cells repaint in place on a timer. */
 const LIVE_MS = 60000;

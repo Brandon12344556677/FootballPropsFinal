@@ -5,8 +5,7 @@ Runs in the hourly workflow after build_today.py. The first run at or after
 POST_HOUR_ET (Eastern) each day posts:
 
   - yesterday's Value spots results per sport (graded, wins and losses), and
-  - today's best value from today.json, each linking straight to its prop,
-  - the referral code.
+  - today's best value from today.json, each linking straight to its prop.
 
 Channels come from repository secrets; a channel whose secret is unset is skipped,
 and with none set the script does nothing:
@@ -32,8 +31,6 @@ import depth
 from zoneinfo import ZoneInfo
 
 SITE = "https://propstreaklab.com"
-REFERRAL = "https://polymarket.us/join/propstreaklab"
-REFERRAL_KALSHI = "https://kalshi.com/sign-up/?referral=4373e9f9-0304-498c-8ca7-fccd3714b808&m=true&utm_source=mobile_app&utm_medium=share&utm_campaign=referral&utm_content=share_button&utm_term=referrals_pill"
 STATE = "posted.json"
 POST_HOUR_ET = 11           # late morning: after the overnight grading, before the early games
 MAX_PICKS = 5
