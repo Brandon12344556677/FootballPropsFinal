@@ -52,16 +52,29 @@ class Stats(unittest.TestCase):
 
 
 class Edges(unittest.TestCase):
-    def run_with(self, hours_ago, strategies=True):
+    def run_with(self, hours_ago, strategies=True, graded_hours_ago=None, picks=True):
         gen = (NOW - datetime.timedelta(hours=hours_ago)).strftime("%Y-%m-%dT%H:%M:%SZ")
         blob = team_stats.encrypt(json.dumps({"generated_at": gen, "strategies": [{"key": "x"}] if strategies else []}), PW)
-        with mock.patch.object(D, "fetch", side_effect=fake({"/team/edges.enc": (200, blob)})):
+        files = {"/team/edges.enc": (200, blob)}
+        if picks:
+            rows = [] if graded_hours_ago is None else                 [["hit", (NOW - datetime.timedelta(hours=graded_hours_ago)).strftime("%Y-%m-%dT%H:%M:%SZ")]]
+            files["/nhl_picks_recent.json"] = (200, json.dumps({"cols": ["res", "start"], "picks": rows}))
+        with mock.patch.object(D, "fetch", side_effect=fake(files)):
             return D.check_edges(NOW, PW)
 
     def test_fresh_stale_and_empty(self):
         self.assertEqual(self.run_with(1), {})
-        self.assertIn("edges: fresh", self.run_with(7))
+        self.assertIn("edges: fresh", self.run_with(12, graded_hours_ago=8))   # a game graded since: should have been rebuilt
         self.assertIn("edges: contents", self.run_with(0, strategies=False))
+
+    def test_a_quiet_stretch_is_not_stale(self):
+        self.assertEqual(self.run_with(11), {})                      # no games graded since the last rebuild
+        self.assertEqual(self.run_with(11, graded_hours_ago=3), {})  # a game that may not be graded yet
+        self.assertEqual(self.run_with(11, graded_hours_ago=14), {}) # graded before the last rebuild
+
+    def test_no_picks_files_falls_back_to_a_long_limit(self):
+        self.assertEqual(self.run_with(30, picks=False), {})
+        self.assertIn("edges: fresh", self.run_with(80, picks=False))
 
 
 class Page(unittest.TestCase):
