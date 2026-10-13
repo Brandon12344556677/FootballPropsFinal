@@ -35,6 +35,7 @@ TIME_RE = re.compile(r"(?:^|/)time/([^/?#]+)$")
 CLICK_RE = re.compile(r"(?:^|/)click/([a-z0-9-]+)/([a-z0-9-]+)$")   # app.js: click/<what>/<page>
 VIEW_RE = re.compile(r"(?:^|/)view/(\d+)$")   # app.js: view/<n>, the visitor's n-th page load today
 VISITOR_RE = re.compile(r"(?:^|/)visitor/(new|returning)$")   # app.js: once per visitor per day
+REF_RE = re.compile(r"(?:^|/)ref/([a-z0-9-]{2,24})/(new|visit)$")   # app.js: ref/<affiliate code>/<new|visit>
 SPORT_RE = re.compile(r"^/(?:(nfl|nba|nhl|mlb)\.html|(?:games|players)/(nfl|nba|nhl|mlb)/|best/(nfl|nba|nhl|mlb)\.html)")
 SPORTS = ("nfl", "nba", "nhl", "mlb")
 HIT_PAGES = 4      # /stats/hits returns at most 100 paths a call; page through up to 400
@@ -160,6 +161,26 @@ def click_rows(events):
     return sorted(out, key=lambda r: -r["n"])
 
 
+def ref_rows(events):
+    """Affiliate links (the dashboard's Affiliates tab) from app.js's "ref/<code>/new" and "ref/<code>/visit" events:
+    [{"code", "new", "visit", "daily": [{"day", "new"}]}], most new viewers first. "new" (a first-time
+    browser that kept the site on screen 20 seconds) is what affiliates are paid for; the dashboard
+    sums "daily" into pay periods and weeks."""
+    out = {}
+    for h in events:
+        m = REF_RE.search(h.get("path") or "")
+        if not m:
+            continue
+        r = out.setdefault(m.group(1), {"code": m.group(1), "new": 0, "visit": 0, "daily": {}})
+        r[m.group(2)] += int(h.get("count") or 0)
+        if m.group(2) == "new":
+            for s in h.get("stats") or []:
+                if int(s.get("daily") or 0):
+                    r["daily"][s["day"]] = r["daily"].get(s["day"], 0) + int(s["daily"])
+    rows = [dict(r, daily=[{"day": d, "new": n} for d, n in sorted(r["daily"].items())]) for r in out.values()]
+    return sorted(rows, key=lambda r: (-r["new"], -r["visit"], r["code"]))
+
+
 def site_tz(token):
     """The GoatCounter account's time zone ("US.America/New_York" → America/New_York). Its
     daily and hourly buckets use it, so "today" has to start at local midnight too."""
@@ -198,6 +219,7 @@ def range_stats(token, now, days, tz=dt.timezone.utc):
         "time": time_rows(events),
         "clicks": click_rows(events),
         "views": view_stats(events),
+        "refs": ref_rows(events),
         # per day, for week-over-week and the by-sport chart
         "sports_daily": daily_by(hits, sport_of),
         "visitors_daily": daily_by(hits, visitor_kind),

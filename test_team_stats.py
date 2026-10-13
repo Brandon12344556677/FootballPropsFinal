@@ -85,6 +85,25 @@ class Clicks(unittest.TestCase):
         self.assertEqual(r30["clicks"], [{"what": "kalshi-market", "page": "nfl", "n": 1}])
 
 
+class Affiliates(unittest.TestCase):
+    def test_ref_events_grouped_by_code(self):
+        events = [{"path": "ref/sam/visit", "count": 9, "event": True},
+                  {"path": "/ref/sam/new", "count": 5, "event": True,
+                   "stats": [{"day": "2026-10-12", "daily": 2}, {"day": "2026-10-13", "daily": 3},
+                             {"day": "2026-10-11", "daily": 0}]},
+                  {"path": "ref/jo-2/new", "count": 7, "event": True, "stats": [{"day": "2026-10-13", "daily": 7}]},
+                  {"path": "ref/x/new", "count": 4, "event": True},             # code too short
+                  {"path": "ref/sam/clicked", "count": 4, "event": True},       # not a ref event
+                  {"path": "click/kalshi-signup/nba", "count": 2, "event": True}]
+        self.assertEqual(team_stats.ref_rows(events), [
+            {"code": "jo-2", "new": 7, "visit": 0, "daily": [{"day": "2026-10-13", "new": 7}]},
+            {"code": "sam", "new": 5, "visit": 9,
+             "daily": [{"day": "2026-10-12", "new": 2}, {"day": "2026-10-13", "new": 3}]}])
+
+    def test_no_ref_events_is_empty(self):
+        self.assertEqual(team_stats.ref_rows([{"path": "view/1", "count": 3, "event": True}]), [])
+
+
 class LateEvening(unittest.TestCase):
     def test_tomorrow_from_goatcounter_is_dropped(self):
         # 11:45 PM in New York: "end" reaches past midnight, so GoatCounter returns tomorrow too

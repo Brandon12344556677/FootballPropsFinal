@@ -111,7 +111,8 @@ footer p{margin:0;max-width:80ch}
 #app[data-cur="social"] [data-view]:not([data-view="social"]){display:none!important}
 #app[data-cur="sponsors"] [data-view]:not([data-view="sponsors"]){display:none!important}
 #app[data-cur="expenses"] [data-view]:not([data-view="expenses"]){display:none!important}
-#app[data-cur="picks"] #tabs, #app[data-cur="social"] #tabs, #app[data-cur="expenses"] #tabs{display:none}
+#app[data-cur="affiliates"] [data-view]:not([data-view="affiliates"]){display:none!important}
+#app[data-cur="picks"] #tabs, #app[data-cur="social"] #tabs, #app[data-cur="expenses"] #tabs, #app[data-cur="affiliates"] #tabs{display:none}
 /* expenses (expenses.js) */
 .exform{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:10px;align-items:end}
 .exform label{display:grid;gap:4px;font-size:13px;color:var(--muted);min-width:0}
@@ -173,6 +174,7 @@ footer p{margin:0;max-width:80ch}
 .edges .n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
 .edges small{color:var(--muted)}
 .edges .ed-wait td{color:var(--muted)}
+.edges .aff-due{color:var(--accent);font-weight:600} .edges .aff-low{color:var(--down);font-weight:600}
 .posts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-top:12px}
 @media (max-width:760px){ .posts{grid-template-columns:1fr} }
 .post{min-width:0;display:grid;gap:8px}
@@ -277,6 +279,7 @@ footer p{margin:0;max-width:80ch}
     <button role="tab" data-v="picks">Picks &amp; edges</button>
     <button role="tab" data-v="social">Social</button>
     <button role="tab" data-v="sponsors">Sponsors</button>
+    <button role="tab" data-v="affiliates">Affiliates</button>
     <button role="tab" data-v="expenses">Expenses</button>
   </nav>
 
@@ -450,6 +453,26 @@ footer p{margin:0;max-width:80ch}
       </form>
     </section>
   </div>
+
+  <section data-view="affiliates" class="panel">
+    <div class="panel-h"><h2>Affiliate pay</h2><span class="label" id="affLabel">Pay periods</span></div>
+    <div class="edwrap"><table class="edges"><thead><tr><th>Code</th><th class="n">This period</th><th class="n">Last period</th>
+      <th class="n">This week</th><th class="n">Last week</th><th class="n">Visits, 30 days</th><th class="n">New per visit</th></tr></thead><tbody id="affRows"></tbody></table></div>
+    <p class="hint" id="affNote" style="margin-top:10px"></p>
+  </section>
+  <section data-view="affiliates" class="panel">
+    <div class="panel-h"><h2>Affiliate link</h2><span class="label">One per affiliate</span></div>
+    <form class="form" id="afl" autocomplete="off">
+      <label for="aflCode">Affiliate code
+        <input id="aflCode" type="text" placeholder="for example sam or jordan-k" maxlength="24">
+      </label>
+      <div class="out">
+        <input id="aflOut" type="text" readonly aria-label="Affiliate link">
+        <button class="btn" id="aflCopy" type="button">Copy</button>
+      </div>
+      <p class="hint">Codes are 2 to 24 letters, numbers or dashes. Keep the list of who owns which code, their warnings and any rolled-over balance off this page: only codes are published.</p>
+    </form>
+  </section>
 
   <section data-view="social" class="panel">
     <div class="panel-h"><h2>Best time to post</h2><span class="label" id="heatLabel">Last 4 weeks</span></div>
@@ -788,7 +811,7 @@ footer p{margin:0;max-width:80ch}
     const clicks = clickRows(R.clicks), signups = clicks.filter(c => isSignup(c.what)).reduce((a,b)=>a+b.n,0);
     $('clickRate').textContent = signups && total ? `Sign-up clicks: ${(signups/total*100).toFixed(1)}% of visits` : 'Clicks';
     list($('lClicks'), clicks, clicks.reduce((a,b)=>a+b.n,0), {empty:'No clicks yet. Clicks on the Polymarket and Kalshi sign-up buttons, market links and your social profiles start counting as visitors load the updated site.'});
-    renderViews(R, days); renderEmail(R); renderWeek(); renderGoals(); renderSports(R); renderReturning(R); renderHeat(); renderSponsor(); buildLink();
+    renderViews(R, days); renderEmail(R); renderWeek(); renderGoals(); renderSports(R); renderReturning(R); renderHeat(); renderSponsor(); buildLink(); renderAffiliates();
 
     // plain-language suggestions computed from this range
     const acts = [];
@@ -929,7 +952,7 @@ footer p{margin:0;max-width:80ch}
 
 
   // ---------- section menu: Overview / Audience / Sign-ups / Picks / Social / Sponsors ----------
-  const VIEWS = ['overview','audience','signups','picks','social','sponsors','expenses'];
+  const VIEWS = ['overview','audience','signups','picks','social','sponsors','affiliates','expenses'];
   function setView(v, push){
     if (!VIEWS.includes(v)) v = 'overview';
     $('app').dataset.cur = v;
@@ -1209,6 +1232,54 @@ footer p{margin:0;max-width:80ch}
   $('kitMake').addEventListener('click', makeKit);
   $('kitShare').addEventListener('click', shareKit);
   $('kitCopy').addEventListener('click', async () => { try { await navigator.clipboard.writeText($('kitText').value); $('kitMsg').textContent = 'Caption copied.'; } catch(e){ $('kitText').select(); } });
+
+  // ---------- affiliates: app.js "ref/<code>/new" events (team_stats.py ref_rows), paid per new viewer ----------
+  // Must match the signed affiliate agreement: $0.20 a new viewer, paid every 2 weeks once a
+  // balance reaches $10, at most $50 a period, and at least 15 new viewers a week to avoid a warning.
+  const AFF_RATE = 0.20, AFF_MIN = 10, AFF_CAP = 50, AFF_WEEK_MIN = 15;
+  const AFF_PERIOD_START = '2026-10-12';   // a Monday: pay periods are the 14 days from here, then every 14 after
+  const dayNum = d => Math.round(Date.parse(d + 'T00:00:00Z') / 864e5);
+  const shortDay = n => new Date(n * 864e5).toLocaleDateString('en-US', {month:'short', day:'numeric', timeZone:'UTC'});
+  const money = v => '$' + v.toFixed(2);
+  function renderAffiliates(){
+    const R = snap.d90 || snap.d30 || {}, R30 = snap.d30 || R;
+    let today; try { today = dayNum(new Date().toLocaleDateString('en-CA', {timeZone: snap.tz || 'America/New_York'})); } catch(e){ today = dayNum(new Date().toISOString().slice(0, 10)); }
+    const p0 = dayNum(AFF_PERIOD_START), cur = p0 + Math.floor((today - p0) / 14) * 14, prev = cur - 14;
+    const wk = today - ((today - p0) % 7 + 7) % 7, lastWk = wk - 7;   // Mondays, counted from the anchor Monday
+    const sum = (r, a, b) => (r.daily || []).reduce((t, d) => { const n = dayNum(d.day); return t + (n >= a && n < b ? d.new : 0); }, 0);
+    const pay = n => Math.min(n * AFF_RATE, AFF_CAP);
+    const visits = new Map((R30.refs || []).map(r => [r.code, r]));
+    const rows = (R.refs || []).map(r => ({code: r.code, cur: sum(r, cur, cur + 14), prev: sum(r, prev, cur), wk: sum(r, wk, wk + 7),
+      last: sum(r, lastWk, wk), r30: visits.get(r.code) || {new: 0, visit: 0}}));
+    rows.sort((a, b) => b.cur - a.cur || b.prev - a.prev || a.code.localeCompare(b.code));
+    const period = (n, done) => {
+      const v = pay(n), cls = done ? (v >= AFF_MIN ? 'aff-due' : '') : '';
+      const note = !n ? '' : v >= AFF_MIN ? (done ? 'pay' : 'on track') : 'rolls over';
+      return `<td class="n ${cls}">${fmt(n)} · ${money(v)}${note ? `<br><small>${note}</small>` : ''}</td>`;
+    };
+    $('affLabel').textContent = `This period ${shortDay(cur)} – ${shortDay(cur + 13)}`;
+    $('affRows').innerHTML = rows.map(r => `<tr><td>${esc(r.code)}</td>${period(r.cur, false)}${period(r.prev, true)}` +
+      `<td class="n">${fmt(r.wk)}<br><small>so far</small></td>` +
+      `<td class="n ${r.last < AFF_WEEK_MIN ? 'aff-low' : ''}">${fmt(r.last)}${r.last < AFF_WEEK_MIN ? '<br><small>under ' + AFF_WEEK_MIN + ': warning</small>' : ''}</td>` +
+      `<td class="n">${fmt(r.r30.visit)}</td><td class="n">${r.r30.visit ? pct(r.r30.new, r.r30.visit) + '%' : '–'}</td></tr>`).join('') ||
+      '<tr><td colspan="7" class="empty">No affiliate visits yet. Make a link below, give it to an affiliate, and their visits show up here within about 20 minutes.</td></tr>';
+    $('affNote').textContent = `$${AFF_RATE.toFixed(2)} per new viewer (a first-time browser that kept the site on screen 20 seconds), capped at ${money(AFF_CAP)} a period. ` +
+      `Last period (${shortDay(prev)} – ${shortDay(prev + 13)}) is payable within 5 days when it reaches ${money(AFF_MIN)}; add any rolled-over balance yourself before deciding. ` +
+      `Weeks run Monday to Sunday; last week was ${shortDay(lastWk)} – ${shortDay(wk - 1)}. A low "new per visit" share can mean repeat or fake traffic: look before paying.`;
+  }
+  function affLink(){
+    const c = slugify($('aflCode').value).slice(0, 24);
+    $('aflOut').value = c.length >= 2 ? 'https://propstreaklab.com/?ref=' + c : '';
+    return $('aflOut').value;
+  }
+  $('aflCode').addEventListener('input', affLink);
+  $('afl').addEventListener('submit', e => e.preventDefault());
+  $('aflCopy').addEventListener('click', async () => {
+    const url = affLink(); if (!url) { $('aflCode').focus(); return; }
+    const ok = await copyText(url, $('aflOut'));
+    $('aflCopy').textContent = ok ? 'Copied' : 'Press Ctrl+C';
+    setTimeout(() => { $('aflCopy').textContent = 'Copy'; }, 2200);
+  });
 
   // ---------- link builder + tracked links ----------
   // Every generated link carries its own campaign name (utm_campaign = "<source>-<link name>"),
