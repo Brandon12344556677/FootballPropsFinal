@@ -88,7 +88,7 @@ finished games, records the upcoming picks with their prices, and redeploys the 
   model's chance that the streak extends and the live Polymarket price for it.
 
 The **Polymarket** column on those three boards reads Polymarket US, the exchange
-the referral links point to. One request per game prices every prop in it, so the
+the site's links point to. One request per game prices every prop in it, so the
 three boards share a single refresh about once a minute. A price is only ever used
 for the **same line** — where Polymarket US lists a prop at a different number (the
 hit-streak board uses the site's own seeded lines, so this is common there) the row
@@ -108,12 +108,11 @@ different bet is meaningless.
   and by prop type, and a sortable table. The live record of each list also shows
   next to its heading on the Research tab.
 
-## Your Polymarket referral link
-Near the top of the `<script>` in `template.html` (and `index.html`):
-```js
-const REFERRAL = { url: "", text: "..." };
-```
-Put your referral link in `url`. Leave it `""` to hide the banner.
+## Polymarket and Kalshi links
+The links to Polymarket and Kalshi are plain links to `https://polymarket.us` and
+`https://kalshi.com`, with no referral codes: the header buttons in each sport template,
+the "Find this prop on…" buttons in a pick's details (`REF` in `app.js`) and
+`guides/polymarket-and-kalshi.html`.
 
 ---
 
@@ -145,7 +144,7 @@ Put your referral link in `url`. Leave it `""` to hide the banner.
 | `watchdog.py` | Its own workflow (`.github/workflows/watchdog.yml`), every 30 minutes: checks the live site from the outside. Is the update job still running and passing, is the data fresh, does every main page and data file load, and does each board open in headless Chrome without script errors? A problem opens one GitHub issue ("Site watchdog: …"), updated as it changes and closed once everything passes; the team dashboard's health panel shows it too. |
 | `dashboard_check.py` | Runs after `watchdog.py` every 30 minutes: the team dashboard loads with no script errors and has every part its script uses, `team/stats.enc` and `team/edges.enc` open with the team password and are fresh, and `today.json` still has the fields its panels read. Problems open one "Team dashboard" GitHub issue. |
 | Affiliate links | Private affiliate program (no public page): affiliates the team recruits share `propstreaklab.com/?ref=<code>` and are paid $0.20 per new viewer (a first-time browser that keeps the site on screen 20 seconds), every two weeks once they reach $10. `app.js` counts these as `ref/<code>/new` events; `team_stats.py` and the dashboard's Affiliates tab total them per pay period and week. |
-| `site_checks.py` | Its own workflow (`.github/workflows/site_checks.yml`), once a day: every sitemap page loads and has a title, description, heading and canonical link (and no stray noindex); robots.txt allows crawling; links on the hand-written pages work; the Polymarket sign-up page still shows the PROPSTREAKLAB code (so sign-ups are credited), and every page carrying sign-up links has both. Problems open one "Site checks" GitHub issue. |
+| `site_checks.py` | Its own workflow (`.github/workflows/site_checks.yml`), once a day: every sitemap page loads and has a title, description, heading and canonical link (and no stray noindex); robots.txt allows crawling; links on the hand-written pages work. Problems open one "Site checks" GitHub issue. |
 | `edge_report.py` | Every update pass (~10 minutes, rewritten only when the numbers change): grades every recorded pick with a market price as a flat $1 bet for a fixed set of strategies (each list, NHL Value since the regular season, the unders edge, what was losing), with a likely range and the last 7 days, into `team/edges.enc` for the team dashboard. |
 | `update_pass.sh` | One update pass: every builder, the health check, commit + push. Only the NFL build is fatal. |
 | `tests/` | Unit tests for the model, market parsing, grading, and a check that the JavaScript model matches the Python one. |
@@ -190,8 +189,7 @@ picks but still updates stats, grades, and the backtest.
 
 ## Daily Discord / Telegram post (optional)
 The update job can post once a day, after 11 AM ET: yesterday's Value spots results
-(wins and losses) and today's best value, each linking straight to its prop, plus the
-referral code. Add either or both as **Settings → Secrets and variables → Actions →
+(wins and losses) and today's best value, each linking straight to its prop. Add either or both as **Settings → Secrets and variables → Actions →
 New repository secret**:
 - **Discord:** in your server, *Server settings → Integrations → Webhooks → New
   webhook*, pick the channel, *Copy Webhook URL*, save it as `DISCORD_WEBHOOK_URL`.

@@ -428,7 +428,7 @@ footer p{margin:0;max-width:80ch}
     <section data-view="audience" class="panel"><div class="panel-h"><h2>Browsers</h2><span class="label">Share of visits</span></div><ul class="list" id="lBrw"></ul></section>
     <section data-view="audience" class="panel"><div class="panel-h"><h2>Screen sizes</h2><span class="label">Share of visits</span></div><ul class="list" id="lSize"></ul></section>
     
-    <section data-view="signups" class="panel"><div class="panel-h"><h2>Clicks to sign-ups and markets</h2><span class="label" id="clickRate">Clicks</span></div><ul class="list" id="lClicks"></ul></section>
+    <section data-view="signups" class="panel"><div class="panel-h"><h2>Clicks to Polymarket, Kalshi and other sites</h2><span class="label" id="clickRate">Clicks</span></div><ul class="list" id="lClicks"></ul></section>
     <section data-view="signups" class="panel">
       <div class="panel-h"><h2>Link builder</h2><span class="label">Tag every post</span></div>
       <form class="form" id="lb" autocomplete="off">
@@ -685,7 +685,9 @@ footer p{margin:0;max-width:80ch}
   const CLICK_NAME = {'email-list':'Joined the email list','polymarket-signup':'Polymarket sign-up','kalshi-signup':'Kalshi sign-up','polymarket-market':'A Polymarket market',
     'kalshi-market':'A Kalshi market','instagram-profile':'Our Instagram','tiktok-profile':'Our TikTok','x-profile':'Our X (Twitter)',
     'gambling-help':'Gambling help line','other-site':'Other sites','home-screen-open':'Opened from the home screen','player-search':'Used the player search',
-    'polymarket-signup-sheet':'Polymarket sign-up, from a pick','kalshi-signup-sheet':'Kalshi sign-up, from a pick'};
+    'polymarket-signup-sheet':'Polymarket sign-up, from a pick','kalshi-signup-sheet':'Kalshi sign-up, from a pick',
+    'polymarket-site':'Opened Polymarket','kalshi-site':'Opened Kalshi',
+    'polymarket-site-sheet':'Opened Polymarket, from a pick','kalshi-site-sheet':'Opened Kalshi, from a pick'};
   const CLICK_PAGE = {home:'Home', nfl:'NFL', nba:'NBA', nhl:'NHL', mlb:'MLB'};
   const isSignup = w => /-signup(-|$)/.test(w);   // includes the in-pick buttons (…-signup-sheet)
   function clickRows(rows){

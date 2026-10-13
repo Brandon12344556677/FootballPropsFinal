@@ -1,5 +1,5 @@
 """
-Prop Streak Lab — daily site checks: can search engines read the site, and do the sign-up links pay?
+Prop Streak Lab — daily site checks: can search engines read the site?
 
 Runs once a day in its own workflow (.github/workflows/site_checks.yml), from the outside:
 
@@ -8,10 +8,8 @@ Runs once a day in its own workflow (.github/workflows/site_checks.yml), from th
               allows crawling and points at the sitemap; links on the hand-written pages
               (home, methodology, guides, best props, games, legal) all lead somewhere.
               (indexnow.yml already sends every sitemap URL to Bing once a day.)
-  - signup:   the Polymarket referral page still shows the PROPSTREAKLAB code (so sign-ups are
-              still credited to the site); the Kalshi referral link still answers (Kalshi often
-              blocks servers, which is noted, not alerted); every page and script that
-              carries a sign-up link carries the same code.
+  (The Polymarket and Kalshi links are plain links since Oct 13, 2026, so there are no
+  referral codes left to check.)
 
 Problems go into one GitHub issue ("Site checks: ..."), updated as they change and closed
 when everything passes (watchdog.report). Smaller search notes (a title that's long for
@@ -31,24 +29,15 @@ import urllib.parse
 import watchdog
 from watchdog import SITE, fetch
 
-TITLE = "Site checks: search engines or sign-up links need a look"
+TITLE = "Site checks: search engines need a look"
 MARK = "<!-- site-checks -->"
-POLY_REF = "https://polymarket.us/join/propstreaklab"
-POLY_CODE = "PROPSTREAKLAB"
-KALSHI_REF_ID = "4373e9f9-0304-498c-8ca7-fccd3714b808"
-KALSHI_REF = f"https://kalshi.com/sign-up/?referral={KALSHI_REF_ID}"
 HAND_PAGES = ["/", "/methodology.html", "/guides/", "/guides/what-is-a-player-prop.html",
               "/guides/polymarket-and-kalshi.html", "/guides/how-to-read-the-model.html",
               "/best/", "/games/", "/privacy.html", "/terms.html", "/cookies.html"]
-REF_CARRIERS = ["/app.js", "/guides/polymarket-and-kalshi.html"]   # every one carries both sign-up links
-# (not the home page: its sign-up row was removed on purpose for Meta's ad review, Oct 12, 2026)
 NOINDEX_OK = re.compile(r"^/(team|p)/")
 HINTS = {
     "search": "Search engines can't read or reach a page. Generated pages (players/, games/, best/) come from "
               "their builder (build_players.py, build_games.py); hand-written ones from the last PR that changed them.",
-    "signup": "A sign-up link no longer shows the code or the offer the site promises. Check the link in a browser; "
-              "if Polymarket or Kalshi changed the offer, update the wording in index.html, app.js (REF), the guides "
-              "and post_daily.py.",
 }
 WORKERS = 8
 
@@ -148,39 +137,9 @@ def check_search():
     return out, notes, len(urls)
 
 
-def check_signup():
-    out, notes = {}, []
-    st, html = fetch(POLY_REF)
-    if st != 200:
-        out["signup: polymarket"] = f"The Polymarket sign-up link {POLY_REF} returns {st or html}."
-    else:
-        t = TITLE_RE.search(html)
-        title = re.sub(r"\s+", " ", t.group(1)) if t else ""
-        if POLY_CODE not in title.upper():
-            out["signup: polymarket"] = (f"The Polymarket sign-up page no longer shows the code {POLY_CODE} "
-                                         f"(its title is \"{title.strip()[:120]}\"): new users may not be credited to you.")
-    st, _ = fetch(KALSHI_REF, tries=2)
-    if st in (403, 429, None):
-        notes.append(f"Kalshi's sign-up link couldn't be checked from a server ({st or 'no answer'}); Kalshi blocks most bots.")
-    elif st >= 400:
-        out["signup: kalshi"] = f"The Kalshi sign-up link returns {st}."
-    for path in REF_CARRIERS:
-        st, text = fetch(watchdog.bust(path))
-        if st != 200:
-            continue          # a page that doesn't load is the watchdog's job
-        missing = [name for name, needle in (("Polymarket code", "join/propstreaklab"), ("Kalshi referral", KALSHI_REF_ID))
-                   if needle not in text]
-        if missing:
-            out[f"signup: {path}"] = f"{SITE}{path} no longer carries the {' or the '.join(missing)} link."
-    return out, notes
-
-
 def main():
     now = datetime.datetime.now(datetime.timezone.utc)
-    search, notes, n_urls = check_search()
-    signup, notes2 = check_signup()
-    problems = {**search, **signup}
-    notes += notes2
+    problems, notes, n_urls = check_search()
     for msg in problems.values():
         print(f"::warning title=Site checks::{msg}")
     for n in notes:

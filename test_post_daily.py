@@ -30,7 +30,7 @@ class Tag(unittest.TestCase):
                          "https://propstreaklab.com/?utm_source=telegram&utm_campaign=daily-post")
 
     def test_other_sites_untouched(self):
-        self.assertEqual(post_daily.tag(post_daily.REFERRAL, "discord"), post_daily.REFERRAL)
+        self.assertEqual(post_daily.tag("https://polymarket.us", "discord"), "https://polymarket.us")
 
     def test_messages_tag_each_channel(self):
         d, t = post_daily.messages([], True, [("nfl", 3, 5, 1.2)], post_daily.datetime.date(2026, 10, 11))
