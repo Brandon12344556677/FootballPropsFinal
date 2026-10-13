@@ -598,6 +598,24 @@ window.PS = (function(){
   }
   if(document.readyState!=='loading') trust(); else document.addEventListener('DOMContentLoaded', trust);
 
+  // ---- "New here?": a four-line key to the board, above its tabs, until the visitor closes it ----
+  function newHere(){
+    const tabs=document.querySelector('.tabs[role="tablist"]'); if(!tabs || document.getElementById('psnew')) return;
+    let seen=false; try{ seen=localStorage.getItem('psl_newhere_ok')==='1'; }catch(e){}
+    if(seen) return;
+    const box=document.createElement('section'); box.id='psnew'; box.className='psnew'; box.setAttribute('aria-label','How to read this page');
+    box.innerHTML='<div class="psnew-h"><b>New here? How to read a pick</b><button type="button" class="psnew-x" aria-label="Close">Got it</button></div>'+
+      '<ul>'+
+      '<li><b class="k">72%</b> Our model’s chance the pick hits, from the player’s game log and the matchup.</li>'+
+      '<li><b class="k">57¢</b> What Polymarket or Kalshi charges for a $1 payout, so it pays <b>1.75×</b>. A low price means a bigger payout but a less likely pick.</li>'+
+      '<li><b class="k">⚡ Value spots</b> Our chance is well above the price: bigger payouts, more misses.</li>'+
+      '<li><b class="k">🔒 Top 25 Surest</b> The picks most likely to hit, with small payouts.</li>'+
+      '</ul><p class="psnew-f">Every pick is recorded before the game and graded afterward, wins and losses, in <b>Past picks</b>. Research, not advice. 21+.</p>';
+    tabs.parentNode.insertBefore(box, tabs);
+    box.querySelector('.psnew-x').onclick=()=>{ box.remove(); try{ localStorage.setItem('psl_newhere_ok','1'); }catch(e){} };
+  }
+  if(document.readyState!=='loading') newHere(); else document.addEventListener('DOMContentLoaded', newHere);
+
   // ---- opening vs current price: has the market moved toward a pick since it was recorded? ----
   // open/now are fractions for the side taken. Up = the price rose since the site first
   // recorded the pick, i.e. the market moved toward it (closing line value). closed=true
@@ -605,6 +623,7 @@ window.PS = (function(){
   function pxMove(open, now, closed){
     if(open==null || now==null) return '';
     const o=Math.round(open*100), n=Math.round(now*100), d=n-o;
+    if(!closed && !d) return '';          // a card only mentions the opening price once it has moved
     const cls=d>=1?'up':d<=-1?'dn':'flat', arrow=d>=1?'\u25b2'+d:d<=-1?'\u25bc'+(-d):'\u00b10';
     const say=d>=1? `the market moved ${d}\u00a2 toward this pick` : d<=-1? `the market moved ${-d}\u00a2 away from this pick` : 'no real move';
     const title=`Price (the cheaper of Polymarket and Kalshi) when the site first recorded this pick: ${o}\u00a2. ${closed?'Last price before it locked (or, for picks before October 7, 2026, before the game)':'Now'}: ${n}\u00a2 \u2014 ${say}.`;

@@ -627,8 +627,8 @@ details.valrules>summary{cursor:pointer}
 .panel.collapsed{padding-bottom:14px}
 </style>
 
-<link rel="stylesheet" href="app.css?v=20261013a">
-<script src="app.js?v=20261013a"></script>
+<link rel="stylesheet" href="app.css?v=20261013b">
+<script src="app.js?v=20261013b"></script>
 <script src="/halloween.js?v=20261012a"></script>
 
 <header class="apptop">
@@ -669,7 +669,7 @@ details.valrules>summary{cursor:pointer}
   <a id="valueweekbar" class="vwbar" href="#" hidden></a>
 
   <div class="tabs" role="tablist">
-    <button class="tab" role="tab" data-tab="week" aria-selected="true">📅 This week</button>
+    <button class="tab" role="tab" data-tab="week" aria-selected="true">📅 Today</button>
     <button class="tab" role="tab" data-tab="player" aria-selected="false">🔬 Player</button>
     <button class="tab" role="tab" data-tab="tools" aria-selected="false">🧰 Tools</button>
     <button class="tab" role="tab" data-tab="past" aria-selected="false">📒 Past picks</button>
@@ -1311,7 +1311,7 @@ function pickTable(rows, sort){
     h+=`<article class="pickcard ${tier}${r.lk?' locked':''}" style="${PS.teamVars(SPORT_KEY, r.team)}">`+
       `<div class="pc-top"><span class="av">${esc(initials(r.name))}</span>`+
         `<div class="pc-who"><b>${esc(r.name)}</b><span><span class="tbadge">${esc(r.team)}</span>${r.team===r.game.home? "vs "+esc(r.game.away) : r.team===r.game.away? "@ "+esc(r.game.home) : esc(r.game.away)+" @ "+esc(r.game.home)}</span></div>`+
-        `<div class="pc-prob"><div class="ring" style="--p:${pv}"><b>${pv}<small>%</small></b></div><span>${Math.round(r.lo*100)}–${Math.round(r.hi*100)} · ${r.n}g</span></div></div>`+
+        `<div class="pc-prob"><div class="ring" style="--p:${pv}"><b>${pv}<small>%</small></b></div><span title="80% range ${Math.round(r.lo*100)}–${Math.round(r.hi*100)}%, from ${r.n} games">chance</span></div></div>`+
       `<div class="pc-bet"><span class="leantag ${esc(r.side)}">${esc(r.side)}</span><b>${r.line}</b><span>${esc(r.statText)}</span>${byId[r.pid]? PS.spark(valuesOf(byId[r.pid], r.sk), r.line, r.side) : ''}</div>`+
       `<div class="pc-foot"><span class="pc-price livecell">${priceCell(r)}</span>${r.lk? PS.lockBadge(r.lk) : ''}<button class="edgeload" type="button" data-i="${idx}">Details</button></div>`+
     `</article>`;
