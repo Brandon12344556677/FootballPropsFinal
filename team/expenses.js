@@ -1,0 +1,172 @@
+/* Prop Streak Lab team dashboard: the Expenses section.
+   The list is shared by the team: encrypted in the browser with the team password (the same
+   OpenSSL "Salted__" / PBKDF2-SHA256 600k / AES-256-CBC format as stats.enc) and saved as
+   expenses.enc on the repo's `team-data` branch through the GitHub API. Anyone can read the
+   encrypted file; only the team password opens it. Saving needs a GitHub token from someone with
+   write access to the repo, kept in that browser only (localStorage). The `team-data` branch holds
+   nothing else, so these commits never touch main or the update bot.
+   index.html sends the password with a "psa-unlock" event and clears it with "psa-lock". */
+(function(){
+  const REPO = 'Brandon12344556677/FootballPropsFinal', BRANCH = 'team-data', PATH = 'expenses.enc';
+  const API = `https://api.github.com/repos/${REPO}/contents/${PATH}`;
+  const ITERATIONS = 600000;   // must match index.html and team_stats.py
+  const TOKEN_KEY = 'psa-gh-token';
+  const CATS = {expense: ['Advertising', 'Software & web', 'Filing & legal', 'Equipment', 'Other'],
+                income: ['Gift', 'Referral payout', 'Sponsorship', 'Other']};
+  const WHO = ['Business account', 'Brandon', 'Max'];
+  const $ = id => document.getElementById(id);
+  const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const money = n => (n < 0 ? '−' : '') + '$' + Math.abs(n).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+  const today = () => new Date().toLocaleDateString('en-CA');
+
+  let pw = null, data = {v: 1, items: []}, sha = null, loaded = false, busy = false, login = null;
+
+  // ---------- crypto (OpenSSL-compatible) ----------
+  async function keyIv(pass, salt){
+    const base = await crypto.subtle.importKey('raw', new TextEncoder().encode(pass), 'PBKDF2', false, ['deriveBits']);
+    const bits = new Uint8Array(await crypto.subtle.deriveBits({name: 'PBKDF2', salt, iterations: ITERATIONS, hash: 'SHA-256'}, base, 384));
+    return {key: await crypto.subtle.importKey('raw', bits.slice(0, 32), 'AES-CBC', false, ['encrypt', 'decrypt']), iv: bits.slice(32, 48)};
+  }
+  const b64 = u8 => { let s = ''; for (let i = 0; i < u8.length; i += 0x8000) s += String.fromCharCode.apply(null, u8.subarray(i, i + 0x8000)); return btoa(s); };
+  const unb64 = s => Uint8Array.from(atob(s.replace(/\s+/g, '')), c => c.charCodeAt(0));
+  async function encrypt(obj, pass){
+    const salt = crypto.getRandomValues(new Uint8Array(8)), {key, iv} = await keyIv(pass, salt);
+    const ct = new Uint8Array(await crypto.subtle.encrypt({name: 'AES-CBC', iv}, key, new TextEncoder().encode(JSON.stringify(obj))));
+    const out = new Uint8Array(16 + ct.length); out.set(new TextEncoder().encode('Salted__')); out.set(salt, 8); out.set(ct, 16);
+    return b64(out);
+  }
+  async function decrypt(text, pass){
+    const raw = unb64(text);
+    if (new TextDecoder().decode(raw.slice(0, 8)) !== 'Salted__') throw new Error('format');
+    const {key, iv} = await keyIv(pass, raw.slice(8, 16));
+    return JSON.parse(new TextDecoder().decode(await crypto.subtle.decrypt({name: 'AES-CBC', iv}, key, raw.slice(16))));
+  }
+
+  // ---------- GitHub storage ----------
+  function token(){ try { return localStorage.getItem(TOKEN_KEY) || ''; } catch(e){ return ''; } }
+  function headers(){ const h = {Accept: 'application/vnd.github+json'}; const t = token(); if (t) h.Authorization = 'Bearer ' + t; return h; }
+  async function fetchList(){
+    const r = await fetch(`${API}?ref=${BRANCH}&t=${Date.now()}`, {headers: headers(), cache: 'no-store'});
+    if (r.status === 404) return {doc: {v: 1, items: []}, sha: null};
+    if (!r.ok) throw Object.assign(new Error('read'), {status: r.status});
+    const j = await r.json();
+    return {doc: await decrypt(new TextDecoder().decode(unb64(j.content)), pw), sha: j.sha};
+  }
+  async function saveList(doc, prevSha){
+    const body = {message: 'Update team data', branch: BRANCH, content: b64(new TextEncoder().encode(await encrypt(doc, pw)))};
+    if (prevSha) body.sha = prevSha;
+    const r = await fetch(API, {method: 'PUT', headers: Object.assign({'Content-Type': 'application/json'}, headers()), body: JSON.stringify(body)});
+    if (!r.ok) throw Object.assign(new Error('save'), {status: r.status});
+    return (await r.json()).content.sha;
+  }
+  // Change the list: re-read the latest copy first, so two people saving don't overwrite each other.
+  async function change(fn){
+    if (busy) return;
+    if (!token()) { msg('Connect GitHub below to save changes.', true); return; }
+    busy = true; msg('Saving…');
+    try {
+      for (let tries = 0; tries < 3; tries++){
+        const cur = await fetchList();
+        const doc = fn(JSON.parse(JSON.stringify(cur.doc)));
+        try { sha = await saveList(doc, cur.sha); data = doc; break; }
+        catch(e){ if (e.status !== 409 && e.status !== 422 || tries === 2) throw e; }   // someone saved in between: retry on top of theirs
+      }
+      msg('Saved. Your teammate sees it on their next refresh.');
+      render();
+    } catch(e){
+      msg(e.status === 401 ? 'GitHub rejected the token. Make a new one (steps below).' :
+          e.status === 403 || e.status === 404 ? 'This GitHub account can’t write to the repo. Use an account Brandon added as a collaborator.' :
+          'Couldn’t save. Check your connection and try again.', true);
+    } finally { busy = false; }
+  }
+
+  // ---------- page ----------
+  function msg(t, bad){ const m = $('exMsg'); if (m){ m.textContent = t; m.classList.toggle('bad', !!bad); } }
+  function fillCats(){
+    const type = $('exType').value, sel = $('exCat'), keep = sel.value;
+    sel.innerHTML = CATS[type].map(c => `<option>${esc(c)}</option>`).join('');
+    if (CATS[type].includes(keep)) sel.value = keep;
+  }
+  function render(){
+    if (!$('exPanel')) return;
+    const items = (data.items || []).slice().sort((a, b) => (b.date || '').localeCompare(a.date || '') || (b.added || 0) - (a.added || 0));
+    const out = items.filter(i => i.type === 'expense'), inn = items.filter(i => i.type === 'income');
+    const sum = a => a.reduce((s, i) => s + (+i.amount || 0), 0);
+    const month = today().slice(0, 7), mOut = sum(out.filter(i => (i.date || '').startsWith(month)));
+    const tOut = sum(out), tIn = sum(inn);
+    $('exKpis').innerHTML = [
+      ['Spent this month', money(mOut), new Date().toLocaleDateString('en-US', {month: 'long', year: 'numeric'})],
+      ['Spent in all', money(tOut), `${out.length} expense${out.length === 1 ? '' : 's'}`],
+      ['Money in', money(tIn), `${inn.length} entr${inn.length === 1 ? 'y' : 'ies'} (gifts, payouts)`],
+      ['Balance', money(tIn - tOut), 'money in minus spent']
+    ].map(([l, v, s], i) => `<div class="kpi"><span class="label">${l}</span><span class="v sm${i === 3 ? (tIn - tOut >= 0 ? ' up' : ' down') : ''}">${v}</span><span class="s">${esc(s)}</span></div>`).join('');
+    const byCat = {}; out.forEach(i => { byCat[i.cat] = (byCat[i.cat] || 0) + (+i.amount || 0); });
+    const cats = Object.entries(byCat).sort((a, b) => b[1] - a[1]), top = cats.length ? cats[0][1] : 1;
+    $('exCats').innerHTML = cats.length ? cats.map(([c, n]) =>
+      `<li class="row"><span class="bar" style="width:${(100 * n / top).toFixed(1)}%"></span><span class="name">${esc(c)}</span><span class="pct">${tOut ? Math.round(100 * n / tOut) + '%' : ''}</span><span class="n">${money(n)}</span></li>`).join('')
+      : '<li class="empty">No expenses yet.</li>';
+    $('exRows').innerHTML = items.length ? items.map(i =>
+      `<tr><td>${esc(i.date)}</td><td>${esc(i.desc)}<small>${esc(i.cat)}${i.by ? ' · ' + esc(i.by) : ''}</small></td>` +
+      `<td class="n ${i.type === 'income' ? 'up' : ''}">${i.type === 'income' ? '+' : '−'}${money(+i.amount || 0).replace('−', '')}</td>` +
+      `<td><button type="button" class="ghost exdel" data-id="${esc(i.id)}" aria-label="Delete ${esc(i.desc)}">Delete</button></td></tr>`).join('')
+      : `<tr><td colspan="4" class="empty">${loaded ? 'Nothing recorded yet. Add the first entry above.' : 'Loading…'}</td></tr>`;
+    const t = token();
+    $('exConn').innerHTML = t
+      ? `Saving as <b>${esc(login || 'your GitHub account')}</b> on this device. <button type="button" class="ghost" id="exDisc">Disconnect</button>`
+      : 'Not connected on this device: you can see the list but not change it.';
+    $('exTokWrap').hidden = !!t;
+    const d = $('exDisc'); if (d) d.onclick = () => { try { localStorage.removeItem(TOKEN_KEY); } catch(e){} login = null; msg(''); render(); };
+  }
+  async function who(){
+    if (!token()) { login = null; return; }
+    try { const r = await fetch('https://api.github.com/user', {headers: headers()}); if (r.ok) login = (await r.json()).login; else if (r.status === 401) login = 'an expired token'; } catch(e){}
+    render();
+  }
+  async function reload(){
+    if (!pw) return;
+    try { const r = await fetchList(); data = r.doc; sha = r.sha; loaded = true; render(); }
+    catch(e){ loaded = true; msg(e.message === 'format' || e.name === 'OperationError' ? 'The saved list doesn’t open with this password.' : 'Couldn’t load the list. Refresh to try again.', true); render(); }
+  }
+  function csv(){
+    const rows = [['Date', 'Type', 'Category', 'Description', 'Paid by / from', 'Amount']]
+      .concat((data.items || []).slice().sort((a, b) => (a.date || '').localeCompare(b.date || ''))
+      .map(i => [i.date, i.type === 'income' ? 'Money in' : 'Expense', i.cat, i.desc, i.by, (i.type === 'income' ? '' : '-') + (+i.amount || 0).toFixed(2)]));
+    const text = rows.map(r => r.map(v => /[",\n]/.test(String(v ?? '')) ? '"' + String(v).replace(/"/g, '""') + '"' : (v ?? '')).join(',')).join('\n');
+    const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([text], {type: 'text/csv'}));
+    a.download = `prop-streak-lab-expenses-${today()}.csv`; document.body.appendChild(a); a.click(); a.remove();
+  }
+
+  function wire(){
+    if (!$('exPanel') || $('exPanel').dataset.wired) return; $('exPanel').dataset.wired = '1';
+    $('exDate').value = today();
+    $('exBy').innerHTML = WHO.map(w => `<option>${esc(w)}</option>`).join('');
+    fillCats();
+    $('exType').addEventListener('change', fillCats);
+    $('exForm').addEventListener('submit', e => {
+      e.preventDefault();
+      const amount = Math.round(parseFloat(String($('exAmt').value).replace(/[$,]/g, '')) * 100) / 100;
+      const desc = $('exDesc').value.trim();
+      if (!(amount > 0)) { msg('Enter an amount above $0.', true); return; }
+      if (!desc) { msg('Add a short description.', true); return; }
+      const item = {id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), date: $('exDate').value || today(),
+                    type: $('exType').value, cat: $('exCat').value, desc, amount, by: $('exBy').value, added: Date.now()};
+      change(doc => { (doc.items = doc.items || []).push(item); return doc; }).then(() => { if (!$('exMsg').classList.contains('bad')) { $('exDesc').value = ''; $('exAmt').value = ''; } });
+    });
+    $('exRows').addEventListener('click', e => {
+      const b = e.target.closest('.exdel'); if (!b) return;
+      if (b.dataset.sure !== '1') { b.dataset.sure = '1'; b.textContent = 'Sure?'; setTimeout(() => { if (b.isConnected) { b.dataset.sure = ''; b.textContent = 'Delete'; } }, 3000); return; }
+      const id = b.dataset.id;
+      change(doc => { doc.items = (doc.items || []).filter(i => i.id !== id); return doc; });
+    });
+    $('exTokSave').addEventListener('click', () => {
+      const t = $('exTok').value.trim(); if (!t) return;
+      try { localStorage.setItem(TOKEN_KEY, t); } catch(e){ msg('This browser won’t store the token.', true); return; }
+      $('exTok').value = ''; msg('Connected on this device.'); who(); render();
+    });
+    $('exCsv').addEventListener('click', csv);
+  }
+
+  window.addEventListener('psa-unlock', e => { pw = e.detail && e.detail.pw; wire(); render(); reload(); who(); });
+  window.addEventListener('psa-lock', () => { pw = null; data = {v: 1, items: []}; sha = null; loaded = false; });
+  window.addEventListener('psa-refresh', () => { if (!busy) reload(); });
+})();
