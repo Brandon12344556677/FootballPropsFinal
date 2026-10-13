@@ -1,6 +1,6 @@
 // Meta ads panel on the team dashboard (team/index.html): draws feed (1080x1080) and story (1080x1920)
 // ads on a canvas from ../today.json, so every number is the live record, and saves them as PNGs.
-// Copy rules for Meta: no "bet", "lock" or exchange names, a 21+ line on every ad (see the panel's notes).
+// Copy rules for Meta: no "bet", "lock" or exchange names, an 18+ line on every ad (see the panel's notes).
 (function(){
   'use strict';
   const $ = id => document.getElementById(id);
@@ -106,7 +106,7 @@
         return cy + ch;
       },
       cta: 'See the full record',
-      fine: () => `Live NFL, NBA, NHL & MLB picks, graded through ${dateLbl(T.gen)}. Past results don't guarantee future ones. 21+.`,
+      fine: () => `Live NFL, NBA, NHL & MLB picks, graded through ${dateLbl(T.gen)}. Past results don't guarantee future ones. 18+.`,
       copy(){
         const b = T.calib.find(r => r.lo === 70) || T.calib[0], n = T.calib.reduce((a, r) => a + r.n, 0);
         return {primary: `When our model says ${pc(b.said)}%, it hits ${pc(b.hit)}%. ${fmt(n)} player props, every one recorded before the game and graded after, misses included. Free research for NFL, NBA, NHL and MLB.`,
@@ -136,7 +136,7 @@
         return cy + ch;
       },
       cta: 'See every pick',
-      fine: () => `Live picks this season, through ${dateLbl(T.gen)}. Units: return on 1 unit per priced pick. Past results don't guarantee future ones. 21+.`,
+      fine: () => `Live picks this season, through ${dateLbl(T.gen)}. Units: return on 1 unit per priced pick. Past results don't guarantee future ones. 18+.`,
       copy(s){
         const t = T.record[s].T;
         return {primary: `${pc(t.hit/t.n)}% of our top ${NAME[s]} player props have hit this season (${fmt(t.hit)} of ${fmt(t.n)}). Every pick is recorded before the game and graded after. See the whole record free.`,
@@ -175,7 +175,7 @@
         return cy + ch;
       },
       cta: "See today's board",
-      fine: () => `Model chance, not a guarantee. Market price as of ${new Date(T.gen).toLocaleTimeString('en-US', {hour:'numeric', minute:'2-digit', timeZone:'America/New_York'})} ET. 21+.`,
+      fine: () => `Model chance, not a guarantee. Market price as of ${new Date(T.gen).toLocaleTimeString('en-US', {hour:'numeric', minute:'2-digit', timeZone:'America/New_York'})} ET. 18+.`,
       copy(p){
         return {primary: `Our model gives ${p.player} ${an(pc(p.prob))} ${pc(p.prob)}% chance of going ${p.side} ${p.line} ${p.statText.toLowerCase()}. The market says ${pc(p.price)}%. See the math, the matchup and the last 10 games, free.`,
           headline: 'See where the model disagrees', description: 'Free player prop research'};
@@ -202,7 +202,7 @@
         return cy + ch;
       },
       cta: 'See the streak board',
-      fine: () => 'Model chance, not a guarantee. Streaks end. 21+.',
+      fine: () => 'Model chance, not a guarantee. Streaks end. 18+.',
       copy(s){
         return {primary: `${s.player}: ${s.streak} straight games ${s.side} ${s.line} ${s.statText.toLowerCase()}. Our model gives it ${an(pc(s.prob))} ${pc(s.prob)}% chance to keep going. Free player prop research for NFL, NBA, NHL and MLB.`,
           headline: 'Will the streak keep going?', description: 'Free player prop research'};
