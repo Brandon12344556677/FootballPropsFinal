@@ -610,7 +610,7 @@ window.PS = (function(){
       '<li><b class="k">57¢</b> What Polymarket or Kalshi charges for a $1 payout, so it pays <b>1.75×</b>. A low price means a bigger payout but a less likely pick.</li>'+
       '<li><b class="k">⚡ Value spots</b> Our chance is well above the price: bigger payouts, more misses.</li>'+
       '<li><b class="k">🔒 Top 25 Surest</b> The picks most likely to hit, with small payouts.</li>'+
-      '</ul><p class="psnew-f">Every pick is recorded before the game and graded afterward, wins and losses, in <b>Past picks</b>. Research, not advice. 21+.</p>';
+      '</ul><p class="psnew-f">Every pick is recorded before the game and graded afterward, wins and losses, in <b>Past picks</b>. Research, not advice. 18+.</p>';
     tabs.parentNode.insertBefore(box, tabs);
     box.querySelector('.psnew-x').onclick=()=>{ box.remove(); try{ localStorage.setItem('psl_newhere_ok','1'); }catch(e){} };
   }
