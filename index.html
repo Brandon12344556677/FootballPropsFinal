@@ -35,19 +35,19 @@
 <link rel="manifest" href="/site.webmanifest">
 <script data-goatcounter="https://propstreaklive.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
 <link rel="stylesheet" href="fonts.css">
-<link rel="stylesheet" href="app.css?v=20261013b">
+<link rel="stylesheet" href="app.css?v=20261013c">
 <script src="app.js?v=20261013b"></script>
 <script src="/halloween.js?v=20261012a"></script>
 <style>
 :root{
   color-scheme:dark;
   --bg:#0a1628; --bg-2:#081120; --surface:#0f2038; --surface-2:#142743; --line:#22354f;
-  --text:#ffffff; --soft:#dfe6ef; --muted:#9fb0c6;
+  --text:#ffffff; --soft:#dfe6ef; --muted:#b8c5d6;
   --green:#22d07f; --green-2:#22d07f; --green-ink:#06210b; --red:#eb6f7d;
   --display:"Archivo","Inter",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
   --num:"Inter",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
   --gold:#e8b54a;
-  --cond:"Barlow Condensed",Impact,"Arial Narrow",sans-serif;
+  --cond:"Inter",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
   --body:"Inter",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
   --r:18px;
 }
@@ -65,7 +65,7 @@ body{margin:0;background:var(--bg);color:var(--text);font-family:var(--body);fon
   background-size:58px 58px,58px 58px,100% 100%,100% 100%,100% 100%;background-attachment:fixed}
 a{color:var(--green)}
 .wrap{max-width:1160px;margin:0 auto;padding:0 20px}
-.cond{font-family:var(--cond);text-transform:uppercase;letter-spacing:.12em}
+.cond{font-family:var(--cond);text-transform:uppercase;letter-spacing:.06em}
 .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
 
 /* ---------- header ---------- */
@@ -91,7 +91,7 @@ a{color:var(--green)}
 /* ---------- hero ---------- */
 .hero{position:relative;padding:74px 0 60px}
 .hero .wrap{display:grid;grid-template-columns:1.08fr .92fr;gap:54px;align-items:center}
-.eyebrow{display:inline-flex;align-items:center;gap:10px;font-family:var(--cond);text-transform:uppercase;letter-spacing:.16em;
+.eyebrow{display:inline-flex;align-items:center;gap:10px;font-family:var(--cond);text-transform:uppercase;letter-spacing:.06em;
   font-size:13px;font-weight:700;color:var(--green);background:rgba(34,208,127,.08);border:1px solid rgba(34,208,127,.3);
   padding:7px 14px;border-radius:999px}
 .eyebrow .dot{width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 0 0 rgba(34,208,127,.7);animation:ping 2s infinite}
@@ -120,7 +120,7 @@ h1 i{color:var(--green);font-weight:600}
   animation:float 7s ease-in-out infinite}
 @keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
 .demo-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
-.tag{font-family:var(--cond);font-weight:700;letter-spacing:.14em;text-transform:uppercase;font-size:11px;
+.tag{font-family:var(--cond);font-weight:700;letter-spacing:.06em;text-transform:uppercase;font-size:11px;
   color:var(--green-ink);background:var(--green);padding:3px 9px;border-radius:6px}
 .demo-sport{font-family:var(--cond);letter-spacing:.1em;text-transform:uppercase;font-size:12.5px;color:var(--muted)}
 .demo-q{font-family:var(--display);font-weight:700;font-size:22px;line-height:1.2;letter-spacing:-.01em;margin:6px 0 16px}
@@ -156,7 +156,7 @@ h1 i{color:var(--green);font-weight:600}
 .stat:last-child{border-right:0}
 .stat b{display:block;font-family:var(--num);font-weight:800;font-size:clamp(30px,3.4vw,42px);line-height:1;color:#fff;font-variant-numeric:tabular-nums;letter-spacing:-.03em}
 .stat b em{font-style:normal;color:var(--green)}
-.stat>span{font-family:var(--cond);text-transform:uppercase;letter-spacing:.12em;font-size:13px;color:var(--muted)}
+.stat>span{font-family:var(--cond);text-transform:uppercase;letter-spacing:.06em;font-size:13px;color:var(--muted)}
 
 /* ---------- sections ---------- */
 section{padding:96px 0}
@@ -261,7 +261,7 @@ h2 i{color:var(--green)}
 .crow .k{font-family:var(--cond);text-transform:uppercase;letter-spacing:.1em;font-size:14px;font-weight:700;color:var(--muted)}
 .crow .them{color:var(--muted)}
 .crow .us{color:#fff;font-weight:600;background:rgba(34,208,127,.07);border-left:1px solid rgba(34,208,127,.25)}
-.crow.head>div{font-family:var(--cond);text-transform:uppercase;letter-spacing:.12em;font-size:14px;font-weight:700}
+.crow.head>div{font-family:var(--cond);text-transform:uppercase;letter-spacing:.06em;font-size:14px;font-weight:700}
 .crow.head .us{color:var(--green)}
 .crow .x{color:var(--red)} .crow .ok{color:var(--green)}
 .howfree{margin-top:22px;color:var(--muted);font-size:14.5px;text-align:center}
@@ -271,7 +271,7 @@ h2 i{color:var(--green)}
 .receipt{display:grid;grid-template-columns:auto 1fr auto;gap:26px;align-items:center;margin-top:40px;
   background:linear-gradient(90deg,rgba(34,208,127,.12),rgba(34,208,127,.02));border:1px solid rgba(34,208,127,.35);border-radius:22px;padding:26px 30px}
 .receipt .big{font-family:var(--num);font-weight:800;font-variant-numeric:tabular-nums;letter-spacing:-.03em;font-size:clamp(40px,4.6vw,58px);line-height:.95;color:var(--green)}
-.receipt .lbl{font-family:var(--cond);text-transform:uppercase;letter-spacing:.14em;font-size:13px;color:var(--soft)}
+.receipt .lbl{font-family:var(--cond);text-transform:uppercase;letter-spacing:.06em;font-size:13px;color:var(--soft)}
 .receipt p{margin:4px 0 0;color:var(--soft)}
 .receipt .fine{font-size:12.5px;color:var(--muted);margin-top:6px}
 .pillars{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:22px}
@@ -306,7 +306,7 @@ h2 i{color:var(--green)}
 /* promo strip at the top of the page */
 .pickbar{padding:18px 0 4px}
 .pickbar .wrap{display:grid;gap:10px}
-.pickbar-h{margin:0;font-family:var(--cond);font-size:14px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--green)}
+.pickbar-h{margin:0;font-family:var(--cond);font-size:14px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--green)}
 .pickbar .sports{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:0}
 .pickbar .sport{min-width:0}
 @media (max-width:620px){.pickbar{padding-top:12px}.pickbar .sports{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.pickbar .sport{padding:12px}}
