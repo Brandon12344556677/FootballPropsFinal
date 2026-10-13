@@ -109,7 +109,7 @@ window.PS = (function(){
   };
   const helpBtn=(k,label)=>`<button type="button" class="qhelp" data-help="${k}" aria-expanded="false">${label}<span class="qi" aria-hidden="true">?</span></button>`;
   function legend(short){
-    return `<div class="pslegend"><span class="lg-lab">How to read a card</span>${helpBtn('model','Model %')}${helpBtn('last10','Last 10')}${helpBtn('price','Price')}${helpBtn('payout','Payout')}${helpBtn('edge','Edge')}${short?'':helpBtn('range','Range')}</div>`;
+    return `<details class="pslegend"><summary class="lg-lab">How to read a card</summary>${helpBtn('model','Model %')}${helpBtn('last10','Last 10')}${helpBtn('price','Price')}${helpBtn('payout','Payout')}${helpBtn('edge','Edge')}${short?'':helpBtn('range','Range')}</details>`;
   }
   // One legend per page, just above the first real grid of pick cards. Boards render at
   // different times (NFL's leaderboard at once, Value spots after the live scan), so it

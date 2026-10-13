@@ -609,6 +609,7 @@ tr.hit td{background:var(--hit-soft)} tr.miss td{background:var(--miss-soft)}
 .pmdim{color:#aeb9c8;font-size:12.5px}
 .livehead{display:inline-flex;align-items:center;gap:5px}
 .livedot{width:6px;height:6px;border-radius:50%;background:var(--accent);display:inline-block;animation:pmpulse 1.6s ease-in-out infinite}
+details.valrules>summary{cursor:pointer}
 .valrules{background:rgba(34,208,127,.05);border:1px solid rgba(34,208,127,.28);border-radius:12px;padding:13px 16px;margin:2px 0 14px}
 .valrules .vrhead{font-family:var(--dispers);text-transform:uppercase;letter-spacing:.9px;font-weight:700;font-size:13.5px;color:var(--gold);margin-bottom:9px}
 .valrules .vrlist{list-style:none;margin:0;padding:0;display:grid;gap:8px}
@@ -626,8 +627,8 @@ tr.hit td{background:var(--hit-soft)} tr.miss td{background:var(--miss-soft)}
 .panel.collapsed{padding-bottom:14px}
 </style>
 
-<link rel="stylesheet" href="app.css?v=20261012a">
-<script src="app.js?v=20261012e"></script>
+<link rel="stylesheet" href="app.css?v=20261013a">
+<script src="app.js?v=20261013a"></script>
 <script src="/halloween.js?v=20261012a"></script>
 
 <header class="apptop">
@@ -645,15 +646,13 @@ tr.hit td{background:var(--hit-soft)} tr.miss td{background:var(--miss-soft)}
     </div>
   </div>
 </header>
-<div id="psticker" class="ticker" hidden aria-label="Live updates"></div>
 <div class="sportbg sportbg-nhl" aria-hidden="true"></div>
 
 <div class="wrap app">
   <section class="apphero">
-    <span class="eyebrow"><span class="dot"></span>NHL player props · season live</span>
     <h1>Know who <i>clears</i> the line tonight.</h1>
-    <p class="lede">Every NHL skater's and goalie's game log, a calibrated chance for any line, priced against Polymarket and Kalshi — and every pick graded in public.</p>
-    <div class="herostats">
+    <p class="lede">The model's chance for every NHL prop, priced against the market, with every pick graded in public.</p>
+    <div class="herostats" hidden>
       <div><b id="dncount">—</b><span>Players tracked</span></div>
       <div><b id="dnthru">—</b><span>Data through</span></div>
     </div>
@@ -677,20 +676,16 @@ tr.hit td{background:var(--hit-soft)} tr.miss td{background:var(--miss-soft)}
   </div>
 
 <div id="page-week">
-  <div class="panel" id="digestpanel" hidden>
-    <div class="mkthead"><h2>📰 This week</h2><span class="mktmuted" id="digestcap"></span></div>
-    <div id="digestbody"></div>
-  </div>
   <div class="panel" id="valuepanel" hidden>
     <div class="mkthead"><h2>⚡ Value spots<button type="button" class="qhelp hq" data-help="value" aria-expanded="false" aria-label="What are Value spots?"><span class="qi" aria-hidden="true">?</span></button></h2><span class="mktmuted">market gives it 30%+, model is 15+ points better — overs and unders both</span><span class="mktmuted" id="recV"></span></div>
-    <div class="valrules">
-      <div class="vrhead">What counts as a value spot — both rules have to be true</div>
+    <details class="valrules">
+      <summary class="vrhead">What counts as a value spot — both rules have to be true</summary>
       <ol class="vrlist">
         <li><span class="vrnum">1</span><span class="vrtxt"><b>The market gives it at least a 30% chance.</b> The price you'd pay has to be <b>30¢ or more</b>. <span class="vrwhy">This is the rule that keeps penny longshots off the list — a 6¢ ask against an 11% model chance looks like a huge edge in percentage terms and is still a bad bet.</span></span></li>
         <li><span class="vrnum">2</span><span class="vrtxt"><b>Our model puts it at least 15 points higher.</b> <span class="vreg">30¢ ask → needs 45%</span> · <span class="vreg">50¢ → 65%</span> · <span class="vreg">70¢ → 85%</span>. <span class="vrwhy">The gap between the two, in percentage points, is the <b>edge</b> shown in the Polymarket column.</span></span></li>
       </ol>
       <div class="vrfoot">Both rules are tested against the <b>cheaper of the Polymarket and Kalshi prices for the side the model takes</b> that has at least <b>$25</b> offered at it (or within 2¢) — the price you'd actually pay; a thinner price would move when you bet — and a prop also needs <b>6+ effective games</b> of history behind it. Everything clearing both rules is listed, ranked by that edge. Prices come from Polymarket's NHL player-prop markets, so this list stays empty until those are posted. Props <b>waiting on injury news</b> stay off this list and Top 25 Surest: when the player, or a regular teammate at his position (forwards, defensemen, goalies), is day-to-day on ESPN's injury report — until he's ruled out (then his teammates' props come back) or cleared.</div>
-    </div>
+    </details>
     <div id="valuebody"></div>
   </div>
   <div class="panel" id="edgepanel">
@@ -701,10 +696,6 @@ tr.hit td{background:var(--hit-soft)} tr.miss td{background:var(--miss-soft)}
       <span class="mktmuted" id="recT"></span>
     </div>
     <div id="edgebody"></div>
-  </div>
-  <div class="panel" id="lbpanel">
-    <div class="mkthead"><h2>🔥 Hit streak leaderboard</h2><span class="mktmuted">longest active over streaks — consecutive games clearing the site's realistic line · tap one to open it</span></div>
-    <div id="lbbody"></div>
   </div>
 </div>
 
@@ -771,6 +762,10 @@ tr.hit td{background:var(--hit-soft)} tr.miss td{background:var(--miss-soft)}
 </div>
 
 <div id="page-tools" hidden>
+  <div class="panel" id="lbpanel">
+    <div class="mkthead"><h2>🔥 Hit streak leaderboard</h2><span class="mktmuted">longest active over streaks — consecutive games clearing the site's realistic line · tap one to open it</span></div>
+    <div id="lbbody"></div>
+  </div>
   <div class="panel" id="betspanel">
     <div class="mkthead"><h2>📈 My bets</h2><span class="mktmuted">props you tracked — graded from the box score, saved on this device</span></div>
     <div id="betsbody"></div>
@@ -816,6 +811,16 @@ tr.hit td{background:var(--hit-soft)} tr.miss td{background:var(--miss-soft)}
     <div id="slipbody"></div>
   </div>
 
+  <div class="panel" id="feedbackpanel">
+    <div class="mkthead"><h2>💡 Suggest a feature</h2></div>
+    <p class="mktnote">Got an idea for something we should add to the NHL side? Send it our way — it goes straight to the team.</p>
+    <textarea id="fbtext" class="fbtext" rows="3" placeholder="What would you like us to add?"></textarea>
+    <label style="display:flex;gap:8px;align-items:flex-start;margin:10px 0 4px;font-size:13px;color:var(--muted);cursor:pointer">
+      <input type="checkbox" id="fbconsent" style="margin-top:3px;flex:none">
+      <span>I understand this opens my own email app and sends my message and email address to Prop Streak Lab so we can handle my request. See the <a href="privacy.html">Privacy Policy</a>.</span>
+    </label>
+    <div class="fbrow"><button id="fbsend" class="btn" type="button">Send suggestion</button><span class="mktmuted" id="fbnote"></span></div>
+  </div>
 </div>
 
 <div id="tab-picks" hidden>
@@ -868,16 +873,6 @@ tr.hit td{background:var(--hit-soft)} tr.miss td{background:var(--miss-soft)}
 </div>
 
   <!-- Outside the tabs (like the NFL page), so it shows at the bottom of every tab. -->
-  <div class="panel" id="feedbackpanel">
-    <div class="mkthead"><h2>💡 Suggest a feature</h2></div>
-    <p class="mktnote">Got an idea for something we should add to the NHL side? Send it our way — it goes straight to the team.</p>
-    <textarea id="fbtext" class="fbtext" rows="3" placeholder="What would you like us to add?"></textarea>
-    <label style="display:flex;gap:8px;align-items:flex-start;margin:10px 0 4px;font-size:13px;color:var(--muted);cursor:pointer">
-      <input type="checkbox" id="fbconsent" style="margin-top:3px;flex:none">
-      <span>I understand this opens my own email app and sends my message and email address to Prop Streak Lab so we can handle my request. See the <a href="privacy.html">Privacy Policy</a>.</span>
-    </label>
-    <div class="fbrow"><button id="fbsend" class="btn" type="button">Send suggestion</button><span class="mktmuted" id="fbnote"></span></div>
-  </div>
 
   <div id="socialbar" class="socialbar" hidden>
     <span class="socialtag">Follow us</span>

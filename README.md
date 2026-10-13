@@ -84,7 +84,7 @@ finished games, records the upcoming picks with their prices, and redeploys the 
   quietly keeping unders off the list. On a live board it roughly doubled the list and
   took it from all-overs to about half unders. `build.py` prices its recorded picks
   the same way (see below), so Past picks and the board agree.
-- **Hit streak leaderboard** — longest active over streaks, now alongside the
+- **Hit streak leaderboard** (Tools tab) — longest active over streaks, now alongside the
   model's chance that the streak extends and the live Polymarket price for it.
 
 The **Polymarket** column on those three boards reads Polymarket US, the exchange
@@ -128,7 +128,7 @@ Put your referral link in `url`. Leave it `""` to hide the banner.
 | `slate.json` | This week's Polymarket player-prop events, used by the board scan. |
 | `picks.json` | Every recorded pick, live and backtest, with grades. Read by the Past picks tab. |
 | `build_today.py` | Runs after the four builders and writes `today.json` from their picks and season records, plus `live` (every Value and Top 25 pick in today's games, which the home page's "Live now" section follows from ESPN's live box scores, with your tracked bets) and three agent feeds: `fast` (featured props whose price moved 10¢+ in the last hour, from snapshots in `fast_hist.json`; shown on the home page and in the board's pick details), `flags` (featured picks whose player is on an injury report or missing from a posted lineup) and `promo` (today's Value spots against a usual day), both for the team dashboard. Standard library only; never fails the deploy. |
-| `today.json` | The home page's cross-sport **Today** feed (the best upcoming value spots, at most 3 per sport up top, each linking to its prop) and the season records its ticker leads with. |
+| `today.json` | The home page's cross-sport **Today** feed (the best upcoming value spots, at most 3 per sport up top, each linking to its prop) and the season records on the sport tiles. |
 | `botd.py` | **Pick of the Day** for the home page (renamed from "Bet of the Day", its Lock now "Safe Pick", for Meta ad review), run by `build_today.py`: a **Safe Pick** (`lock` in the data) (Polymarket price 90–96¢ and a model chance of 90%+: 135 of 138 graded picks like that hit) and a **Value Shot** (price 30–50¢, so 2x or more, and a model chance of 70–80%), from every sport's upcoming picks. Picked from 11 AM ET, never swapped once posted, "No bet today" if nothing qualifies by 7:30 PM ET. Skips players the news flags (injury status, limited practice, not in a posted lineup) and props with under 6 effective games. Graded from each sport's own picks file; a DNP is a void. |
 | `botd.json` | Every Bet of the Day ever posted (that's the record), its results, the running record per slot, and how picks inside each slot's price/chance window have done on the whole graded record (the "picks like this" rate the home page quotes). |
 | `post_daily.py` | Once a day, posts yesterday's Value results and today's best value (with links) to Discord and/or Telegram, and emails it (with Bet of the Day) to the daily picks list through Buttondown (`BUTTONDOWN_API_KEY`). Needs the secrets below; does nothing without them. |
@@ -138,7 +138,7 @@ Put your referral link in `url`. Leave it `""` to hide the banner.
 | `test_botd.py` | Unit tests for `botd.py`: the slot rules, the news filter, posting at 11 AM ET without ever swapping, closing empty days, grading and the record: `python -m unittest test_botd`. |
 | `methodology.html` | "How the model works" — the public write-up of the model, the matchup adjustments, calibration, the list rules and how picks are graded. Linked from every footer and the trust line under each hero. |
 | `build_players.py` → `players/` | One static page per most-bet player (up to 60 per sport): title, description and share preview, this week's props with model chance, price, edge and call, the last 10 games, and a link into the full model; plus `players/index.html`. Rebuilt once a day (`--force` rebuilds now); the pages are re-added to `sitemap.xml` every run, since `build.py` rewrites it. |
-| `app.js` / `app.css` | Shared look and behavior for every page: fonts (Archivo headlines, Inter body and numbers), colors, icons (Lucide, swapped in for emoji at runtime), the verdict card, pick-details sheet, one-time 18+ check, explainers, share links, ticker and trust line. |
+| `app.js` / `app.css` | Shared look and behavior for every page: fonts (Archivo headlines, Inter body and numbers), colors, icons (Lucide, swapped in for emoji at runtime), the verdict card, pick-details sheet, one-time 18+ check, explainers, share links, ticker (no page shows it since Oct 13, 2026) and trust line. |
 | `fonts/` | Self-hosted fonts (Barlow Condensed for labels, Archivo, Inter), with their SIL Open Font License files. |
 | `LICENSE-lucide-icons.txt` | License notice for the Lucide icon shapes bundled in `app.js`. |
 | `.github/workflows/update.yml` | The update job: two update passes 10 minutes apart per run, and each run starts the next when it ends, so the site updates about every 10 minutes even when GitHub's scheduler stalls. The 20-minute schedule restarts the chain if a run is ever lost. |

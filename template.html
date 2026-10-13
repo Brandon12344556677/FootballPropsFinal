@@ -600,6 +600,7 @@ table td,table th,thead th,tbody td,.edgetbl td,.edgetbl th,.caltbl td,.caltbl t
 .livedot{width:6px;height:6px;border-radius:50%;background:var(--accent);display:inline-block;animation:pmpulse 1.6s ease-in-out infinite}
 
 /* ---- what counts as a value spot: the rules, stated on the panel ---- */
+details.valrules>summary{cursor:pointer}
 .valrules{background:rgba(34,208,127,.05);border:1px solid rgba(34,208,127,.28);border-radius:12px;
   padding:13px 16px;margin:2px 0 14px}
 .valrules .vrhead{font-family:var(--dispers);text-transform:uppercase;letter-spacing:.9px;font-weight:700;
@@ -617,8 +618,8 @@ table td,table th,thead th,tbody td,.edgetbl td,.edgetbl th,.caltbl td,.caltbl t
 .valrules .vrfoot b{color:#fff}
 </style>
 
-<link rel="stylesheet" href="app.css?v=20261012a">
-<script src="app.js?v=20261012e"></script>
+<link rel="stylesheet" href="app.css?v=20261013a">
+<script src="app.js?v=20261013a"></script>
 <script src="/halloween.js?v=20261012a"></script>
 
 <header class="apptop">
@@ -636,15 +637,13 @@ table td,table th,thead th,tbody td,.edgetbl td,.edgetbl th,.caltbl td,.caltbl t
     </div>
   </div>
 </header>
-<div id="psticker" class="ticker" hidden aria-label="Live updates"></div>
 <div class="sportbg sportbg-nfl" aria-hidden="true"></div>
 
 <div class="wrap app">
   <section class="apphero">
-    <span class="eyebrow"><span class="dot"></span>NFL player props · live Polymarket &amp; Kalshi prices</span>
     <h1>Know who <i>clears</i> the line this week.</h1>
-    <p class="lede">Every NFL player's game log, a calibrated chance for any line — adjusted for the Vegas spread and total and the opponent's defense — priced live against Polymarket and Kalshi, and every pick graded in public.</p>
-    <div class="herostats">
+    <p class="lede">The model's chance for every NFL prop, priced against the market, with every pick graded in public.</p>
+    <div class="herostats" hidden>
       <div><b id="dncount">—</b><span>Players tracked</span></div>
       <div><b id="dnthru">—</b><span>Data through</span></div>
       <div id="dnweekbox" hidden><b id="dnweek">—</b><span>On deck</span></div>
@@ -669,21 +668,17 @@ table td,table th,thead th,tbody td,.edgetbl td,.edgetbl th,.caltbl td,.caltbl t
   </div>
 
 <div id="page-week">
-  <div class="panel" id="digestpanel" hidden>
-    <div class="mkthead"><h2>📰 This week</h2><span class="mktmuted" id="digestcap"></span></div>
-    <div id="digestbody"></div>
-  </div>
 
   <div class="panel" id="valuepanel">
     <div class="mkthead"><h2>⚡ Value spots<button type="button" class="qhelp hq" data-help="value" aria-expanded="false" aria-label="What are Value spots?"><span class="qi" aria-hidden="true">?</span></button></h2><span class="mktmuted">market gives it 30%+, model is 15+ points better — overs and unders both</span><span class="mktmuted" id="recV"></span></div>
-    <div class="valrules">
-      <div class="vrhead">What counts as a value spot — both rules have to be true</div>
+    <details class="valrules">
+      <summary class="vrhead">What counts as a value spot — both rules have to be true</summary>
       <ol class="vrlist">
         <li><span class="vrnum">1</span><span class="vrtxt"><b>The market gives it at least a 30% chance.</b> The price you'd pay has to be <b>30¢ or more</b>. <span class="vrwhy">This is the rule that keeps penny longshots off the list — a 6¢ ask against an 11% model chance looks like a huge edge in percentage terms and is still a bad bet.</span></span></li>
         <li><span class="vrnum">2</span><span class="vrtxt"><b>Our model puts it 15 to 20 points higher.</b> <span class="vreg">30¢ ask → needs 45–50%</span> · <span class="vreg">50¢ → 65–70%</span> · <span class="vreg">70¢ → 85–90%</span>. <span class="vrwhy">Not more: on the record so far, NFL picks 15–20 points up hit 56% while bigger gaps hit 42% — a gap that big has more often been the model missing a role change the market already knew. So if any line of a prop is more than 20 points up, that whole prop is left off.</span> <span class="vrwhy">The gap between the two, in percentage points, is the <b>edge</b> shown in the Best price column.</span></span></li>
       </ol>
       <div class="vrfoot">Both rules are tested against the <b>best price in the row</b> — the cheaper of the live Polymarket US price and Kalshi's, the price you'd actually pay — so the edge shown is always the edge it qualified on, and a prop drops off the list as soon as the price moves against it. A price only counts when at least <b>$25</b> is offered at it (or within 2¢) — in a near-empty market your bet would move the price — so a thin price is skipped for the other exchange's, or the prop is left off. Polymarket's global book (shown as <span class="pmdim">board 46¢</span>) doesn't count: US users can't trade it. One line per player-prop (the rung with the biggest edge). Both rules are checked on the <b>over</b> and the <b>under</b> of every market separately, so either side can qualify, and a prop also needs <b>6+ effective games</b> of history behind it. Everything clearing both rules is listed — no fixed top 25 — ranked by that edge, and the list re-checks itself about once a minute. Props <b>waiting on injury news</b> stay off this list and Top 25 Surest: when the player, or a teammate whose snaps decide his role (a quarterback for the whole passing game), is questionable or doubtful — until ESPN shows him active or out (on game day, the inactives 90 minutes before kickoff). Ruled out: his teammates' props come back, with the model's numbers.</div>
-    </div>
+    </details>
     <div id="valuebody"><p class="mktnote">The board scan fills this in. <span class="mktmuted">Needs the hosted website (the Polymarket API can't be reached from a local file).</span></p></div>
   </div>
 
@@ -697,10 +692,6 @@ table td,table th,thead th,tbody td,.edgetbl td,.edgetbl th,.caltbl td,.caltbl t
     <div id="edgebody"><p class="mktnote">Scans every player prop on this week's Polymarket board and shows the <b>25 highest model chances</b> you can bet (a live price with $25+ offered near it), each next to its <b>best price on Polymarket US or Kalshi</b> — the surest plays by the numbers, regardless of payout. Especially handy if you're holding <b>credits you can't withdraw without trading</b>: these are the props most likely to resolve as wins, so clearing that requirement lets you cash out your balance. Each pick is recorded before kickoff and graded in the <b>Past picks</b> tab. <span class="mktmuted">Needs the hosted website (the Polymarket API can't be reached from a local file).</span></p></div>
   </div>
 
-  <div class="panel" id="lbpanel">
-    <div class="mkthead"><h2>🔥 Hit streak leaderboard</h2><span class="mktmuted">longest active over streaks — with the model's chance and the live Polymarket price · tap one to open it</span></div>
-    <div id="lbbody"></div>
-  </div>
   <div class="panel" id="sharepanel" hidden>
     <div class="mkthead"><h2>📸 Shareable card</h2><button id="sharemake" class="btn" type="button">Make this week's image</button><span class="mktmuted" id="sharecap"></span></div>
     <div id="sharebox"><p class="mktnote">Generate a branded image of this week's top model picks — sized for Instagram, TikTok, or X. One tap, then download and post.</p></div>
@@ -812,6 +803,10 @@ table td,table th,thead th,tbody td,.edgetbl td,.edgetbl th,.caltbl td,.caltbl t
 </div><!-- /page-player -->
 
 <div id="page-tools" hidden>
+  <div class="panel" id="lbpanel">
+    <div class="mkthead"><h2>🔥 Hit streak leaderboard</h2><span class="mktmuted">longest active over streaks — with the model's chance and the live Polymarket price · tap one to open it</span></div>
+    <div id="lbbody"></div>
+  </div>
   <div class="panel" id="betspanel">
     <div class="mkthead"><h2>📈 My bets</h2><span class="mktmuted">props you tracked — graded from the box score, saved on this device</span></div>
     <div id="betsbody"></div>
@@ -861,6 +856,16 @@ table td,table th,thead th,tbody td,.edgetbl td,.edgetbl th,.caltbl td,.caltbl t
     <p class="mktnote">Best-effort OCR of a DraftKings / FanDuel / Polymarket-style slip. Each leg's player, prop, side and line are matched to the model and graded, and same-game legs are flagged as correlated. The image is read in your browser and never uploaded.</p>
     <div id="slipstatus" class="mktmuted" style="margin:4px"></div>
     <div id="slipbody"></div>
+  </div>
+  <div class="panel" id="feedbackpanel">
+    <div class="mkthead"><h2>💡 Suggest a feature</h2></div>
+    <p class="mktnote">Got an idea for something we should add or build into the site? Send it our way — it goes straight to the team.</p>
+    <textarea id="fbtext" class="fbtext" rows="3" placeholder="What would you like us to add?"></textarea>
+    <label style="display:flex;gap:8px;align-items:flex-start;margin:10px 0 4px;font-size:13px;color:var(--muted);cursor:pointer">
+      <input type="checkbox" id="fbconsent" style="margin-top:3px;flex:none">
+      <span>I understand this opens my own email app and sends my message and email address to Prop Streak Lab so we can handle my request. See the <a href="privacy.html">Privacy Policy</a>.</span>
+    </label>
+    <div class="fbrow"><button id="fbsend" class="btn" type="button">Send suggestion</button><span class="mktmuted" id="fbnote"></span></div>
   </div>
 </div><!-- /page-tools -->
 
@@ -912,16 +917,6 @@ table td,table th,thead th,tbody td,.edgetbl td,.edgetbl th,.caltbl td,.caltbl t
   </div>
 </div><!-- /tab-picks -->
 
-  <div class="panel" id="feedbackpanel">
-    <div class="mkthead"><h2>💡 Suggest a feature</h2></div>
-    <p class="mktnote">Got an idea for something we should add or build into the site? Send it our way — it goes straight to the team.</p>
-    <textarea id="fbtext" class="fbtext" rows="3" placeholder="What would you like us to add?"></textarea>
-    <label style="display:flex;gap:8px;align-items:flex-start;margin:10px 0 4px;font-size:13px;color:var(--muted);cursor:pointer">
-      <input type="checkbox" id="fbconsent" style="margin-top:3px;flex:none">
-      <span>I understand this opens my own email app and sends my message and email address to Prop Streak Lab so we can handle my request. See the <a href="privacy.html">Privacy Policy</a>.</span>
-    </label>
-    <div class="fbrow"><button id="fbsend" class="btn" type="button">Send suggestion</button><span class="mktmuted" id="fbnote"></span></div>
-  </div>
 
   <div id="socialbar" class="socialbar" hidden>
     <span class="socialtag">Follow us</span>
