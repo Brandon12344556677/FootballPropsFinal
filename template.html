@@ -620,9 +620,9 @@ details.valrules>summary{cursor:pointer}
 .datanote[open] summary{margin-bottom:8px}
 </style>
 
-<link rel="stylesheet" href="app.css?v=20261013c">
-<script src="app.js?v=20261013e"></script>
-<script src="/halloween.js?v=20261012a"></script>
+<link rel="stylesheet" href="app.css?v=20261013g">
+<script src="app.js?v=20261013g"></script>
+<script src="/halloween.js?v=20261013a"></script>
 
 <header class="apptop">
   <div class="apptop-in">
@@ -1126,7 +1126,7 @@ if(WEEK.week){ $('dnweek').textContent = 'Week '+WEEK.week; $('dnweekbox').hidde
 (function renderRecords(){ const R=DB.record||{};
   ['T','V'].forEach(k=>{ const r=R[k], el=$('rec'+k); if(!el) return;
     if(!r||!r.n){ el.innerHTML='· live record: no graded picks yet — <a href="#picks" onclick="showTab(\'picks\');return false;">Past picks</a>'; return; }
-    el.innerHTML=`· <b>live record ${r.hit}/${r.n} (${Math.round(100*r.hit/r.n)}%)</b> — <a href="#picks" onclick="showTab(\'picks\');return false;">details</a>`+(r.clvN? ` · price moved its way on <b>${r.clvUp} of ${r.clvN}</b> (avg ${r.clv>=0?'+':''}${r.clv}¢)<button type="button" class="qhelp hq" data-help="clv" aria-expanded="false" aria-label="What is closing line value?"><span class="qi" aria-hidden="true">?</span></button>` : ''); }); })();
+    el.innerHTML=`· <b>live record ${r.hit}/${r.n} (${Math.round(100*r.hit/r.n)}%)</b> — <a href="#picks" onclick="showTab(\'picks\');return false;">details</a>`+(r.clvN? `<span class="clvbit"> · price moved its way on <b>${r.clvUp} of ${r.clvN}</b> (avg ${r.clv>=0?'+':''}${r.clv}¢)<button type="button" class="qhelp hq" data-help="clv" aria-expanded="false" aria-label="What is closing line value?"><span class="qi" aria-hidden="true">?</span></button></span>` : ''); }); })();
 (function renderRef(){ const b=$('refbanner');
   b.hidden=true;   // the top Polymarket banner is off (each pick links to both exchanges)
   const bk=$('refbannerk'); if(bk) bk.hidden=true;   // and the Kalshi one
@@ -1933,7 +1933,7 @@ function liveCell(d){
   const signed = v => (v>=0?'+':'\u2212')+Math.abs(Math.round(v*100));
   const edge = d.prob==null? null : d.prob-k;
   const cls = edge==null? '' : edge>=0.04? 'pos' : edge<=-0.04? 'neg' : '';
-  const sub = edge==null? (1/k).toFixed(2)+'\u00d7' : signed(edge)+' edge \u00b7 '+(1/k).toFixed(2)+'\u00d7';
+  const sub = edge==null? (1/k).toFixed(2)+'\u00d7' : '<span class="edgebit">'+signed(edge)+' edge \u00b7 </span>'+(1/k).toFixed(2)+'\u00d7';
   const open = (DB.open||{})[d.mk+'|'+d.side];
   return '<span class="pmpx '+cls+'">'+Math.round(k*100)+'\u00a2</span> <span class="rng">'+sub+'</span>'+(open!=null? PS.pxMove(open/100, k) : '')+PS.venues(pm, k, 'K', pmThin, kThin);
 }
@@ -1943,7 +1943,7 @@ function pmCell(d){
   // books disagree, and with its own edge when Polymarket US has no market and the
   // board ask is therefore the price the row was judged on.
   const cents = d.ask==null? '' : Math.round(d.ask*100)+'\u00a2';
-  const boardBare = d.ask==null? '' : ' <span class="pmdim" title="the ask on the global Polymarket book, which quotes separately from Polymarket US">board '+cents+'</span>';
+  const boardBare = d.ask==null? '' : ' <span class="pmdim board" title="the ask on the global Polymarket book, which quotes separately from Polymarket US">board '+cents+'</span>';
   const boardFull = d.ask==null? '' : ' <span class="pmdim" title="the ask on the global Polymarket book \u2014 with no Polymarket US market, this is the price the rules were tested on">board '+cents+(d.prob==null? '' : ' \u00b7 '+signed(d.prob-d.ask)+' edge')+'</span>';
   const L=livePx.get(d.mk);
   if(!L) return '<span class="pmdim">\u2026</span>'+boardBare;
@@ -1962,7 +1962,7 @@ function pmCell(d){
   const edge = d.prob==null? null : d.prob-px;
   const cls = edge==null? '' : edge>=0.04? 'pos' : edge<=-0.04? 'neg' : '';
   const off = '';   // an off-line market never reaches here
-  const sub = edge==null? (1/px).toFixed(2)+'\u00d7' : signed(edge)+' edge \u00b7 '+(1/px).toFixed(2)+'\u00d7';
+  const sub = edge==null? (1/px).toFixed(2)+'\u00d7' : '<span class="edgebit">'+signed(edge)+' edge \u00b7 </span>'+(1/px).toFixed(2)+'\u00d7';
   const gap = (d.ask!=null && Math.abs(d.ask-px)>=0.03)? boardBare : '';
   const open = (DB.open||{})[d.mk+'|'+d.side];   // cents, the price the pick was first recorded at
   return '<span class="pmpx '+cls+'">'+Math.round(px*100)+'\u00a2</span>'+off+' <span class="rng">'+sub+'</span>'+gap+(open!=null? PS.pxMove(open/100, px) : '');
@@ -2215,7 +2215,7 @@ function pickTable(rows, opts){
     const tier=r.prob>=0.9?'hi':r.prob>=0.7?'mid':'lo', g=r.game||{};
     const vs=r.team===g.home? 'vs '+esc(g.away) : r.team===g.away? '@ '+esc(g.home) : esc(g.away)+' @ '+esc(g.home);
     const pv=Math.round(r.prob*100);
-    h+=`<article class="pickcard ${tier}${r.locked?' locked':''}" style="${PS.teamVars('nfl', r.team)}">`+
+    h+=`<article class="pickcard ${tier}${r.locked?' locked':''}" style="${PS.teamVars('nfl', r.team)}">`+(r.locked? PS.lockRibbon(r.lk) : '')+
       `<div class="pc-top"><span class="av">${esc(initials(r.name))}</span>`+
         `<div class="pc-who"><b>${esc(r.name)}</b><span><span class="tbadge">${esc(r.team)}</span>${vs}</span></div>`+
         `<div class="pc-prob"><div class="ring" style="--p:${pv}"><b>${pv}<small>%</small></b></div><span title="80% range ${Math.round(r.lo*100)}–${Math.round(r.hi*100)}%, from ${r.n} games">chance</span></div></div>`+

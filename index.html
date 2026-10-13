@@ -35,9 +35,9 @@
 <link rel="manifest" href="/site.webmanifest">
 <script data-goatcounter="https://propstreaklive.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
 <link rel="stylesheet" href="fonts.css">
-<link rel="stylesheet" href="app.css?v=20261013c">
-<script src="app.js?v=20261013e"></script>
-<script src="/halloween.js?v=20261012a"></script>
+<link rel="stylesheet" href="app.css?v=20261013g">
+<script src="app.js?v=20261013g"></script>
+<script src="/halloween.js?v=20261013a"></script>
 <style>
 :root{
   color-scheme:dark;
@@ -392,6 +392,20 @@ h2 i{color:var(--green)}
 .mv-stat small{color:var(--muted);font-size:12px}
 .mv-bet{grid-column:1/-1;font-size:14px;color:var(--soft)}
 @media (max-width:760px){#move{padding:44px 0 0}.movegrid{grid-template-columns:1fr}}
+.movecol:not(.all) .mvlist > .mv:nth-child(n+4){display:none}
+.mvmore{justify-self:start;border:0;background:none;padding:6px 2px;color:var(--green);font:600 14px var(--body);cursor:pointer}
+.mvtabs{display:none}
+@media (max-width:760px){
+  .mvtabs:not([hidden]){display:flex;gap:6px;margin-top:18px;overflow-x:auto;scrollbar-width:none}
+  .mvtabs button{flex:none;border:1px solid var(--line);background:transparent;color:var(--soft);border-radius:999px;padding:8px 14px;font:600 13.5px var(--body);cursor:pointer;white-space:nowrap}
+  .mvtabs button[aria-selected="true"]{background:var(--green);border-color:var(--green);color:var(--green-ink)}
+  .mvtabs:not([hidden]) ~ .movegrid{margin-top:12px}
+  .mvtabs:not([hidden]) ~ .movegrid .movecol:not(.on){display:none}
+  .mvtabs:not([hidden]) ~ .movegrid .movecol h3{display:none}
+  #todaygrid:not(.all) > .pickcard:nth-child(n+4){display:none}
+  .seeall:not([hidden]){display:flex;justify-content:center;width:100%;margin-top:12px}
+}
+@media (min-width:761px){.seeall{display:none!important}}
 #calib{padding:64px 0 8px}
 .calib{display:grid;gap:12px;margin-top:26px;max-width:780px}
 .cr{display:grid;grid-template-columns:78px minmax(0,1fr) 220px;align-items:center;gap:14px}
@@ -525,6 +539,29 @@ footer .fine a{color:#8394ab}
     </div>
   </section>
 
+  <!-- PICK OF THE DAY: a Safe Pick and a Value Shot, from botd.json (botd.py): picked once a day, never swapped, graded in public -->
+  <section id="botd" aria-labelledby="botd-h" hidden>
+    <div class="wrap">
+      <p class="kicker" id="botdkick">Pick of the Day</p>
+      <h2 id="botd-h">Today's <i>Safe Pick</i> &amp; <i>Value Shot</i>.</h2>
+      <p class="sub">One sure pick and one bigger payout, picked once a day from all four sports and graded in public.</p>
+      <div class="app botdgrid"><div class="botdslot lock" id="botd-lock"></div><div class="botdslot" id="botd-value"></div></div>
+      <p class="todaynote" id="botdnote"></p>
+    </div>
+  </section>
+
+  <!-- TODAY: the best bets across all four sports, from today.json (rebuilt hourly) -->
+  <section id="today" aria-labelledby="today-h" hidden>
+    <div class="wrap">
+      <p class="kicker">Right now · all four sports</p>
+      <h2 id="today-h">Today's best <i>value</i>.</h2>
+      <p class="sub">Where the model's chance beats the market price (the cheaper of Polymarket and Kalshi) by the most — NFL, NBA, NHL and MLB in one feed. Tap a pick for the game log, the live price and the full breakdown.</p>
+      <div class="app todayfeed"><div class="pickgrid" id="todaygrid"></div><button type="button" class="btn ghost seeall" id="todayall" hidden></button><div id="todaylock"></div></div>
+      <p class="todaynote" id="todaynote"></p>
+      <p class="todaynote"><a href="games/">Browse every game's props →</a> · <a href="best/">Today's best props by sport →</a></p>
+    </div>
+  </section>
+
   <!-- DAILY EMAIL: sign-up for the daily picks email (Buttondown; post_daily.py sends it). Hidden until NEWSLETTER is set below. -->
   <section id="email" aria-labelledby="email-h" hidden>
     <div class="wrap">
@@ -545,29 +582,6 @@ footer .fine a{color:#8394ab}
     </div>
   </section>
 
-  <!-- PICK OF THE DAY: a Safe Pick and a Value Shot, from botd.json (botd.py): picked once a day, never swapped, graded in public -->
-  <section id="botd" aria-labelledby="botd-h" hidden>
-    <div class="wrap">
-      <p class="kicker" id="botdkick">Pick of the Day</p>
-      <h2 id="botd-h">Today's <i>Safe Pick</i> &amp; <i>Value Shot</i>.</h2>
-      <p class="sub">One sure pick and one bigger payout, picked once a day from all four sports and graded in public.</p>
-      <div class="app botdgrid"><div class="botdslot lock" id="botd-lock"></div><div class="botdslot" id="botd-value"></div></div>
-      <p class="todaynote" id="botdnote"></p>
-    </div>
-  </section>
-
-  <!-- TODAY: the best bets across all four sports, from today.json (rebuilt hourly) -->
-  <section id="today" aria-labelledby="today-h" hidden>
-    <div class="wrap">
-      <p class="kicker">Right now · all four sports</p>
-      <h2 id="today-h">Today's best <i>value</i>.</h2>
-      <p class="sub">Where the model's chance beats the market price (the cheaper of Polymarket and Kalshi) by the most — NFL, NBA, NHL and MLB in one feed. Tap a pick for the game log, the live price and the full breakdown.</p>
-      <div class="app todayfeed"><div class="pickgrid" id="todaygrid"></div><div id="todaylock"></div></div>
-      <p class="todaynote" id="todaynote"></p>
-      <p class="todaynote"><a href="games/">Browse every game's props →</a> · <a href="best/">Today's best props by sport →</a></p>
-    </div>
-  </section>
-
   <!-- LIVE NOW: today's Value and Top 25 picks (today.json "live") and your tracked bets, followed through the
        games from ESPN's live box scores in the browser (app.js PSLive) -->
   <section id="live" aria-labelledby="live-h" hidden>
@@ -585,9 +599,10 @@ footer .fine a{color:#8394ab}
     <div class="wrap">
       <p class="kicker">On the move</p>
       <h2 id="move-h">Hot streaks and <i>moving</i> markets.</h2>
+      <div class="mvtabs" role="tablist" aria-label="Lists" hidden></div>
       <div class="app movegrid">
         <div class="movecol" id="mvstreak"><h3>Hot streaks</h3><p class="mvnote">Cleared this exact line in each of their last games, and it still pays.</p><div class="mvlist"></div></div>
-        <div class="movecol" id="mvmove"><h3>Market moving our way</h3><p class="mvnote">The price has risen since we recorded the pick: the market came around to it.</p><div class="mvlist"></div></div>
+        <div class="movecol" id="mvmove"><h3>Prices moving toward our pick</h3><p class="mvnote">The price has risen since we recorded the pick: the market came around to it.</p><div class="mvlist"></div></div>
         <div class="movecol" id="mvfast" hidden><h3>Moving fast</h3><p class="mvnote">The price jumped 10¢ or more in the last hour, often a sign of injury or lineup news. Check before you bet.</p><div class="mvlist"></div></div>
       </div>
     </div>
@@ -694,10 +709,10 @@ const reduce = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)
     const fair=Math.round(100*(FAIRW*p.prob+(1-FAIRW)*p.price));
     const kind=p.kind==='value'? `<span class="pc-kind">⚡ Value · fair ${fair}%</span>`
                                : `<span class="pc-kind safe">🎯 Safe bet that pays</span>`;
-    return `<a class="pickcard ${tier}${p.lk?' locked':''}" href="${esc(href)}" style="${PS.teamVars(p.sport, p.team)}">`+
+    return `<a class="pickcard ${tier}${p.lk?' locked':''}" href="${esc(href)}" style="${PS.teamVars(p.sport, p.team)}">`+(p.lk? PS.lockRibbon(p.lk) : '')+
       `<div class="pc-top"><span class="av">${esc(initials(p.player))}</span>`+
         `<div class="pc-who"><b>${esc(p.player)}</b><span><span class="tbadge">${esc(p.team)}</span>vs ${esc(p.opp)}</span><span>${SPORT[p.sport]||''} · <span class="cd" data-cd="${esc(p.start)}">${PS.until(Date.parse(p.start))}</span></span>${p.lk? PS.lockBadge(p.lk) : ''}</div>`+
-        `<div class="pc-prob"><div class="ring" style="--p:${pv}"><b>${pv}<small>%</small></b></div><span>model</span></div></div>`+
+        `<div class="pc-prob"><div class="ring" style="--p:${pv}"><b>${pv}<small>%</small></b></div><span>chance</span></div></div>`+
       `<div class="pc-bet"><span class="leantag ${esc(p.side)}">${esc(p.side)}</span><b>${esc(p.line)}</b><span>${esc(p.statText)}</span>${PS.spark(p.l10, p.line, p.side)}</div>`+
       `<div class="pc-foot"><span class="pc-price"><span class="pmpx">${Math.round(p.price*100)}¢</span> <span class="rng">${(1/p.price).toFixed(2)}× payout</span>${PS.venues(p.pp, p.kp, p.vn)}</span>${kind}</div>`+
     `</a>`;
@@ -712,6 +727,10 @@ const reduce = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)
     const anyValue=picks.some(p=>p.kind==='value');
     document.getElementById('today-h').innerHTML= anyValue? 'Today\'s best <i>value</i>.' : 'Today\'s <i>surest</i> bets that pay.';
     grid.innerHTML=picks.map(card).join('');
+    // phones show the first 3; "See all" opens the rest
+    const all=document.getElementById('todayall'); grid.classList.remove('all');
+    all.hidden=picks.length<=3; all.textContent=`See all ${picks.length} ↓`;
+    all.onclick=()=>{ grid.classList.add('all'); all.hidden=true; };
     document.getElementById('todaylock').innerHTML=picks.some(p=>p.lk)? PS.lockNote() : '';
     const at=new Date(t.gen); const when=isFinite(at)? at.toLocaleTimeString([], {hour:'numeric', minute:'2-digit'}) : 'the last update';
     document.getElementById('todaynote').textContent=`Prices as of ${when} — tap a pick for the live price. Picks leave this list when their game starts. Research, not betting advice.`;
@@ -739,7 +758,7 @@ const reduce = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)
     return `<a class="pickcard ${tier}" href="${esc(href)}" style="${PS.teamVars(p.sport, p.team)}">`+
       `<div class="pc-top"><span class="av">${esc(initials(p.player))}</span>`+
         `<div class="pc-who"><b>${esc(p.player)}</b><span><span class="tbadge">${esc(p.team)}</span>vs ${esc(p.opp)}</span><span>${SPORT[p.sport]||''} · <span class="cd" data-cd="${esc(p.start)}">${PS.until(Date.parse(p.start))}</span></span></div>`+
-        `<div class="pc-prob"><div class="ring" style="--p:${pv}"><b>${pv}<small>%</small></b></div><span>model</span></div></div>`+
+        `<div class="pc-prob"><div class="ring" style="--p:${pv}"><b>${pv}<small>%</small></b></div><span>chance</span></div></div>`+
       `<div class="pc-bet"><span class="leantag ${esc(p.side)}">${esc(p.side)}</span><b>${esc(p.line)}</b><span>${esc(p.statText)}</span>${PS.spark(p.l10||[], p.line, p.side)}</div>`+
       `<div class="pc-foot"><span class="pc-price"><span class="pmpx">${Math.round(p.price*100)}¢</span> <span class="rng">${(1/p.price).toFixed(2)}× payout</span></span>${bsStatus(p)}</div>`+
     `</a>`;
@@ -897,11 +916,23 @@ const reduce = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)
         `<span class="mv-bet"><span class="leantag ${esc(p.side)}">${esc(p.side)}</span> <b>${esc(p.line)}</b> ${esc(p.statText)}</span></a>`;
     };
     const st=(t&&t.streaks||[]).filter(up), mv=(t&&t.moves||[]).filter(up), fs=(t&&t.fast||[]).filter(up);
-    const fill=(id, rows, html)=>{ const col=document.getElementById(id); col.hidden=!rows.length; col.querySelector('.mvlist').innerHTML=rows.map(html).join(''); };
+    // each list shows 3 rows, then "Show all N"
+    const fill=(id, rows, html)=>{ const col=document.getElementById(id); col.hidden=!rows.length;
+      col.querySelector('.mvlist').innerHTML=rows.map(html).join('')+(rows.length>3 && !col.classList.contains('all')? `<button type="button" class="mvmore">Show all ${rows.length} ↓</button>` : '');
+      const more=col.querySelector('.mvmore'); if(more) more.onclick=()=>{ col.classList.add('all'); more.remove(); }; };
     fill('mvstreak', st, p=>row(p, `<b>${p.streak} straight</b><small>model ${Math.round(p.prob*100)}% · ${Math.round(p.price*100)}¢</small>`));
     fill('mvmove', mv, p=>row(p, `<b>${Math.round(p.px0*100)}¢ → ${Math.round(p.price*100)}¢</b><small>model ${Math.round(p.prob*100)}%</small>`));
     fill('mvfast', fs, p=>row(p, `<b>${Math.round(p.was*100)}¢ → ${Math.round(p.price*100)}¢</b><small>in the last hour · model ${Math.round(p.prob*100)}%</small>`));
     sec.hidden=!st.length && !mv.length && !fs.length;
+    // phones: one list at a time, picked from tabs above them
+    const cols=[...sec.querySelectorAll('.movecol')].filter(c=>!c.hidden), bar=sec.querySelector('.mvtabs');
+    const pick=id=>{ cols.forEach(c=>c.classList.toggle('on', c.id===id));
+      bar.querySelectorAll('button').forEach(b=>b.setAttribute('aria-selected', String(b.dataset.c===id))); };
+    bar.innerHTML=cols.map(c=>`<button type="button" role="tab" data-c="${c.id}">${esc(c.querySelector('h3').textContent)}</button>`).join('');
+    bar.hidden=cols.length<2;
+    bar.querySelectorAll('button').forEach(b=>b.onclick=()=>pick(b.dataset.c));
+    const cur=cols.find(c=>c.classList.contains('on'));
+    pick(cur? cur.id : cols.length? cols[0].id : '');
   }
 
   // Calibration: for each band of model chance, how often those picks hit (today.json "calib").

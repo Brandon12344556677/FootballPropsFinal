@@ -569,10 +569,15 @@ html body .pslcookie button{padding:7px 14px;font-size:13px;border-radius:999px;
 .app .vd-fair .qhelp.hq{margin-left:0}
 .app .vd-fair .qhelp.hq .qi{width:16px;height:16px;font-size:10px}
 /* Locked pick (PS.lockBadge): its game starts within 20 minutes, so it's final */
-.lockbadge{display:inline-flex;align-items:center;gap:3px;padding:1px 8px;border:1.5px solid #eb6f7d;border-radius:999px;color:#eb6f7d;background:rgba(235,111,125,.1);font-weight:700;font-size:11px;line-height:1.6;letter-spacing:.06em;text-transform:uppercase;white-space:nowrap;cursor:help}
+.lockbadge{display:inline-flex;align-items:center;gap:3px;padding:2px 9px;border:1.5px solid #f5b942;border-radius:999px;color:#1d1300;background:#f5b942;font-weight:800;font-size:12px;line-height:1.6;letter-spacing:.06em;text-transform:uppercase;white-space:nowrap;cursor:help}
 .lockbadge .ic{width:1.1em;height:1.1em}
-.app .pickcard.locked{outline:1.5px solid rgba(235,111,125,.7);outline-offset:-1.5px}
-.app .pc-who .lockbadge{display:inline-flex;width:auto;overflow:visible;margin-top:4px;color:#eb6f7d;font-size:11px}   /* beats .app .pc-who span */
+.app .pickcard.locked{outline:2px solid #f5b942;outline-offset:-2px}
+.app .pickcard.locked .pc-price,.app .pickcard.locked .livecell{opacity:.85}
+.lockribbon{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:-1px -1px 10px;padding:7px 14px;
+  background:#f5b942;color:#1d1300;font-size:13px;line-height:1.3;border-radius:16px 16px 0 0}
+.lockribbon b{font-weight:800;letter-spacing:.04em;text-transform:uppercase}
+.lockribbon span{font-weight:600}
+.app .pc-who .lockbadge{display:inline-flex;width:auto;overflow:visible;margin-top:4px;color:#1d1300;font-size:12px}   /* beats .app .pc-who span */
 .locknote{display:flex;align-items:flex-start;gap:8px;margin-top:8px}
 .locknote .lockbadge{flex:none;margin-top:1px}
 /* Polymarket and Kalshi side by side (PS.venues): the cheaper one, highlighted, is the price the pick is judged on */
@@ -618,3 +623,61 @@ html body .pslcookie button{padding:7px 14px;font-size:13px;border-radius:999px;
 .psnew li .k{display:inline-block;min-width:8.2em;color:#fff}
 @media (max-width:620px){.psnew li .k{display:block;min-width:0}}
 .psnew-f{margin:8px 0 0;font-size:13px;color:#9fb0c6}
+
+/* ================= Simple / Pro (app.js: <html data-view>, the header toggle, the first-visit question) =================
+   Simple, the default, keeps who, the line, the chance, the price and the last 10 on each card, one line
+   per list header and three tabs. Pro is the full board. Both views: a shorter top on phones, the tab bar
+   stays under the header, and the exchange buttons leave the phone header (each pick links to both). */
+html[data-view="simple"] .pro-only, html[data-view="pro"] .simple-only{display:none!important}
+.psview{flex:none;display:inline-flex;padding:3px;border-radius:999px;border:1px solid rgba(255,255,255,.16);background:rgba(255,255,255,.04)}
+.psview button{border:0;background:transparent;color:#9fb0c6;font:600 13px "Inter",system-ui,sans-serif;padding:6px 13px;border-radius:999px;cursor:pointer;line-height:1}
+.psview button[aria-pressed="true"]{background:#22d07f;color:#06210b}
+.psview button:focus-visible{outline:2px solid #fff;outline-offset:1px}
+.apptop .psview{margin-left:4px}
+@media(max-width:760px){
+  .apptop .appctas{display:none}
+  .apptop .psview{margin-left:auto}
+  .app .apphero .lede{display:none}
+  .app .tabs{position:sticky;top:var(--ps-toph,104px);z-index:40;-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px)}
+}
+@media(min-width:761px){.app .tabs{top:var(--ps-toph,62px)}}
+.tabs-mark{height:0}
+
+/* the first-visit question */
+.psgate-views{display:grid;gap:10px;margin:4px 0 14px}
+.psgate-view{display:grid;gap:4px;text-align:left;padding:14px 16px;border-radius:16px;border:1px solid #2a4163;background:#13284a;color:#c9d6e6;cursor:pointer;font:14px/1.45 "Inter",system-ui,sans-serif}
+.psgate-view b{display:flex;align-items:center;gap:8px;color:#fff;font:800 18px "Archivo","Inter",system-ui,sans-serif}
+.psgate-view small{font:700 11px "Inter",system-ui,sans-serif;text-transform:uppercase;letter-spacing:.06em;color:#06210b;background:#22d07f;border-radius:999px;padding:3px 8px}
+.psgate-view:hover,.psgate-view:focus-visible{border-color:#22d07f;outline:none}
+.psgate-later{border:0;background:none;padding:0;color:#86e6b6;font:inherit;text-decoration:underline;cursor:pointer}
+
+/* "New here?" in Simple: one line */
+.psnew-line{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:0;font-size:14px;line-height:1.45;color:#c9d6e6}
+.psnew-line b{color:#fff}
+.psnew:has(.psnew-line){padding:10px 14px}
+html[data-view="pro"] .psnew:has(.psnew-line){padding:14px 16px}
+
+/* pick cards: the bet line wraps instead of cutting off the "7/10" count */
+.app .pc-bet{flex-wrap:wrap;row-gap:6px}
+.app .pc-bet > span:not(.leantag):not(.spark){min-width:0}
+
+/* Simple: the trust line, the season record and the list headers on one line each */
+html[data-view="simple"] .pstrust .tr-res{display:none}
+html[data-view="simple"] .pstrust .tr-grd{padding:0;border:0;background:none}
+html[data-view="simple"] .app .vwbar{display:inline-flex;gap:2px 8px;margin:8px 0 0;padding:0;border:0;background:none;box-shadow:none}
+html[data-view="simple"] .app .vwbar .lbl{font-size:12px}
+html[data-view="simple"] .app .vwbar .big{font-size:15px}
+html[data-view="simple"] .app .vwbar .sub{display:none}
+html[data-view="simple"] .app .mkthead > .mktmuted:not([id^="rec"]),
+html[data-view="simple"] .app #edgescan, html[data-view="simple"] .app #edgestatus,
+html[data-view="simple"] .app .clvbit,
+html[data-view="simple"] .app details.valrules,
+html[data-view="simple"] .app .pslegend,
+html[data-view="simple"] .app .sortbar,
+html[data-view="simple"] .app .pickgrid ~ .mktnote{display:none}
+html[data-view="simple"]:not(.has-bets) .app .tab[data-tab="tools"]:not([aria-selected="true"]){display:none}
+/* Simple cards: no edge, no opening price, no second exchange or global-book price (the pick's details have them all) */
+html[data-view="simple"] .app .pickcard .edgebit,
+html[data-view="simple"] .app .pickcard .pxmove,
+html[data-view="simple"] .app .pickcard .board,
+html[data-view="simple"] .app .pickcard .venues .vq:not(.best){display:none}

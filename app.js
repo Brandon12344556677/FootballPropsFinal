@@ -383,28 +383,83 @@ window.PS = (function(){
             {title:`More for ${r.name}`, items:onePer(uniq.filter(x=>String(o.pid(x))===pk).sort(rank), x=>x.statText).slice(0,3).map(item)}];
   }
 
-  // ---- one-time 18+ check. It carries the storage notice, so a first visit sees one pop-up, not two. ----
+  // ---- Simple / Pro: how much the sport boards show. Simple (the default) keeps who, the line, the
+  // chance, the price and the last 10; Pro adds every number and the Tools tab. Saved on this device
+  // only (psl_view). <html data-view> is set here, in the <head>, so a page never flashes the wrong view;
+  // app.css hides .pro-only / .simple-only parts and the extra card numbers. ----
+  const VIEW_KEY='psl_view';
+  function getView(){ try{ return localStorage.getItem(VIEW_KEY)==='pro'? 'pro' : 'simple'; }catch(e){ return 'simple'; } }
+  function canStore(){ try{ localStorage.setItem('psl_t','1'); localStorage.removeItem('psl_t'); return true; }catch(e){ return false; } }
+  // asked once: a choice, or "decide later". Without storage nobody is asked (it would come back on every page).
+  function viewAsked(){ try{ return !!localStorage.getItem(VIEW_KEY) || localStorage.getItem('psl_view_asked')==='1'; }catch(e){ return true; } }
+  // how: "gate" (the first-visit question) or "switch" (the header toggle); counted as click/view-<v>[-switch]/<page>
+  function setView(v, how){
+    v= v==='pro'? 'pro' : 'simple';
+    document.documentElement.dataset.view=v;
+    try{ localStorage.setItem(VIEW_KEY, v); }catch(e){}
+    document.querySelectorAll('.psview button').forEach(b=>b.setAttribute('aria-pressed', String(b.dataset.v===v)));
+    const gc=window.goatcounter;
+    if(how && gc && typeof gc.count==='function'){
+      const page=(location.pathname.match(/\/(nfl|nba|nhl|mlb)\.html$/) || [])[1] || 'home', k='view-'+v+(how==='switch'? '-switch' : '');
+      gc.count({path:'click/'+k+'/'+page, title:(how==='switch'? 'Switched to ' : 'Chose ')+v+' on '+page, event:true});
+    }
+  }
+  document.documentElement.dataset.view=getView();
+  // The Simple | Pro toggle, in a sport page's header (the home page shows the same in both).
+  function viewSwitch(){
+    const host=document.querySelector('.apptop-in'); if(!host || host.querySelector('.psview')) return;
+    const v=getView(), s=document.createElement('div');
+    s.className='psview'; s.setAttribute('role','group'); s.setAttribute('aria-label','How much to show');
+    s.innerHTML=`<button type="button" data-v="simple" aria-pressed="${v==='simple'}" title="Today's best picks, the essentials">Simple</button>`+
+      `<button type="button" data-v="pro" aria-pressed="${v==='pro'}" title="Every number, sorting and the Tools tab">Pro</button>`;
+    s.onclick=e=>{ const b=e.target.closest('button'); if(b && b.getAttribute('aria-pressed')!=='true') setView(b.dataset.v, 'switch'); };
+    host.insertBefore(s, host.querySelector('.appctas'));
+  }
+  if(document.readyState!=='loading') viewSwitch(); else document.addEventListener('DOMContentLoaded', viewSwitch);
+
+  // ---- one-time 18+ check. It carries the storage notice, so a first visit sees one pop-up, not two.
+  // Then, once, how to see the boards (Simple or Pro); a visitor who passed the check before
+  // the question existed gets just the question. ----
+  const GATE_LOGO='<svg class="psgate-logo" viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" rx="14" fill="#0f2038"/><path d="M32,6 Q32,32 54,32 Q32,32 32,58 Q32,32 10,32 Q32,32 32,6 Z" fill="#22d07f"/></svg>';
+  function viewStep(card, done){
+    try{ localStorage.setItem('psl_view_asked','1'); }catch(e){}
+    card.innerHTML=GATE_LOGO+`<h2 id="psgate-h">How do you want to see picks?</h2>`+
+      `<div class="psgate-views">`+
+        `<button type="button" class="psgate-view" data-v="simple"><b>Simple <small>Recommended</small></b><span>Today's best picks with the four things that matter: who, the line, how likely it hits, and what it pays. Tap any pick for the full story.</span></button>`+
+        `<button type="button" class="psgate-view" data-v="pro"><b>Pro</b><span>Everything: the model's edge, opening prices and moves, both exchanges' prices, sorting, the streak leaderboard and parlay tools, and the full rules for each list.</span></button>`+
+      `</div>`+
+      `<p class="psgate-fine">You can switch any time with the Simple | Pro buttons at the top of a sports page. <button type="button" class="psgate-later">Decide later</button></p>`;
+    card.querySelectorAll('.psgate-view').forEach(b=>b.onclick=()=>{ setView(b.dataset.v, 'gate'); done(); });
+    card.querySelector('.psgate-later').onclick=done;   // stays on Simple, and isn't asked again
+    card.querySelector('.psgate-view').focus({preventScroll:true});
+  }
   function ageGate(){
     let ok=false; try{ ok=localStorage.getItem('psl_age_ok')==='1'; }catch(e){}
-    if(ok || !document.body) return;
+    if(!document.body || (ok && viewAsked())) return;
     const g=document.createElement('div'); g.className='psgate'; g.setAttribute('role','dialog'); g.setAttribute('aria-modal','true'); g.setAttribute('aria-labelledby','psgate-h');
-    g.innerHTML=`<div class="psgate-card"><svg class="psgate-logo" viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" rx="14" fill="#0f2038"/><path d="M32,6 Q32,32 54,32 Q32,32 32,58 Q32,32 10,32 Q32,32 32,6 Z" fill="#22d07f"/></svg>`+
+    g.innerHTML=`<div class="psgate-card"></div>`;
+    const card=g.firstChild, close=()=>{ g.remove(); document.documentElement.classList.remove('ps-lock'); };
+    document.body.appendChild(g); document.documentElement.classList.add('ps-lock');
+    if(ok){ viewStep(card, close); return; }
+    card.innerHTML=GATE_LOGO+
       `<h2 id="psgate-h">Are you 18 or older?</h2>`+
       `<p>Prop Streak Lab is player-prop research for adults. It isn't a sportsbook and takes no bets. Some links go to Polymarket and Kalshi, which have their own age and location rules.</p>`+
       `<div class="psgate-btns"><button type="button" class="btn" id="psgate-ok">Yes, I'm 18 or older</button><a class="btn ghost" href="https://www.google.com" rel="noopener">No, leave</a></div>`+
-      `<p class="psgate-fine">We use only essential local storage for your preferences and cookieless analytics — no ads, no cross-site tracking. <a href="cookies.html">Cookie Policy</a> · <a href="privacy.html">Privacy</a><br>Gambling problem? Call 1-800-522-4700 or visit <a href="https://www.ncpgambling.org" rel="noopener" target="_blank">ncpgambling.org</a>.</p></div>`;
-    document.body.appendChild(g); document.documentElement.classList.add('ps-lock');
+      `<p class="psgate-fine">We use only essential local storage for your preferences and cookieless analytics — no ads, no cross-site tracking. <a href="cookies.html">Cookie Policy</a> · <a href="privacy.html">Privacy</a><br>Gambling problem? Call 1-800-522-4700 or visit <a href="https://www.ncpgambling.org" rel="noopener" target="_blank">ncpgambling.org</a>.</p>`;
     const bar=document.getElementById('pslcookie'); if(bar) bar.hidden=true;    // the check carries the same notice
     const btn=g.querySelector('#psgate-ok'); btn.focus({preventScroll:true});
     btn.onclick=()=>{ try{ localStorage.setItem('psl_age_ok','1'); localStorage.setItem('psl_notice_ok','1'); }catch(e){}
-      g.remove(); document.documentElement.classList.remove('ps-lock'); };
+      if(canStore() && !viewAsked()) viewStep(card, close); else close(); };
   }
   if(document.readyState!=='loading') ageGate(); else document.addEventListener('DOMContentLoaded', ageGate);
 
   // ---- My bets: props you tracked, graded from the box score, saved on this device only ----
   const BETS_KEY='psl_mybets';
   function loadBets(){ try{ const a=JSON.parse(localStorage.getItem(BETS_KEY)||'[]'); return Array.isArray(a)? a : []; }catch(e){ return []; } }
-  function saveBets(a){ try{ localStorage.setItem(BETS_KEY, JSON.stringify(a.slice(-300))); }catch(e){} }
+  // html.has-bets keeps the Tools tab (where My bets lives) in the Simple view too
+  const markBets=a=>document.documentElement.classList.toggle('has-bets', a.length>0);
+  function saveBets(a){ try{ localStorage.setItem(BETS_KEY, JSON.stringify(a.slice(-300))); }catch(e){} markBets(a); }
+  markBets(loadBets());
   const betId=b=>[b.sport, b.pid, b.stat, b.line, b.side, b.game].join('|');
   const isTracked=b=> !!b && loadBets().some(x=>x.id===betId(b));
   // b: {sport, pid, name, team, opp, stat, statText, line, side, prob, price, game, when} — returns whether it's now tracked
@@ -598,23 +653,44 @@ window.PS = (function(){
   }
   if(document.readyState!=='loading') trust(); else document.addEventListener('DOMContentLoaded', trust);
 
-  // ---- "New here?": a four-line key to the board, above its tabs, until the visitor closes it ----
+  // ---- "New here?": a key to the board, above its tabs, until the visitor closes it: one line in
+  // Simple, the four-line key in Pro ----
   function newHere(){
     const tabs=document.querySelector('.tabs[role="tablist"]'); if(!tabs || document.getElementById('psnew')) return;
     let seen=false; try{ seen=localStorage.getItem('psl_newhere_ok')==='1'; }catch(e){}
     if(seen) return;
     const box=document.createElement('section'); box.id='psnew'; box.className='psnew'; box.setAttribute('aria-label','How to read this page');
-    box.innerHTML='<div class="psnew-h"><b>New here? How to read a pick</b><button type="button" class="psnew-x" aria-label="Close">Got it</button></div>'+
+    box.innerHTML='<p class="psnew-line simple-only"><span><b>72%</b> = our chance it hits · <b>57¢</b> = the price, so it pays 1.75× · Tap a pick for the full story. Research, not advice. 18+.</span>'+
+      '<button type="button" class="psnew-x" aria-label="Close">Got it</button></p>'+
+      '<div class="pro-only"><div class="psnew-h"><b>New here? How to read a pick</b><button type="button" class="psnew-x" aria-label="Close">Got it</button></div>'+
       '<ul>'+
       '<li><b class="k">72%</b> Our model’s chance the pick hits, from the player’s game log and the matchup.</li>'+
       '<li><b class="k">57¢</b> What Polymarket or Kalshi charges for a $1 payout, so it pays <b>1.75×</b>. A low price means a bigger payout but a less likely pick.</li>'+
       '<li><b class="k">⚡ Value spots</b> Our chance is well above the price: bigger payouts, more misses.</li>'+
       '<li><b class="k">🔒 Top 25 Surest</b> The picks most likely to hit, with small payouts.</li>'+
-      '</ul><p class="psnew-f">Every pick is recorded before the game and graded afterward, wins and losses, in <b>Past picks</b>. Research, not advice. 18+.</p>';
+      '</ul><p class="psnew-f">Every pick is recorded before the game and graded afterward, wins and losses, in <b>Past picks</b>. Research, not advice. 18+.</p></div>';
     tabs.parentNode.insertBefore(box, tabs);
-    box.querySelector('.psnew-x').onclick=()=>{ box.remove(); try{ localStorage.setItem('psl_newhere_ok','1'); }catch(e){} };
+    box.querySelectorAll('.psnew-x').forEach(b=>b.onclick=()=>{ box.remove(); try{ localStorage.setItem('psl_newhere_ok','1'); }catch(e){} });
   }
   if(document.readyState!=='loading') newHere(); else document.addEventListener('DOMContentLoaded', newHere);
+
+  // ---- sport-page layout: the email button below the lists, and a tab bar that stays under the
+  // header and brings its tab's content into view when tapped ----
+  function boardLayout(){
+    const tabs=document.querySelector('.app .tabs[role="tablist"]'), top=document.querySelector('.apptop'); if(!tabs) return;
+    const promo=document.querySelector('.wrap.app > .promo'); if(promo) promo.parentNode.appendChild(promo);
+    const fit=()=>{ if(top) document.documentElement.style.setProperty('--ps-toph', top.offsetHeight+'px'); };
+    fit(); addEventListener('resize', fit);
+    const mark=document.createElement('div'); mark.className='tabs-mark'; tabs.parentNode.insertBefore(mark, tabs);
+    tabs.addEventListener('click', e=>{
+      if(!e.target.closest('.tab')) return;
+      setTimeout(()=>{   // after the page's own handler, which jumps to the top
+        const y=mark.getBoundingClientRect().top+scrollY-(top? top.offsetHeight : 0);
+        if(Math.abs(scrollY-y)>4) scrollTo(0, y);
+      }, 0);
+    });
+  }
+  if(document.readyState!=='loading') boardLayout(); else document.addEventListener('DOMContentLoaded', boardLayout);
 
   // ---- opening vs current price: has the market moved toward a pick since it was recorded? ----
   // open/now are fractions for the side taken. Up = the price rose since the site first
@@ -670,13 +746,18 @@ window.PS = (function(){
   function lockNote(){
     return `<p class="mktnote locknote"><span class="lockbadge">\ud83d\udd12 Locked</span><span>The game starts within 30 minutes, so the pick is final: its Top 25 / Value status, its chance and its price won\u2019t change again. The site updates about every 10 minutes, so picks lock at least 10 minutes before the start.</span></p>`;
   }
+  // A strip across the top of a locked pick's card, so a final pick reads as final at a glance.
+  function lockRibbon(lk){
+    const t=Date.parse(lk), at=isFinite(t)? ' at '+new Date(t).toLocaleTimeString([], {hour:'numeric', minute:'2-digit'}) : '';
+    return `<div class="lockribbon" title="${esc(`Locked${at}: the game starts within 30 minutes, so this pick is final.`)}"><b>🔒 Locked</b><span>Final pick · won’t change</span></div>`;
+  }
   function lockBadge(lk){
     const t=Date.parse(lk), at=isFinite(t)? ' at '+new Date(t).toLocaleTimeString([], {hour:'numeric', minute:'2-digit'}) : '';
     return `<span class="lockbadge" title="${esc(`Locked${at}: the game starts within 30 minutes, so this pick is final \u2014 its Top 25 / Value status, its chance and its price won\u2019t change again.`)}">\ud83d\udd12 Locked</span>`;
   }
 
   return {teamVars, ticker, until, skeleton, esc, hashFor, pickHash, parsePickHash, syncHash, sharePick, toast, helpBtn, spark, verdict, icon, sheet, closeSheet, pickSheet, relatedPicks,
-          isTracked, toggleBet, renderBets, loadBets, fairOf, setFair, pxMove, lockBadge, lockNote, venues, venueName, cap, capPick, thinOut};
+          isTracked, toggleBet, renderBets, loadBets, fairOf, setFair, pxMove, lockBadge, lockRibbon, lockNote, venues, venueName, cap, capPick, thinOut, getView, setView};
 })();
 
 // ---- live tracker: follows picks through today's games from ESPN's public box scores ----

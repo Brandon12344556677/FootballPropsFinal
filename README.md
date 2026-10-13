@@ -14,6 +14,13 @@ public API.
 finished games, records the upcoming picks with their prices, and redeploys the site.
 
 ## What's on the page
+Every sport page has two views. **Simple**, the default, shows each pick's player, line, chance, best price and
+payout, and last 10 games, one line per list header, and the This week / Player / Past picks tabs. **Pro** adds the
+model's edge, opening prices and moves, both exchanges' prices, sorting, each list's full rules and the Tools tab.
+After the 18+ check, a new visitor is asked which one they want (anyone who passed the check earlier is asked once). The
+Simple | Pro buttons in the header switch views, and the choice is saved in `localStorage` (`psl_view`). `app.js` sets
+`<html data-view>`; `app.css` hides `.pro-only` parts and the extra card numbers (`.edgebit`, `.pxmove`, the second
+exchange chip) in Simple.
 
 ### Research tab
 - **Model chance** — the headline number. Instead of "hit 7 of the last 10", the
