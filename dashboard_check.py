@@ -10,7 +10,9 @@ outside:
   - stats:  team/stats.enc is a valid encrypted file; with TEAM_DASH_PASSWORD it decrypts to the
             numbers the dashboard draws (every date range, with visits, pages, sources, clicks,
             views) and they were refreshed in the last STATS_STALE_H hours
-  - edges:  team/edges.enc (the edge tracker) decrypts and was rebuilt in the last EDGES_STALE_H hours
+  - edges:  team/edges.enc (the edge tracker) decrypts and has caught up with the graded picks: it is
+            only rewritten when the numbers change, so it's stale only when a game that started after
+            its last rebuild (and at least GRADE_LAG_H hours ago) has been graded since
   - feeds:  today.json still carries the fields the dashboard's panels read
 
 A problem opens one "Team dashboard" GitHub issue, updated as it changes and closed when it's
@@ -36,6 +38,9 @@ TITLE = "Team dashboard: something needs a look"
 MARK = "<!-- dashboard-check -->"
 STATS_STALE_H = 18     # stats.enc only changes when the numbers do; overnight can be quiet for hours
 EDGES_STALE_H = 6      # edges.enc is rebuilt every pass when graded picks change; a quiet night can go hours
+GRADE_LAG_H = 6        # a game is graded within ~6 hours of its start (about 3 to play, then the box score)
+EDGES_MAX_H = 72       # with no readable picks to compare against, warn after this long
+RECENT_PICKS = ["/nhl_picks_recent.json", "/mlb_picks_recent.json", "/nba_picks_recent.json"]
 RANGES = ("d1", "d7", "d30", "d90")
 RANGE_KEYS = ("total", "daily", "pages", "toprefs", "clicks", "views")
 PAGE_IDS = ("lockForm", "pw", "app", "views", "tabs", "chart", "sp", "em", "edRows", "posts", "health")
@@ -130,11 +135,39 @@ def check_edges(now, password):
     if gen is None:
         return {"edges: fresh": "edges.enc has no update time."}
     if now - gen > datetime.timedelta(hours=EDGES_STALE_H):
-        hours = int((now - gen).total_seconds() // 3600)
-        return {"edges: fresh": f"The edge tracker was last rebuilt {hours} hours ago ({gen:%Y-%m-%d %H:%M} UTC)."}
+        missed = graded_since(gen, now)   # None: no picks file could be read
+        if missed or (missed is None and now - gen > datetime.timedelta(hours=EDGES_MAX_H)):
+            hours = int((now - gen).total_seconds() // 3600)
+            why = f", though {missed} pick{'s' if missed != 1 else ''} from later games {'have' if missed != 1 else 'has'} been graded" if missed else ""
+            return {"edges: fresh": f"The edge tracker was last rebuilt {hours} hours ago ({gen:%Y-%m-%d %H:%M} UTC){why}."}
     if not rep.get("strategies"):
         return {"edges: contents": "The edge tracker has no strategies in it."}
     return {}
+
+
+def graded_since(gen, now):
+    """How many graded picks (hit/miss) are from games that started after the edge tracker's last
+    rebuild and at least GRADE_LAG_H hours ago, from the small recent-picks files; None if none load.
+    A quiet stretch (overnight, a day with no games) has none, so it isn't a problem."""
+    n, read = 0, False
+    cutoff = now - datetime.timedelta(hours=GRADE_LAG_H)
+    for path in RECENT_PICKS:
+        st, text = fetch(watchdog.bust(path))
+        if st != 200:
+            continue
+        try:
+            doc = json.loads(text)
+            cols = doc["cols"]
+            ri, si = cols.index("res"), cols.index("start")
+        except (ValueError, KeyError):
+            continue
+        read = True
+        for row in doc.get("picks") or []:
+            if row[ri] in ("hit", "miss"):
+                start = parse_time(row[si])
+                if start is not None and gen < start < cutoff:
+                    n += 1
+    return n if read else None
 
 
 def check_feeds():
