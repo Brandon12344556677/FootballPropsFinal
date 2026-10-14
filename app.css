@@ -676,8 +676,8 @@ html[data-view="simple"] .app .pslegend,
 html[data-view="simple"] .app .sortbar,
 html[data-view="simple"] .app .pickgrid ~ .mktnote{display:none}
 html[data-view="simple"]:not(.has-bets) .app .tab[data-tab="tools"]:not([aria-selected="true"]){display:none}
-/* Simple cards: no edge, no opening price, no second exchange or global-book price (the pick's details have them all) */
+/* Simple cards: no edge, no opening price, no global-book price (the pick's details have them all).
+   Both exchanges' prices stay, Polymarket and Kalshi side by side. */
 html[data-view="simple"] .app .pickcard .edgebit,
 html[data-view="simple"] .app .pickcard .pxmove,
-html[data-view="simple"] .app .pickcard .board,
-html[data-view="simple"] .app .pickcard .venues .vq:not(.best){display:none}
+html[data-view="simple"] .app .pickcard .board{display:none}
