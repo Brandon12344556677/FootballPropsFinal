@@ -491,7 +491,7 @@ def fetch_markets_us(players_by_key, today=None):
 
     from concurrent.futures import ThreadPoolExecutor
     with ThreadPoolExecutor(max_workers=6) as ex:
-        for (g, _slug, name, stat_text, line), md in ex.map(bbo, todo):
+        for (g, us_slug, name, stat_text, line), md in ex.map(bbo, todo):
             if not md:
                 continue
             ask, bid = md["ask"], md["bid"]
@@ -501,7 +501,7 @@ def fetch_markets_us(players_by_key, today=None):
             tradeable = (over is not None or under is not None) and (spread is None or spread <= 0.15)
             g["markets"].append({"pm": {"player": name, "statText": stat_text, "line": line,
                                         "over": over, "under": under, "tradeable": tradeable,
-                                        "od": md["over"], "ud": md["under"]}})
+                                        "od": md["over"], "ud": md["under"], "us": us_slug}})
     games = [g for g in games if g["markets"]]
     print(f"  polymarket US: {len(games)} NBA game(s), {sum(len(g['markets']) for g in games)} priced player props")
     return games
@@ -812,6 +812,7 @@ def refresh_price(p, pm):
         p["pp"] = round(px, 3) if px is not None else None
         p["pd"] = pm.get("od" if p["side"] == "over" else "ud") if px is not None else None
         p["_pt"] = (pm.get("tok") or {}).get(p["side"]) if px is not None else None   # global book token (depth.verify)
+        p["_us"] = pm.get("us") if px is not None else None   # Polymarket US market: the board refreshes its price live
         depth.choose(p)        # the cheaper of Polymarket and Kalshi with $25+ offered
 
 
@@ -1393,6 +1394,13 @@ def fit_temperature(picks):
     return round(min(2.0, max(0.7, best_T)), 3)
 
 
+def live_markets(picks):
+    """Polymarket US market slug for each upcoming, unlocked, priced pick on a list (Top 25 / Value) ("pid|stat|line" -> slug),
+    so the board can refresh those prices in the browser every minute between updates."""
+    return {f"{p['pid']}|{p['stat']}|{p['line']}": p["_us"] for p in picks
+            if p.get("_us") and p.get("lists") and p.get("res") is None and not pick_locked(p)}
+
+
 def live_record(picks):
     out = {}
     for p in picks:
@@ -1681,6 +1689,7 @@ def main():
         "defAvg": defavg,
         "calT": cal_t,
         "record": live_record(picks),
+        "us": live_markets(picks),
         "players": players,
     }
     payload = json.dumps(db, separators=(",", ":"), ensure_ascii=False)

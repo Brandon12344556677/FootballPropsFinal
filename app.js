@@ -59,6 +59,36 @@ window.PS = (function(){
     const t=Date.parse(iso); if(!isFinite(t)) return '';
     return `<span class="pc-when">⏰ ${esc(startLabel(iso))} · <i data-cd="${esc(iso)}">${until(t)}</i></span>`;
   }
+  // ---- live Polymarket US prices between site updates (NBA, NHL, MLB boards) ----
+  // The builders list each upcoming pick's Polymarket US market (the sport file's "us": "pid|stat|line" -> slug);
+  // while the page is open and visible this re-reads those markets' best prices once a minute.
+  // Display only: which list a pick is on, and its recorded price, still come from the builder.
+  const liveUS=(function(){
+    const Q=new Map(); let slugs=[], cb=null, timer=null;
+    const px=a=>{ const v=a? parseFloat(a.value) : NaN; return v>0 && v<1? v : null; };
+    async function one(s){
+      try{
+        const r=await fetch('https://gateway.polymarket.us/v1/markets/'+encodeURIComponent(s)+'/bbo', {cache:'no-store'});
+        if(!r.ok) return;
+        const d=(await r.json()).marketData||{}, open=!d.state || d.state==='MARKET_STATE_OPEN';
+        const bid=px(d.bestBid), ask=px(d.bestAsk);
+        Q.set(s, {over: open? ask : null, under: open && bid!=null? 1-bid : null, at: Date.now()});   // what you'd pay for each side
+      }catch(e){}
+    }
+    const nap=ms=>new Promise(r=>setTimeout(r, ms));
+    function schedule(){ clearTimeout(timer); timer=setTimeout(tick, 60000); }
+    async function tick(){
+      if(document.hidden || !slugs.length){ schedule(); return; }
+      const list=slugs.slice(0, 150);
+      for(let i=0; i<list.length; i+=6){ await Promise.all(list.slice(i, i+6).map(one)); await nap(350); }   // under Polymarket US's 20 requests/s
+      if(cb) cb();
+      schedule();
+    }
+    return {
+      start(map, onUpdate){ slugs=[...new Set(Object.values(map||{}))]; cb=onUpdate; if(slugs.length) tick(); },
+      quote(s){ const q=s && Q.get(s); return q && Date.now()-q.at < 180000? q : null; }   // 3 minutes old at most
+    };
+  })();
   function tickCountdowns(){ document.querySelectorAll('[data-cd]').forEach(e=>{ const t=Date.parse(e.dataset.cd); if(isFinite(t)) e.textContent=until(t); }); }
   setInterval(tickCountdowns, 30000);
 
@@ -769,7 +799,7 @@ window.PS = (function(){
   }
 
   return {teamVars, ticker, until, skeleton, esc, hashFor, pickHash, parsePickHash, syncHash, sharePick, toast, helpBtn, spark, verdict, icon, sheet, closeSheet, pickSheet, relatedPicks,
-          isTracked, toggleBet, renderBets, loadBets, fairOf, setFair, pxMove, lockBadge, lockRibbon, lockNote, startLabel, gameTime, venues, venueName, cap, capPick, thinOut, getView, setView};
+          isTracked, toggleBet, renderBets, loadBets, fairOf, setFair, pxMove, lockBadge, lockRibbon, lockNote, startLabel, gameTime, liveUS, venues, venueName, cap, capPick, thinOut, getView, setView};
 })();
 
 // ---- live tracker: follows picks through today's games from ESPN's public box scores ----
