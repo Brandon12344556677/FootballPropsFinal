@@ -620,8 +620,8 @@ details.valrules>summary{cursor:pointer}
 .datanote[open] summary{margin-bottom:8px}
 </style>
 
-<link rel="stylesheet" href="app.css?v=20261014a">
-<script src="app.js?v=20261013h"></script>
+<link rel="stylesheet" href="app.css?v=20261014b">
+<script src="app.js?v=20261014b"></script>
 <script src="/halloween.js?v=20261013a"></script>
 
 <header class="apptop">
@@ -1104,6 +1104,12 @@ function gameHappened(g){ if(!g) return false; if(g.final) return true; if(!g.da
   const t=Date.parse(g.date+'T'+tm+':00'+etOffset(g.date)); return isFinite(t) && t<=Date.now(); }
 function oppOf(p){ const g=teamGame(p.t); if(!g) return null; return g.away===p.t? g.home : g.away; }
 const DAYS=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'], MONS=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+// A game's kickoff as an ISO time (nflverse's date + Eastern time), for the start line on pick cards.
+function kickoffISO(g){
+  if(!g||!g.date) return '';
+  const m=String(g.time||'').match(/^(\d{1,2}):(\d{2})$/); if(!m) return '';
+  return g.date+'T'+m[1].padStart(2,'0')+':'+m[2]+':00'+etOffset(g.date);
+}
 function kickoff(g){
   if(!g||!g.date) return '';
   const d=new Date(g.date+'T12:00:00'); let t='';
@@ -2217,7 +2223,7 @@ function pickTable(rows, opts){
     const pv=Math.round(r.prob*100);
     h+=`<article class="pickcard ${tier}${r.locked?' locked':''}" style="${PS.teamVars('nfl', r.team)}">`+(r.locked? PS.lockRibbon(r.lk) : '')+
       `<div class="pc-top"><span class="av">${esc(initials(r.name))}</span>`+
-        `<div class="pc-who"><b>${esc(r.name)}</b><span><span class="tbadge">${esc(r.team)}</span>${vs}</span></div>`+
+        `<div class="pc-who"><b>${esc(r.name)}</b><span><span class="tbadge">${esc(r.team)}</span>${vs}</span>${kickoffISO(teamGame(r.team))? PS.gameTime(kickoffISO(teamGame(r.team))) : ''}</div>`+
         `<div class="pc-prob"><div class="ring" style="--p:${pv}"><b>${pv}<small>%</small></b></div><span title="80% range ${Math.round(r.lo*100)}–${Math.round(r.hi*100)}%, from ${r.n} games">chance</span></div></div>`+
       `<div class="pc-bet"><span class="leantag ${r.side}">${r.side}</span><b>${r.line}</b><span>${esc(r.statText)}</span>${r.pl? PS.spark(valuesOf(r.pl, r.sk), r.line, r.side) : ''}</div>`+
       `<div class="pc-foot">${r.locked? lockedPrice(r)+PS.lockBadge(r.lk) : liveSpan(r)}<button class="edgeload" type="button" data-i="${idx}">Details</button></div>`+

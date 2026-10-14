@@ -681,3 +681,7 @@ html[data-view="simple"]:not(.has-bets) .app .tab[data-tab="tools"]:not([aria-se
 html[data-view="simple"] .app .pickcard .edgebit,
 html[data-view="simple"] .app .pickcard .pxmove,
 html[data-view="simple"] .app .pickcard .board{display:none}
+
+/* game start on pick cards (PS.gameTime): local time plus a countdown */
+.app .pc-who .pc-when{color:var(--ps-soft);font-weight:600;margin-top:2px}
+.app .pc-who .pc-when i{font-style:normal;font-weight:500;color:var(--ps-muted)}
