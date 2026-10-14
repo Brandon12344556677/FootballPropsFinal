@@ -42,7 +42,7 @@ permissions:
   actions: write    # the last step starts the next run (workflow_dispatch)
 
 concurrency:
-  group: update-data
+  group: update-data-2   # renamed Oct 14, 2026 so new runs skip a frozen run still holding "update-data"
   cancel-in-progress: false
 
 jobs:
