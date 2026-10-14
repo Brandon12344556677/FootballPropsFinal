@@ -50,6 +50,7 @@ jobs:
     # The image every run so far has used. On 2026-10-05 two runs on ubuntu-latest were never
     # given a runner and were cancelled after 15 minutes; pinning skips that label's queue.
     runs-on: ubuntu-24.04
+    timeout-minutes: 45   # a backstop; the update step below has its own, shorter limit
     steps:
       # Pushes with the DEPLOY_KEY deploy key (write access), which the main-branch ruleset
       # lets bypass its pull-request rule. The default token would be refused.
@@ -65,6 +66,9 @@ jobs:
       # second 10 minutes after the first began; a chained run then waits out the rest of 20
       # minutes, so passes stay ~10 minutes apart. A manual run does one pass.
       - name: Update the site (two passes, 10 minutes apart)
+        # Normally ~19 minutes. A hung pass fails this step instead of holding the run for hours,
+        # and the next step still starts the next run (a timed-out step counts as failed, not cancelled).
+        timeout-minutes: 32
         env:
           NBA_PROBE: ${{ github.event.inputs.probe }}
           NHL_PROBE: ${{ github.event.inputs.probe }}
@@ -82,7 +86,7 @@ jobs:
           if [ "${{ github.event_name }}" = "schedule" ] || [ "${{ github.event.inputs.chain }}" = "1" ]; then
             wait=$(( start + 600 - $(date +%s) ))
             if [ "$wait" -gt 0 ]; then sleep "$wait"; fi
-            git pull --rebase --autostash origin main || true    # anything merged meanwhile
+            timeout 2m git pull --rebase --autostash origin main || true    # anything merged meanwhile
             bash update_pass.sh
             if [ "${{ github.event.inputs.chain }}" = "1" ]; then
               wait=$(( start + 1140 - $(date +%s) ))             # the next run takes ~1 min to start
