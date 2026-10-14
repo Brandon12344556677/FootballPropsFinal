@@ -35,6 +35,7 @@ TIME_RE = re.compile(r"(?:^|/)time/([^/?#]+)$")
 CLICK_RE = re.compile(r"(?:^|/)click/([a-z0-9-]+)/([a-z0-9-]+)$")   # app.js: click/<what>/<page>
 VIEW_RE = re.compile(r"(?:^|/)view/(\d+)$")   # app.js: view/<n>, the visitor's n-th page load today
 VISITOR_RE = re.compile(r"(?:^|/)visitor/(new|returning)$")   # app.js: once per visitor per day
+DAYS_RE = re.compile(r"(?:^|/)days/(2|3-4|5-9|10\+)$")      # app.js: a returning visitor's days on the site, once a day
 REF_RE = re.compile(r"(?:^|/)ref/([a-z0-9-]{2,24})/(new|visit)$")   # app.js: ref/<affiliate code>/<new|visit>
 STAY_MARKS = ["0s", "10s", "20s", "1m", "3m", "10m", "30m"]   # same labels as app.js: ref/<code>/stay/<mark>
 STAY_SECS = [5, 15, 40, 120, 390, 1200, 1800]   # a visit that left between two marks counts as the middle; 30m+ as 30m
@@ -133,6 +134,12 @@ def sport_of(h):
 
 def visitor_kind(h):
     m = VISITOR_RE.search(h.get("path") or "") if h.get("event") else None
+    return m.group(1) if m else None
+
+
+def days_kind(h):
+    """"2", "3-4", "5-9" or "10+": how many different days a returning visitor has been on the site."""
+    m = DAYS_RE.search(h.get("path") or "") if h.get("event") else None
     return m.group(1) if m else None
 
 
@@ -250,6 +257,7 @@ def range_stats(token, now, days, tz=dt.timezone.utc):
         # per day, for week-over-week and the by-sport chart
         "sports_daily": daily_by(hits, sport_of),
         "visitors_daily": daily_by(hits, visitor_kind),
+        "loyal_daily": daily_by(hits, days_kind),
         "clicks_daily": daily_by(hits, click_kind),
     }
     if days == 1 and daily:
