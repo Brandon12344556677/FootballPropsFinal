@@ -910,8 +910,8 @@ window.PSLive=(function(){
 // ---- affiliate links: "?ref=<code>" (the team dashboard makes them; the affiliate agreement sets the pay). Every arrival
 // through one sends "ref/<code>/visit". A browser that has never been here before also sends
 // "ref/<code>/new" once the site has been on its screen for 20 seconds, counted across this visit's
-// pages and paused while hidden; affiliates are paid per "new". Only the code is sent: no ID, no
-// cookie. team_stats.py reads these (REF_RE). Runs before the block below, which marks the browser
+// pages and paused while hidden; affiliates are paid per "new". "ref/<code>/stay/<mark>" times the
+// visit (below). Only the code is sent: no ID, no cookie. team_stats.py reads these (REF_RE, STAY_RE). Runs before the block below, which marks the browser
 // as seen (psl_views, psl_first).
 (function(){
   const NEED = 20000, KEY = 'psl_ref';
@@ -934,6 +934,33 @@ window.PSLive=(function(){
     try { seen = !!(localStorage.getItem('psl_views') || localStorage.getItem('psl_first')); } catch(e) {}
     if (!seen && !st) { st = {c: code, ms: 0}; save(); }
   }
+  // Time on site from an affiliate link: "ref/<code>/stay/<mark>" once this visit (this tab, across pages,
+  // paused while hidden) reaches each mark, "0s" on arrival. The team dashboard turns the marks into an
+  // average time on site per affiliate. MARKS must match STAY_MARKS in team_stats.py.
+  (function(){
+    const MARKS = [[0,'0s'],[10,'10s'],[20,'20s'],[60,'1m'],[180,'3m'],[600,'10m'],[1800,'30m']], TKEY = 'psl_ref_t';
+    let t = null;
+    try { t = JSON.parse(sessionStorage.getItem(TKEY) || 'null'); } catch(e) {}
+    if (/^[a-z0-9-]{2,24}$/.test(code) && (!t || t.c !== code)) t = {c: code, ms: 0, k: 0};   // k: marks sent so far
+    if (!t || !/^[a-z0-9-]{2,24}$/.test(t.c || '') || !(t.k < MARKS.length)) return;
+    let since = 0, timer = 0;
+    function keep(){ try { sessionStorage.setItem(TKEY, JSON.stringify(t)); } catch(e) {} }
+    function tick(){
+      const ms = t.ms + (since ? Date.now() - since : 0);
+      while (t.k < MARKS.length && ms >= MARKS[t.k][0] * 1000) {
+        count('ref/' + t.c + '/stay/' + MARKS[t.k][1], 'Affiliate visitor stayed ' + MARKS[t.k][1] + ': ' + t.c); t.k++;
+      }
+      keep(); clearTimeout(timer);
+      if (since && t.k < MARKS.length) timer = setTimeout(tick, MARKS[t.k][0] * 1000 - ms + 50);
+    }
+    function on(){ if (since) return; since = Date.now(); tick(); }
+    function off(){ if (!since) return; t.ms += Date.now() - since; since = 0; clearTimeout(timer); keep(); }
+    document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') off(); else on(); });
+    addEventListener('pagehide', off);
+    addEventListener('pageshow', e => { if (e.persisted && document.visibilityState === 'visible') on(); });
+    tick();
+    if (document.visibilityState === 'visible') on();
+  })();
   if (!st || st.done || !/^[a-z0-9-]{2,24}$/.test(st.c || '')) return;
   let since = 0, timer = 0;
   function start(){ if (since) return; since = Date.now(); timer = setTimeout(done, Math.max(0, NEED - st.ms)); }

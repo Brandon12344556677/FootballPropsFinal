@@ -460,6 +460,12 @@ footer p{margin:0;max-width:80ch}
   </div>
 
   <section data-view="affiliates" class="panel">
+    <div class="panel-h"><h2>Affiliate link tracking</h2><span class="label" id="affTrackLabel">Last 30 days</span></div>
+    <div class="edwrap"><table class="edges"><thead><tr><th>Affiliate</th><th class="n">Visits, 7 days</th><th class="n">Visits, 30 days</th>
+      <th class="n">New viewers, 30 days</th><th class="n">Average time on site</th><th class="n">Stayed 20s+</th><th class="n">Left within 10s</th></tr></thead><tbody id="affTrack"></tbody></table></div>
+    <p class="hint" style="margin-top:10px">Everyone who arrives through an affiliate's link, over the last 30 days. <b>Average time on site</b> is how long the site stayed on their screen during that visit, across the home and sport pages they opened (player and game pages, and time in another tab, don't count). It's an estimate: the site notes when a visit passes 10s, 20s, 1, 3, 10 and 30 minutes, and a visit that ends between two of those counts as halfway; 30 minutes or more counts as 30. <b>Stayed 20s+</b> is the agreement's bar for a new viewer, measured here for every visit, new or returning. Time on site started being measured on Oct 13, 2026, so links from before then show fewer timed visits than visits.</p>
+  </section>
+  <section data-view="affiliates" class="panel">
     <div class="panel-h"><h2>Flagged: under 15 new viewers last week</h2><span class="label" id="affFlagLabel">Last week</span></div>
     <div class="edwrap"><table class="edges"><thead><tr><th>Affiliate</th><th class="n">Last week</th><th>Warnings before this</th><th>Contact</th><th></th></tr></thead><tbody id="affFlags"></tbody></table></div>
     <p class="hint" style="margin-top:10px">Each row needs a written warning by email (agreement sections 4 and 6). <b>Open email</b> starts it in your mail app with the right warning filled in, or <b>Copy email</b> copies the same text. Press <b>Mark warning sent</b> once it's gone out, so it counts toward the two warnings and nobody gets it twice. A third breach gets the ending notice instead.</p>
@@ -1300,11 +1306,29 @@ footer p{margin:0;max-width:80ch}
       '<tr><td colspan="7" class="empty">No affiliate links yet. Create one below and give it to an affiliate; their visits show up here within about 20 minutes.</td></tr>';
     renderAffList(R);
     renderAffFlags(rows, lastWk, wk);
+    renderAffTrack();
     $('affNote').textContent = `$${AFF_RATE.toFixed(2)} per new viewer (a first-time browser that kept the site on screen 20 seconds), capped at ${money(AFF_CAP)} a period. ` +
       `Last period (${shortDay(prev)} – ${shortDay(prev + 13)}) is payable within 5 days when it reaches ${money(AFF_MIN)}; add any rolled-over balance yourself before deciding. ` +
       `Weeks run Monday to Sunday; last week was ${shortDay(lastWk)} – ${shortDay(wk - 1)}. A low "new per visit" share can mean repeat or fake traffic: look before paying.`;
   }
-  // The team's list of affiliate links: affiliates.enc on the team-data branch, through expenses.js
+  // Affiliate link tracking: visits, new viewers and time on site per link over 30 days. Time on site comes
+  // from app.js's "ref/<code>/stay/<mark>" events, summed by team_stats.py stay_summary ("stay").
+  const dur = s => s < 60 ? s + 's' : Math.floor(s / 60) + 'm' + (s % 60 ? ' ' + s % 60 + 's' : '');
+  function renderAffTrack(){
+    const R30 = snap.d30 || {}, wk7 = new Map(((snap.d7 || {}).refs || []).map(r => [r.code, r.visit]));
+    const refs = (R30.refs || []).slice();
+    for (const a of affList) if (!refs.some(r => r.code === a.code)) refs.push({code: a.code, new: 0, visit: 0});
+    refs.sort((a, b) => b.visit - a.visit || b.new - a.new || a.code.localeCompare(b.code));
+    $('affTrack').innerHTML = refs.map(r => {
+      const st = r.stay || {n: 0, marks: []}, n = st.n, m = st.marks || [];
+      const share = i => n ? pct(m[i] || 0, n) + '%' : '–';
+      return `<tr><td class="aff-code">${esc(r.code)}${affName(r.code) ? `<br><small>${esc(affName(r.code))}</small>` : ''}</td>` +
+        `<td class="n">${fmt(wk7.get(r.code) || 0)}</td><td class="n">${fmt(r.visit)}</td><td class="n">${fmt(r.new)}</td>` +
+        `<td class="n">${n ? '≈ ' + dur(st.avg) + `<br><small>${fmt(n)} timed visit${n === 1 ? '' : 's'}</small>` : '–<br><small>no timed visits yet</small>'}</td>` +
+        `<td class="n">${share(2)}</td><td class="n">${n ? pct(n - (m[1] || 0), n) + '%' : '–'}</td></tr>`;
+    }).join('') || '<tr><td colspan="7" class="empty">No affiliate links yet. Create one below and give it to an affiliate; their visits show up here within about 20 minutes.</td></tr>';
+  }
+  // The team's list of affiliate links: affiliates.enc  // The team's list of affiliate links: affiliates.enc on the team-data branch, through expenses.js
   // (window.psaTeamData). Codes that show up in the stats without being on the list are listed too.
   const AFF_PATH = 'affiliates.enc', affUrl = c => 'https://propstreaklab.com/?ref=' + c;
   let affList = [], affLoaded = false, affBusy = false;
