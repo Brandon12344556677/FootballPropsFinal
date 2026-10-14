@@ -628,7 +628,7 @@ details.valrules>summary{cursor:pointer}
 </style>
 
 <link rel="stylesheet" href="app.css?v=20261014b">
-<script src="app.js?v=20261014b"></script>
+<script src="app.js?v=20261014c"></script>
 <script src="/halloween.js?v=20261013a"></script>
 
 <header class="apptop">
@@ -1270,12 +1270,17 @@ const SPORT_KEY=SPORT_NAME.toLowerCase();   // team colors in app.js are keyed b
 let edgeSort={key:'prob',dir:-1}, valueSort={key:'prob',dir:-1}, goodSort={key:'edge',dir:-1};
 function gameOf(p){ const m=/^\d{4}-\d{2}-\d{2}-([A-Z]+)-([A-Z]+)$/.exec(p.gid||'');
   return m? {away:m[1], home:m[2], start:p.start} : {away:p.team, home:p.opp, start:p.start}; }
-function normPick(p){ const px=p.price==null? null : p.price;
+function normPick(p){ let px=p.price==null? null : p.price;
   // pp/kp: this side's Polymarket and Kalshi prices; price is the cheaper (vn). Older picks: Polymarket only.
-  const pp=p.pp!=null? p.pp : (p.vn==null && p.kp==null? px : null), kp=p.kp==null? null : p.kp;
+  let pp=p.pp!=null? p.pp : (p.vn==null && p.kp==null? px : null), vn=p.vn||(px==null? null : 'P');
+  const kp=p.kp==null? null : p.kp;
+  // Between site updates the Polymarket price is refreshed live (PS.liveUS, about once a minute); a locked pick keeps
+  // the price it locked at. The shown price is again the cheaper of Polymarket and Kalshi.
+  const q=!p.lk && p.res==null && PS.liveUS.quote((DB.us||{})[p.pid+'|'+p.stat+'|'+p.line]);
+  if(q){ pp=q[p.side||'over']; vn=kp!=null && (pp==null || kp<pp)? 'K' : pp!=null? 'P' : null; px=vn==='K'? kp : vn==='P'? pp : null; }
   return {pid:p.pid, gid:p.gid, name:p.player, team:p.team, game:gameOf(p), sk:p.stat, statText:statLabel(p.stat),
     line:p.line, side:p.side||'over', prob:p.prob, lo:p.lo, hi:p.hi, n:Math.round(p.neff||0),
-    price:px, pp, kp, vn:p.vn||(px==null? null : 'P'), pd:p.pd, kd:p.kd, px0:p.px0==null? null : p.px0, lk:p.lk||null, edge:(px==null||p.prob==null)? null : p.prob-px}; }
+    price:px, pp, kp, vn, pd:p.pd, kd:p.kd, px0:p.px0==null? null : p.px0, lk:p.lk||null, edge:(px==null||p.prob==null)? null : p.prob-px}; }
 function listRows(tag){ return upcomingPicks().filter(p=>(p.lists||'').includes(tag) && p.prob!=null).map(normPick); }
 function sortRows(rows, key, dir){ return [...rows].sort((a,b)=>{
   if(key==='matchup') return dir*((a.game.away+a.game.home).localeCompare(b.game.away+b.game.home));
@@ -1839,6 +1844,7 @@ const SOCIAL = { instagram: "https://www.instagram.com/propstreaklab", tiktok: "
   bar.hidden = !(SOCIAL.instagram||SOCIAL.tiktok||SOCIAL.x); })();
 renderEdges();        // shows "Loading…" until picks arrive
 loadPicks();
+PS.liveUS.start(DB.us, ()=>{ if(PICKS!==null) renderPickViews(); });   // live Polymarket prices between updates
 buildLeaderboard();
 PS.ticker(tickerItems());
 render();
