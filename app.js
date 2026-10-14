@@ -1022,7 +1022,8 @@ window.PSLive=(function(){
 // GoatCounter counts each path once per visitor per day, so "view/1" is the day's unique visitors
 // and all "view/<n>" together are its page views (up to VIEW_CAP a visitor). Only the number is
 // sent: no ID, no cookie. team_stats.py reads these (VIEW_RE) for the team dashboard. On the day's
-// first page it also sends "visitor/new" or "visitor/returning" (VISITOR_RE).
+// first page it also sends "visitor/new" or "visitor/returning" (VISITOR_RE), and a returning visitor sends
+// "days/<range>" (DAYS_RE): how many different days this browser has visited, as 2, 3-4, 5-9 or 10+.
 (function(){
   const VIEW_CAP = 25;
   const day = new Date().toLocaleDateString('en-CA', {timeZone: 'America/New_York'});
@@ -1035,10 +1036,17 @@ window.PSLive=(function(){
   if (n > VIEW_CAP) return;
   // new or returning: on the first page of the day, whether this browser has been here before
   // (the date of its first visit stays in local storage; only "new" or "returning" is sent)
-  let kind = null;
+  let kind = null, range = null;
   if (n === 1) {
     kind = 'new';
     try { const first = localStorage.getItem('psl_first'); if (first && first !== day) kind = 'returning'; if (!first) localStorage.setItem('psl_first', day); } catch(e) {}
+    // how many different days this browser has been here (a returning visitor from before this count began starts at 2)
+    try {
+      const prev = parseInt(localStorage.getItem('psl_days') || '0', 10) || 0;
+      const days = kind === 'returning' ? Math.max(prev, 1) + 1 : 1;
+      localStorage.setItem('psl_days', String(days));
+      if (kind === 'returning') range = days >= 10 ? '10+' : days >= 5 ? '5-9' : days >= 3 ? '3-4' : '2';
+    } catch(e) {}
   }
   let tries = 0;
   (function send(){
@@ -1046,6 +1054,7 @@ window.PSLive=(function(){
     if (gc && typeof gc.count === 'function') {
       gc.count({path: 'view/' + n, title: 'Page view ' + n + ' today', event: true});
       if (kind) gc.count({path: 'visitor/' + kind, title: (kind === 'new' ? 'New' : 'Returning') + ' visitor', event: true});
+      if (range) gc.count({path: 'days/' + range, title: 'Returning visitor, ' + range + ' days', event: true});
     } else if (++tries < 40) setTimeout(send, 250);   // count.js loads async; give up after 10 s (blocked)
   })();
 })();

@@ -134,6 +134,7 @@ footer p{margin:0;max-width:80ch}
 /* insights */
 .stats.wk{grid-template-columns:repeat(5,minmax(0,1fr))}
 .stats.nr{grid-template-columns:repeat(3,minmax(0,1fr))}
+.subh{font-size:15px;font-weight:600;margin:18px 0 8px}
 @media (max-width:760px){ .stats.wk{grid-template-columns:repeat(2,minmax(0,1fr))} .stats.nr{grid-template-columns:1fr} }
 .stat .s.up{color:var(--accent)} .stat .s.down{color:var(--down)}
 .goals{list-style:none;margin:0;padding:0;display:grid;gap:14px}
@@ -412,6 +413,9 @@ footer p{margin:0;max-width:80ch}
       <div class="panel-h"><h2>New vs returning</h2><span class="label">This range</span></div>
       <div class="stats nr" id="nr"></div>
       <p class="hint" style="margin-top:10px">Each visitor counts once a day, as new (first time on the site) or returning. Counted anonymously since October 12, 2026; everyone counts as new at first.</p>
+      <h3 class="subh">How often returning visitors come back</h3>
+      <ul class="list" id="lLoyal"></ul>
+      <p class="hint" style="margin-top:8px">Each returning visit, by how many different days that visitor has been on the site. <b>10+ days</b> are your regulars. Counted since October 15, 2026, so the longer ranges fill in over the next weeks.</p>
     </section>
     <section data-view="audience" class="panel"><div class="panel-h"><h2>Time on page</h2><span class="label" id="timeMid">Page views</span></div><ul class="list" id="lTime"></ul></section>
     <section data-view="audience" class="panel"><div class="panel-h"><h2>Pages</h2><span class="label">Visits</span></div><ul class="list" id="lPages"></ul></section>
@@ -1244,6 +1248,12 @@ footer p{margin:0;max-width:80ch}
     const facts = [['New visitors', fmt(nw), 'first time on the site'], ['Returning visitors', fmt(rt), 'been here on an earlier day'],
                    ['Coming back', all ? pct(rt, all) + '%' : '–', 'of visitors were returning']];
     $('nr').innerHTML = facts.map(([k,v,sub]) => `<div class="stat"><span class="label">${esc(k)}</span><span class="v">${esc(v)}</span><span class="s">${esc(sub)}</span></div>`).join('');
+    // returning visits by days on the site (app.js "days/<range>")
+    const L = R.loyal_daily || [], RANGES = [['2', '2nd day'], ['3-4', '3–4 days'], ['5-9', '5–9 days'], ['10+', '10+ days (regulars)']];
+    const tot = RANGES.map(([k, label]) => [label, L.reduce((a, d) => a + (+d[k] || 0), 0)]);
+    const top = Math.max(1, ...tot.map(t => t[1])), sum = tot.reduce((a, t) => a + t[1], 0);
+    $('lLoyal').innerHTML = sum ? tot.map(([label, n]) => `<li class="row"><span class="bar" style="width:${(100 * n / top).toFixed(1)}%"></span><span class="name">${esc(label)}</span><span class="pct">${pct(n, sum)}%</span><span class="n">${fmt(n)}</span></li>`).join('')
+      : '<li class="empty">No returning visits counted yet in this range.</li>';
   }
   // post kit: the results image, the best caption and its tracked link, shared in one tap
   let LAST_POSTS = [];

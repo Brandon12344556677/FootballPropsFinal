@@ -276,10 +276,13 @@ class Insights(unittest.TestCase):
                 {"path": "/", "stats": [{"day": "2026-10-12", "daily": 9}]},
                 {"path": "visitor/new", "event": True, "stats": [{"day": "2026-10-12", "daily": 4}]},
                 {"path": "visitor/returning", "event": True, "stats": [{"day": "2026-10-12", "daily": 2}]},
+                {"path": "days/2", "event": True, "stats": [{"day": "2026-10-12", "daily": 1}]},
+                {"path": "days/10+", "event": True, "stats": [{"day": "2026-10-12", "daily": 1}]},
                 {"path": "click/polymarket-signup-sheet/nhl", "event": True, "stats": [{"day": "2026-10-12", "daily": 1}]},
                 {"path": "click/email-list/link", "event": True, "stats": [{"day": "2026-10-12", "daily": 3}]},
                 {"path": "click/polymarket-market/nfl", "event": True, "stats": [{"day": "2026-10-12", "daily": 7}]}]
         self.assertEqual(team_stats.daily_by(hits, team_stats.sport_of),
                          [{"day": "2026-10-11", "nfl": 5}, {"day": "2026-10-12", "nfl": 3, "nhl": 3}])
         self.assertEqual(team_stats.daily_by(hits, team_stats.visitor_kind), [{"day": "2026-10-12", "new": 4, "returning": 2}])
+        self.assertEqual(team_stats.daily_by(hits, team_stats.days_kind), [{"day": "2026-10-12", "2": 1, "10+": 1}])
         self.assertEqual(team_stats.daily_by(hits, team_stats.click_kind), [{"day": "2026-10-12", "signup": 1, "email": 3}])
