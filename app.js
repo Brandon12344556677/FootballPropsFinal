@@ -47,6 +47,18 @@ window.PS = (function(){
   function until(ms){ const d=ms-Date.now(); if(d<=0) return 'under way';
     const m=Math.round(d/60000); if(m<60) return 'in '+m+'m';
     const h=Math.floor(m/60); return h<48? 'in '+h+'h '+(m%60)+'m' : 'in '+Math.round(h/24)+' days'; }
+  // A game's start for a pick card, in the visitor's own time zone: "Today 7:10 PM EDT", "Tomorrow 1:05 PM CDT", "Sat 4:25 PM EDT".
+  function startLabel(iso){
+    const t=Date.parse(iso); if(!isFinite(t)) return '';
+    const d=new Date(t), day=x=>x.toLocaleDateString('en-CA'), now=new Date(), tmr=new Date(Date.now()+864e5);
+    const when=day(d)===day(now)? 'Today' : day(d)===day(tmr)? 'Tomorrow' : d.toLocaleDateString([], {weekday:'short', month:'short', day:'numeric'});
+    return when+' '+d.toLocaleTimeString([], {hour:'numeric', minute:'2-digit', timeZoneName:'short'});
+  }
+  // The start line under a pick card's matchup, with a live countdown (tickCountdowns keeps it current).
+  function gameTime(iso){
+    const t=Date.parse(iso); if(!isFinite(t)) return '';
+    return `<span class="pc-when">⏰ ${esc(startLabel(iso))} · <i data-cd="${esc(iso)}">${until(t)}</i></span>`;
+  }
   function tickCountdowns(){ document.querySelectorAll('[data-cd]').forEach(e=>{ const t=Date.parse(e.dataset.cd); if(isFinite(t)) e.textContent=until(t); }); }
   setInterval(tickCountdowns, 30000);
 
@@ -757,7 +769,7 @@ window.PS = (function(){
   }
 
   return {teamVars, ticker, until, skeleton, esc, hashFor, pickHash, parsePickHash, syncHash, sharePick, toast, helpBtn, spark, verdict, icon, sheet, closeSheet, pickSheet, relatedPicks,
-          isTracked, toggleBet, renderBets, loadBets, fairOf, setFair, pxMove, lockBadge, lockRibbon, lockNote, venues, venueName, cap, capPick, thinOut, getView, setView};
+          isTracked, toggleBet, renderBets, loadBets, fairOf, setFair, pxMove, lockBadge, lockRibbon, lockNote, startLabel, gameTime, venues, venueName, cap, capPick, thinOut, getView, setView};
 })();
 
 // ---- live tracker: follows picks through today's games from ESPN's public box scores ----
