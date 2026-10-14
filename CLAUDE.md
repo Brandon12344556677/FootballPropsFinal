@@ -28,7 +28,8 @@ README.md has the full feature tour; this file is the working rules.
   (the visitor's n-th page today: page views and unique visitors) and `ref/<code>/visit|new`; their labels are mirrored in `team_stats.py`
   (TIME_RANGES, CLICK_RE, VIEW_RE, REF_RE) and `team/index.html`. `view/<n>` and `ref/` are disclosed in privacy.html and cookies.html.
 - Affiliate program (private: no public page; the team recruits affiliates and they sign an agreement): links are `/?ref=<code>`. `app.js` sends `ref/<code>/visit` on
-  arrival and `ref/<code>/new` once a never-seen browser has had the site on screen 20 seconds; affiliates are paid $0.20 per
+  arrival and `ref/<code>/new` once a never-seen browser has had the site on screen 20 seconds; every affiliate arrival also sends `ref/<code>/stay/<mark>` as the visit passes each time mark (STAY_MARKS in `team_stats.py`; the tab's
+  tracking table shows average time on site); affiliates are paid $0.20 per
   `new`, every 2 weeks, $10 minimum (rolls over), $50 cap, 15 a week to avoid a warning. The dashboard's Affiliates tab
   (`AFF_*` constants) does the math, keeps the team's affiliate list (code, name, email, phone, warnings sent) in
   `affiliates.enc` on the `team-data` branch via `expenses.js`'s `window.psaTeamData`, and flags last week's under-15s

@@ -100,6 +100,25 @@ class Affiliates(unittest.TestCase):
             {"code": "sam", "new": 5, "visit": 9,
              "daily": [{"day": "2026-10-12", "new": 2}, {"day": "2026-10-13", "new": 3}]}])
 
+    def test_time_on_site_from_stay_marks(self):
+        # 10 timed visits: 4 left before 10s, 2 at 10-20s, 1 at 20s-1m, 2 at 1-3m, 1 stayed 30m+
+        marks = {"0s": 10, "10s": 6, "20s": 4, "1m": 3, "3m": 1, "10m": 1, "30m": 1}
+        events = [{"path": f"ref/sam/stay/{k}", "count": n, "event": True} for k, n in marks.items()]
+        events += [{"path": "ref/sam/visit", "count": 11, "event": True},
+                   {"path": "ref/sam/stay/2h", "count": 9, "event": True},       # not a mark
+                   {"path": "ref/new-guy/stay/0s", "count": 2, "event": True}]   # timed, nothing else yet
+        rows = {r["code"]: r for r in team_stats.ref_rows(events)}
+        self.assertEqual(rows["sam"]["visit"], 11)
+        self.assertEqual(rows["sam"]["stay"], {"n": 10, "avg": (4 * 5 + 2 * 15 + 40 + 2 * 120 + 1800) // 10,
+                                               "marks": [10, 6, 4, 3, 1, 1, 1]})
+        self.assertEqual(rows["new-guy"], {"code": "new-guy", "new": 0, "visit": 0, "daily": [],
+                                           "stay": {"n": 2, "avg": 5, "marks": [2, 0, 0, 0, 0, 0, 0]}})
+
+    def test_stay_marks_never_rise(self):
+        # a later mark with more visits than an earlier one (old app.js without the 0s mark, blocked sends) is capped
+        self.assertEqual(team_stats.stay_summary([3, 5, 0, 0, 0, 0, 0]), {"n": 3, "avg": 15, "marks": [3, 3, 0, 0, 0, 0, 0]})
+        self.assertEqual(team_stats.stay_summary([0, 2, 0, 0, 0, 0, 0]), {"n": 0, "avg": None, "marks": [0, 0, 0, 0, 0, 0, 0]})
+
     def test_no_ref_events_is_empty(self):
         self.assertEqual(team_stats.ref_rows([{"path": "view/1", "count": 3, "event": True}]), [])
 

@@ -36,6 +36,9 @@ CLICK_RE = re.compile(r"(?:^|/)click/([a-z0-9-]+)/([a-z0-9-]+)$")   # app.js: cl
 VIEW_RE = re.compile(r"(?:^|/)view/(\d+)$")   # app.js: view/<n>, the visitor's n-th page load today
 VISITOR_RE = re.compile(r"(?:^|/)visitor/(new|returning)$")   # app.js: once per visitor per day
 REF_RE = re.compile(r"(?:^|/)ref/([a-z0-9-]{2,24})/(new|visit)$")   # app.js: ref/<affiliate code>/<new|visit>
+STAY_MARKS = ["0s", "10s", "20s", "1m", "3m", "10m", "30m"]   # same labels as app.js: ref/<code>/stay/<mark>
+STAY_SECS = [5, 15, 40, 120, 390, 1200, 1800]   # a visit that left between two marks counts as the middle; 30m+ as 30m
+STAY_RE = re.compile(r"(?:^|/)ref/([a-z0-9-]{2,24})/stay/([a-z0-9]+)$")
 SPORT_RE = re.compile(r"^/(?:(nfl|nba|nhl|mlb)\.html|(?:games|players)/(nfl|nba|nhl|mlb)/|best/(nfl|nba|nhl|mlb)\.html)")
 SPORTS = ("nfl", "nba", "nhl", "mlb")
 HIT_PAGES = 4      # /stats/hits returns at most 100 paths a call; page through up to 400
@@ -163,7 +166,8 @@ def click_rows(events):
 
 def ref_rows(events):
     """Affiliate links (the dashboard's Affiliates tab) from app.js's "ref/<code>/new" and "ref/<code>/visit" events:
-    [{"code", "new", "visit", "daily": [{"day", "new"}]}], most new viewers first. "new" (a first-time
+    [{"code", "new", "visit", "daily": [{"day", "new"}], "stay"?}], most new viewers first; "stay" (stay_summary,
+    from "ref/<code>/stay/<mark>") is the time on site. "new" (a first-time
     browser that kept the site on screen 20 seconds) is what affiliates are paid for; the dashboard
     sums "daily" into pay periods and weeks."""
     out = {}
@@ -177,8 +181,31 @@ def ref_rows(events):
             for s in h.get("stats") or []:
                 if int(s.get("daily") or 0):
                     r["daily"][s["day"]] = r["daily"].get(s["day"], 0) + int(s["daily"])
+    stays = {}
+    for h in events:
+        m = STAY_RE.search(h.get("path") or "")
+        if m and m.group(2) in STAY_MARKS:
+            c = stays.setdefault(m.group(1), [0] * len(STAY_MARKS))
+            c[STAY_MARKS.index(m.group(2))] += int(h.get("count") or 0)
+    for code, c in stays.items():
+        r = out.setdefault(code, {"code": code, "new": 0, "visit": 0, "daily": {}})
+        r["stay"] = stay_summary(c)
     rows = [dict(r, daily=[{"day": d, "new": n} for d, n in sorted(r["daily"].items())]) for r in out.values()]
     return sorted(rows, key=lambda r: (-r["new"], -r["visit"], r["code"]))
+
+
+def stay_summary(counts):
+    """Time on site for one affiliate from how many of its visits reached each STAY_MARKS mark:
+    {"n": timed visits, "avg": estimated average seconds on screen, "marks": counts}. A later mark
+    can't be reached by more visits than an earlier one, so counts are capped going down."""
+    capped = []
+    for c in counts:
+        capped.append(min(c, capped[-1]) if capped else c)
+    n = capped[0]
+    if not n:
+        return {"n": 0, "avg": None, "marks": capped}
+    left = [a - b for a, b in zip(capped, capped[1:] + [0])]   # visits that ended between this mark and the next
+    return {"n": n, "avg": round(sum(k * s for k, s in zip(left, STAY_SECS)) / n), "marks": capped}
 
 
 def site_tz(token):
