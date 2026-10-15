@@ -214,6 +214,16 @@ class Skip(unittest.TestCase):
                     os.environ[k] = v
 
 
+
+
+class ToVisits(unittest.TestCase):
+    def test_breakdowns_scale_down_to_the_days_visits(self):
+        rows = [{"name": "google", "n": 33}, {"name": "instagram.com", "n": 26}, {"name": "(unknown)", "n": 25}]
+        out = team_stats.to_visits(rows, 42)
+        self.assertEqual([r["n"] for r in out], [16, 13, 12])        # shares of 42, not raw hit counts
+        self.assertLessEqual(sum(r["n"] for r in out), 43)
+        self.assertEqual(team_stats.to_visits([{"name": "x", "n": 5}], 42), [{"name": "x", "n": 5}])   # already fits
+
 if __name__ == "__main__":
     unittest.main()
 
