@@ -786,12 +786,14 @@ window.PS = (function(){
   // ---- locked picks: the builders lock a pick when its game starts within 30 minutes (lock_picks) ----
   // From then on its spot on the lists, its chance and its price stay as published.
   function lockNote(){
-    return `<p class="mktnote locknote"><span class="lockbadge">\ud83d\udd12 Locked</span><span>The game starts within 30 minutes, so the pick is final: its Top 25 / Value status, its chance and its price won\u2019t change again. The site updates about every 10 minutes, so picks lock at least 10 minutes before the start.</span></p>`;
+    return `<div class="mktnote locknote"><span class="lockbadge">\ud83d\udd12 Locked</span><div><p><b>When:</b> a pick locks once its game starts within 30 minutes. The site updates about every 10 minutes, so that\u2019s 20\u201330 minutes before the start.</p>`+
+      `<p><b>What stops changing:</b> whether it\u2019s on Top 25 or Value, the model\u2019s chance, and its price. No new picks are added for that game.</p>`+
+      `<p><b>Why:</b> so the record shows exactly what you saw before the game. Each pick is graded at its locked price, a last-minute update can\u2019t swap a pick you already acted on, and prices right before the start are the least reliable. <a href="/methodology.html#locking">How locking works</a></p></div></div>`;
   }
   // A strip across the top of a locked pick's card, so a final pick reads as final at a glance.
   function lockRibbon(lk){
     const t=Date.parse(lk), at=isFinite(t)? ' at '+new Date(t).toLocaleTimeString([], {hour:'numeric', minute:'2-digit'}) : '';
-    return `<div class="lockribbon" title="${esc(`Locked${at}: the game starts within 30 minutes, so this pick is final.`)}"><b>🔒 Locked</b><span>Final pick · won’t change</span></div>`;
+    return `<div class="lockribbon" title="${esc(`Locked${at}: the game starts within 30 minutes, so this pick is final.`)}"><b>🔒 Locked</b><span>Game starts soon · final pick</span></div>`;
   }
   function lockBadge(lk){
     const t=Date.parse(lk), at=isFinite(t)? ' at '+new Date(t).toLocaleTimeString([], {hour:'numeric', minute:'2-digit'}) : '';
