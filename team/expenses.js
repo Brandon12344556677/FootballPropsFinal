@@ -86,6 +86,28 @@
   }
 
   // ---------- page ----------
+  // ---- repeating charges: saved once in doc.recurring, counted on every date they fall on up to today ----
+  const FREQ = {daily: 'every day', weekly: 'every week', monthly: 'every month', yearly: 'every year'};
+  function nextDate(iso, freq, n){       // the n-th occurrence after iso (monthly/yearly keep the day, clamped to month end)
+    const [y, m, d] = iso.split('-').map(Number);
+    if (freq === 'daily' || freq === 'weekly') return new Date(Date.UTC(y, m - 1, d + (freq === 'daily' ? 1 : 7) * n)).toISOString().slice(0, 10);
+    const months = freq === 'yearly' ? 12 * n : n, t = new Date(Date.UTC(y, m - 1 + months, 1));
+    const last = new Date(Date.UTC(t.getUTCFullYear(), t.getUTCMonth() + 1, 0)).getUTCDate();
+    return new Date(Date.UTC(t.getUTCFullYear(), t.getUTCMonth(), Math.min(d, last))).toISOString().slice(0, 10);
+  }
+  function occurrences(r, until){
+    const out = [], stop = r.end && r.end < until ? r.end : until;
+    for (let n = 0; n < 4000; n++){ const day = nextDate(r.start, r.freq, n); if (day > stop) break; out.push(day); }   // a daily charge: ~11 years
+    return out;
+  }
+  function allItems(){
+    const t = today(), extra = [];
+    (data.recurring || []).forEach(r => occurrences(r, t).forEach(day =>
+      extra.push({id: r.id + '@' + day, rid: r.id, date: day, type: r.type, cat: r.cat, desc: r.desc, amount: r.amount, by: r.by, added: r.added})));
+    return (data.items || []).concat(extra);
+  }
+  function upcoming(r){ const t = today(); for (let n = 0; n < 4000; n++){ const day = nextDate(r.start, r.freq, n); if (day > t) return r.end && day > r.end ? null : day; } return null; }
+
   function msg(t, bad){ const m = $('exMsg'); if (m){ m.textContent = t; m.classList.toggle('bad', !!bad); } }
   function fillCats(){
     const type = $('exType').value, sel = $('exCat'), keep = sel.value;
@@ -94,7 +116,7 @@
   }
   function render(){
     if (!$('exPanel')) return;
-    const items = (data.items || []).slice().sort((a, b) => (b.date || '').localeCompare(a.date || '') || (b.added || 0) - (a.added || 0));
+    const items = allItems().sort((a, b) => (b.date || '').localeCompare(a.date || '') || (b.added || 0) - (a.added || 0));
     const out = items.filter(i => i.type === 'expense'), inn = items.filter(i => i.type === 'income');
     const sum = a => a.reduce((s, i) => s + (+i.amount || 0), 0);
     const month = today().slice(0, 7), mOut = sum(out.filter(i => (i.date || '').startsWith(month)));
@@ -113,8 +135,13 @@
     $('exRows').innerHTML = items.length ? items.map(i =>
       `<tr><td>${esc(i.date)}</td><td>${esc(i.desc)}<small>${esc(i.cat)}${i.by ? ' · ' + esc(i.by) : ''}</small></td>` +
       `<td class="n ${i.type === 'income' ? 'up' : ''}">${i.type === 'income' ? '+' : '−'}${money(+i.amount || 0).replace('−', '')}</td>` +
-      `<td><button type="button" class="ghost exdel" data-id="${esc(i.id)}" aria-label="Delete ${esc(i.desc)}">Delete</button></td></tr>`).join('')
+      `<td>${i.rid ? `<small class="exrep" title="A repeating charge: stop it in Repeating charges above">\u21bb ${esc(FREQ[(data.recurring.find(r => r.id === i.rid) || {}).freq] || 'repeats')}</small>` : `<button type="button" class="ghost exdel" data-id="${esc(i.id)}" aria-label="Delete ${esc(i.desc)}">Delete</button>`}</td></tr>`).join('')
       : `<tr><td colspan="4" class="empty">${loaded ? 'Nothing recorded yet. Add the first entry above.' : 'Loading…'}</td></tr>`;
+    const rec = (data.recurring || []).slice().sort((a, b) => (a.end ? 1 : 0) - (b.end ? 1 : 0) || a.desc.localeCompare(b.desc));
+    $('exRecWrap').hidden = !rec.length;
+    $('exRec').innerHTML = rec.map(r => { const nx = upcoming(r), n = occurrences(r, today()).length;
+      return `<li class="row"><span class="name">${esc(r.desc)} <small>${esc(r.cat)} · ${money(+r.amount || 0)} ${esc(FREQ[r.freq] || '')} since ${esc(r.start)}${r.end ? ' · stopped ' + esc(r.end) : nx ? ' · next ' + esc(nx) : ''}</small></span>` +
+        `<span class="pct">${n}\u00d7</span><span class="n">${r.end ? '' : `<button type="button" class="ghost exstop" data-id="${esc(r.id)}">Stop</button> `}<button type="button" class="ghost exrdel" data-id="${esc(r.id)}" title="Remove it and every time it was counted">Delete</button></span></li>`; }).join('');
     const t = token();
     $('exConn').innerHTML = t
       ? `Saving as <b>${esc(login || 'your GitHub account')}</b> on this device. <button type="button" class="ghost" id="exDisc">Disconnect</button>`
@@ -134,7 +161,7 @@
   }
   function csv(){
     const rows = [['Date', 'Type', 'Category', 'Description', 'Paid by / from', 'Amount']]
-      .concat((data.items || []).slice().sort((a, b) => (a.date || '').localeCompare(b.date || ''))
+      .concat(allItems().sort((a, b) => (a.date || '').localeCompare(b.date || ''))
       .map(i => [i.date, i.type === 'income' ? 'Money in' : 'Expense', i.cat, i.desc, i.by, (i.type === 'income' ? '' : '-') + (+i.amount || 0).toFixed(2)]));
     const text = rows.map(r => r.map(v => /[",\n]/.test(String(v ?? '')) ? '"' + String(v).replace(/"/g, '""') + '"' : (v ?? '')).join(',')).join('\n');
     const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([text], {type: 'text/csv'}));
@@ -155,6 +182,12 @@
       if (!desc) { msg('Add a short description.', true); return; }
       const item = {id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), date: $('exDate').value || today(),
                     type: $('exType').value, cat: $('exCat').value, desc, amount, by: $('exBy').value, added: Date.now()};
+      const freq = $('exRep').value;
+      if (freq){   // a repeating charge: saved once, counted on each date it falls on
+        const r = {id: item.id, start: item.date, freq, type: item.type, cat: item.cat, desc, amount, by: item.by, added: item.added, end: null};
+        change(doc => { (doc.recurring = doc.recurring || []).push(r); return doc; }).then(() => { if (!$('exMsg').classList.contains('bad')) { $('exDesc').value = ''; $('exAmt').value = ''; $('exRep').value = ''; } });
+        return;
+      }
       change(doc => { (doc.items = doc.items || []).push(item); return doc; }).then(() => { if (!$('exMsg').classList.contains('bad')) { $('exDesc').value = ''; $('exAmt').value = ''; } });
     });
     $('exRows').addEventListener('click', e => {
@@ -162,6 +195,17 @@
       if (b.dataset.sure !== '1') { b.dataset.sure = '1'; b.textContent = 'Sure?'; setTimeout(() => { if (b.isConnected) { b.dataset.sure = ''; b.textContent = 'Delete'; } }, 3000); return; }
       const id = b.dataset.id;
       change(doc => { doc.items = (doc.items || []).filter(i => i.id !== id); return doc; });
+    });
+    $('exRec').addEventListener('click', e => {
+      const b = e.target.closest('.exstop, .exrdel'); if (!b) return;
+      if (b.dataset.sure !== '1') { b.dataset.sure = '1'; b.dataset.was = b.textContent; b.textContent = 'Sure?'; setTimeout(() => { if (b.isConnected) { b.dataset.sure = ''; b.textContent = b.dataset.was; } }, 3000); return; }
+      const id = b.dataset.id, stop = b.classList.contains('exstop');
+      change(doc => {
+        doc.recurring = (doc.recurring || []);
+        if (stop) doc.recurring.forEach(r => { if (r.id === id) r.end = today(); });   // keeps what was already charged
+        else doc.recurring = doc.recurring.filter(r => r.id !== id);                    // removes it and its past charges
+        return doc;
+      });
     });
     $('exTokSave').addEventListener('click', () => {
       const t = $('exTok').value.trim(); if (!t) return;
