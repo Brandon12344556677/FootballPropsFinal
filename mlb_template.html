@@ -626,8 +626,8 @@ details.valrules>summary{cursor:pointer}
 .panel.collapsed > *:not(:first-child){display:none!important}
 .panel.collapsed{padding-bottom:14px}
 </style>
-<link rel="stylesheet" href="app.css?v=20261015a">
-<script src="app.js?v=20261015a"></script>
+<link rel="stylesheet" href="app.css?v=20261015b">
+<script src="app.js?v=20261015b"></script>
 <script src="/halloween.js?v=20261013a"></script>
 
 <header class="apptop">
@@ -1320,7 +1320,7 @@ function pickTable(rows, sort){
       `<div class="pc-foot"><span class="pc-price livecell">${priceCell(r)}</span>${r.lk? PS.lockBadge(r.lk) : ''}<button class="edgeload" type="button" data-i="${idx}">Details</button></div>`+
     `</article>`;
   });
-  return h+`</div>`+(rows.some(r=>r.lk)? PS.lockNote() : ''); }
+  return h+`</div>`+PS.lockNote(rows.some(r=>r.lk)); }
 // Tapping a pick card opens its details — the verdict and the last 10 games — in a sheet;
 // "Full breakdown" there loads it on the Player tab, as the old Load button did.
 function openPickSheet(r){ const p=byId[r.pid]; if(!p){ loadPick(r); return; }

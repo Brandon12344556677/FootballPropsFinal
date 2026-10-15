@@ -785,10 +785,13 @@ window.PS = (function(){
 
   // ---- locked picks: the builders lock a pick when its game starts within 30 minutes (lock_picks) ----
   // From then on its spot on the lists, its chance and its price stay as published.
-  function lockNote(){
-    return `<div class="mktnote locknote"><span class="lockbadge">\ud83d\udd12 Locked</span><div><p><b>When:</b> a pick locks once its game starts within 30 minutes. The site updates about every 10 minutes, so that\u2019s 20\u201330 minutes before the start.</p>`+
+  // Shown under every pick list, locked picks or not: one line, tap to read when and why picks lock
+  // (open by default while a pick on the list is locked).
+  function lockNote(anyLocked){
+    return `<details class="mktnote locknote"${anyLocked?' open':''}><summary><span class="lockbadge">\ud83d\udd12 ${anyLocked?'Locked':'Lock rule'}</span><span>${anyLocked?'Locked picks are final.':'Picks lock 20\u201330 minutes before the start.'} <u>When and why</u></span></summary><div>`+
+      `<p><b>When:</b> a pick locks once its game starts within 30 minutes. The site updates about every 10 minutes, so that\u2019s 20\u201330 minutes before the start.</p>`+
       `<p><b>What stops changing:</b> whether it\u2019s on Top 25 or Value, the model\u2019s chance, and its price. No new picks are added for that game.</p>`+
-      `<p><b>Why:</b> so the record shows exactly what you saw before the game. Each pick is graded at its locked price, a last-minute update can\u2019t swap a pick you already acted on, and prices right before the start are the least reliable. <a href="/methodology.html#locking">How locking works</a></p></div></div>`;
+      `<p><b>Why:</b> so the record shows exactly what you saw before the game. Each pick is graded at its locked price, a last-minute update can\u2019t swap a pick you already acted on, and prices right before the start are the least reliable. <a href="/methodology.html#locking">How locking works</a></p></div></details>`;
   }
   // A strip across the top of a locked pick's card, so a final pick reads as final at a glance.
   function lockRibbon(lk){
