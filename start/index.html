@@ -54,6 +54,14 @@ button{border:0;border-radius:12px;padding:13px 20px;background:var(--green);col
 .more a{color:var(--green);font-weight:700}
 footer{border-top:1px solid var(--line);padding-top:18px;font-size:13.5px;color:var(--muted)}
 footer a{color:var(--muted)}
+.consent{position:fixed;left:12px;right:12px;bottom:calc(12px + env(safe-area-inset-bottom, 0px));z-index:50;max-width:640px;margin:0 auto;
+  background:#0f2038;border:1px solid var(--line);border-radius:16px;padding:14px 16px;box-shadow:0 12px 40px rgba(0,0,0,.5);font-size:14.5px;color:var(--soft)}
+.consent p{margin:0 0 10px}
+.consent a{color:var(--muted)}
+.consent .row{display:flex;gap:8px;flex-wrap:wrap}
+.consent button{padding:9px 16px;font-size:14.5px}
+.consent .no{background:transparent;color:var(--soft);border:1px solid var(--line)}
+[hidden]{display:none!important}
 </style>
 </head>
 <body>
@@ -98,13 +106,40 @@ footer a{color:var(--muted)}
   <p class="more"><a href="/">Explore today's stats →</a></p>
 
   <footer>
-    <p>Prop Streak Lab is an independent sports statistics site, not affiliated with any league or team. Informational use only, not advice. <a href="/methodology.html">How the model works</a> · <a href="/privacy.html">Privacy</a> · <a href="/terms.html">Terms</a> · <a href="/cookies.html">Cookies</a> · <a href="mailto:info@propstreaklab.com">Contact</a></p>
+    <p>Prop Streak Lab is an independent sports statistics site, not affiliated with any league or team. Informational use only, not advice. <a href="/methodology.html">How the model works</a> · <a href="/privacy.html">Privacy</a> · <a href="/terms.html">Terms</a> · <a href="/cookies.html">Cookies</a> · <a href="#" id="cChange">Ad measurement choice</a> · <a href="mailto:info@propstreaklab.com">Contact</a></p>
   </footer>
 </main>
+<div class="consent" id="consent" role="region" aria-label="Ad measurement choice" hidden>
+  <p>This page can use <b>Google Ads measurement</b> (cookies from Google) to tell us which ads bring visitors who sign up. It's off unless you accept. <a href="/cookies.html#ads">Details</a></p>
+  <div class="row"><button type="button" id="cAccept">Accept</button><button type="button" class="no" id="cDecline">No thanks</button></div>
+</div>
 <script>
-// email sign-ups from this page count as "click/email-list/start" on the team dashboard
+// ---- Google Ads measurement: only on this page, and only after the visitor accepts (choice kept in local storage) ----
+const GADS_ID = 'AW-18513892872';
+const GADS_SIGNUP_LABEL = '';   // the "Sign-up" conversion action's label from Google Ads (AW-.../<label>); empty = no conversion event yet
+let gadsOn = false;
+function loadGads(){
+  if (gadsOn) return; gadsOn = true;
+  window.dataLayer = window.dataLayer || [];
+  window.gtag = function(){ dataLayer.push(arguments); };
+  gtag('js', new Date());
+  gtag('config', GADS_ID);
+  const s = document.createElement('script'); s.async = true; s.src = 'https://www.googletagmanager.com/gtag/js?id=' + GADS_ID;
+  document.head.appendChild(s);
+}
+(function(){
+  let choice = null; try { choice = localStorage.getItem('psl_gads'); } catch(e) {}
+  if (choice === 'yes') loadGads();
+  else if (choice !== 'no') document.getElementById('consent').hidden = false;
+  const set = v => { try { localStorage.setItem('psl_gads', v); } catch(e) {} document.getElementById('consent').hidden = true; if (v === 'yes') loadGads(); };
+  document.getElementById('cAccept').onclick = () => set('yes');
+  document.getElementById('cDecline').onclick = () => set('no');
+  document.getElementById('cChange').onclick = e => { e.preventDefault(); document.getElementById('consent').hidden = false; };   // a withdrawal applies from the next page load
+})();
+// email sign-ups from this page count as "click/email-list/start" on the team dashboard (and, if accepted, as a Google Ads conversion)
 document.getElementById('emailform').addEventListener('submit', () => {
   const gc = window.goatcounter; if (gc && gc.count) gc.count({path: 'click/email-list/start', title: 'Joined the email list (start)', event: true});
+  if (gadsOn && GADS_SIGNUP_LABEL && window.gtag) gtag('event', 'conversion', {send_to: GADS_ID + '/' + GADS_SIGNUP_LABEL});
   setTimeout(() => { document.getElementById('emailfine').textContent = 'Check your inbox for a confirmation link.'; }, 300);
 });
 // calibration from the live record (today.json), with the numbers from Oct 15, 2026 as a fallback
