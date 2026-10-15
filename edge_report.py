@@ -143,6 +143,21 @@ def summary(rows, today, rng):
             "daily": [[d, round(sum(byday[d]), 2)] for d in sorted(byday)][-30:]}
 
 
+def before(rows, day):
+    """A strategy's headline numbers from the picks graded before `day` (its record as of the day
+    before the latest results), for the dashboard's up/down arrows. No bootstrap: just the counts."""
+    rows = [p for p in rows if p["day"] < day]
+    if not rows:
+        return None
+    n = len(rows)
+    last = max(p["day"] for p in rows)
+    week = (datetime.date.fromisoformat(last) - datetime.timedelta(days=7)).isoformat()
+    recent = [p for p in rows if p["day"] > week]
+    return {"n": n, "hit": round(sum(p["win"] for p in rows) / n, 3),
+            "units": round(sum(pnl(p) for p in rows), 1), "roi": round(sum(pnl(p) for p in rows) / n, 4),
+            "roi7": round(sum(pnl(p) for p in recent) / len(recent), 4) if recent else None}
+
+
 def current_season(rows):
     """This season's picks only: NHL preseason games are left out."""
     return [p for p in rows if not (p["sport"] == "nhl" and p["day"] < NHL_REGULAR)]
@@ -151,11 +166,14 @@ def current_season(rows):
 def build(rows, today, seed=1):
     rng = random.Random(seed)
     rows = current_season(rows)
+    latest = max((p["day"] for p in rows), default=None)   # the most recent day with graded picks
     out = []
     for key, label, sport, test in STRATEGIES:
-        s = summary([p for p in rows if (sport is None or p["sport"] == sport) and test(p)], today, rng)
+        mine = [p for p in rows if (sport is None or p["sport"] == sport) and test(p)]
+        s = summary(mine, today, rng)
         if s:
-            out.append(dict(s, key=key, label=label, sport=sport))
+            prev = before(mine, latest) if latest else None
+            out.append(dict(s, key=key, label=label, sport=sport, prev=prev, prev_day=latest))
         elif sport in WAITING or key in WAITING_KEYS:   # not started yet: shown empty, fills in by itself
             out.append({"key": key, "label": label, "sport": sport, "n": 0, "verdict": "Waiting for games"})
     return out

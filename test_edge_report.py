@@ -61,6 +61,15 @@ class Summary(unittest.TestCase):
         self.assertEqual(out["unders"]["n"], 10)
         self.assertNotIn("nhl-top", out)
 
+    def test_previous_day_numbers_leave_out_the_latest_day(self):
+        rows = self.rows(4, 4, day="2026-10-0{}")          # days Oct 1-8
+        rows += [{"sport": "mlb", "day": "2026-10-09", "pr": 0.5, "win": True, "side": "under",
+                  "stat": "tb", "line": 1.5, "lists": ""} for _ in range(2)]   # two wins on the latest day
+        s = {x["key"]: x for x in E.build(rows, "2026-10-10")}["all-mlb"]
+        self.assertEqual(s["prev_day"], "2026-10-09")
+        self.assertEqual((s["prev"]["n"], s["n"]), (8, 10))
+        self.assertLess(s["prev"]["roi"], s["roi"])         # the two wins pushed the return up
+
 
 if __name__ == "__main__":
     unittest.main()
