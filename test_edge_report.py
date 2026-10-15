@@ -3,7 +3,7 @@ import unittest
 
 import edge_report as E
 
-COLS = ["src", "res", "price", "px0", "start", "date", "side", "stat", "line", "lists"]
+COLS = ["src", "res", "price", "px0", "start", "date", "side", "stat", "line", "lists", "vn", "th"]
 
 
 def doc(rows):
@@ -21,6 +21,10 @@ class Graded(unittest.TestCase):
             {"src": "live", "res": "push", "price": 0.6, "start": "2026-10-08T23:00:00Z"}]))
         self.assertEqual(len(rows), 1)
         self.assertEqual(rows[0]["day"], "2026-10-08")
+        # an Oct 7 Top 25 / Value pick the $25 depth rule never checked stays out, as on the NHL/MLB boards
+        unchecked = {"src": "live", "res": "hit", "price": 0.6, "start": "2026-10-07T23:00:00Z", "date": "2026-10-07", "lists": "V"}
+        self.assertEqual(E.graded("nhl", doc([unchecked])), [])
+        self.assertEqual(len(E.graded("nhl", doc([dict(unchecked, vn="P")]))), 1)   # its depth was checked
         nfl = E.graded("nfl", doc([{"src": "live", "res": "miss", "price": 55, "date": "2026-10-05"}]))
         self.assertEqual((nfl[0]["pr"], nfl[0]["day"]), (0.55, "2026-10-05"))
 

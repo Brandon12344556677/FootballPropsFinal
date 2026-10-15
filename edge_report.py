@@ -23,6 +23,7 @@ import random
 import sys
 from zoneinfo import ZoneInfo
 
+import depth
 import team_stats
 
 OUT = os.path.join("team", "edges.enc")
@@ -96,6 +97,8 @@ def graded(sport, doc):
         p = dict(zip(cols, row))
         if p.get("src") != "live" or p.get("res") not in ("hit", "miss"):
             continue
+        if sport in ("nhl", "mlb") and depth.unchecked(p):
+            continue      # launch-day picks the $25 rule never checked: left out of the boards' records too
         pr, p0 = frac(p.get("price")), frac(p.get("px0"))
         if pr is None or not 0.10 <= pr <= 0.99 or (p0 is not None and abs(pr - p0) > 0.35):
             continue
