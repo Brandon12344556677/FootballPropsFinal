@@ -579,6 +579,7 @@ html body .pslcookie button{padding:7px 14px;font-size:13px;border-radius:999px;
 .lockribbon span{font-weight:600}
 .app .pc-who .lockbadge{display:inline-flex;width:auto;overflow:visible;margin-top:4px;color:#1d1300;font-size:12px}   /* beats .app .pc-who span */
 .locknote{display:flex;align-items:flex-start;gap:8px;margin-top:8px}
+.locknote p{margin:0 0 4px} .locknote p:last-child{margin:0} .locknote a{color:inherit;text-decoration:underline}
 .locknote .lockbadge{flex:none;margin-top:1px}
 /* Polymarket and Kalshi side by side (PS.venues): the cheaper one, highlighted, is the price the pick is judged on */
 .venues{display:flex;flex-wrap:wrap;gap:3px 5px;margin-top:4px;font-size:11px;line-height:1.6;color:var(--ps-muted);white-space:nowrap}
