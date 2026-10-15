@@ -117,9 +117,10 @@ different bet is meaningless.
 
 ## Polymarket and Kalshi links
 The links to Polymarket and Kalshi are plain links to `https://polymarket.us` and
-`https://kalshi.com`, with no referral codes: the header buttons in each sport template,
-the "Find this prop on…" buttons in a pick's details (`REF` in `app.js`) and
-`guides/polymarket-and-kalshi.html`.
+`https://kalshi.com`, with no referral codes: the "Find this prop on…" buttons in a pick's
+details (`REF` in `app.js`) and `guides/polymarket-and-kalshi.html`. (The sport pages' header
+buttons for the two exchanges were removed on Oct 15, 2026.) The boards' "Join our Polymarket
+group" button links to the Prop Streak Lab squad, also without a referral tag.
 
 ---
 
