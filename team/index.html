@@ -125,6 +125,9 @@ footer p{margin:0;max-width:80ch}
 .extbl th{text-align:left;color:var(--muted);font-weight:600;font-size:13px;padding:6px 8px;border-bottom:1px solid var(--line)}
 .extbl td{padding:8px;border-bottom:1px solid var(--line);vertical-align:top}
 .extbl td small{display:block;color:var(--muted);font-size:12.5px}
+.extbl td small.exrep{display:inline;white-space:nowrap}
+#exRec .row{grid-template-columns:minmax(0,1fr) auto auto}
+#exRec .name small{display:block;color:var(--muted);font-size:12.5px;white-space:normal}
 .extbl .n{text-align:right;font-weight:600;white-space:nowrap}
 .extok{display:grid;gap:8px;max-width:640px;margin-top:10px}
 .extok ol{margin:0;padding-left:20px;color:var(--soft);font-size:14px;display:grid;gap:4px}
@@ -356,9 +359,15 @@ footer p{margin:0;max-width:80ch}
       <label class="wide">Description<input id="exDesc" maxlength="120" placeholder="e.g. Instagram boost, 5 days"></label>
       <label>Amount ($)<input id="exAmt" inputmode="decimal" placeholder="0.00"></label>
       <label>Paid by / from<select id="exBy"></select></label>
+      <label>Repeats<select id="exRep"><option value="">Doesn't repeat</option><option value="daily">Every day</option><option value="weekly">Every week</option><option value="monthly">Every month</option><option value="yearly">Every year</option></select></label>
       <div><button class="btn" type="submit">Save</button></div>
     </form>
     <p id="exMsg" role="status"></p>
+    <div id="exRecWrap" hidden>
+      <h3 class="subh">Repeating charges</h3>
+      <ul class="list" id="exRec"></ul>
+      <p class="hint" style="margin-top:6px">Each one counts on every date it falls on, up to today. <b>Stop</b> ends it from today and keeps what was already charged; <b>Delete</b> removes it and every time it was counted.</p>
+    </div>
   </section>
   <div class="grid" data-view="expenses">
     <section data-view="expenses" class="panel"><div class="panel-h"><h2>Spending by category</h2><span class="label">All time</span></div><ul class="list" id="exCats"></ul></section>
@@ -1604,6 +1613,6 @@ footer p{margin:0;max-width:80ch}
 })();
 </script>
 <script src="ads.js?v=20261013a"></script>
-<script src="expenses.js?v=20261013b"></script>
+<script src="expenses.js?v=20261015a"></script>
 </body>
 </html>
