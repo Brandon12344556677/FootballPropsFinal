@@ -1027,7 +1027,7 @@ footer p{margin:0;max-width:80ch}
 
   // ---------- email sign-ups: form submits from GoatCounter ("click/email-list/<from>"), confirmed
   // subscribers from Buttondown (team_stats.py "email") ----------
-  const EMAIL_FROM = {link:'From a "Free daily email" link on another page', 'home-link':'From the link at the top of the home page', home:'Scrolled to the box on the home page'};
+  const EMAIL_FROM = {link:'From a "Free daily email" link on another page', 'home-link':'From the link at the top of the home page', home:'Scrolled to the box on the home page', start:'The ad landing page (/start)'};
   function renderEmail(R){
     const rows = (R.clicks||[]).filter(c => c.what === 'email-list');
     const total = rows.reduce((a,b)=>a+b.n,0), E = snap.email || null;
