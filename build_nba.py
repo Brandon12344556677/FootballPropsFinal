@@ -685,16 +685,31 @@ PRESEASON = set()
 PRE_GAMES = []
 
 
+def slate_events(default_url, dated_url):
+    """ESPN events for today and tomorrow (ET), plus whatever the default scoreboard shows.
+    The default only rolls over to the new day partway through the morning; until then it is
+    last night's games, and today's picks would get no start time (seen Oct 15, 2026)."""
+    tomorrow = (datetime.date.fromisoformat(ET_TODAY) + datetime.timedelta(days=1)).isoformat()
+    urls = [default_url] + [f"{dated_url}?dates={d.replace('-', '')}" for d in (ET_TODAY, tomorrow)]
+    evs, ids = [], set()
+    for url in urls:
+        try:
+            sb = get_json(url)
+        except Exception as e:  # noqa: BLE001
+            print(f"    slate: {url[-24:]} skipped ({e})")
+            continue
+        # site.web.api returns events at the top level; the cdn format wraps them in content.sbData
+        for ev in sb.get("events") or ((sb.get("content") or {}).get("sbData") or {}).get("events", []) or []:
+            if ev.get("id") not in ids:
+                ids.add(ev.get("id"))
+                evs.append(ev)
+    return evs
+
+
 def fetch_slate():
-    """The current/upcoming board (the cdn scoreboard returns today's games; it
-    ignores a date param, which is fine — the NBA page shows tonight's slate)."""
+    """Today's and tomorrow's games (started and finished ones only mark games under way)."""
     games = []
-    try:
-        sb = get_json(ESPN_CDN_SB)
-    except Exception as e:  # noqa: BLE001
-        print(f"    slate: skipped ({e})")
-        return games
-    events = ((sb.get("content") or {}).get("sbData") or {}).get("events", []) or []
+    events = slate_events(ESPN_CDN_SB, "https://site.web.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard")
     for ev in events:
         comp = (ev.get("competitions") or [{}])[0]
         status = ((comp.get("status") or {}).get("type") or {})
@@ -706,6 +721,9 @@ def fetch_slate():
         start = ev.get("date") or ""
         if start:
             SB_GAMES.append((away, home, start))
+        t0 = parse_utc(start)
+        if t0 and (t0 - datetime.timedelta(hours=4)).date().isoformat() > ET_TODAY:
+            continue      # tomorrow's games: only their start times (stamp_starts), no picks a day early
         if (ev.get("season") or {}).get("type") == 1:
             PRESEASON.add(frozenset((away, home)))
             PRE_GAMES.append([start[:10], away, home])
