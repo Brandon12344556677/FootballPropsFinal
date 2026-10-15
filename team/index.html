@@ -548,14 +548,12 @@ footer p{margin:0;max-width:80ch}
     <div id="adCopy" hidden></div>
 
     <h3 class="adsub">Example ads</h3>
-    <p class="hint">The first six concepts, made Oct 11 with that day's numbers. C1 is a one-day example; make a fresh one above.</p>
+    <p class="hint">One of each kind, made by the ad maker above on Oct 14 with that day's numbers (every one carries the 18+ line). Make a fresh one above before running it.</p>
     <div class="adgal">
-      <figure><img src="ads/a1-calibration.png" alt="A1 · Proof example ad" loading="lazy"><figcaption>A1 · Proof: "When we say 75%, it hits 76%"</figcaption><a href="ads/a1-calibration.png" download="prop-streak-lab-a1-calibration.png">Download PNG</a></figure>
-      <figure><img src="ads/a2-receipts.png" alt="A2 · Proof example ad" loading="lazy"><figcaption>A2 · Proof: "We post the misses too"</figcaption><a href="ads/a2-receipts.png" download="prop-streak-lab-a2-receipts.png">Download PNG</a></figure>
-      <figure><img src="ads/b1-hit-rates.png" alt="B1 · Problem example ad" loading="lazy"><figcaption>B1 · Problem: "7 of his last 10" is not 70%</figcaption><a href="ads/b1-hit-rates.png" download="prop-streak-lab-b1-hit-rates.png">Download PNG</a></figure>
-      <figure><img src="ads/b2-parlay.png" alt="B2 · Problem example ad" loading="lazy"><figcaption>B2 · Problem: same-game parlay legs</figcaption><a href="ads/b2-parlay.png" download="prop-streak-lab-b2-parlay.png">Download PNG</a></figure>
-      <figure><img src="ads/c1-todays-gap.png" alt="C1 · Daily example ad" loading="lazy"><figcaption>C1 · Daily: model vs. market</figcaption><a href="ads/c1-todays-gap.png" download="prop-streak-lab-c1-todays-gap.png">Download PNG</a></figure>
-      <figure><img src="ads/d1-story.png" alt="D1 · Story / Reel, 9:16 example ad" loading="lazy"><figcaption>D1 · Story / Reel, 9:16</figcaption><a href="ads/d1-story.png" download="prop-streak-lab-d1-story.png">Download PNG</a></figure>
+      <figure><img src="ads/proof-feed.png" alt="Calibration example ad" loading="lazy"><figcaption>Calibration (proof): "When we say 75%, it hits 76%"</figcaption><a href="ads/proof-feed.png" download="prop-streak-lab-proof.png">Download PNG</a></figure>
+      <figure><img src="ads/record-feed.png" alt="Season record example ad" loading="lazy"><figcaption>Season record (one sport)</figcaption><a href="ads/record-feed.png" download="prop-streak-lab-record.png">Download PNG</a></figure>
+      <figure><img src="ads/gap-feed.png" alt="Biggest gap example ad" loading="lazy"><figcaption>Today's biggest gap (model vs. market)</figcaption><a href="ads/gap-feed.png" download="prop-streak-lab-gap.png">Download PNG</a></figure>
+      <figure><img src="ads/streak-feed.png" alt="Hit streak example ad" loading="lazy"><figcaption>Hit streak</figcaption><a href="ads/streak-feed.png" download="prop-streak-lab-streak.png">Download PNG</a></figure>
     </div>
 
     <h3 class="adsub">Before you run them</h3>
@@ -1152,7 +1150,7 @@ footer p{margin:0;max-width:80ch}
     });
     g.fillStyle='#dfe6ef'; g.font='600 40px Inter, sans-serif'; g.fillText('Every pick recorded before the game.', 96, H-250);
     g.fillStyle='#22d07f'; g.font='800 58px Archivo, Inter, sans-serif'; g.fillText('propstreaklab.com', 96, H-160);
-    g.fillStyle='#9fb0c6'; g.font='600 32px Inter, sans-serif'; g.fillText('Free · NFL · NBA · NHL · MLB · Research, not betting advice', 96, H-96);
+    g.fillStyle='#9fb0c6'; g.font='600 32px Inter, sans-serif'; g.fillText('Free · NFL · NBA · NHL · MLB · Research, not advice · 18+', 96, H-96);
     imgBlob=await new Promise(res=>c.toBlob(res,'image/png'));
     $('imgPrev').src=URL.createObjectURL(imgBlob); $('imgPrev').hidden=false; $('imgSave').hidden=false;
     $('imgMsg').textContent='Ready. On a phone, Save or share opens the share sheet (Snapchat, Instagram, Photos).';
