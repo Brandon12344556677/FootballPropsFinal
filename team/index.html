@@ -455,7 +455,7 @@ footer p{margin:0;max-width:80ch}
             <select id="lbSource">
               <option value="snapchat">Snapchat</option><option value="instagram">Instagram</option><option value="tiktok">TikTok</option>
               <option value="x">X (Twitter)</option><option value="discord">Discord</option><option value="telegram">Telegram</option>
-              <option value="reddit">Reddit</option><option value="facebook">Facebook</option><option value="text">Text / DM</option><option value="email">Email</option>
+              <option value="reddit">Reddit</option><option value="google">Google Ads</option><option value="facebook">Facebook</option><option value="text">Text / DM</option><option value="email">Email</option>
             </select>
           </label>
           <label for="lbPage">Page to open
@@ -692,7 +692,7 @@ footer p{margin:0;max-width:80ch}
     return [...m.values()].sort((a,b)=>b.n-a.n);
   }
   const PAGE_NAME = {'/':'Home','/index.html':'Home','/nfl.html':'NFL board','/nba.html':'NBA board','/nhl.html':'NHL board','/mlb.html':'MLB board',
-    '/methodology.html':'Methodology','/privacy.html':'Privacy','/terms.html':'Terms','/cookies.html':'Cookie policy'};
+    '/start/':'Ad landing page','/methodology.html':'Methodology','/privacy.html':'Privacy','/terms.html':'Terms','/cookies.html':'Cookie policy'};
   function mergePages(rows){
     const m = new Map();
     for (const r of rows||[]) {
@@ -1509,7 +1509,7 @@ footer p{margin:0;max-width:80ch}
   // Links made on this device are remembered here so they show (at 0) before their first visit;
   // after that they come from the stats and everyone on the team sees them.
   const slugify = s => String(s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'').slice(0,40);
-  const SOURCES = ['snapchat','instagram','tiktok','x','discord','telegram','reddit','facebook','text','email'];
+  const SOURCES = ['snapchat','instagram','tiktok','x','discord','telegram','reddit','google','facebook','text','email'];
   const savedLinks = {
     all(){ try { return JSON.parse(localStorage.getItem('psa-links') || '[]'); } catch(e){ return []; } },
     add(l){ try { const a = this.all().filter(x => x.c !== l.c); a.unshift(l); localStorage.setItem('psa-links', JSON.stringify(a.slice(0,50))); } catch(e){} }
