@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Prop Streak Lab — Free sports stats for every player</title>
+<meta name="description" content="Game logs and stat trends for every NFL, NHL, MLB and NBA player, updated every 10 minutes, with every prediction graded in public. Free daily email.">
+<!-- Landing page for paid ads (Snapchat, TikTok, Google...): what the site is and the email sign-up, with no
+     exchange prices, links or picks, so an ad platform reviewing the landing page sees a sports-stats site.
+     noindex and not in the sitemap; the home page stays the site's main page. -->
+<meta name="robots" content="noindex">
+<link rel="canonical" href="https://propstreaklab.com/">
+<meta name="theme-color" content="#0a1628">
+<link rel="icon" href="/favicon.ico" sizes="48x48">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<script data-goatcounter="https://propstreaklive.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
+<link rel="stylesheet" href="/fonts.css">
+<style>
+:root{--bg:#0a1628;--surface:#0f2038;--surface-2:#142743;--line:#22354f;--text:#fff;--soft:#dfe6ef;--muted:#b8c5d6;--green:#22d07f;--green-ink:#06210b}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:radial-gradient(900px 600px at 15% -10%,rgba(34,208,127,.14),transparent 60%),var(--bg);color:var(--text);font-family:"Inter",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;font-size:17px;line-height:1.55}
+.wrap{max-width:760px;margin:0 auto;padding-inline:18px;padding-block:28px 56px;display:grid;gap:34px}
+.brand{display:flex;align-items:center;gap:10px;color:#fff;text-decoration:none;font-family:"Archivo","Inter",sans-serif;font-weight:800;font-size:22px}
+.brand i{color:var(--green);font-weight:600}
+h1{font-family:"Archivo","Inter",sans-serif;font-weight:800;font-size:clamp(40px,8vw,64px);line-height:1.03;letter-spacing:-.03em;margin:0;text-wrap:balance}
+h1 em{color:var(--green);font-weight:700}
+h2{font-family:"Archivo","Inter",sans-serif;font-size:24px;margin:0 0 12px;letter-spacing:-.01em}
+.lede{color:var(--soft);font-size:19px;margin:14px 0 0;max-width:36em}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:18px}
+.chips span{border:1.5px solid rgba(34,208,127,.5);background:rgba(34,208,127,.1);color:var(--green);font-weight:800;border-radius:999px;padding:5px 16px;font-size:15px}
+.email{background:var(--surface);border:1px solid rgba(34,208,127,.45);border-radius:18px;padding:22px}
+.email p{margin:0 0 14px;color:var(--soft)}
+form{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px}
+input[type=email]{min-width:0;padding:13px 14px;border-radius:12px;border:1px solid var(--line);background:var(--surface-2);color:#fff;font:inherit;font-size:16px}
+input[type=email]:focus-visible,button:focus-visible{outline:2px solid var(--green);outline-offset:2px}
+button{border:0;border-radius:12px;padding:13px 20px;background:var(--green);color:var(--green-ink);font:inherit;font-weight:800;cursor:pointer}
+.fine{font-size:13.5px;color:var(--muted);margin:10px 0 0}
+.fine a{color:var(--muted)}
+@media (max-width:480px){form{grid-template-columns:1fr}}
+.feats{list-style:none;margin:0;padding:0;display:grid;gap:14px}
+.feats li{padding-left:16px;border-left:3px solid rgba(34,208,127,.5)}
+.feats b{display:block;font-size:18px}
+.feats span{color:var(--muted)}
+.calib{display:grid;gap:10px;margin-top:6px}
+.cr{display:grid;grid-template-columns:76px minmax(0,1fr) 54px;gap:12px;align-items:center;font-variant-numeric:tabular-nums}
+.cr .l{color:var(--muted);font-size:15px}
+.track{position:relative;height:12px;border-radius:6px;background:rgba(255,255,255,.08)}
+.track i{position:absolute;inset:0 auto 0 0;border-radius:6px;background:var(--green)}
+.track b{position:absolute;top:-5px;bottom:-5px;width:3px;border-radius:2px;background:#fff}
+.cr .v{text-align:right;font-weight:800}
+.key{display:flex;gap:18px;flex-wrap:wrap;font-size:13.5px;color:var(--muted);margin-top:10px}
+.more a{color:var(--green);font-weight:700}
+footer{border-top:1px solid var(--line);padding-top:18px;font-size:13.5px;color:var(--muted)}
+footer a{color:var(--muted)}
+</style>
+</head>
+<body>
+<main class="wrap">
+  <a class="brand" href="/start/"><svg width="34" height="34" viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" rx="14" fill="#0f2038" stroke="rgba(34,208,127,.35)"/><path d="M32,6 Q32,32 54,32 Q32,32 32,58 Q32,32 10,32 Q32,32 32,6 Z" fill="#22d07f"/></svg><span>Prop <i>Streak</i> Lab</span></a>
+
+  <section>
+    <h1>Every player. Every game. Every <em>stat.</em></h1>
+    <p class="lede">Game logs and stat trends for every NFL, NHL, MLB and NBA player, updated every 10 minutes. Free, no account needed.</p>
+    <div class="chips" aria-label="Leagues"><span>NFL</span><span>NHL</span><span>MLB</span><span>NBA</span></div>
+  </section>
+
+  <section class="email" id="email" aria-labelledby="email-h">
+    <h2 id="email-h">Get the free daily email</h2>
+    <p>Every morning: the model's top-rated player stat lines for the day, and how yesterday's predictions did. One email a day, unsubscribe any time.</p>
+    <form id="emailform" method="post" target="_blank" rel="noopener" action="https://buttondown.com/api/emails/embed-subscribe/PropStreakLab">
+      <label class="sr" for="emailaddr" style="position:absolute;left:-9999px">Email address</label>
+      <input id="emailaddr" type="email" name="email" required placeholder="you@example.com" autocomplete="email">
+      <input type="hidden" name="tag" value="start">
+      <button type="submit">Sign me up</button>
+    </form>
+    <p class="fine" id="emailfine">We'll email you a link to confirm. Your address is used only for this email and never sold. <a href="/privacy.html">Privacy</a></p>
+  </section>
+
+  <section aria-labelledby="what-h">
+    <h2 id="what-h">What you get</h2>
+    <ul class="feats">
+      <li><b>Game logs for 3,800+ players</b><span>The last 10 games, home and away, and how each matchup went.</span></li>
+      <li><b>A statistical model for every stat line</b><span>The chance a player reaches a number, from his game log and the matchup.</span></li>
+      <li><b>Updated every 10 minutes</b><span>Fresh numbers from morning until the games start.</span></li>
+      <li><b>Graded in public</b><span>Every prediction is recorded before the game and checked against the final box score, misses included.</span></li>
+    </ul>
+  </section>
+
+  <section aria-labelledby="calib-h">
+    <h2 id="calib-h">When the model says 75%, it happens about <span id="c75">76%</span> of the time.</h2>
+    <p class="lede" style="margin:0 0 12px;font-size:16px" id="calibsub">How often each confidence level came true, across every graded prediction.</p>
+    <div class="calib" id="calib"></div>
+    <div class="key"><span><span style="display:inline-block;width:18px;height:8px;border-radius:4px;background:#22d07f;margin-right:6px"></span>How often it happened</span><span><span style="display:inline-block;width:3px;height:12px;background:#fff;margin-right:6px"></span>What the model said</span></div>
+  </section>
+
+  <p class="more"><a href="/">Explore today's stats →</a></p>
+
+  <footer>
+    <p>Prop Streak Lab is an independent sports statistics site, not affiliated with any league or team. Informational use only, not advice. <a href="/methodology.html">How the model works</a> · <a href="/privacy.html">Privacy</a> · <a href="/terms.html">Terms</a> · <a href="/cookies.html">Cookies</a> · <a href="mailto:info@propstreaklab.com">Contact</a></p>
+  </footer>
+</main>
+<script>
+// email sign-ups from this page count as "click/email-list/start" on the team dashboard
+document.getElementById('emailform').addEventListener('submit', () => {
+  const gc = window.goatcounter; if (gc && gc.count) gc.count({path: 'click/email-list/start', title: 'Joined the email list (start)', event: true});
+  setTimeout(() => { document.getElementById('emailfine').textContent = 'Check your inbox for a confirmation link.'; }, 300);
+});
+// calibration from the live record (today.json), with the numbers from Oct 15, 2026 as a fallback
+(function(){
+  const draw = (rows, total) => {
+    const pos = v => Math.max(0, Math.min(100, (v - 0.4) / 0.6 * 100)).toFixed(1) + '%', pct = v => Math.round(v * 100) + '%';
+    document.getElementById('calib').innerHTML = rows.map(b => `<div class="cr"><span class="l">${b.lo}–${b.hi}%</span><div class="track"><i style="width:${pos(b.hit)}"></i><b style="left:${pos(b.said)}"></b></div><span class="v">${pct(b.hit)}</span></div>`).join('');
+    const mid = rows.find(b => b.lo === 70); if (mid) document.getElementById('c75').textContent = pct(mid.hit);
+    if (total) document.getElementById('calibsub').textContent = `How often each confidence level came true, across ${total.toLocaleString('en-US')} graded predictions.`;
+  };
+  const fallback = [{lo:50,hi:60,said:.55,hit:.554},{lo:60,hi:70,said:.651,hit:.658},{lo:70,hi:80,said:.75,hit:.757},{lo:80,hi:90,said:.85,hit:.849},{lo:90,hi:100,said:.949,hit:.945}];
+  draw(fallback, 0);
+  fetch('/today.json', {cache: 'no-store'}).then(r => r.ok ? r.json() : null).then(t => {
+    const rows = (t && t.calib || []).filter(b => b.n >= 200);
+    if (rows.length >= 3) draw(rows, (t.calib || []).reduce((a, b) => a + b.n, 0));
+  }).catch(() => {});
+})();
+</script>
+</body>
+</html>
