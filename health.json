@@ -2,12 +2,10 @@
  "problems": {
   "team_stats: GoatCounter team stats": {
    "first": "2026-10-15T00:19:43Z",
-   "runs": 18,
+   "runs": 19,
    "alerted": "2026-10-15T03:02:55Z",
    "msg": "team_stats.py: GoatCounter team stats failed (URLError: <urlopen error [Errno 104] Connection reset by peer>)"
   }
  },
- "alert": [
-  "team_stats.py: GoatCounter team stats failed (URLError: <urlopen error [Errno 104] Connection reset by peer>)"
- ]
+ "alert": []
 }
