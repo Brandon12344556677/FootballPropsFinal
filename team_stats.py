@@ -225,12 +225,15 @@ def site_tz(token):
         return "America/New_York", ZoneInfo("America/New_York")
 
 
-def range_stats(token, now, days, tz=dt.timezone.utc):
-    """`now` is naive UTC; the range starts at local midnight `days - 1` days ago."""
-    today = now.replace(tzinfo=dt.timezone.utc).astimezone(tz).date()
+def range_stats(token, now, days, tz=dt.timezone.utc, ago=0):
+    """`now` is naive UTC; the range starts at local midnight `days - 1` days ago. With ago > 0 the
+    range is shifted back that many whole days and ends at local midnight ("yesterday": days=1, ago=1)."""
+    today = now.replace(tzinfo=dt.timezone.utc).astimezone(tz).date() - dt.timedelta(days=ago)
     local_day = today - dt.timedelta(days=days - 1)
     start = dt.datetime.combine(local_day, dt.time(), tzinfo=tz).astimezone(dt.timezone.utc).replace(tzinfo=None)
-    q = {"start": hour(start), "end": hour(now + dt.timedelta(hours=1))}
+    end = (dt.datetime.combine(today + dt.timedelta(days=1), dt.time(), tzinfo=tz).astimezone(dt.timezone.utc).replace(tzinfo=None)
+           if ago else now + dt.timedelta(hours=1))
+    q = {"start": hour(start), "end": hour(end)}
     total = get(token, "/stats/total", **q)          # rejects a "limit" parameter
     hits = all_hits(token, q)   # every path, including ?v= test URLs (merged on the page) and events
     events = [h for h in hits if h.get("event")]
@@ -365,6 +368,7 @@ def main():
             "source": "GoatCounter", "tz": tz_name}
     for key, days in RANGES.items():
         snap[key] = range_stats(token, now, days, tz)
+    snap["y1"] = range_stats(token, now, 1, tz, ago=1)   # yesterday, midnight to midnight
     snap["spikes"] = spikes(snap)
     snap["email"] = email_stats(os.environ.get("BUTTONDOWN_API_KEY", "").strip())
     if unchanged(snap, password):

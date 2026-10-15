@@ -301,6 +301,7 @@ footer p{margin:0;max-width:80ch}
 
   <div class="tabs" role="tablist" aria-label="Date range" id="tabs">
     <button role="tab" id="tab-d1" data-r="d1" aria-selected="false">Today</button>
+    <button role="tab" id="tab-y1" data-r="y1" aria-selected="false">Yesterday</button>
     <button role="tab" id="tab-d7" data-r="d7" aria-selected="false">7 days</button>
     <button role="tab" id="tab-d30" data-r="d30" aria-selected="true">30 days</button>
     <button role="tab" id="tab-d90" data-r="d90" aria-selected="false">90 days</button>
@@ -592,7 +593,7 @@ footer p{margin:0;max-width:80ch}
     del(k){ try { sessionStorage.removeItem(k); } catch(e){} }
   };
   let snap = null, range = 'd30', password = null, timer = null;
-  try { const r = localStorage.getItem('psa-range'); if (/^d(1|7|30|90)$/.test(r)) range = r; } catch(e){}
+  try { const r = localStorage.getItem('psa-range'); if (/^(d(1|7|30|90)|y1)$/.test(r)) range = r; } catch(e){}
 
   // ---------- decryption (OpenSSL "Salted__" format, PBKDF2-SHA256 → AES-256-CBC) ----------
   async function decrypt(b64, pw){
@@ -745,7 +746,7 @@ footer p{margin:0;max-width:80ch}
   }
 
   function series(){
-    if (range === 'd1') return {kind:'hour', pts:(snap.d1.hourly||[]).map((n,i)=>({label: (i%12||12)+(i<12?' am':' pm'), n}))};
+    if (range === 'd1' || range === 'y1') return {kind:'hour', pts:((snap[range]||{}).hourly||[]).map((n,i)=>({label: (i%12||12)+(i<12?' am':' pm'), n}))};
     const days = {d7:7,d30:30,d90:90}[range];
     const daily = (snap.d90.daily||[]).slice(-days);
     return {kind:'day', pts: daily.map(d => ({label: new Date(d.day+'T12:00:00Z').toLocaleDateString('en-US',{month:'short',day:'numeric',timeZone:'UTC'}), n:d.n}))};
@@ -809,6 +810,10 @@ footer p{margin:0;max-width:80ch}
   }
 
   function prevChange(){
+    if (range === 'y1') {   // yesterday vs the day before
+      const d = (snap.d90.daily||[]).map(x=>x.n); if (d.length < 3) return null;
+      const cur = d[d.length-2], prev = d[d.length-3]; return prev ? Math.round((cur-prev)/prev*100) : null;
+    }
     const days = {d1:1,d7:7,d30:30}[range]; if (!days) return null;
     const d = (snap.d90.daily||[]).map(x=>x.n); if (d.length < days*2) return null;
     const cur = d.slice(-days).reduce((a,b)=>a+b,0), prev = d.slice(-days*2,-days).reduce((a,b)=>a+b,0);
@@ -817,9 +822,9 @@ footer p{margin:0;max-width:80ch}
 
   function render(){
     if (!snap) return;
-    const R = snap[range]; if (!R) return;
+    const R = snap[range]; if (!R) { if (range === 'y1') { $('kVisits').textContent = '–'; $('kVisitsS').textContent = 'Yesterday shows after the next stats update'; } return; }
     const total = R.total || 0;
-    const days = {d1:1,d7:7,d30:30,d90:90}[range];
+    const days = {d1:1,y1:1,d7:7,d30:30,d90:90}[range];
     const refs = mergeRefs(R.toprefs);   // shares below are of all visits, like GoatCounter's own dashboard
     const sys = clean(R.systems), sysTotal = sys.reduce((a,b)=>a+b.n,0);
     const mobile = sys.filter(s=>/ios|android|ipados/i.test(s.name)).reduce((a,b)=>a+b.n,0);
@@ -829,8 +834,8 @@ footer p{margin:0;max-width:80ch}
     const ch = prevChange(); const kv = $('kVisitsS'); kv.textContent=''; kv.className='s';
     if (ch === null) kv.textContent = range==='d90' ? 'Last 90 days' : 'No earlier period to compare';
     else { kv.textContent = (ch>=0?'▲ ':'▼ ') + Math.abs(ch) + '% vs previous ' + (days===1?'day':days+' days'); kv.classList.add(ch>=0?'up':'down'); }
-    $('kAvg').textContent = range==='d1' ? fmt(total) : fmt(Math.round(total/days));
-    $('kAvgS').textContent = range==='d1' ? 'So far today (' + tzAbbr() + ')' : 'Average over ' + days + ' days';
+    $('kAvg').textContent = days===1 ? fmt(total) : fmt(Math.round(total/days));
+    $('kAvgS').textContent = range==='d1' ? 'So far today (' + tzAbbr() + ')' : range==='y1' ? 'All of yesterday (' + tzAbbr() + ')' : 'Average over ' + days + ' days';
     $('kMobile').textContent = sysTotal ? pct(mobile, sysTotal)+'%' : '–';
     $('kMobileS').textContent = sysTotal ? 'iPhone and Android' : 'No device data yet';
     $('kSrc').textContent = named[0] ? named[0].name : '–';
@@ -936,8 +941,8 @@ footer p{margin:0;max-width:80ch}
   }
 
   // ---------- sponsor snapshot: last 30 days, ready to paste into an email ----------
-  const RANGE_DAYS = {d1:1, d7:7, d30:30, d90:90};
-  const RANGE_NAME = {d1:'today', d7:'last 7 days', d30:'last 30 days', d90:'last 90 days'};
+  const RANGE_DAYS = {d1:1, y1:1, d7:7, d30:30, d90:90};
+  const RANGE_NAME = {d1:'today', y1:'yesterday', d7:'last 7 days', d30:'last 30 days', d90:'last 90 days'};
   function sponsorFacts(){
     const R = snap[range]; if (!R) return [];   // follows the date range picked above
     const nDays = RANGE_DAYS[range] || 30;

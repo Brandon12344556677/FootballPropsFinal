@@ -155,6 +155,19 @@ class LocalDay(unittest.TestCase):
         self.assertEqual(seen[0][1]["start"], "2026-10-10T04:00:00Z")
         self.assertEqual(seen[0][1]["end"], "2026-10-11T02:00:00Z")
 
+    def test_yesterday_is_the_whole_previous_local_day(self):
+        seen = []
+        old = team_stats.get
+        team_stats.get = lambda token, path, **q: (seen.append((path, q)), {})[1]
+        try:
+            ny = team_stats.ZoneInfo("America/New_York")
+            # 3 PM Oct 14 in New York: yesterday is Oct 13, midnight to midnight EDT
+            team_stats.range_stats("t", team_stats.dt.datetime(2026, 10, 14, 19, 0), 1, ny, ago=1)
+        finally:
+            team_stats.get = old
+        self.assertEqual(seen[0][1]["start"], "2026-10-13T04:00:00Z")
+        self.assertEqual(seen[0][1]["end"], "2026-10-14T04:00:00Z")
+
 
 @unittest.skipUnless(shutil.which("openssl"), "openssl not installed")
 class Crypto(unittest.TestCase):
