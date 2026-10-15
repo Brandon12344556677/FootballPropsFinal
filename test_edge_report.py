@@ -59,11 +59,17 @@ class Summary(unittest.TestCase):
 
     def test_strategies_pick_their_rows(self):
         out = {s["key"]: s for s in E.build(self.rows(6, 4) + self.rows(3, 7, side="over", pr=0.6), "2026-10-10")}
-        self.assertEqual(out["mlb-unders-mid"]["n"], 10)
-        self.assertEqual(out["mlb-tb-under"]["n"], 10)
         self.assertNotIn("mlb-overs", out)
-        self.assertEqual(out["unders"]["n"], 10)
         self.assertNotIn("nhl-top", out)
+        self.assertNotIn("unders", out)          # private rules aren't in the code any more
+
+    def test_private_rules_from_the_encrypted_document(self):
+        doc = {"items": [{"key": "a", "label": "MLB unders 50-65c", "sport": "mlb", "side": "under", "pmin": 0.5, "pmax": 0.65},
+                         {"key": "b", "label": "MLB total bases under 1.5", "sport": "mlb", "side": "under", "stat": "tb", "line": 1.5}]}
+        strategies = E.STRATEGIES + E.private_strategies(doc)
+        out = {s["key"]: s for s in E.build(self.rows(6, 4) + self.rows(3, 7, side="over", pr=0.6), "2026-10-10", strategies=strategies)}
+        self.assertEqual((out["a"]["n"], out["b"]["n"], out["private-all"]["n"]), (10, 10, 10))
+        self.assertEqual(E.private_strategies({"items": []}), [])
 
     def test_previous_day_numbers_leave_out_the_latest_day(self):
         rows = self.rows(4, 4, day="2026-10-0{}")          # days Oct 1-8

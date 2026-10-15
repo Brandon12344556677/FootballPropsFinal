@@ -119,7 +119,8 @@ footer p{margin:0;max-width:80ch}
 .exform input,.exform select,.extok input{width:100%;font:500 15px var(--f-body);color:var(--fg);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:9px 10px}
 .exform .wide{grid-column:span 2}
 @media (max-width:760px){ .exform{grid-template-columns:repeat(2,minmax(0,1fr))} .exform .wide{grid-column:1/-1} }
-#exMsg{font-size:14px;color:var(--accent);min-height:1.4em;margin:10px 0 0} #exMsg.bad{color:var(--down)}
+#exMsg,#prMsg{font-size:14px;color:var(--accent);min-height:1.4em;margin:10px 0 0} #exMsg.bad,#prMsg.bad{color:var(--down)}
+#prList .name small{display:block;color:var(--muted);font-size:12.5px;margin-top:2px} #prList .ghost{padding:3px 9px;font-size:12.5px} #prForm{margin-top:12px}
 .extbl-wrap{overflow-x:auto}
 .extbl{width:100%;border-collapse:collapse;font-size:14px}
 .extbl th{text-align:left;color:var(--muted);font-weight:600;font-size:13px;padding:6px 8px;border-bottom:1px solid var(--line)}
@@ -403,6 +404,24 @@ footer p{margin:0;max-width:80ch}
     <p class="hint">This season's picks (NHL from the regular season on) with a market price, each graded as a flat $1 bet at that price. The likely range is where the true return probably sits; treat an edge as real only once the whole range is above 0%.</p>
     <p class="hint" style="margin-top:6px"><span class="arw up">▲</span><span class="arw down">▼</span> next to a number: up or down since the previous day's results (hover one for the earlier value).</p>
     <div class="edwrap"><table class="edges"><thead><tr><th>Strategy</th><th class="n">Picks</th><th class="n">Hit</th><th class="n">Return</th><th class="n">Likely range</th><th class="n">Last 7 days</th><th>Verdict</th></tr></thead><tbody id="edRows"></tbody></table></div>
+  </section>
+
+  <section data-view="picks" class="panel" id="prPanel">
+    <div class="panel-h"><h2>Private strategies</h2><span class="label">Encrypted, team only</span></div>
+    <p class="hint">Rules the edge tracker grades without them being in the public code. They're saved encrypted with the team password and show up in the tracker from the next update. Empty fields mean any. Saving uses the GitHub connection from the Expenses tab.</p>
+    <ul class="list" id="prList"><li class="empty">Loading…</li></ul>
+    <p><button type="button" class="ghost" id="prImport" hidden>Import the current private rules (the three unders rules)</button></p>
+    <form class="exform" id="prForm" autocomplete="off">
+      <label class="wide">Name<input id="prLabel" maxlength="80" placeholder="e.g. NHL assist unders priced 65-80c"></label>
+      <label>Sport<select id="prSport"><option value="">Any sport</option><option value="nfl">NFL</option><option value="nba">NBA</option><option value="nhl">NHL</option><option value="mlb">MLB</option></select></label>
+      <label>Side<select id="prSide"><option value="">Overs and unders</option><option value="over">Overs</option><option value="under">Unders</option></select></label>
+      <label>Stat code<input id="prStat" maxlength="12" placeholder="e.g. a, tb, pts"></label>
+      <label>Line<input id="prLine" inputmode="decimal" placeholder="e.g. 1.5"></label>
+      <label>Price from (¢)<input id="prMin" inputmode="numeric" placeholder="e.g. 50"></label>
+      <label>Price under (¢)<input id="prMax" inputmode="numeric" placeholder="e.g. 65"></label>
+      <div><button class="btn" type="submit" id="prSave">Add strategy</button> <button class="ghost" type="button" id="prCancel">Clear</button></div>
+    </form>
+    <p id="prMsg" role="status"></p>
   </section>
 
   <section data-view="social" class="panel">
@@ -1614,5 +1633,6 @@ footer p{margin:0;max-width:80ch}
 </script>
 <script src="ads.js?v=20261013a"></script>
 <script src="expenses.js?v=20261015a"></script>
+<script src="rules.js?v=20261015a"></script>
 </body>
 </html>

@@ -4,7 +4,7 @@ Prop Streak Lab — edge tracker: once a day, which betting strategies are actua
 Grades every recorded live pick that has a market price and a result (picks.json and the
 other sports' picks files) as a flat $1 bet at its recorded price, for a fixed set of
 strategies: each sport's Value and Top 25 lists, NHL Value since the regular season, the
-unders edge found in October 2026's analysis, and the bets that were losing. Each gets its
+team's private strategies (rules.enc, see load_private), and the bets that were losing. Each gets its
 record, return, a likely range (a bootstrap over game days, since picks from one night win
 and lose together) and the last 7 days, so the team sees an edge grow or fade.
 
@@ -46,21 +46,15 @@ STRATEGIES = [   # (key, label, sport or None, test)
     ("nba-top", "NBA Top 25 Surest", "nba", lambda p: "T" in p["lists"]),
     ("nba-unders", "NBA unders", "nba", lambda p: p["side"] == "under"),
     ("nba-overs", "NBA overs", "nba", lambda p: p["side"] == "over"),
-    ("unders", "Unders edge (the three rules below)", None,
-     lambda p: any(f(p) for f in (UNDER_RULES[k] for k in UNDER_RULES))),
-    ("mlb-unders-mid", "MLB unders priced 50-65c", "mlb", lambda p: UNDER_RULES["mlb-unders-mid"](p)),
-    ("nhl-assist-unders", "NHL assist unders priced 65-80c", "nhl", lambda p: UNDER_RULES["nhl-assist-unders"](p)),
-    ("mlb-tb-under", "MLB total bases under 1.5", "mlb", lambda p: UNDER_RULES["mlb-tb-under"](p)),
     ("all-nhl", "Every NHL pick", "nhl", lambda p: True),
     ("all-mlb", "Every MLB pick", "mlb", lambda p: True),
     ("all-nfl", "Every NFL pick", "nfl", lambda p: True),
     ("all-nba", "Every NBA pick", "nba", lambda p: True),
 ]
-UNDER_RULES = {
-    "mlb-unders-mid": lambda p: p["sport"] == "mlb" and p["side"] == "under" and 0.50 <= p["pr"] < 0.65,
-    "nhl-assist-unders": lambda p: p["sport"] == "nhl" and p["stat"] == "a" and p["side"] == "under" and 0.65 <= p["pr"] < 0.80,
-    "mlb-tb-under": lambda p: p["sport"] == "mlb" and p["stat"] == "tb" and p["side"] == "under" and p["line"] == 1.5,
-}
+# Private strategies (the unders rules and any the team adds) are not in this file: they live
+# encrypted in rules.enc on the repo's team-data branch, written from the team dashboard's
+# Private strategies panel and unlocked here with the team password (load_private).
+PRIVATE_URL = "https://raw.githubusercontent.com/Brandon12344556677/FootballPropsFinal/team-data/rules.enc"
 
 
 def load(path):
@@ -166,12 +160,52 @@ def current_season(rows):
     return [p for p in rows if not (p["sport"] == "nhl" and p["day"] < NHL_REGULAR)]
 
 
-def build(rows, today, seed=1):
+def rule_test(r):
+    """A private rule ({sport, side, stat, line, pmin, pmax}; any field may be empty) as a pick test."""
+    def num(v):
+        try:
+            return None if v in (None, "") else float(v)
+        except (TypeError, ValueError):
+            return None
+    sport, side, stat = r.get("sport") or None, r.get("side") or None, r.get("stat") or None
+    line, lo, hi = num(r.get("line")), num(r.get("pmin")), num(r.get("pmax"))
+
+    def test(p):
+        return ((sport is None or p["sport"] == sport) and (side is None or p["side"] == side)
+                and (stat is None or p["stat"] == stat) and (line is None or p.get("line") == line)
+                and (lo is None or p["pr"] >= lo) and (hi is None or p["pr"] < hi))
+    return test
+
+
+def private_strategies(doc):
+    """Strategy rows from the decrypted rules.enc document ({"items": [rule, ...]}), plus one row for
+    all of them together when there are two or more."""
+    items = [r for r in (doc or {}).get("items") or [] if r.get("label")]
+    out = [(r.get("key") or "private-" + str(i), r["label"], r.get("sport") or None, rule_test(r)) for i, r in enumerate(items)]
+    if len(out) > 1:
+        tests = [t for _, _, _, t in out]
+        out.insert(0, ("private-all", "Private strategies, all together", None, lambda p: any(t(p) for t in tests)))
+    return out
+
+
+def load_private(password):
+    """The team's private strategies from rules.enc (team-data branch), or [] if it can't be read."""
+    import urllib.request
+    try:
+        with urllib.request.urlopen(urllib.request.Request(PRIVATE_URL, headers={"Cache-Control": "no-cache"}), timeout=20) as r:
+            blob = r.read().decode("ascii").strip()
+        return private_strategies(json.loads(team_stats.decrypt(blob, password)))
+    except Exception as e:  # noqa: BLE001 - a missing or unreadable file only drops the private rows
+        print(f"edge report: private strategies not loaded ({type(e).__name__})")
+        return []
+
+
+def build(rows, today, seed=1, strategies=None):
     rng = random.Random(seed)
     rows = current_season(rows)
     latest = max((p["day"] for p in rows), default=None)   # the most recent day with graded picks
     out = []
-    for key, label, sport, test in STRATEGIES:
+    for key, label, sport, test in (STRATEGIES if strategies is None else strategies):
         mine = [p for p in rows if (sport is None or p["sport"] == sport) and test(p)]
         s = summary(mine, today, rng)
         if s:
@@ -195,7 +229,7 @@ def main():
         if doc:
             rows += graded(sport, doc)
     report = {"generated_at": now.strftime("%Y-%m-%dT%H:%M:%SZ"), "day": today, "picks": len(current_season(rows)),
-              "strategies": build(rows, today)}
+              "strategies": build(rows, today, strategies=STRATEGIES + load_private(password))}
     try:   # the same numbers as the last pass: leave the file alone (a new salt would change it every time)
         with open(OUT, encoding="ascii") as f:
             old = json.loads(team_stats.decrypt(f.read().strip(), password))
