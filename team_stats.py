@@ -275,8 +275,19 @@ def range_stats(token, now, days, tz=dt.timezone.utc, ago=0):
                       for d in daily]
     for page in ("toprefs", "campaigns", "locations", "browsers", "systems", "sizes"):
         n = 50 if page == "campaigns" else TOP_N   # every tracked link from the team page is a campaign
-        r[page] = rows(get(token, f"/stats/{page}", limit=n, **q).get("stats"), page)
+        r[page] = to_visits(rows(get(token, f"/stats/{page}", limit=n, **q).get("stats"), page), r["total"])
     return r
+
+
+def to_visits(rows_, visits):
+    """GoatCounter's breakdowns (referrers, tracked links, countries, devices) count app.js's events
+    too: one visit can send view/<n>, visitor/new|returning and time/<range>, so a source can show
+    more "visits" than the site had (Oct 15, 2026: Google 33 + Instagram 26 on a 42-visit day).
+    When a breakdown adds up to more than the visits, scale each row down to its share of them."""
+    total = sum(r["n"] for r in rows_)
+    if not total or total <= visits:
+        return rows_
+    return [dict(r, n=round(r["n"] * visits / total)) for r in rows_]
 
 
 SPIKE_X = 2.5      # a source or page counts as spiking at this many times its usual day...
