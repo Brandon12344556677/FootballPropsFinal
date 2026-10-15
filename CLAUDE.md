@@ -19,6 +19,7 @@ README.md has the full feature tour; this file is the working rules.
   `site_checks.py` (own daily workflow: search basics, keeps a "Site checks" GitHub issue).
   Polymarket and Kalshi links are plain links (no referral codes) since Oct 13, 2026.
   `dashboard_check.py` (in watchdog.yml, every 30 min: the team dashboard's page, encrypted numbers, edge tracker; "Team dashboard" issue).
+  Private edge-tracker strategies live encrypted in `rules.enc` on `team-data` (dashboard panel `team/rules.js`, read by `edge_report.py` load_private); never put them back in the public code.
   `depth.guard` holds a 30c+ price jump until a second run confirms it (the `pj` pick column).
 - `team_stats.py` → `team/stats.enc`: GoatCounter visitor totals (and traffic spikes), encrypted with the
   `TEAM_DASH_PASSWORD` secret, for the password-protected team dashboard `team/index.html`
