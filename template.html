@@ -620,8 +620,8 @@ details.valrules>summary{cursor:pointer}
 .datanote[open] summary{margin-bottom:8px}
 </style>
 
-<link rel="stylesheet" href="app.css?v=20261015a">
-<script src="app.js?v=20261015a"></script>
+<link rel="stylesheet" href="app.css?v=20261015b">
+<script src="app.js?v=20261015b"></script>
 <script src="/halloween.js?v=20261013a"></script>
 
 <header class="apptop">
@@ -2225,7 +2225,7 @@ function pickTable(rows, opts){
       `<div class="pc-foot">${r.locked? lockedPrice(r)+PS.lockBadge(r.lk) : liveSpan(r)}<button class="edgeload" type="button" data-i="${idx}">Details</button></div>`+
     `</article>`;
   });
-  return h+`</div>`+(rows.some(r=>r.locked)? PS.lockNote() : '');
+  return h+`</div>`+PS.lockNote(rows.some(r=>r.locked));
 }
 // A locked card's price: the one recorded at the lock, not repainted each minute.
 function lockedPrice(r){
