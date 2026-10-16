@@ -5,7 +5,8 @@ Grades every recorded live pick that has a market price and a result (picks.json
 other sports' picks files) as a flat $1 bet at its recorded price, for a fixed set of
 strategies: each sport's Value and Top 25 lists, NHL Value since the regular season, the
 team's private strategies (rules.enc, see load_private), the daily model parlays (parlay.py,
-each graded as one bet at the product of its legs' prices), and the bets that were losing. Each gets its
+each graded as one bet at the product of its legs' prices), the home page's Pick of the Day
+(botd.json: the Value Shot and the Safe Pick, each at its frozen price), and the bets that were losing. Each gets its
 record, return, a likely range (a bootstrap over game days, since picks from one night win
 and lose together) and the last 7 days, so the team sees an edge grow or fade.
 
@@ -29,12 +30,14 @@ import team_stats
 
 OUT = os.path.join("team", "edges.enc")
 PARLAYS = os.path.join("team", "parlays.enc")
+BOTD = "botd.json"
 ET = ZoneInfo("America/New_York")
 FILES = [("nfl", "picks.json"), ("nhl", "nhl_picks.json"), ("mlb", "mlb_picks.json"), ("nba", "nba_picks.json")]
 NHL_REGULAR = "2026-09-29"     # NHL 2026-27 regular season opener: anything earlier is left out (current season only)
 BOOT = 400
 WAITING = {"nba"}       # rows shown even before their first graded pick (the NBA season starts Oct 2026)
-WAITING_KEYS = {"parlays"}     # and rows for lists that start posting later
+WAITING_KEYS = {"parlays", "botd-value", "botd-lock"}     # and rows for lists that start posting later
+OWN_ROWS = {"parlay", "botd"}  # rows that repeat picks already counted: only their own strategies grade them
 
 STRATEGIES = [   # (key, label, sport or None, test)
     ("nhl-value", "NHL Value spots", "nhl", lambda p: "V" in p["lists"]),
@@ -52,6 +55,8 @@ STRATEGIES = [   # (key, label, sport or None, test)
     ("all-mlb", "Every MLB pick", "mlb", lambda p: True),
     ("all-nfl", "Every NFL pick", "nfl", lambda p: True),
     ("all-nba", "Every NBA pick", "nba", lambda p: True),
+    ("botd-value", "Value Shot (Pick of the Day, pays 2x+)", "botd", lambda p: p["lists"] == "value"),
+    ("botd-lock", "Safe Pick of the Day", "botd", lambda p: p["lists"] == "lock"),
     ("parlays", "Model parlays (three a day, about 50% each by the model)", "parlay", lambda p: True),
 ]
 # Private strategies (the unders rules and any the team adds) are not in this file: they live
@@ -119,6 +124,21 @@ def parlay_rows(doc):
             continue
         out.append({"sport": "parlay", "day": e["date"], "pr": float(pr), "win": e["res"] == "hit",
                     "side": "parlay", "stat": None, "line": None, "lists": ""})
+    return out
+
+
+def botd_rows(doc):
+    """The home page's Pick of the Day (botd.py's botd.json) that won or lost, as rows for the "botd"
+    strategies: each one bet at the price it was frozen at, the slot ("value"/"lock") in lists.
+    Voids and pushes are left out, as in botd.json's own record."""
+    out = []
+    for d in (doc or {}).get("days") or []:
+        for slot in ("value", "lock"):
+            p = d.get(slot)
+            if not p or p.get("res") not in ("hit", "miss") or not p.get("price"):
+                continue
+            out.append({"sport": "botd", "day": d["date"], "pr": frac(p["price"]), "win": p["res"] == "hit",
+                        "side": p.get("side") or "over", "stat": p.get("stat"), "line": p.get("line"), "lists": slot})
     return out
 
 
@@ -233,7 +253,7 @@ def build(rows, today, seed=1, strategies=None):
     latest = max((p["day"] for p in rows), default=None)   # the most recent day with graded picks
     out = []
     for key, label, sport, test in (STRATEGIES if strategies is None else strategies):
-        mine = [p for p in rows if (p["sport"] == sport if sport else p["sport"] != "parlay") and test(p)]
+        mine = [p for p in rows if (p["sport"] == sport if sport else p["sport"] not in OWN_ROWS) and test(p)]
         s = summary(mine, today, rng)
         if s:
             prev = before(mine, latest) if latest else None
@@ -256,7 +276,7 @@ def main():
         if doc:
             rows += graded(sport, doc)
     report = {"generated_at": now.strftime("%Y-%m-%dT%H:%M:%SZ"), "day": today, "picks": len(current_season(rows)),
-              "strategies": build(rows + load_parlays(password), today, strategies=STRATEGIES + load_private(password))}
+              "strategies": build(rows + load_parlays(password) + botd_rows(load(BOTD)), today, strategies=STRATEGIES + load_private(password))}
     try:   # the same numbers as the last pass: leave the file alone (a new salt would change it every time)
         with open(OUT, encoding="ascii") as f:
             old = json.loads(team_stats.decrypt(f.read().strip(), password))
