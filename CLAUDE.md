@@ -20,6 +20,8 @@ README.md has the full feature tour; this file is the working rules.
   Polymarket and Kalshi links are plain links (no referral codes) since Oct 13, 2026.
   `dashboard_check.py` (in watchdog.yml, every 30 min: the team dashboard's page, encrypted numbers, edge tracker; "Team dashboard" issue).
   Private edge-tracker strategies live encrypted in `rules.enc` on `team-data` (dashboard panel `team/rules.js`, read by `edge_report.py` load_private); never put them back in the public code.
+  `parlay.py` → `team/parlays.enc` (team only, never public): one parlay a day from 11 AM ET the model puts at 45-55%,
+  frozen once made, graded from the legs' picks; the edge tracker's "parlays" row and the dashboard's Model parlay panel read it.
   `depth.guard` holds a 30c+ price jump until a second run confirms it (the `pj` pick column).
 - `team_stats.py` → `team/stats.enc`: GoatCounter visitor totals (and traffic spikes), encrypted with the
   `TEAM_DASH_PASSWORD` secret, for the password-protected team dashboard `team/index.html`
@@ -53,7 +55,7 @@ The bot overwrites these on every pass, so hand edits are lost and cause merge c
   `mlb.html` ← `mlb_template.html`. Edit the template (and the builder), never the output page.
 - `data.json`, `slate.json`, `picks.json`, `weekly.json`, `*_picks.json`, `*_stats.json`,
   `nba.json`, `nhl.json`, `mlb.json`, `today.json`, `botd.json`, `health.json`, `top_cache.json`,
-  `sitemap.xml`, `robots.txt`, `players/`, `games/`, `best/`, `p/`, `team/stats.enc`, `team/edges.enc`, `fast_hist.json`, `*_picks_recent.json`, `search.json`.
+  `sitemap.xml`, `robots.txt`, `players/`, `games/`, `best/`, `p/`, `team/stats.enc`, `team/edges.enc`, `team/parlays.enc`, `fast_hist.json`, `*_picks_recent.json`, `search.json`.
 
 `index.html` (home page), `methodology.html`, `guides/`, and the legal pages are hand-written and safe to edit.
 
