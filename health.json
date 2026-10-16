@@ -1,4 +1,11 @@
 {
- "problems": {},
+ "problems": {
+  "build_nhl: events #-#-#": {
+   "first": "2026-10-16T07:54:10Z",
+   "runs": 1,
+   "alerted": null,
+   "msg": "build_nhl.py: events #-#-# failed 4 times this run (e.g. HTTP Error 503: Service Unavailable)"
+  }
+ },
  "alert": []
 }
