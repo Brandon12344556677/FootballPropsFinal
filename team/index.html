@@ -120,7 +120,20 @@ footer p{margin:0;max-width:80ch}
 .exform .wide{grid-column:span 2}
 @media (max-width:760px){ .exform{grid-template-columns:repeat(2,minmax(0,1fr))} .exform .wide{grid-column:1/-1} }
 #exMsg,#prMsg{font-size:14px;color:var(--accent);min-height:1.4em;margin:10px 0 0} #exMsg.bad,#prMsg.bad{color:var(--down)}
-#prList .name small,#plToday .name small{display:block;color:var(--muted);font-size:12.5px;margin-top:2px} #prList .ghost{padding:3px 9px;font-size:12.5px} #prForm{margin-top:12px}
+.pl-cards{display:grid;gap:12px;margin-top:14px}
+.pl-card{border:1px solid var(--line);border-radius:12px;padding:12px 14px;background:rgba(255,255,255,.02)}
+.pl-card header{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px}
+.pl-chips{display:flex;flex-wrap:wrap;gap:6px}
+.pl-chips span{font-size:12.5px;color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:2px 10px;white-space:nowrap}
+.pl-chips b{color:var(--fg)} .pl-chips .pay{border-color:var(--accent)} .pl-chips .pay b{color:var(--accent)}
+.pl-legs{list-style:none;margin:0;padding:0}
+.pl-legs li{display:grid;grid-template-columns:44px minmax(0,1fr) 56px 56px;gap:10px;align-items:center;padding:8px 0;border-top:1px solid var(--line)}
+.pl-legs .pl-head{border-top:0;padding:2px 0;font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
+.pl-sp{font-size:11px;font-weight:700;letter-spacing:.06em;color:var(--muted)}
+.pl-who small{display:block;color:var(--muted);font-size:12.5px;margin-top:2px}
+.pl-num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+@media (max-width:520px){.pl-legs li{grid-template-columns:minmax(0,1fr) 48px 48px}.pl-sp{display:none}}
+#prList .name small{display:block;color:var(--muted);font-size:12.5px;margin-top:2px} #prList .ghost{padding:3px 9px;font-size:12.5px} #prForm{margin-top:12px}
 .extbl-wrap{overflow-x:auto}
 .extbl{width:100%;border-collapse:collapse;font-size:14px}
 .extbl th{text-align:left;color:var(--muted);font-weight:600;font-size:13px;padding:6px 8px;border-bottom:1px solid var(--line)}
@@ -408,7 +421,7 @@ footer p{margin:0;max-width:80ch}
 
   <section data-view="picks" class="panel" id="plPanel" hidden>
     <div class="panel-h"><h2>Model parlays</h2><span class="label" id="plUpd">Team only</span></div>
-    <p class="hint">Three parlays a day from 11 AM ET, from any sport, never sharing a player: each 2-4 legs the model puts at about a coin flip (45-55%) that the market prices well below that. Each is frozen once made and graded as one 1-unit bet at the legs' prices multiplied together (a book's same-game parlay pays less). Never shown on the public site. The edge tracker's "Model parlays" row shows whether they pay off.</p>
+    <p class="hint">Up to three a day from 11 AM ET, any sport, no player in two of them. Each is about 50% by the model and priced lower by the market, frozen once made, and graded as a 1-unit bet at the legs’ prices multiplied (a book’s same-game parlay pays less). Team only.</p>
     <div id="plToday"></div>
     <div class="kpis" id="plKpis" style="margin-top:12px"></div>
     <h3 class="subh">Past parlays</h3>
@@ -1182,10 +1195,11 @@ footer p{margin:0;max-width:80ch}
       const legTxt=l=>`${esc(SP[l.sport]||l.sport)} · <b>${esc(l.player)}</b> ${esc(l.side)} ${esc(l.line)} ${esc(STAT[l.stat]||l.stat)}`;
       const RES={hit:'✅ Hit', miss:'❌ Miss', push:'Push', dnp:'DNP', void:'Void'};
       const today=new Date().toLocaleDateString('en-CA',{timeZone:'America/New_York'}), mine=days.filter(e=>e.date===today).reverse(), made=mine.filter(e=>e.legs);
+      const leg=l=>`<li><span class="pl-sp">${esc(SP[l.sport]||l.sport)}</span><span class="pl-who"><b>${esc(l.player)}</b> ${esc(l.side)} ${esc(l.line)} ${esc(STAT[l.stat]||l.stat)}<small>${esc(l.team)} vs ${esc(l.opp)} · ${when(l.start)} · ${esc(l.venue)}${l.res? ' · '+(RES[l.res]||l.res) : ''}</small></span><span class="pl-num">${pc(l.prob)}</span><span class="pl-num">${Math.round(l.price*100)}¢</span></li>`;
       $('plToday').innerHTML = mine.some(e=>e.closed) ? `<p class="empty">No parlay today: nothing reached about 50% by the model with a better price.</p>` :
-        (made.map(t=>`<h3 class="subh">Today #${t.n||1}: model ${pc(t.model)} · market ${pc(t.price)} · pays ${x(t.price)}${t.res? ' · '+RES[t.res] : ''}</h3><ul class="list">`+
-        t.legs.map(l=>`<li class="row"><span class="name">${legTxt(l)}<small>${esc(l.team)} vs ${esc(l.opp)} · ${when(l.start)} · ${esc(l.venue)}</small></span><span class="pct" style="white-space:nowrap">model ${pc(l.prob)}</span><span class="n" style="white-space:nowrap">${Math.round(l.price*100)}¢${l.res? ' · '+(RES[l.res]||l.res) : ''}</span></li>`).join('')+`</ul>`).join('')+
-        (made.length<3 ? `<p class="empty" style="margin-top:8px">${made.length? 'The rest are made as more games get prices, until 7:30 PM ET.' : 'Today’s parlays are made from 11 AM ET.'}</p>` : ''));
+        (made.length? `<div class="pl-cards">`+made.map(t=>`<article class="pl-card"><header><b>Parlay #${t.n||1}${t.res? ' · '+RES[t.res] : ''}</b><span class="pl-chips"><span>Model <b>${pc(t.model)}</b></span><span>Market <b>${pc(t.price)}</b></span><span class="pay">Pays <b>${x(t.price)}</b></span></span></header>`+
+          `<ul class="pl-legs"><li class="pl-head"><span class="pl-sp"></span><span>Leg</span><span class="pl-num">Model</span><span class="pl-num">Price</span></li>${t.legs.map(leg).join('')}</ul></article>`).join('')+`</div>` : '')+
+        (made.length<3 ? `<p class="empty" style="margin-top:10px">${made.length? 'The rest are made as more games get prices, until 7:30 PM ET.' : 'Today’s parlays are made from 11 AM ET.'}</p>` : '');
       const done=days.filter(e=>e.res==='hit'||e.res==='miss'), units=done.reduce((s,e)=>s+e.units,0), wins=done.filter(e=>e.res==='hit').length;
       const avgModel=done.length? done.reduce((s,e)=>s+e.model,0)/done.length : null;
       $('plKpis').innerHTML=[['Parlays graded', fmt(done.length)], ['Hit', done.length? `${wins} (${pc(wins/done.length)})` : '–'],
