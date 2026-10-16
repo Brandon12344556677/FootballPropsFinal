@@ -407,8 +407,8 @@ footer p{margin:0;max-width:80ch}
   </section>
 
   <section data-view="picks" class="panel" id="plPanel" hidden>
-    <div class="panel-h"><h2>Model parlay</h2><span class="label" id="plUpd">Team only</span></div>
-    <p class="hint">One parlay a day from 11 AM ET, from any sport: 2-4 legs the model puts at about a coin flip (45-55%) that the market prices well below that. It's frozen once made and graded as one 1-unit bet at the legs' prices multiplied together (a book's same-game parlay pays less). Never shown on the public site. The edge tracker's "Model parlay" row shows whether it pays off.</p>
+    <div class="panel-h"><h2>Model parlays</h2><span class="label" id="plUpd">Team only</span></div>
+    <p class="hint">Three parlays a day from 11 AM ET, from any sport, never sharing a player: each 2-4 legs the model puts at about a coin flip (45-55%) that the market prices well below that. Each is frozen once made and graded as one 1-unit bet at the legs' prices multiplied together (a book's same-game parlay pays less). Never shown on the public site. The edge tracker's "Model parlays" row shows whether they pay off.</p>
     <div id="plToday"></div>
     <div class="kpis" id="plKpis" style="margin-top:12px"></div>
     <h3 class="subh">Past parlays</h3>
@@ -1181,10 +1181,11 @@ footer p{margin:0;max-width:80ch}
       const when=s=>{ const t=Date.parse(s); return isFinite(t)? new Date(t).toLocaleTimeString('en-US',{hour:'numeric', minute:'2-digit'}) : ''; };
       const legTxt=l=>`${esc(SP[l.sport]||l.sport)} · <b>${esc(l.player)}</b> ${esc(l.side)} ${esc(l.line)} ${esc(STAT[l.stat]||l.stat)}`;
       const RES={hit:'✅ Hit', miss:'❌ Miss', push:'Push', dnp:'DNP', void:'Void'};
-      const today=new Date().toLocaleDateString('en-CA',{timeZone:'America/New_York'}), t=days.find(e=>e.date===today);
-      $('plToday').innerHTML = !t ? `<p class="empty">Today's parlay is made from 11 AM ET.</p>` : t.closed ? `<p class="empty">No parlay today: nothing reached about 50% by the model with a better price.</p>` :
-        `<h3 class="subh">Today: model ${pc(t.model)} · market ${pc(t.price)} · pays ${x(t.price)}${t.res? ' · '+RES[t.res] : ''}</h3><ul class="list">`+
-        t.legs.map(l=>`<li class="row"><span class="name">${legTxt(l)}<small>${esc(l.team)} vs ${esc(l.opp)} · ${when(l.start)} · ${esc(l.venue)}</small></span><span class="pct" style="white-space:nowrap">model ${pc(l.prob)}</span><span class="n" style="white-space:nowrap">${Math.round(l.price*100)}¢${l.res? ' · '+(RES[l.res]||l.res) : ''}</span></li>`).join('')+`</ul>`;
+      const today=new Date().toLocaleDateString('en-CA',{timeZone:'America/New_York'}), mine=days.filter(e=>e.date===today).reverse(), made=mine.filter(e=>e.legs);
+      $('plToday').innerHTML = mine.some(e=>e.closed) ? `<p class="empty">No parlay today: nothing reached about 50% by the model with a better price.</p>` :
+        (made.map(t=>`<h3 class="subh">Today #${t.n||1}: model ${pc(t.model)} · market ${pc(t.price)} · pays ${x(t.price)}${t.res? ' · '+RES[t.res] : ''}</h3><ul class="list">`+
+        t.legs.map(l=>`<li class="row"><span class="name">${legTxt(l)}<small>${esc(l.team)} vs ${esc(l.opp)} · ${when(l.start)} · ${esc(l.venue)}</small></span><span class="pct" style="white-space:nowrap">model ${pc(l.prob)}</span><span class="n" style="white-space:nowrap">${Math.round(l.price*100)}¢${l.res? ' · '+(RES[l.res]||l.res) : ''}</span></li>`).join('')+`</ul>`).join('')+
+        (made.length<3 ? `<p class="empty" style="margin-top:8px">${made.length? 'The rest are made as more games get prices, until 7:30 PM ET.' : 'Today’s parlays are made from 11 AM ET.'}</p>` : ''));
       const done=days.filter(e=>e.res==='hit'||e.res==='miss'), units=done.reduce((s,e)=>s+e.units,0), wins=done.filter(e=>e.res==='hit').length;
       const avgModel=done.length? done.reduce((s,e)=>s+e.model,0)/done.length : null;
       $('plKpis').innerHTML=[['Parlays graded', fmt(done.length)], ['Hit', done.length? `${wins} (${pc(wins/done.length)})` : '–'],
@@ -1192,8 +1193,8 @@ footer p{margin:0;max-width:80ch}
         ['Profit', done.length? (units>=0?'+':'−')+Math.abs(units).toFixed(2)+'u' : '–', done.length? 'Return '+(units>=0?'+':'−')+Math.abs(units/done.length*100).toFixed(1)+'%' : '']]
         .map(([k,v,sub])=>`<div class="kpi"><span class="label">${k}</span><span class="v sm">${v}</span><span class="s">${sub||''}</span></div>`).join('');
       const past=days.filter(e=>e.date!==today);
-      $('plRows').innerHTML=past.length? past.slice(0,30).map(e=> e.closed? `<tr><td>${esc(e.date)}</td><td colspan="5" class="hint">No parlay</td></tr>` :
-        `<tr><td>${esc(e.date)}</td><td>${e.legs.map(l=>legTxt(l)+(l.res? ' <small>'+(RES[l.res]||l.res)+'</small>' : '')).join('<br>')}</td><td class="n">${pc(e.model)}</td><td class="n">${x(e.price)}</td>`+
+      $('plRows').innerHTML=past.length? past.slice(0,30).map(e=> e.closed? `<tr><td>${esc(e.date)}</td><td colspan="5" class="hint">No parlays</td></tr>` :
+        `<tr><td>${esc(e.date)}${e.n? ' #'+e.n : ''}</td><td>${e.legs.map(l=>legTxt(l)+(l.res? ' <small>'+(RES[l.res]||l.res)+'</small>' : '')).join('<br>')}</td><td class="n">${pc(e.model)}</td><td class="n">${x(e.price)}</td>`+
         `<td>${e.res? RES[e.res] : 'Pending'}</td><td class="n ${e.units>0?'up':e.units<0?'down':''}">${e.units==null? '–' : (e.units>=0?'+':'−')+Math.abs(e.units).toFixed(2)}</td></tr>`).join('')
         : `<tr class="ed-wait"><td colspan="6">The first results show up the day after the first parlay.</td></tr>`;
       $('plUpd').textContent='Team only · updated '+new Date(d.gen).toLocaleString('en-US',{month:'short', day:'numeric', hour:'numeric', minute:'2-digit'});

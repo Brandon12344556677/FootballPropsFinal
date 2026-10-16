@@ -1,15 +1,17 @@
 """
-Prop Streak Lab — the model parlay: once a day, a parlay the model gives about a coin flip (45-55%)
-that the market prices well below that, for the team only (never on the public site).
+Prop Streak Lab — the model parlays: three a day, each a parlay the model gives about a coin flip
+(45-55%) that the market prices well below that, for the team only (never on the public site).
 
 Legs come from every sport's upcoming recorded picks: a live price on an exchange with enough
 money behind it (not thin), no injury hold, not locked, 6+ effective games of history, and a model
 chance at least 3 points above the price. Each game has to start today (ET) and at least 45 minutes
 after the parlay is made; different players, at most 2 legs from one game. Of the 2-4 leg
 combinations the model puts at 45-55%, the one with the biggest model-to-market ratio is posted.
+The day's parlays never share a player, so they're three separate bets, not one bet three times.
 
-Timing (like Pick of the Day): from the first run at or after 11:00 AM ET, every run tries to make
-today's parlay; once made it never changes. Still none at 7:30 PM ET: "No parlay today".
+Timing (like Pick of the Day): from the first run at or after 11:00 AM ET, every run makes as many
+of today's PER_DAY parlays as it can (later runs fill the rest as more games get prices); once made
+a parlay never changes. Still none at 7:30 PM ET: "No parlay today"; fewer than three is fine.
 
 Grading reads each leg's own pick in its sport's picks file: any miss loses; a push or a DNP drops
 that leg (the parlay pays on the rest); every leg dropped is a void. Still ungraded 5 days after
@@ -41,6 +43,7 @@ MODEL_LO, MODEL_HI = 0.45, 0.55
 MIN_NEFF = 6.0
 MIN_EDGE = 0.03
 MAX_PER_GAME = 2
+PER_DAY = 3
 POOL = 40                  # best legs (by model / price) searched for combinations
 VOID_AFTER_DAYS = 5
 
@@ -169,13 +172,22 @@ def step(state, docs, now, nfl_kick=None):
     changed = False
     for e in days:
         changed |= grade(e, docs, today)
-    if any(e["date"] == today for e in days) or (et.hour, et.minute) < OPEN_AT:
+    mine = [e for e in days if e["date"] == today]
+    if (et.hour, et.minute) < OPEN_AT or any(e.get("closed") for e in mine):
         return changed
-    pick = choose(candidates(docs, now, nfl_kick))
-    if pick:
-        days.append(dict(pick, date=today, made=now.strftime("%Y-%m-%dT%H:%MZ"), res=None))
-        return True
-    if (et.hour, et.minute) >= CLOSE_AT:
+    made = [e for e in mine if e.get("legs")]
+    if len(made) < PER_DAY and (et.hour, et.minute) < CLOSE_AT:
+        used = {(l["sport"], l["pid"]) for e in made for l in e["legs"]}
+        legs = [l for l in candidates(docs, now, nfl_kick) if (l["sport"], l["pid"]) not in used]
+        while len(made) < PER_DAY:
+            pick = choose(legs)
+            if not pick:
+                break
+            e = dict(pick, date=today, n=len(made) + 1, made=now.strftime("%Y-%m-%dT%H:%MZ"), res=None)
+            days.append(e); made.append(e); changed = True
+            taken = {(l["sport"], l["pid"]) for l in pick["legs"]}
+            legs = [l for l in legs if (l["sport"], l["pid"]) not in taken]
+    if not made and (et.hour, et.minute) >= CLOSE_AT:
         days.append({"date": today, "closed": True})
         return True
     return changed
