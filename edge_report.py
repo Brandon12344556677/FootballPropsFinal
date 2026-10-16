@@ -4,7 +4,8 @@ Prop Streak Lab — edge tracker: once a day, which betting strategies are actua
 Grades every recorded live pick that has a market price and a result (picks.json and the
 other sports' picks files) as a flat $1 bet at its recorded price, for a fixed set of
 strategies: each sport's Value and Top 25 lists, NHL Value since the regular season, the
-team's private strategies (rules.enc, see load_private), and the bets that were losing. Each gets its
+team's private strategies (rules.enc, see load_private), the daily model parlay (parlay.py,
+graded as one bet at the product of its legs' prices), and the bets that were losing. Each gets its
 record, return, a likely range (a bootstrap over game days, since picks from one night win
 and lose together) and the last 7 days, so the team sees an edge grow or fade.
 
@@ -27,12 +28,13 @@ import depth
 import team_stats
 
 OUT = os.path.join("team", "edges.enc")
+PARLAYS = os.path.join("team", "parlays.enc")
 ET = ZoneInfo("America/New_York")
 FILES = [("nfl", "picks.json"), ("nhl", "nhl_picks.json"), ("mlb", "mlb_picks.json"), ("nba", "nba_picks.json")]
 NHL_REGULAR = "2026-09-29"     # NHL 2026-27 regular season opener: anything earlier is left out (current season only)
 BOOT = 400
 WAITING = {"nba"}       # rows shown even before their first graded pick (the NBA season starts Oct 2026)
-WAITING_KEYS = set()     # and rows for lists that start posting later
+WAITING_KEYS = {"parlays"}     # and rows for lists that start posting later
 
 STRATEGIES = [   # (key, label, sport or None, test)
     ("nhl-value", "NHL Value spots", "nhl", lambda p: "V" in p["lists"]),
@@ -50,6 +52,7 @@ STRATEGIES = [   # (key, label, sport or None, test)
     ("all-mlb", "Every MLB pick", "mlb", lambda p: True),
     ("all-nfl", "Every NFL pick", "nfl", lambda p: True),
     ("all-nba", "Every NBA pick", "nba", lambda p: True),
+    ("parlays", "Model parlay (one a day, about 50% by the model)", "parlay", lambda p: True),
 ]
 # Private strategies (the unders rules and any the team adds) are not in this file: they live
 # encrypted in rules.enc on the repo's team-data branch, written from the team dashboard's
@@ -102,6 +105,30 @@ def graded(sport, doc):
         out.append({"sport": sport, "day": day, "pr": pr, "win": p["res"] == "hit", "side": p.get("side") or "over",
                     "stat": p.get("stat"), "line": p.get("line"), "lists": p.get("lists") or ""})
     return out
+
+
+def parlay_rows(doc):
+    """The daily model parlays (parlay.py's team/parlays.enc, decrypted) that won or lost, as rows
+    for the "parlay" strategy: one bet a day at the product of the legs' prices."""
+    out = []
+    for e in (doc or {}).get("days") or []:
+        if e.get("res") not in ("hit", "miss"):
+            continue
+        pr = e.get("paid") if e["res"] == "hit" else e.get("price")
+        if not pr:
+            continue
+        out.append({"sport": "parlay", "day": e["date"], "pr": float(pr), "win": e["res"] == "hit",
+                    "side": "parlay", "stat": None, "line": None, "lists": ""})
+    return out
+
+
+def load_parlays(password):
+    try:
+        with open(PARLAYS, encoding="ascii") as f:
+            return parlay_rows(json.loads(team_stats.decrypt(f.read().strip(), password)))
+    except Exception as e:  # noqa: BLE001 - no parlays yet (or unreadable) only empties that row
+        print(f"edge report: no parlays loaded ({type(e).__name__})")
+        return []
 
 
 def pnl(p):
@@ -206,7 +233,7 @@ def build(rows, today, seed=1, strategies=None):
     latest = max((p["day"] for p in rows), default=None)   # the most recent day with graded picks
     out = []
     for key, label, sport, test in (STRATEGIES if strategies is None else strategies):
-        mine = [p for p in rows if (sport is None or p["sport"] == sport) and test(p)]
+        mine = [p for p in rows if (p["sport"] == sport if sport else p["sport"] != "parlay") and test(p)]
         s = summary(mine, today, rng)
         if s:
             prev = before(mine, latest) if latest else None
@@ -229,7 +256,7 @@ def main():
         if doc:
             rows += graded(sport, doc)
     report = {"generated_at": now.strftime("%Y-%m-%dT%H:%M:%SZ"), "day": today, "picks": len(current_season(rows)),
-              "strategies": build(rows, today, strategies=STRATEGIES + load_private(password))}
+              "strategies": build(rows + load_parlays(password), today, strategies=STRATEGIES + load_private(password))}
     try:   # the same numbers as the last pass: leave the file alone (a new salt would change it every time)
         with open(OUT, encoding="ascii") as f:
             old = json.loads(team_stats.decrypt(f.read().strip(), password))
