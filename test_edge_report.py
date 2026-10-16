@@ -81,5 +81,23 @@ class Summary(unittest.TestCase):
         self.assertLess(s["prev"]["roi"], s["roi"])         # the two wins pushed the return up
 
 
+class PickOfTheDay(unittest.TestCase):
+    def test_value_shot_and_safe_pick_rows(self):
+        pick = lambda res, price: {"res": res, "price": price, "side": "under", "stat": "tb", "line": 1.5}
+        doc = {"days": [{"date": "2026-10-14", "lock": pick("hit", 0.95), "value": None},
+                        {"date": "2026-10-15", "lock": pick("miss", 0.94), "value": pick("hit", 0.40)},
+                        {"date": "2026-10-16", "lock": pick(None, 0.96), "value": pick("void", 0.45)}]}
+        rows = E.botd_rows(doc)
+        self.assertEqual(len(rows), 3)                       # ungraded and void picks stay out
+        out = {s["key"]: s for s in E.build(rows, "2026-10-17")}
+        v = out["botd-value"]
+        self.assertEqual((v["n"], v["units"]), (1, 1.5))     # a 40c win pays 1.5 units
+        self.assertEqual(out["botd-lock"]["n"], 2)
+        self.assertNotIn("all-mlb", out)                     # they don't count twice in the sport rows
+        empty = {s["key"]: s for s in E.build([], "2026-10-17")}
+        self.assertEqual(empty["botd-value"]["verdict"], "Waiting for games")
+        self.assertEqual(E.botd_rows(None), [])
+
+
 if __name__ == "__main__":
     unittest.main()
