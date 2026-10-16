@@ -53,8 +53,26 @@ class ParlayTest(unittest.TestCase):
         first = [l["pid"] for l in state["days"][0]["legs"]]
         better = rows + [pick("3", "g3", 0.70, 0.40)]
         parlay.step(state, self.docs(*better), NOW + datetime.timedelta(minutes=10))
+        self.assertEqual([l["pid"] for l in state["days"][0]["legs"]], first)   # the first one never changes
+        self.assertEqual(len(state["days"]), 1)                                  # nobody left for a second
+
+    def test_three_a_day_with_no_shared_players(self):
+        rows = [pick(str(i), "g" + str(i), 0.70, 0.55) for i in range(8)]
+        state = {"days": []}
+        parlay.step(state, self.docs(*rows), NOW)
+        made = [e for e in state["days"] if e.get("legs")]
+        self.assertEqual([e["n"] for e in made], [1, 2, 3])
+        pids = [l["pid"] for e in made for l in e["legs"]]
+        self.assertEqual(len(pids), len(set(pids)))
+        self.assertFalse(parlay.step(state, self.docs(*rows), NOW + datetime.timedelta(minutes=10)))   # full: nothing more
+
+    def test_later_runs_fill_the_rest(self):
+        state = {"days": []}
+        parlay.step(state, self.docs(pick("1", "g1", 0.7, 0.55), pick("2", "g2", 0.7, 0.55)), NOW)
         self.assertEqual(len(state["days"]), 1)
-        self.assertEqual([l["pid"] for l in state["days"][0]["legs"]], first)
+        more = [pick(str(i), "g" + str(i), 0.7, 0.55) for i in range(1, 5)]
+        parlay.step(state, self.docs(*more), NOW + datetime.timedelta(hours=2))
+        self.assertEqual([e["n"] for e in state["days"]], [1, 2])
 
     def test_no_parlay_after_730(self):
         state = {"days": []}

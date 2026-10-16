@@ -4,8 +4,8 @@ Prop Streak Lab — edge tracker: once a day, which betting strategies are actua
 Grades every recorded live pick that has a market price and a result (picks.json and the
 other sports' picks files) as a flat $1 bet at its recorded price, for a fixed set of
 strategies: each sport's Value and Top 25 lists, NHL Value since the regular season, the
-team's private strategies (rules.enc, see load_private), the daily model parlay (parlay.py,
-graded as one bet at the product of its legs' prices), and the bets that were losing. Each gets its
+team's private strategies (rules.enc, see load_private), the daily model parlays (parlay.py,
+each graded as one bet at the product of its legs' prices), and the bets that were losing. Each gets its
 record, return, a likely range (a bootstrap over game days, since picks from one night win
 and lose together) and the last 7 days, so the team sees an edge grow or fade.
 
@@ -52,7 +52,7 @@ STRATEGIES = [   # (key, label, sport or None, test)
     ("all-mlb", "Every MLB pick", "mlb", lambda p: True),
     ("all-nfl", "Every NFL pick", "nfl", lambda p: True),
     ("all-nba", "Every NBA pick", "nba", lambda p: True),
-    ("parlays", "Model parlay (one a day, about 50% by the model)", "parlay", lambda p: True),
+    ("parlays", "Model parlays (three a day, about 50% each by the model)", "parlay", lambda p: True),
 ]
 # Private strategies (the unders rules and any the team adds) are not in this file: they live
 # encrypted in rules.enc on the repo's team-data branch, written from the team dashboard's
@@ -109,7 +109,7 @@ def graded(sport, doc):
 
 def parlay_rows(doc):
     """The daily model parlays (parlay.py's team/parlays.enc, decrypted) that won or lost, as rows
-    for the "parlay" strategy: one bet a day at the product of the legs' prices."""
+    for the "parlay" strategy: each one bet at the product of the legs' prices."""
     out = []
     for e in (doc or {}).get("days") or []:
         if e.get("res") not in ("hit", "miss"):
