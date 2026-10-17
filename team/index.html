@@ -132,6 +132,17 @@ footer p{margin:0;max-width:80ch}
 .pl-sp{font-size:11px;font-weight:700;letter-spacing:.06em;color:var(--muted)}
 .pl-who small{display:block;color:var(--muted);font-size:12.5px;margin-top:2px}
 .pl-num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.pl-lv{display:grid;grid-template-columns:max-content minmax(60px,140px);justify-content:start;align-items:center;gap:4px 10px;margin-top:6px;font-size:12.5px;color:var(--muted)}
+.pl-lvn{font-variant-numeric:tabular-nums;color:var(--soft)} .pl-lvn b{color:var(--fg);font-size:14px}
+.pl-lvbar{height:6px;border-radius:999px;background:var(--line);overflow:hidden}
+.pl-lvbar i{display:block;height:100%;border-radius:999px;background:var(--warn);transition:width .4s}
+.pl-lvbar i.ok{background:var(--accent)} .pl-lvbar i.bad{background:var(--down)}
+.pl-lvst{grid-column:1/-1}
+.pl-alive{font-size:12.5px;font-weight:600;margin-left:6px;white-space:nowrap}
+.pl-dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--down);margin-right:5px;vertical-align:1px;animation:plpulse 1.6s ease-in-out infinite}
+@keyframes plpulse{50%{opacity:.3}}
+@media (prefers-reduced-motion:reduce){.pl-dot{animation:none}}
+#plLive{margin:10px 0 0}
 @media (max-width:520px){.pl-legs li{grid-template-columns:minmax(0,1fr) 48px 48px}.pl-sp{display:none}}
 #prList .name small{display:block;color:var(--muted);font-size:12.5px;margin-top:2px} #prList .ghost{padding:3px 9px;font-size:12.5px} #prForm{margin-top:12px}
 .extbl-wrap{overflow-x:auto}
@@ -1195,9 +1206,9 @@ footer p{margin:0;max-width:80ch}
       const legTxt=l=>`${esc(SP[l.sport]||l.sport)} · <b>${esc(l.player)}</b> ${esc(l.side)} ${esc(l.line)} ${esc(STAT[l.stat]||l.stat)}`;
       const RES={hit:'✅ Hit', miss:'❌ Miss', push:'Push', dnp:'DNP', void:'Void'};
       const today=new Date().toLocaleDateString('en-CA',{timeZone:'America/New_York'}), mine=days.filter(e=>e.date===today).reverse(), made=mine.filter(e=>e.legs);
-      const leg=l=>`<li><span class="pl-sp">${esc(SP[l.sport]||l.sport)}</span><span class="pl-who"><b>${esc(l.player)}</b> ${esc(l.side)} ${esc(l.line)} ${esc(STAT[l.stat]||l.stat)}<small>${esc(l.team)} vs ${esc(l.opp)} · ${when(l.start)} · ${esc(l.venue)}${l.res? ' · '+(RES[l.res]||l.res) : ''}</small></span><span class="pl-num">${pc(l.prob)}</span><span class="pl-num">${Math.round(l.price*100)}¢</span></li>`;
+      const leg=(l,j)=>`<li data-leg="${j}"><span class="pl-sp">${esc(SP[l.sport]||l.sport)}</span><span class="pl-who"><b>${esc(l.player)}</b> ${esc(l.side)} ${esc(l.line)} ${esc(STAT[l.stat]||l.stat)}<small>${esc(l.team)} vs ${esc(l.opp)} · ${when(l.start)} · ${esc(l.venue)}${l.res? ' · '+(RES[l.res]||l.res) : ''}</small><span class="pl-live"></span></span><span class="pl-num">${pc(l.prob)}</span><span class="pl-num">${Math.round(l.price*100)}¢</span></li>`;
       $('plToday').innerHTML = mine.some(e=>e.closed) ? `<p class="empty">No parlay today: nothing reached about 50% by the model with a better price.</p>` :
-        (made.length? `<div class="pl-cards">`+made.map(t=>`<article class="pl-card"><header><b>Parlay #${t.n||1}${t.res? ' · '+RES[t.res] : ''}</b><span class="pl-chips"><span>Model <b>${pc(t.model)}</b></span><span>Market <b>${pc(t.price)}</b></span><span class="pay">Pays <b>${x(t.price)}</b></span></span></header>`+
+        (made.length? `<p class="hint" id="plLive"></p><div class="pl-cards">`+made.map((t,i)=>`<article class="pl-card" data-pl="${i}"><header><b>Parlay #${t.n||1}${t.res? ' · '+RES[t.res] : ''} <span class="pl-livehd"></span></b><span class="pl-chips"><span>Model <b>${pc(t.model)}</b></span><span>Market <b>${pc(t.price)}</b></span><span class="pay">Pays <b>${x(t.price)}</b></span></span></header>`+
           `<ul class="pl-legs"><li class="pl-head"><span class="pl-sp"></span><span>Leg</span><span class="pl-num">Model</span><span class="pl-num">Price</span></li>${t.legs.map(leg).join('')}</ul></article>`).join('')+`</div>` : '')+
         (made.length<3 ? `<p class="empty" style="margin-top:10px">${made.length? 'The rest are made as more games get prices, until 7:30 PM ET.' : 'Today’s parlays are made from 11 AM ET.'}</p>` : '');
       const done=days.filter(e=>e.res==='hit'||e.res==='miss'), units=done.reduce((s,e)=>s+e.units,0), wins=done.filter(e=>e.res==='hit').length;
@@ -1211,6 +1222,7 @@ footer p{margin:0;max-width:80ch}
         `<tr><td>${esc(e.date)}${e.n? ' #'+e.n : ''}</td><td>${e.legs.map(l=>legTxt(l)+(l.res? ' <small>'+(RES[l.res]||l.res)+'</small>' : '')).join('<br>')}</td><td class="n">${pc(e.model)}</td><td class="n">${x(e.price)}</td>`+
         `<td>${e.res? RES[e.res] : 'Pending'}</td><td class="n ${e.units>0?'up':e.units<0?'down':''}">${e.units==null? '–' : (e.units>=0?'+':'−')+Math.abs(e.units).toFixed(2)}</td></tr>`).join('')
         : `<tr class="ed-wait"><td colspan="6">The first results show up the day after the first parlay.</td></tr>`;
+      if(window.psaParlayLive) window.psaParlayLive.track(mine.some(e=>e.closed)? [] : made);   // live box scores (parlaylive.js)
       $('plUpd').textContent='Team only · updated '+new Date(d.gen).toLocaleString('en-US',{month:'short', day:'numeric', hour:'numeric', minute:'2-digit'});
       $('plPanel').hidden=false;
     } catch(err){}
@@ -1688,5 +1700,6 @@ footer p{margin:0;max-width:80ch}
 <script src="ads.js?v=20261013a"></script>
 <script src="expenses.js?v=20261015a"></script>
 <script src="rules.js?v=20261015a"></script>
+<script src="parlaylive.js?v=20261017a"></script>
 </body>
 </html>
