@@ -45,6 +45,15 @@ exchange chip) in Simple.
   even). It's skipped when the injury boost already raises that stat. The tile
   shows the multiplier, and a checkbox turns the adjustment off so you can see the
   raw history.
+- **Trades** — a quarterback, back, receiver or tight end who played for a team this
+  season and is now on another (traded, released and signed, claimed: found from the
+  game log's teams against the current roster, no hand-kept list) leaves his work to
+  his old team for good. Each teammate's games with him are rebuilt as if he had sat
+  them, handing on half his carries and targets (a quarter of a quarterback's passes and
+  carries) by how the group split the work; he's projected from his own log in his new
+  team's games. On 45 such moves in 2024-26 that lowered log loss for receiving
+  (0.6211 -> 0.6174) and rushing (0.6467 -> 0.6405) props; `tune_trade.py` re-fits it.
+  The page shows it as "Volume ▲ ... (now HOU)".
 - **This week strip** — opponent, kickoff, Vegas spread and total from the schedule.
 - **Badges** — official injury report status, injured reserve / practice squad,
   offseason team changes ("now with X, log from Y"), rookies, small samples.
@@ -157,6 +166,7 @@ group" button links to the Prop Streak Lab squad, also without a referral tag.
 | `parlay.py` | Every pass, team only: three a day from 11 AM ET (never sharing a player), 2-4 leg parlays from any sport that the model puts at 45-55% and the market prices lower, frozen once made and graded from its legs' picks, into `team/parlays.enc` (encrypted) for the dashboard's Model parlays panel and the edge tracker. Never on the public site. In that panel, `team/parlaylive.js` follows today's legs live (each leg's number against its line, the game clock, whether the parlay is still alive) from ESPN's public box scores every 30 seconds; display only, the record stays parlay.py's grading. |
 | `update_pass.sh` | One update pass: every builder, the health check, commit + push. Only the NFL build is fatal. |
 | `tests/` | Unit tests for the model, market parsing, grading, and a check that the JavaScript model matches the Python one. |
+| `tune_trade.py` | Re-fits the trade hand-off (`TRADE_LAMBDA` in `build.py`) on every mid-season team change of the last seasons. |
 | `tools/tune_context.py` | Re-fits the game-context adjustment strengths on the backtest. Run it when a season of new data has accumulated. |
 
 ## How the pipeline works

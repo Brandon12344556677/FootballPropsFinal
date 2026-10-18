@@ -1,4 +1,5 @@
-"""Tests for next man up (build.py: injury_outs, nmu_adds, compute_injury_boosts, model_rows).
+"""Tests for next man up (build.py: injury_outs, nmu_adds, compute_injury_boosts, model_rows) and
+players who changed teams this season (season_moves).
 
 Run:  python -m unittest test_injury -v
 """
@@ -181,6 +182,73 @@ class Holds(unittest.TestCase):
         B.compute_injury_boosts([wr1, wr3, te, rb, new], [{"name": "Just Signed", "status": "Questionable"}], sched)
         self.assertTrue(B.hold_reason(new, "rec"))
         self.assertIsNone(B.hold_reason(wr1, "rec"))   # without the schedule, his old team's games read as 100% of the work
+
+
+class Trades(unittest.TestCase):
+    """A player who changed teams this season (build.season_moves) leaves his work to his old team."""
+    SCHED = {f"ari{i}": {"home": "ARI", "away": o, "season": s, "week": w} for i, (s, w, o) in enumerate(WEEKS)}
+    SCHED.update({f"hou{w}": {"home": "HOU", "away": f"H{w}", "season": 2026, "week": w} for w in range(1, 5)})
+
+    def cardinals(self):
+        """Harrison played every Arizona game but the last (week 4) and is now on Houston's roster."""
+        mhj = {"id": "mhj", "n": "Marvin Harrison Jr.", "p": "WR", "t": "HOU", "lt": "ARI",
+               "g": [row(s, w, o, 0, 0, 8, 5, 70) for s, w, o in WEEKS[:-1]]}
+        wilson = {"id": "wilson", "n": "Michael Wilson", "p": "WR", "t": "ARI",
+                  "g": [row(s, w, o, 0, 0, 6, 4, 50) for s, w, o in WEEKS]}
+        mcbride = {"id": "mcbride", "n": "Trey McBride", "p": "TE", "t": "ARI",
+                   "g": [row(s, w, o, 0, 0, 9, 7, 70) for s, w, o in WEEKS]}
+        rb = {"id": "rb", "n": "A Back", "p": "RB", "t": "ARI", "g": [row(s, w, o, 15, 65, 3, 2, 15) for s, w, o in WEEKS]}
+        nico = {"id": "nico", "n": "Nico Collins", "p": "WR", "t": "HOU",
+                "g": [row(2026, w, f"H{w}", 0, 0, 9, 6, 85) for w in range(1, 5)]}
+        return mhj, wilson, mcbride, rb, nico
+
+    def test_found_from_the_game_log(self):
+        mhj, wilson, mcbride, rb, nico = self.cardinals()
+        old = {"id": "old", "n": "Left Last Spring", "p": "WR", "t": "HOU",           # moved in the offseason
+               "g": [row(s, w, o, 0, 0, 5, 3, 40) for s, w, o in WEEKS[:17]]}
+        cut = {"id": "cut", "n": "Released", "p": "WR", "t": "ARI", "st": "CUT",
+               "g": [row(s, w, o, 0, 0, 2, 1, 10) for s, w, o in WEEKS[:-1]]}
+        mv = B.season_moves([mhj, wilson, mcbride, rb, nico, old, cut], self.SCHED, 2026)
+        self.assertEqual(list(mv), ["ARI"])
+        self.assertEqual([(x["id"], x["to"], len(x["g"])) for x in mv["ARI"]], [("mhj", "HOU", 20)])
+
+    def test_old_teammates_get_his_targets(self):
+        mhj, wilson, mcbride, rb, nico = self.cardinals()
+        before = B.model_prob([B.stat_value("rec_yds", r) for r in wilson["g"]], 54.5, "yards")
+        B.compute_injury_boosts([mhj, wilson, mcbride, rb, nico], [], self.SCHED, 2026)
+        # the hand-off: TRADE_LAMBDA of his 8 targets, split between the pass catchers by share
+        self.assertAlmostEqual(B.model_rows(wilson)[-2][13] - wilson["g"][-2][13]
+                               + B.model_rows(mcbride)[-2][13] - mcbride["g"][-2][13], 8 * B.TRADE_LAMBDA["rec"], places=1)
+        self.assertGreater(B.model_rows(mcbride)[-2][13], B.model_rows(wilson)[-2][13])   # the bigger share gets more
+        self.assertEqual(B.model_rows(wilson)[-1], wilson["g"][-1])     # the game he already missed stays as played
+        self.assertIn("Marvin Harrison Jr. (now HOU)", wilson["inj_boost"]["why"])
+        self.assertTrue(B.inj_on(wilson, "rec_yds"))
+        after = B.model_prob([B.stat_value("rec_yds", r) for r in B.model_rows(wilson)], 54.5, "yards")
+        self.assertGreater(after["over"], before["over"])
+        self.assertNotIn("inj_boost", rb)              # a receiver's targets go to receivers and tight ends
+        self.assertNotIn("inj_boost", mhj)             # projected from his own log, on Houston now
+        self.assertNotIn("inj_boost", nico)            # his new teammates are left as they are
+        self.assertIsNone(B.hold_reason(wilson, "rec"))   # settled news: nothing to wait for
+
+    def test_traded_back_and_quarterback(self):
+        sched = self.SCHED
+        rb1 = {"id": "rb1", "n": "Traded Back", "p": "RB", "t": "HOU",
+               "g": [row(s, w, o, 16, 70, 2, 2, 10) for s, w, o in WEEKS[:-1]]}
+        rb2 = {"id": "rb2", "n": "Backup Back", "p": "RB", "t": "ARI", "g": [row(s, w, o, 6, 25) for s, w, o in WEEKS]}
+        qb1 = {"id": "qb1", "n": "Traded QB", "p": "QB", "t": "HOU", "g": [row(s, w, o, 4, 20) for s, w, o in WEEKS[:-1]]}
+        qb2 = {"id": "qb2", "n": "Backup QB", "p": "QB", "t": "ARI", "g": [row(s, w, o, 1, 3) for s, w, o in WEEKS]}
+        for r in qb1["g"]:
+            r[4], r[6], r[7] = 240, 34, 22            # pass yards, attempts, completions
+        for r in qb2["g"]:
+            r[4], r[6], r[7] = 40, 6, 4
+        B.compute_injury_boosts([rb1, rb2, qb1, qb2], [], sched, 2026)
+        add = B.model_rows(rb2)[-2][9] - rb2["g"][-2][9]
+        self.assertAlmostEqual(add, 16 * B.TRADE_LAMBDA["rush"], places=6)   # his carries, to the back left
+        self.assertAlmostEqual(B.model_rows(qb2)[-2][6] - 6, 34 * B.TRADE_LAMBDA["pass"], places=6)
+        self.assertGreater(B.model_rows(qb2)[-2][4], 40)                      # the attempts come with yards
+        self.assertTrue(B.inj_on(qb2, "pass_yds"))
+        self.assertIn("Traded QB (now HOU)", qb2["inj_boost"]["why"])
+        self.assertNotIn("Traded Back", qb2["inj_boost"]["why"])
 
 
 if __name__ == "__main__":

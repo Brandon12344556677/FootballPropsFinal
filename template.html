@@ -1211,10 +1211,12 @@ function currentOpp(){ return oppTouched? ($('oppsel').value||null) : null; }
 /* Next man up (build.py compute_injury_boosts): a back or receiver ruled out leaves his carries and
    targets to the teammates who play. The builder rebuilds each of their past games as if he had sat
    it too and ships the additions per game (p.inj_add: "season-week" -> {game-row index: amount});
-   the model reads those rebuilt games, and the snap-share usage adjustment stays off where they apply. */
+   the model reads those rebuilt games, and the snap-share usage adjustment stays off where they apply.
+   A player who changed teams this season (build.py season_moves) leaves his work the same way, for good:
+   his passes to the quarterbacks, carries to the backs (a QB's to the QBs), targets to the pass catchers. */
 function withInj(p, rows){ const a=p&&p.inj_add; if(!a) return rows;
   return rows.map(r=>{ const d=a[r[0]+'-'+r[1]]; if(!d) return r; const x=r.slice(); for(const k in d) x[+k]+=d[k]; return x; }); }
-function injOn(p, sk){ const b=p&&p.inj_boost; if(!b) return false; const f=statFamily(sk,p.p); return !!(f==='rec'?b.rec:f==='rush'?b.rush:0); }
+function injOn(p, sk){ const b=p&&p.inj_boost; if(!b) return false; const f=statFamily(sk,p.p); return !!(f==='rec'?b.rec:f==='rush'?b.rush:f==='pass'?b.pass:0); }
 /* A starter at his position is out or questionable (build.py role_changes): the game log can't size
    the new role (who takes over is often a surprise), so the prop stays off Top 25 Surest and Value. */
 // waiting on injury news (holds.py / build.py team_holds): off Top 25 Surest and Value until it settles
@@ -1496,7 +1498,7 @@ function renderMeta(){
     ws.innerHTML=`<span><span class="lab">Week ${WEEK.week}</span> <b>${home?'vs':'@'} ${esc(opp)}</b></span>`+
       `<span>${esc(kickoff(wg))}</span>`+(vegas(wg)?`<span><span class="lab">Vegas</span> ${esc(vegas(wg))}</span>`:'')+
       (tp?`<span title="average offensive time of possession per game this season, from ESPN box scores"><span class="lab">Poss/gm</span> <b>${esc(p.t)} ${tp}</b>${to?` · ${esc(opp)} ${to}`:''}</span>`:'')+
-      (p.inj_boost&&(p.inj_boost.rec||p.inj_boost.rush)?`<span title="a teammate newly ruled out frees up carries — the model hands this player a share of them (recent volume, with vs. without)"><span class="lab">Volume ▲</span> <b>+${Math.round((Math.max(p.inj_boost.rec||1,p.inj_boost.rush||1)-1)*100)}%</b> · ${esc(p.inj_boost.why||'teammate out')}</span>`:'')+
+      (p.inj_boost&&(p.inj_boost.rec||p.inj_boost.rush||p.inj_boost.pass)?`<span title="a teammate newly ruled out, or gone to another team this season, frees up passes, carries or targets — the model hands this player a share of them (recent volume, with vs. without)"><span class="lab">Volume ▲</span> <b>+${Math.round((Math.max(p.inj_boost.rec||1,p.inj_boost.rush||1,p.inj_boost.pass||1)-1)*100)}%</b> · ${esc(p.inj_boost.why||'teammate out')}</span>`:'')+
       (p.inj_boost&&(p.inj_boost.hold||[]).length?`<span title="he, or a teammate whose snaps decide his role, is out, questionable or doubtful. His ${esc(p.inj_boost.hold.map(f=>f==='rush'?'rushing':f==='pass'?'passing':'receiving').join(', '))} props stay off Top 25 Surest and Value until that's settled (ESPN shows the player active or out; on game day, the inactives 90 minutes before kickoff)."><span class="lab">Waiting on news</span> <b>${esc(p.inj_boost.hw||'injury report')}</b> · not recommended yet</span>`:'')+score;
     ws.hidden=false;
   } else if(WEEK.week){
