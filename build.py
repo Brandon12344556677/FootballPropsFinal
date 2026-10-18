@@ -841,12 +841,13 @@ def injury_unsure(players, espn=None):
     return out
 
 
-def position_eff(players):
+def position_eff(players, fams=None):
     """Per position, each stat per unit of its family's volume (league-wide): the prior the
-    per-carry / per-target rates shrink toward."""
+    per-carry / per-target rates shrink toward. fams: NMU (default) or TRADE_FAMS."""
+    fams = NMU if fams is None else fams
     tot = {}
     for e in players:
-        for fam, cfg in NMU.items():
+        for fam, cfg in fams.items():
             if e["p"] not in cfg["pos"]:
                 continue
             t = tot.setdefault((e["p"], fam), [0.0] * 16)
@@ -854,18 +855,23 @@ def position_eff(players):
                 t[cfg["vol"]] += r[cfg["vol"]]
                 for k in cfg["stats"]:
                     t[k] += r[k]
-    return {key: {k: (t[k] / t[NMU[key[1]]["vol"]] if t[NMU[key[1]]["vol"]] else 0.0) for k in NMU[key[1]]["stats"]}
+    return {key: {k: (t[k] / t[fams[key[1]]["vol"]] if t[fams[key[1]]["vol"]] else 0.0) for k in fams[key[1]]["stats"]}
             for key, t in tot.items()}
 
 
-def nmu_adds(members, out_ids, pos_eff, before=None, lam=None, w_emp=None):
+def nmu_adds(members, out_ids, pos_eff, before=None, lam=None, w_emp=None, fams=None, heirs_of=None, newly=True):
     """members: one team's players ({"id", "p", "g"}); out_ids: the ones out. Returns
     {player id: {(season, week, opp): {row index: amount}}} for the active ones. before:
-    (season, week) — only earlier games count (the backtest). lam / w_emp default to the fitted."""
+    (season, week) — only earlier games count (the backtest). lam (a number, or one per family) /
+    w_emp default to the fitted. fams / heirs_of: NMU / NMU_HEIRS (injuries) or TRADE_FAMS /
+    TRADE_HEIRS (trades). newly=False: every out player counts, not just the newly out (a player
+    traded away is gone for good, so his whole time with the team is rebuilt)."""
     w_emp = NMU_EMP if w_emp is None else w_emp
+    fams = NMU if fams is None else fams
+    heirs_of = NMU_HEIRS if heirs_of is None else heirs_of
     adds = {}
-    for fam, cfg in NMU.items():
-        fl = NMU_LAMBDA[fam] if lam is None else lam
+    for fam, cfg in fams.items():
+        fl = NMU_LAMBDA.get(fam, 0.0) if lam is None else (lam.get(fam, 0.0) if isinstance(lam, dict) else lam)
         vi = cfg["vol"]
         outs = [m for m in members if m["id"] in out_ids and m["p"] in cfg["pos"]]
         acts = [m for m in members if m["id"] not in out_ids and m["p"] in cfg["pos"]]
@@ -876,7 +882,8 @@ def nmu_adds(members, out_ids, pos_eff, before=None, lam=None, w_emp=None):
         # only players newly out (in one of the team's last 3 games): a longer absence is already
         # in his teammates' recent games
         recent = set(sorted({k for m in outs + acts for k in rows[m["id"]]})[-3:])
-        outs = [o for o in outs if recent & set(rows[o["id"]])]
+        if newly:
+            outs = [o for o in outs if recent & set(rows[o["id"]])]
         if not outs or fl <= 0:
             continue
         everyone = outs + acts
@@ -898,7 +905,7 @@ def nmu_adds(members, out_ids, pos_eff, before=None, lam=None, w_emp=None):
             eff[a["id"]] = {k: (sum(r[k] for r in g) + NMU_EFF_K * prior.get(k, 0.0)) / (v + NMU_EFF_K)
                             for k in cfg["stats"]}
         for o in outs:
-            heirs = [a for a in acts if a["p"] in NMU_HEIRS[fam].get(o["p"], ()) and role[a["id"]] >= NMU_MIN_SHARE]
+            heirs = [a for a in acts if a["p"] in heirs_of[fam].get(o["p"], ()) and role[a["id"]] >= NMU_MIN_SHARE]
             if not heirs:
                 continue
             played = {k for k, r in rows[o["id"]].items() if r[vi] > 0}
@@ -977,15 +984,69 @@ def team_holds(members, unsure, out_ids, games=None):
     return out
 
 
-def compute_injury_boosts(players, espn=None, sched=None):
+# ---------------------------------------------------------------------------
+# Trades (and any other move between teams this season): a quarterback, back, receiver or
+# tight end who played for a team this season and is now on another is gone for good from his
+# old team, so it's next man up without the "newly out" limit: each teammate's games with him
+# are rebuilt as if he had sat them (nmu_adds, newly=False), his passes going to the
+# quarterbacks, his carries to the quarterbacks (a QB's) or backs, his targets to the pass
+# catchers. Found from the data, no hand-kept list: the team of each game in his log
+# (the schedule) against his current team (the roster, build_players). He's projected from his
+# own game log with his new team's game (its Vegas line, its opponent's defense).
+# ---------------------------------------------------------------------------
+TRADE_FAMS = {"pass": {"pos": ("QB",), "vol": 6, "stats": (7, 4, 5, 8)},       # attempts -> completions, yds, TDs, INTs
+              "qbrush": {"pos": ("QB",), "vol": 9, "stats": (10, 11)},         # a quarterback's carries
+              "rush": NMU["rush"], "rec": NMU["rec"]}
+TRADE_HEIRS = {"pass": {"QB": ("QB",)}, "qbrush": {"QB": ("QB",)},
+               "rush": NMU_HEIRS["rush"], "rec": NMU_HEIRS["rec"]}
+# Backtest (tune_trade.py, 2024-26: 45 moves, the old team's games after each, odd and even weeks
+# alike): unlike an injury (who takes over is a surprise), a departure is for good and the work
+# does get absorbed. Half of it to the heirs scored best: receiving log loss 0.6211 -> 0.6174 (3,342
+# props), rushing 0.6467 -> 0.6405 (350); a full hand-off overshoots. Quarterbacks: only 15 props,
+# so a cautious quarter.
+TRADE_LAMBDA = {"pass": 0.25, "qbrush": 0.25, "rush": 0.5, "rec": 0.5}   # share of his work handed on
+BOOST_VOL = {"pass": 6, "rush": 9, "rec": 13}   # stat family -> its volume column (inj_boost's with / without)
+
+
+def game_teams(sched):
+    """(season, week, opponent) -> the team that played that opponent that week (keyed like _gkey)."""
+    out = {}
+    for g in (sched or {}).values():
+        out[(g["season"], g["week"], g["away"])] = g["home"]
+        out[(g["season"], g["week"], g["home"])] = g["away"]
+    return out
+
+
+def season_moves(players, sched, season=None):
+    """{old team: [his games with it, as {"id", "n", "p", "g", "to"}]} for every skill player who
+    played for a team this season and is now on another (traded, released and signed, claimed).
+    Only his games for that team count, from any season."""
+    season = SEASON if season is None else season
+    gt = game_teams(sched)
+    out = {}
+    for e in players:
+        if e.get("p") not in SKILL or not e.get("t") or e.get("st") in ("CUT", "RET"):
+            continue
+        olds = {gt.get(_gkey(r)) for r in e["g"] if r[0] == season} - {None, e["t"]}
+        for old in sorted(olds):
+            g = [r for r in e["g"] if gt.get(_gkey(r)) == old]
+            out.setdefault(old, []).append({"id": e["id"], "n": e["n"], "p": e["p"], "g": g, "to": e["t"]})
+    return out
+
+
+def compute_injury_boosts(players, espn=None, sched=None, season=None):
     """Next man up and holds for this week (see above), in place: entry['inj_add'] with the
     per-game additions and entry['inj_boost'] = {"rush"/"rec": recent volume with / without
     them, "why": who's out; "hold": [stat families waiting on news], "hw": on whom}. sched:
-    load_schedule's games, to tell a team's games from a newcomer's games elsewhere. Returns
-    (players out, players questionable or doubtful, teammates handed work, players held)."""
+    load_schedule's games, to tell a team's games from a newcomer's games elsewhere, and to find
+    players who changed teams this season (season_moves: their old teammates get their work too,
+    "pass" in inj_boost for a quarterback's). Returns (players out, players questionable or
+    doubtful, teammates handed work, players held)."""
     outs = injury_outs(players, espn)
     unsure = {k: v for k, v in injury_unsure(players, espn).items() if k not in outs}
     pos_eff = position_eff(players)
+    moved = season_moves(players, sched, season)
+    trade_eff = position_eff(players, TRADE_FAMS) if moved else {}
     tg = team_games(sched)
     teams = {}
     for e in players:
@@ -995,12 +1056,25 @@ def compute_injury_boosts(players, espn=None, sched=None):
     for team, members in teams.items():
         team_out = {m["id"] for m in members if m["id"] in outs}
         team_unsure = {m["id"]: unsure[m["id"]] for m in members if m["id"] in unsure}
-        if not team_out and not team_unsure:
+        gone = moved.get(team, [])
+        if not team_out and not team_unsure and not gone:
             continue
         out_ids = {m["id"] for m in members if m["id"] in team_out and m["p"] in ("RB", "FB", "WR", "TE")}
         adds = nmu_adds(members, out_ids, pos_eff) if out_ids else {}
+        if gone:      # traded away: every game he played for the team, at TRADE_LAMBDA
+            here = [m for m in members if m["id"] not in team_out]
+            tr = nmu_adds(here + gone, {x["id"] for x in gone}, trade_eff, lam=TRADE_LAMBDA,
+                          fams=TRADE_FAMS, heirs_of=TRADE_HEIRS, newly=False)
+            for pid, per in tr.items():
+                for k, d in per.items():
+                    t = adds.setdefault(pid, {}).setdefault(k, {})
+                    for i, v in d.items():
+                        t[i] = t.get(i, 0.0) + v
         hl = team_holds(members, team_unsure, team_out, tg.get(team))
-        info = {m["id"]: (m["n"], m["p"]) for m in members}
+        # who left work behind, and to which positions: (label, his position, heirs by family)
+        why = [(f"{m['n']} (out)", m["p"], {f: h for f, h in NMU_HEIRS.items() if NMU_LAMBDA[f] > 0})
+               for m in members if m["id"] in out_ids] \
+            + [(f"{x['n']} (now {x['to']})", x["p"], TRADE_HEIRS) for x in gone]
         for m in members:
             a, h = adds.get(m["id"]) or {}, hl.get(m["id"]) or {}
             if not a and not h:
@@ -1009,15 +1083,15 @@ def compute_injury_boosts(players, espn=None, sched=None):
             if a:
                 m["inj_add"] = {f"{k[0]}-{k[1]}": {str(i): round(v, 2) for i, v in d.items()} for k, d in a.items()}
                 recent = sorted(m["g"], key=lambda r: (r[0], r[1]))[-8:]
-                for fam, cfg in NMU.items():
-                    if not any(cfg["vol"] in d for d in a.values()):
+                for fam, vi in BOOST_VOL.items():
+                    if not any(vi in d for d in a.values()):
                         continue
-                    base = sum(r[cfg["vol"]] for r in recent)
-                    extra = sum(a.get(_gkey(r), {}).get(cfg["vol"], 0.0) for r in recent)
+                    base = sum(r[vi] for r in recent)
+                    extra = sum(a.get(_gkey(r), {}).get(vi, 0.0) for r in recent)
                     b[fam] = round(1.0 + extra / base, 2) if base > 0 else 1.0   # set either way: inj_on reads it
-                fams = set(b) & set(NMU)
-                b["why"] = ", ".join(f"{info[o][0]} (out)" for o in sorted(out_ids, key=lambda x: info[x][0])
-                                     if any(info[o][1] in NMU[f]["pos"] for f in fams))[:90]
+                b["why"] = ", ".join(lab for lab, pos, heirs in sorted(why)
+                                     if any(m["p"] in hs.get(pos, ()) for f, hs in heirs.items()
+                                            if b.get("rush" if f == "qbrush" else f)))[:90]
                 adjusted += 1
             if h:
                 b["hold"] = sorted(h)
@@ -2053,6 +2127,9 @@ def main():
         print(f"  next man up: {n_out} out, {n_q} questionable or doubtful"
               f"{'' if espn_inj is not None else ' (ESPN report unavailable: nflverse and rosters only)'},"
               f" {n_adj} teammate(s) handed work, {n_hold} player(s) waiting on news (no Top 25 / Value)")
+        mv = season_moves(players, sched)
+        print((f"  changed teams this season: {sum(len(v) for v in mv.values())} player(s)" + "".join(
+            f"; {x['n']} {t}->{x['to']}" for t, v in sorted(mv.items()) for x in v))[:300])
     except Exception as e:  # noqa: BLE001
         print(f"  next man up: skipped ({e})")
     try:
