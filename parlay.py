@@ -11,7 +11,8 @@ The day's parlays never share a player, so they're three separate bets, not one 
 
 Timing (like Pick of the Day): from the first run at or after 11:00 AM ET, every run makes as many
 of today's PER_DAY parlays as it can (later runs fill the rest as more games get prices); once made
-a parlay never changes. Still none at 7:30 PM ET: "No parlay today"; fewer than three is fine.
+a parlay never changes, except that one of today's using a sport since dropped from TEST_PARLAY_SPORTS is
+remade while none of its games has started. Still none at 7:30 PM ET: "No parlay today"; fewer than three is fine.
 
 Grading reads each leg's own pick in its sport's picks file: any miss loses; a push or a DNP drops
 that leg (the parlay pays on the rest); every leg dropped is a void. Still ungraded 5 days after
@@ -177,6 +178,16 @@ def step(state, docs, now, nfl_kick=None):
     changed = False
     for e in days:
         changed |= grade(e, docs, today)
+    # A sport dropped from TEST_PARLAY_SPORTS after today's parlays were made: remake any of today's
+    # that use it while none of its games has started (no result yet, so the record is unaffected).
+    stale = [e for e in days if e["date"] == today and e.get("legs") and not e.get("res")
+             and any(l["sport"] not in TEST_PARLAY_SPORTS for l in e["legs"])
+             and all(not l.get("res") and (start_utc(l.get("start")) or now) > now for l in e["legs"])]
+    if stale:
+        days[:] = [e for e in days if not any(e is s for s in stale)]
+        for i, e in enumerate([e for e in days if e["date"] == today and e.get("legs")], 1):
+            e["n"] = i
+        changed = True
     mine = [e for e in days if e["date"] == today]
     if (et.hour, et.minute) < OPEN_AT or any(e.get("closed") for e in mine):
         return changed

@@ -47,6 +47,23 @@ class ParlayTest(unittest.TestCase):
         parlay.step(state, [s for s in d if s[0] != "nhl"], NOW)
         self.assertEqual([e for e in state["days"] if e.get("legs")], [])   # no hockey: no parlay
 
+    def test_remakes_todays_non_nhl_parlays_before_their_games(self):
+        leg = lambda s, pid, start: {"key": [s, "g", pid], "sport": s, "pid": pid, "gid": "g" + pid, "start": start,
+                                     "prob": 0.7, "price": 0.55, "player": "P" + pid}
+        later, started = "2026-10-17T00:00Z", "2026-10-16T15:00Z"
+        state = {"days": [
+            {"date": "2026-10-15", "n": 1, "res": None, "legs": [leg("nfl", "y", started)]},             # yesterday: kept
+            {"date": "2026-10-16", "n": 1, "res": None, "legs": [leg("nfl", "a", later), leg("nhl", "b", later)]},
+            {"date": "2026-10-16", "n": 2, "res": None, "legs": [leg("nfl", "c", started), leg("nhl", "d", later)]},
+            {"date": "2026-10-16", "n": 3, "res": None, "legs": [leg("nhl", "e", later), leg("nhl", "f", later)]}]}
+        rows = [pick(str(i), "h" + str(i), 0.70, 0.55) for i in range(4)]
+        self.assertTrue(parlay.step(state, self.docs(*rows), NOW))
+        today = [e for e in state["days"] if e["date"] == "2026-10-16"]
+        self.assertEqual([e["n"] for e in today], [1, 2, 3])
+        self.assertEqual([[l["pid"] for l in e["legs"]] for e in today][:2], [["c", "d"], ["e", "f"]])   # started: kept
+        self.assertEqual({l["sport"] for l in today[2]["legs"]}, {"nhl"})                                   # the remake
+        self.assertEqual(state["days"][0]["date"], "2026-10-15")
+
     def test_at_most_two_legs_per_game_and_one_per_player(self):
         d = self.docs(pick("1", "g1", 0.8, 0.6), pick("2", "g1", 0.8, 0.6), pick("3", "g1", 0.8, 0.6))
         self.assertIsNone(parlay.choose(parlay.candidates(d, NOW)))   # 3 legs from one game: no
