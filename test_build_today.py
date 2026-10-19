@@ -147,6 +147,15 @@ class Agents(unittest.TestCase):
         self.assertEqual([r[0] for r in keep["runs"]], ["2026-10-11T17:00:00Z", "2026-10-11T17:40:00Z",
                                                          "2026-10-11T18:00:00Z"])
 
+    def test_fast_moves_pool_limits_the_list_not_the_snapshot(self):
+        a, b = self.cand("a", 0.70), self.cand("b", 0.40)
+        hist = {"runs": [["2026-10-11T17:00:00Z", {build_today.ckey(a): 0.55, build_today.ckey(b): 0.60}]]}
+        out, keep = build_today.fast_moves([a, b], hist, self.NOW, pool=[a])     # the site: featured only
+        self.assertEqual([r["pid"] for r in out], ["a"])
+        self.assertEqual(set(keep["runs"][-1][1]), {build_today.ckey(a), build_today.ckey(b)})
+        out, _ = build_today.fast_moves([a, b], hist, self.NOW)                  # the dashboard: every pick
+        self.assertEqual([r["pid"] for r in out], ["b", "a"])                   # biggest move first
+
     def test_news_flags_list_flagged_picks_only(self):
         out = build_today.news_flags([self.cand("a", 0.6, lists="V", flag="Questionable"), self.cand("b", 0.6, lists="T")])
         self.assertEqual([(r["pid"], r["flag"], r["lists"]) for r in out], [("a", "Questionable", "V")])

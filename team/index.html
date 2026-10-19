@@ -419,7 +419,7 @@ footer p{margin:0;max-width:80ch}
     <div class="agents">
       <div class="ag"><h3>Promo day</h3><p id="agPromo" class="agp"></p></div>
       <div class="ag"><h3>Double-check before posting</h3><p class="hint">Featured picks whose injury or lineup news says the player might not play.</p><ul class="aglist" id="agFlags"></ul></div>
-      <div class="ag"><h3>Moving fast</h3><p class="hint">Featured props whose price moved 10¢ or more in the last hour, often injury news.</p><ul class="aglist" id="agFast"></ul></div>
+      <div class="ag"><h3>Moving fast</h3><p class="hint">Every upcoming prop whose price moved 10¢ or more in the last hour, often injury news. A chip marks Value and Top 25 picks; the rest are on no list.</p><ul class="aglist" id="agFast"></ul></div>
     </div>
   </section>
 
@@ -1130,9 +1130,11 @@ footer p{margin:0;max-width:80ch}
     fl.forEach(f=>ul.appendChild(li(`<b>${esc(f.player)}</b> ${esc(f.side)} ${esc(f.line)} ${esc(f.statText)} <span class="chip">${f.lists.includes('V')?'Value':'Top 25'}</span><br><small>${esc(SP[f.sport]||'')} · ${esc(f.flag)}</small>`)));
     if(!fl.length) ul.appendChild(li('<span class="empty">Nothing flagged. No featured player is on an injury report or missing from a lineup.</span>'));
     // fast moves (build_today.fast_moves)
-    const fs=(t.fast||[]).filter(up), uf=$('agFast'); uf.textContent='';
-    fs.forEach(f=>uf.appendChild(li(`<b>${esc(f.player)}</b> ${esc(f.side)} ${esc(f.line)} ${esc(f.statText)}<br><small>${esc(SP[f.sport]||'')} · ${cents(f.was)} → ${cents(f.price)} in the last hour</small>`)));
-    if(!fs.length) uf.appendChild(li('<span class="empty">No featured price has moved 10¢ in the last hour.</span>'));
+    // fastAll: every upcoming priced pick, not only Value / Top 25 (team only; the home page keeps "fast")
+    const fs=(t.fastAll||t.fast||[]).filter(up), uf=$('agFast'); uf.textContent='';
+    fs.forEach(f=>{ const L=f.lists||'', chip=L.includes('V')? 'Value' : L.includes('T')? 'Top 25' : '';
+      uf.appendChild(li(`<b>${esc(f.player)}</b> ${esc(f.side)} ${esc(f.line)} ${esc(f.statText)}${chip? ` <span class="chip">${chip}</span>` : ''}<br><small>${esc(SP[f.sport]||'')} · ${cents(f.was)} → ${cents(f.price)} in the last hour</small>`)); });
+    if(!fs.length) uf.appendChild(li('<span class="empty">No price has moved 10¢ in the last hour.</span>'));
     $('agUpd').textContent='Updated '+new Date(t.gen).toLocaleTimeString('en-US',{hour:'numeric', minute:'2-digit'});
     renderPosts(t, b);
   }
