@@ -1640,25 +1640,37 @@ footer p{margin:0;max-width:80ch}
   buildLink();
 
   // ---------- site health: public health.json (health.py) and today.json's time of the last update ----------
-  // Updates run about every 10 minutes, but GitHub can delay one by 20+; warn past 40, alarm past 90.
+  // Updates run about every 10 minutes; 99% of gaps are under 27 (Oct 2026), so warn past 30, alarm past 90.
+  // The update job can be fine while GitHub Pages sits on the new data (queued deploys during a GitHub incident),
+  // so also warn when the newest Pages deploy has been waiting more than 10 minutes, or failed.
+  const HEALTH_WARN_MIN=30, HEALTH_BAD_MIN=90, PAGES_STUCK_MIN=10;
   async function loadHealth(){
     const get=u=>fetch(u+'?t='+Date.now(),{cache:'no-store'}).then(r=>r.ok? r.json() : null).catch(()=>null);
-    // The site watchdog (watchdog.py) keeps one open GitHub issue while it sees a problem on the live site.
-    const dog=fetch('https://api.github.com/repos/Brandon12344556677/FootballPropsFinal/issues?state=open&per_page=50',{cache:'no-store'})
+    const gh=p=>fetch('https://api.github.com/repos/Brandon12344556677/FootballPropsFinal/'+p,{cache:'no-store'})
       .then(r=>r.ok? r.json() : null).catch(()=>null);
-    const [h, t, issues]=await Promise.all([get('../health.json'), get('../today.json'), dog]);
+    // The site watchdog (watchdog.py) keeps one open GitHub issue while it sees a problem on the live site.
+    const [h, t, issues, runs]=await Promise.all([get('../health.json'), get('../today.json'),
+      gh('issues?state=open&per_page=50'), gh('actions/runs?per_page=20')]);
     const find=m=> issues? (issues.find(i=>(i.body||'').includes(m) && !i.pull_request) || false) : null;
     const w=find('<!-- watchdog -->'), sc=find('<!-- site-checks -->');   // sc: the daily search / sign-up check
     const el=$('health'); if(!h && !t) return;
     const age=t && isFinite(Date.parse(t.gen))? Math.round((Date.now()-Date.parse(t.gen))/60000) : null;
+    const pr=runs && (runs.workflow_runs||[]).find(r=>r.name==='pages build and deployment');   // newest first
+    const prAge=pr? Math.round((Date.now()-Date.parse(pr.created_at))/60000) : 0;
+    const pages= !pr? null : pr.status!=='completed' && prAge>PAGES_STUCK_MIN? 'stuck' : pr.conclusion==='failure'? 'failed' : null;
     const probs=Object.entries((h && h.problems)||{});
-    const level= (age!=null && age>90) || w? 'bad' : (probs.length || sc || (age!=null && age>40))? 'warn' : 'ok';
+    const late=age!=null && age>HEALTH_WARN_MIN, dead=age!=null && age>HEALTH_BAD_MIN;
+    const level= dead || w? 'bad' : (probs.length || sc || late || pages)? 'warn' : 'ok';
     el.className='health'+(level==='ok'? '' : ' '+level);
-    $('hTitle').textContent= age!=null && age>90? 'The site has stopped updating.' : w? 'The watchdog found a problem on the live site.' :
+    $('hTitle').textContent= dead? 'The site has stopped updating.' : w? 'The watchdog found a problem on the live site.' :
+      pages==='stuck'? 'GitHub is slow to publish the site.' : pages==='failed'? 'Publishing the site failed.' :
+      late? 'Site updates are running late.' :
       sc && !probs.length? 'The daily check found a search or sign-up link problem.' : level==='warn'? 'Something needs a look.' : 'Everything is running.';
     const ago= age==null? 'unknown' : age<60? age+' min ago' : Math.round(age/60)+' h ago';
     $('hSub').textContent=`Site data last updated ${ago} (updates about every 10 minutes).`+
-      (age!=null && age>90? ' Check the "Update NFL data" runs on GitHub Actions.' : !probs.length && !w? ' All data sources are working.' : '')+
+      (pages==='stuck'? ` Newer data is waiting: GitHub's publish step has been queued ${prAge} min. This is usually a GitHub outage (githubstatus.com) and clears by itself.` :
+       pages==='failed'? ' The last "pages build and deployment" run on GitHub Actions failed.' : '')+
+      (dead || (late && !pages)? ' Check the "Update NFL data" runs on GitHub Actions.' : !probs.length && !w && !late && !pages? ' All data sources are working.' : '')+
       (w===false? ' Watchdog: all live checks pass.' : '');
     const ul=$('hList'); ul.textContent='';
     [[w, 'Open the watchdog issue on GitHub'], [sc, 'Open the site-checks issue on GitHub']].forEach(([iss, label])=>{
