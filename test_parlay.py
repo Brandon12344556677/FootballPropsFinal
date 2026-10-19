@@ -55,21 +55,26 @@ class ParlayTest(unittest.TestCase):
         parlay.step(state, [s for s in d if s[0] != "nhl"], NOW)
         self.assertEqual([e for e in state["days"] if e.get("legs")], [])   # no hockey: no parlay
 
-    def test_remakes_todays_non_nhl_parlays_before_their_games(self):
-        leg = lambda s, pid, start: {"key": [s, "g", pid], "sport": s, "pid": pid, "gid": "g" + pid, "start": start,
-                                     "prob": 0.7, "price": 0.55, "player": "P" + pid}
+    def test_remakes_todays_parlays_that_break_the_rules_before_their_games(self):
+        leg = lambda s, pid, start, venue="Polymarket": {"key": [s, "g", pid], "sport": s, "pid": pid, "gid": "g" + pid,
+                                                         "start": start, "prob": 0.7, "price": 0.55, "player": "P" + pid,
+                                                         "venue": venue}
+        ok = dict(model=0.40, price=0.30)
         later, started = "2026-10-17T00:00Z", "2026-10-16T15:00Z"
         state = {"days": [
             {"date": "2026-10-15", "n": 1, "res": None, "legs": [leg("nfl", "y", started)]},             # yesterday: kept
-            {"date": "2026-10-16", "n": 1, "res": None, "legs": [leg("nfl", "a", later), leg("nhl", "b", later)]},
-            {"date": "2026-10-16", "n": 2, "res": None, "legs": [leg("nfl", "c", started), leg("nhl", "d", later)]},
-            {"date": "2026-10-16", "n": 3, "res": None, "legs": [leg("nhl", "e", later), leg("nhl", "f", later)]}]}
-        rows = [pick(str(i), "h" + str(i), 0.70, 0.55) for i in range(4)]
+            dict(ok, date="2026-10-16", n=1, res=None, legs=[leg("nfl", "a", later), leg("nhl", "b", later)]),   # NFL
+            dict(ok, date="2026-10-16", n=2, res=None, legs=[leg("nfl", "c", started), leg("nhl", "d", later)]), # started
+            dict(ok, date="2026-10-16", n=3, res=None, legs=[leg("nhl", "e", later), leg("nhl", "f", later, "Kalshi")]),
+            dict(model=0.50, price=0.36, date="2026-10-16", n=4, res=None, legs=[leg("nhl", "g", later)]),     # 2.8x
+            dict(ok, date="2026-10-16", n=5, res=None, legs=[leg("nhl", "h", later), leg("nhl", "i", later)])]} # fits
+        rows = [pick(str(k), "h" + str(k), 0.75, 0.55) for k in range(6)]
         self.assertTrue(parlay.step(state, self.docs(*rows), NOW))
         today = [e for e in state["days"] if e["date"] == "2026-10-16"]
-        self.assertEqual([e["n"] for e in today], [1, 2, 3])
-        self.assertEqual([[l["pid"] for l in e["legs"]] for e in today][:2], [["c", "d"], ["e", "f"]])   # started: kept
-        self.assertEqual({l["sport"] for l in today[2]["legs"]}, {"nhl"})                                   # the remake
+        self.assertEqual([[l["pid"] for l in e["legs"]] for e in today][:2], [["c", "d"], ["h", "i"]])   # kept
+        self.assertEqual([e["n"] for e in today], list(range(1, len(today) + 1)))
+        self.assertEqual(len(today), 3)                                                                   # one remade
+        self.assertTrue(parlay.meets_rules(today[2]))
         self.assertEqual(state["days"][0]["date"], "2026-10-15")
 
     def test_polymarket_price_only(self):
