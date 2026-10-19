@@ -62,6 +62,11 @@ jobs:
         with:
           python-version: "3.12"
 
+      # Only price_agent.py uses it (the builders are standard library only); a failed install
+      # just skips the agent.
+      - name: Install the Anthropic SDK for the price-move agent
+        run: pip install --quiet anthropic || echo "anthropic not installed; the price agent will skip"
+
       # Two passes of update_pass.sh (every builder, the health check, commit + push), the
       # second 10 minutes after the first began; a chained run then waits out the rest of 20
       # minutes, so passes stay ~10 minutes apart. A manual run does one pass.
@@ -80,6 +85,7 @@ jobs:
           # team_stats.py: GoatCounter API key ("Read statistics" only) and the /team/ page password
           GOATCOUNTER_TOKEN: ${{ secrets.GOATCOUNTER_TOKEN }}
           TEAM_DASH_PASSWORD: ${{ secrets.TEAM_DASH_PASSWORD }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}   # price_agent.py: why Value prices moved fast
         run: |
           start=$(date +%s)
           bash update_pass.sh

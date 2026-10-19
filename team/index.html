@@ -196,6 +196,7 @@ footer p{margin:0;max-width:80ch}
 .aglist{list-style:none;margin:10px 0 0;padding:0;display:grid;gap:8px;font-size:14px}
 .aglist li{min-width:0;overflow-wrap:anywhere}
 .aglist small{color:var(--muted)}
+.aglist .why{margin-top:4px;font-size:13px;color:var(--soft)}
 .aglist .chip{margin-left:4px;font-size:11px;padding:1px 6px}
 .chip.bad{color:var(--down);border-color:rgba(235,111,125,.5)}
 .edwrap{overflow-x:auto;margin-top:12px}
@@ -419,7 +420,7 @@ footer p{margin:0;max-width:80ch}
     <div class="agents">
       <div class="ag"><h3>Promo day</h3><p id="agPromo" class="agp"></p></div>
       <div class="ag"><h3>Double-check before posting</h3><p class="hint">Featured picks whose injury or lineup news says the player might not play.</p><ul class="aglist" id="agFlags"></ul></div>
-      <div class="ag"><h3>Moving fast</h3><p class="hint">Every upcoming prop whose price moved 10¢ or more in the last hour, often injury news. A chip marks Value and Top 25 picks; the rest are on no list.</p><ul class="aglist" id="agFast"></ul></div>
+      <div class="ag"><h3>Moving fast</h3><p class="hint">Every upcoming prop whose price moved 10¢ or more in the last hour, often injury news. A chip marks Value and Top 25 picks; the rest are on no list. Under each: what the injury and lineup feeds say, and for Value picks they can't explain, what Claude found on the web.</p><ul class="aglist" id="agFast"></ul></div>
     </div>
   </section>
 
@@ -686,7 +687,7 @@ footer p{margin:0;max-width:80ch}
       snap = await load(pw);
       password = pw; store.set('psa-pw', pw);
       $('lock').hidden = true; $('app').hidden = false;
-      setRange(range); freshness(); loadHealth(); renderSpikes(); loadAgents(); loadEdges(pw); loadParlays(pw);
+      setRange(range); freshness(); loadHealth(); renderSpikes(); loadAgents(); loadEdges(pw); loadParlays(pw); loadWhy(pw);
       window.dispatchEvent(new CustomEvent('psa-unlock', {detail: {pw}}));   // expenses.js
       clearInterval(timer);
       timer = setInterval(refresh, 5*60*1000);
@@ -701,7 +702,7 @@ footer p{margin:0;max-width:80ch}
   }
   async function refresh(){
     if (!password) return;
-    try { snap = await load(password); freshness(); render(); loadHealth(); renderSpikes(); loadAgents(); loadEdges(password); loadParlays(password); window.dispatchEvent(new Event('psa-refresh')); } catch(e){ if (e.code === 'wrong') lock(); }
+    try { snap = await load(password); freshness(); render(); loadHealth(); renderSpikes(); loadAgents(); loadEdges(password); loadParlays(password); loadWhy(password); window.dispatchEvent(new Event('psa-refresh')); } catch(e){ if (e.code === 'wrong') lock(); }
   }
   function lock(){
     password = null; snap = null; store.del('psa-pw'); clearInterval(timer);
@@ -1133,7 +1134,11 @@ footer p{margin:0;max-width:80ch}
     // fastAll: every upcoming priced pick, not only Value / Top 25 (team only; the home page keeps "fast")
     const fs=(t.fastAll||t.fast||[]).filter(up), uf=$('agFast'); uf.textContent='';
     fs.forEach(f=>{ const L=f.lists||'', chip=L.includes('V')? 'Value' : L.includes('T')? 'Top 25' : '';
-      uf.appendChild(li(`<b>${esc(f.player)}</b> ${esc(f.side)} ${esc(f.line)} ${esc(f.statText)}${chip? ` <span class="chip">${chip}</span>` : ''}<br><small>${esc(SP[f.sport]||'')} · ${cents(f.was)} → ${cents(f.price)} in the last hour</small>`)); });
+      // why: f.why from the site's news feeds; Value moves they can't explain get Claude's answer (price_agent.py, why.enc)
+      const k=whyKey(f), rule=f.why? `<div class="why">News: ${esc(f.why)}</div>` : '';
+      uf.appendChild(li(`<b>${esc(f.player)}</b> ${esc(f.side)} ${esc(f.line)} ${esc(f.statText)}${chip? ` <span class="chip">${chip}</span>` : ''}<br><small>${esc(SP[f.sport]||'')} · ${cents(f.was)} → ${cents(f.price)} in the last hour</small>`+
+        (rule || (L.includes('V')? `<div class="why" data-k="${esc(k)}"><span class="empty">AI check pending (runs with the next update).</span></div>` : '')))); });
+    fillWhy();
     if(!fs.length) uf.appendChild(li('<span class="empty">No price has moved 10¢ in the last hour.</span>'));
     $('agUpd').textContent='Updated '+new Date(t.gen).toLocaleTimeString('en-US',{hour:'numeric', minute:'2-digit'});
     renderPosts(t, b);
@@ -1198,6 +1203,22 @@ footer p{margin:0;max-width:80ch}
   }
 
   // ---------- model parlay: team/parlays.enc (parlay.py), same password ----------
+  // ---------- price-move agent: team/why.enc (price_agent.py), same password ----------
+  var WHY={};   // var and a function declaration: loadAgents can run before this point of the script
+  function whyKey(f){ return `${f.sport}|${f.pid}|${f.stat}|${Number(f.line)}|${f.side}|${f.price>f.was?'up':'down'}`; }
+  function fillWhy(){
+    document.querySelectorAll('#agFast .why[data-k]').forEach(el=>{ const w=WHY[el.dataset.k]; if(!w) return;
+      const src=(w.sources||[]).map(s=>`<a href="${esc(s.url)}" target="_blank" rel="noopener">${esc(s.title)}</a>`).join(' · ');
+      el.innerHTML=`<b>AI:</b> ${esc(w.reason)} <span class="chip">${esc(w.conf)} confidence</span>`+(src? `<br><small>${src}</small>` : ''); });
+  }
+  async function loadWhy(pw){
+    try {
+      const r=await fetch('why.enc?t='+Date.now(),{cache:'no-store'}); if(!r.ok) return;
+      const d=await decrypt(await r.text(), pw), w={};
+      Object.keys(d.days||{}).sort().forEach(day=>Object.entries(d.days[day]).forEach(([k,v])=>{ w[k]=v; }));
+      WHY=w; fillWhy();
+    } catch(e){}
+  }
   async function loadParlays(pw){
     try {
       const r=await fetch('parlays.enc?t='+Date.now(),{cache:'no-store'}); if(!r.ok) return;
