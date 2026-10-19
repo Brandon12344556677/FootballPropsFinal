@@ -2,8 +2,8 @@
 Prop Streak Lab — the model parlays: three a day, each a parlay the model gives about a coin flip
 (45-55%) that the market prices well below that, for the team only (never on the public site).
 
-Legs come from every sport's upcoming recorded picks: a live price on an exchange with enough
-money behind it (not thin), no injury hold, not locked, 6+ effective games of history, and a model
+Legs come from the upcoming recorded picks of the sports in TEST_PARLAY_SPORTS (NHL only for now):
+a live price on an exchange with enough money behind it (not thin), no injury hold, not locked, 6+ effective games of history, and a model
 chance at least 3 points above the price. Each game has to start today (ET) and at least 45 minutes
 after the parlay is made; different players, at most 2 legs from one game. Of the 2-4 leg
 combinations the model puts at 45-55%, the one with the biggest model-to-market ratio is posted.
@@ -36,6 +36,9 @@ import team_stats
 OUT = os.path.join("team", "parlays.enc")
 ET = ZoneInfo("America/New_York")
 FILES = [("nfl", "picks.json"), ("nba", "nba_picks.json"), ("nhl", "nhl_picks.json"), ("mlb", "mlb_picks.json")]
+# The sports new parlays may take legs from (hockey only for now: NFL has been doing poorly). Add a
+# sport back here to use it again; every file in FILES is still read so older legs keep grading.
+TEST_PARLAY_SPORTS = {"nhl"}
 OPEN_AT = (11, 0)          # ET: first try
 CLOSE_AT = (19, 30)        # ET: still none -> no parlay today
 LEAD_MIN = 45              # every leg's game starts at least this long after the parlay is made
@@ -86,6 +89,8 @@ def candidates(docs, now, nfl_kick=None):
     today = now.astimezone(ET).date()
     out = []
     for sport, doc in docs:
+        if sport not in TEST_PARLAY_SPORTS:
+            continue
         for p in rows_of(doc):
             if sport == "nfl":
                 p = dict(p, start=(nfl_kick or {}).get(p.get("gid")) and nfl_kick[p["gid"]].strftime("%Y-%m-%dT%H:%M:%SZ"))

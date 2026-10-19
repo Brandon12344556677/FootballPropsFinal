@@ -39,6 +39,14 @@ class ParlayTest(unittest.TestCase):
                       pick("8", "g1", 0.8, None))
         self.assertEqual(parlay.candidates(d, NOW), [])
 
+    def test_only_nhl_legs(self):
+        d = [(s, doc(pick(s + "1", s + "g1", 0.8, 0.6), pick(s + "2", s + "g2", 0.75, 0.6)))
+             for s in ("nfl", "nba", "mlb", "nhl")]
+        self.assertEqual({l["sport"] for l in parlay.candidates(d, NOW)}, {"nhl"})
+        state = {"days": []}
+        parlay.step(state, [s for s in d if s[0] != "nhl"], NOW)
+        self.assertEqual([e for e in state["days"] if e.get("legs")], [])   # no hockey: no parlay
+
     def test_at_most_two_legs_per_game_and_one_per_player(self):
         d = self.docs(pick("1", "g1", 0.8, 0.6), pick("2", "g1", 0.8, 0.6), pick("3", "g1", 0.8, 0.6))
         self.assertIsNone(parlay.choose(parlay.candidates(d, NOW)))   # 3 legs from one game: no
