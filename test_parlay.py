@@ -4,14 +4,15 @@ import unittest
 import edge_report
 import parlay
 
-COLS = ["src", "gid", "pid", "player", "team", "opp", "stat", "line", "side", "prob", "price", "neff", "start", "res", "lk", "th", "hd", "vn"]
+COLS = ["src", "gid", "pid", "player", "team", "opp", "stat", "line", "side", "prob", "price", "neff", "start", "res", "lk", "th", "hd", "vn",
+        "pp", "pd"]
 UTC = datetime.timezone.utc
 NOW = datetime.datetime(2026, 10, 16, 16, 0, tzinfo=UTC)          # 12:00 PM ET
 
 
 def pick(pid, gid, prob, price, start="2026-10-17T00:00Z", **kw):
     p = dict(src="live", gid=gid, pid=pid, player="P" + pid, team="A", opp="B", stat="g", line=0.5, side="under",
-             prob=prob, price=price, neff=20, start=start, res=None, lk=None, th=None, hd=None, vn="K")
+             prob=prob, price=price, neff=20, start=start, res=None, lk=None, th=None, hd=None, vn="P", pp=price, pd=100)
     p.update(kw)
     return [p[c] for c in COLS]
 
@@ -63,6 +64,16 @@ class ParlayTest(unittest.TestCase):
         self.assertEqual([[l["pid"] for l in e["legs"]] for e in today][:2], [["c", "d"], ["e", "f"]])   # started: kept
         self.assertEqual({l["sport"] for l in today[2]["legs"]}, {"nhl"})                                   # the remake
         self.assertEqual(state["days"][0]["date"], "2026-10-15")
+
+    def test_polymarket_price_only(self):
+        d = self.docs(pick("1", "g1", 0.80, 0.60, pp=None, vn="K"),          # Kalshi only: out
+                      pick("2", "g2", 0.80, 0.60, pd=10),                      # under $25 on Polymarket: out
+                      pick("3", "g3", 0.80, 0.50, pp=0.62, vn="K"),          # Kalshi cheaper: priced at Polymarket's 62c
+                      pick("4", "g4", 0.75, 0.60))
+        legs = parlay.candidates(d, NOW)
+        self.assertEqual(sorted(l["pid"] for l in legs), ["3", "4"])
+        self.assertEqual({l["pid"]: l["price"] for l in legs}["3"], 0.62)
+        self.assertEqual({l["venue"] for l in legs}, {"Polymarket"})
 
     def test_at_most_two_legs_per_game_and_one_per_player(self):
         d = self.docs(pick("1", "g1", 0.8, 0.6), pick("2", "g1", 0.8, 0.6), pick("3", "g1", 0.8, 0.6))
