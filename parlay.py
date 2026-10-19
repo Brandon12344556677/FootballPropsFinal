@@ -1,13 +1,14 @@
 """
-Prop Streak Lab — the model parlays: three a day, each a parlay the model gives about a coin flip
-(45-55%) that the market prices well below that, for the team only (never on the public site).
+Prop Streak Lab — the model parlays: three a day, each a parlay the model gives 35-55%
+that pays at least 3x the stake (the market prices it well below the model), for the team only (never on the public site).
 
 Legs come from the upcoming recorded picks of the sports in TEST_PARLAY_SPORTS (NHL only for now),
 priced on Polymarket only (the pick's "pp", with $25+ offered there; Kalshi prices are not used):
 a live price with enough money behind it (not thin), no injury hold, not locked, 6+ effective games of history, and a model
 chance at least 3 points above the price. Each game has to start today (ET) and at least 45 minutes
 after the parlay is made; different players, at most 2 legs from one game. Of the 2-4 leg
-combinations the model puts at 45-55%, the one with the biggest model-to-market ratio is posted.
+combinations the model puts at 35-55% that pay at least MIN_PAYOUT (3x) the stake, the one with the
+biggest model-to-market ratio is posted.
 The day's parlays never share a player, so they're three separate bets, not one bet three times.
 
 Timing (like Pick of the Day): from the first run at or after 11:00 AM ET, every run makes as many
@@ -44,7 +45,8 @@ TEST_PARLAY_SPORTS = {"nhl"}
 OPEN_AT = (11, 0)          # ET: first try
 CLOSE_AT = (19, 30)        # ET: still none -> no parlay today
 LEAD_MIN = 45              # every leg's game starts at least this long after the parlay is made
-MODEL_LO, MODEL_HI = 0.45, 0.55
+MODEL_LO, MODEL_HI = 0.35, 0.55   # 35%+: with the 3x payout floor, 45%+ left about one parlay a day (Oct 19)
+MIN_PAYOUT = 3.0           # pays at least 3x the stake (legs' prices multiply to 33.3c or less): one hit in three covers the day
 MIN_NEFF = 6.0
 MIN_EDGE = 0.03
 MIN_DEPTH = 25             # dollars offered on Polymarket near its price (the pick's "pd"), like the thin rule
@@ -114,7 +116,7 @@ def candidates(docs, now, nfl_kick=None):
 
 
 def choose(legs):
-    """The 2-4 leg combination the model puts at 45-55% with the biggest model / market ratio, or None."""
+    """The 2-4 leg combination the model puts at 35-55%, paying 3x+, with the biggest model / market ratio, or None."""
     legs = sorted(legs, key=lambda l: (-l["prob"] / l["price"], l["player"] or ""))[:POOL]
     best = None
     for k in (2, 3, 4):
@@ -130,6 +132,8 @@ def choose(legs):
             if not MODEL_LO <= m <= MODEL_HI:
                 continue
             q = math.prod(l["price"] for l in c)
+            if q * MIN_PAYOUT > 1 + 1e-9:
+                continue
             score = (m / q, m)
             if best is None or score > best[0]:
                 best = (score, c, m, q)

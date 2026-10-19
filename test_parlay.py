@@ -25,12 +25,19 @@ class ParlayTest(unittest.TestCase):
     def docs(self, *rows):
         return [("nhl", doc(*rows))]
 
-    def test_picks_about_a_coin_flip_with_the_best_price(self):
-        d = self.docs(pick("1", "g1", 0.80, 0.60), pick("2", "g2", 0.75, 0.60), pick("3", "g1", 0.80, 0.78),
-                      pick("4", "g3", 0.70, 0.66))
+    def test_picks_35_to_55_with_the_best_price(self):
+        d = self.docs(pick("1", "g1", 0.80, 0.60), pick("2", "g2", 0.75, 0.55), pick("3", "g1", 0.80, 0.78),
+                      pick("4", "g3", 0.70, 0.55))
         c = parlay.choose(parlay.candidates(d, NOW))
-        self.assertTrue(0.45 <= c["model"] <= 0.55)
-        self.assertEqual(sorted(l["pid"] for l in c["legs"]), ["2", "4"])   # the only pair in range (0.525 vs 0.396)
+        self.assertTrue(0.35 <= c["model"] <= 0.55 and c["price"] <= 1 / 3)
+        # 1+2+4: 42% at 18.15c beats 2+4 (52.5% at 30.25c); 1+2 is 60% (too sure), 3 adds 78c for 80%
+        self.assertEqual(sorted(l["pid"] for l in c["legs"]), ["1", "2", "4"])
+
+    def test_pays_at_least_3x(self):
+        d = self.docs(pick("1", "g1", 0.75, 0.60), pick("2", "g2", 0.70, 0.60))   # 52.5% but 36c: pays only 2.8x
+        self.assertIsNone(parlay.choose(parlay.candidates(d, NOW)))
+        d = self.docs(pick("1", "g1", 0.75, 0.60), pick("2", "g2", 0.70, 0.555))  # 33.3c: exactly 3x is fine
+        self.assertIsNotNone(parlay.choose(parlay.candidates(d, NOW)))
 
     def test_skips_legs_that_cant_go_in(self):
         d = self.docs(pick("1", "g1", 0.8, 0.6, lk="x"), pick("2", "g1", 0.8, 0.6, th=1), pick("3", "g1", 0.8, 0.6, hd=1),
@@ -118,18 +125,18 @@ class ParlayTest(unittest.TestCase):
 
     def graded(self, *res):
         state = {"days": []}
-        parlay.step(state, self.docs(*[pick(str(i), "g" + str(i), 0.7, 0.6) for i in range(2)]), NOW)
+        parlay.step(state, self.docs(*[pick(str(i), "g" + str(i), 0.7, 0.55) for i in range(2)]), NOW)
         e = state["days"][0]
-        done = [pick(str(i), "g" + str(i), 0.7, 0.6, res=r) for i, r in enumerate(res)]
+        done = [pick(str(i), "g" + str(i), 0.7, 0.55, res=r) for i, r in enumerate(res)]
         parlay.grade(e, self.docs(*done), "2026-10-17")
         return e
 
     def test_grading(self):
         e = self.graded("hit", "hit")
-        self.assertEqual((e["res"], e["units"]), ("hit", round(1 / 0.36 - 1, 3)))
+        self.assertEqual((e["res"], e["units"]), ("hit", round(1 / 0.3025 - 1, 3)))
         self.assertEqual(self.graded("hit", "miss")["res"], "miss")
         e = self.graded("hit", "dnp")                       # a DNP drops the leg: pays on the other one
-        self.assertEqual((e["res"], e["units"]), ("hit", round(1 / 0.6 - 1, 3)))
+        self.assertEqual((e["res"], e["units"]), ("hit", round(1 / 0.55 - 1, 3)))
         self.assertEqual(self.graded("push", "dnp")["res"], "void")
         self.assertIsNone(self.graded("hit", None)["res"])   # still waiting on a leg
 
