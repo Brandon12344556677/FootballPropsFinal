@@ -316,7 +316,7 @@ def moves(cands, min_move=0.03, n=6):
     return out
 
 
-FAST_STATE = "fast_hist.json"    # recent price snapshots of the props the site features, for fast_moves()
+FAST_STATE = "fast_hist.json"    # recent price snapshots of every upcoming priced pick, for fast_moves()
 FAST_MOVE = 0.10                 # 10c or more...
 FAST_WINDOW = (40, 75)           # ...against the price 40-75 minutes ago
 
@@ -331,17 +331,21 @@ def ckey(c):
     return f'{c["sport"]}|{c["pid"]}|{c["stat"]}|{float(c["line"]):g}|{c["side"]}'
 
 
-def fast_moves(cands, hist, now, n=8):
+FAST_ALL_N = 25                  # the team dashboard's list of every pick moving fast, not only featured ones
+
+
+def fast_moves(cands, hist, now, n=8, pool=None):
     """Props whose price moved FAST_MOVE+ within about an hour (often injury or lineup news),
-    biggest first: each featured pick's price now against its price in the oldest snapshot
-    40-75 minutes old. Returns (moves, the snapshots to keep for next run)."""
+    biggest first: each pick's price now against its price in the oldest snapshot 40-75 minutes
+    old. pool limits which of cands may be listed (default: all); the snapshot always keeps every
+    one of cands. Returns (moves, the snapshots to keep for next run)."""
     stamp = now.strftime("%Y-%m-%dT%H:%M:%SZ")
     lo, hi = (now - datetime.timedelta(minutes=m) for m in (FAST_WINDOW[1], FAST_WINDOW[0]))
     runs = [r for r in (hist or {}).get("runs") or [] if isinstance(r, list) and len(r) == 2
             and (t := parse_start(r[0])) is not None and t >= lo]
     old = next((r[1] for r in runs if parse_start(r[0]) <= hi), {})    # runs are oldest first
     out, seen = [], set()
-    for c in sorted(cands, key=lambda c: -abs(c["price"] - old.get(ckey(c), c["price"]))):
+    for c in sorted(cands if pool is None else pool, key=lambda c: -abs(c["price"] - old.get(ckey(c), c["price"]))):
         was = old.get(ckey(c))
         if was is None or abs(c["price"] - was) < FAST_MOVE or (c["sport"], c["pid"]) in seen:
             continue
@@ -535,18 +539,22 @@ def main():
     picks = [{k: v for k, v in c.items() if k not in ("neff", "flag", "px0", "lists")} for c in top]
     feat = featured(okc, top)
     try:
-        fast, hist = fast_moves(feat, load(FAST_STATE) if os.path.exists(FAST_STATE) else {}, now)
+        old = load(FAST_STATE) if os.path.exists(FAST_STATE) else {}
+        fast, hist = fast_moves(cands, old, now, pool=feat)              # the site: featured picks only
+        fast_all, _ = fast_moves(cands, old, now, n=FAST_ALL_N)          # the team dashboard: every pick
+        lists = {ckey(c): c.get("lists") or "" for c in cands}
+        fast_all = [dict(m, lists=lists.get(ckey(m), "")) for m in fast_all]
         with open(FAST_STATE, "w", encoding="utf-8") as f:
             json.dump(hist, f, separators=(",", ":"))
     except Exception as e:
         print(f"  fast moves: skipped ({e})")
-        fast = []
+        fast, fast_all = [], []
     # [sport, start] of every upcoming value spot, so the ticker can count what's still live.
     value_live = sorted([c["sport"], c["start"]] for c in cands if c["value"])
     doc = {"gen": now.strftime("%Y-%m-%dT%H:%M:%SZ"), "record": rec, "picks": picks, "valueLive": value_live,
            "tracked": {"graded": n_graded, "since": since}, "fair": fair_weight(docs), "last": last,
            "calib": calibration(docs),
-           "streaks": streaks(okc), "moves": moves(okc), "fast": fast,
+           "streaks": streaks(okc), "moves": moves(okc), "fast": fast, "fastAll": fast_all,
            "flags": news_flags(feat), "promo": promo_day(docs, today_et), "live": live}
     with open(OUT, "w", encoding="utf-8") as f:
         json.dump(doc, f, separators=(",", ":"), ensure_ascii=False)
@@ -556,7 +564,7 @@ def main():
                        "players": sorted(search, key=lambda r: r[2])}, f, separators=(",", ":"), ensure_ascii=False)
         print(f"  {SEARCH_OUT}: {len(search)} players")
     kinds = sum(1 for p in picks if p["kind"] == "value")
-    print(f"  {OUT}: {len(picks)} pick(s) ({kinds} value, {len(picks) - kinds} safe), {len(fast)} fast move(s), "
+    print(f"  {OUT}: {len(picks)} pick(s) ({kinds} value, {len(picks) - kinds} safe), {len(fast)} fast move(s) ({len(fast_all)} counting every pick), "
           f"{len(doc['flags'])} news flag(s), {doc['promo']['n']} value spot(s) today (usual {doc['promo']['avg']})")
     try:
         botd.run(okc, docs, now)
