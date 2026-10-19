@@ -521,6 +521,25 @@ class ListTests(unittest.TestCase):
         self.assertEqual(M.grade_picks([pick], {}, set(), {"2026-10-01"}), (0, 1))   # 8 PM ET Oct 1
         self.assertEqual(pick["res"], "dnp")
 
+    def test_mlb_rained_out_game_lets_its_date_settle(self):
+        """ALCS Game 4 (Oct 16, 2026) was postponed and made up the next day as a new event:
+        the postponed one never completes, so it mustn't keep its date from settling."""
+        import build_mlb as M
+        ev = lambda gid, name, done: {"id": gid, "competitions": [{"status": {"type": {"name": name, "completed": done}}}]}
+        saved = M.scan_dates, M.sb_events
+        try:
+            M.scan_dates = lambda: ["2026-10-01"]
+            M.sb_events = lambda d: [ev("1", "STATUS_POSTPONED", False), ev("2", "STATUS_CANCELED", False)]
+            store = {"rows": [], "seen": [], "done": []}
+            M.fetch_new_games(store)
+            self.assertEqual(store["done"], ["2026-10-01"])
+            M.sb_events = lambda d: [ev("3", "STATUS_SCHEDULED", False)]          # still to play: not settled
+            store = {"rows": [], "seen": [], "done": []}
+            M.fetch_new_games(store)
+            self.assertEqual(store["done"], [])
+        finally:
+            M.scan_dates, M.sb_events = saved
+
     def test_nba_preseason_is_purged_with_its_picks(self):
         import build_nba as N
         header = lambda t: {"header": {"season": {"type": t}, "competitions": [{"date": "2025-10-10T23:00Z",

@@ -422,6 +422,12 @@ def fetch_summary(gid):
         return gid, None
 
 
+# A postponed or canceled game never finishes on its date, so it mustn't keep the date from
+# settling: then its picks (made for that day) are voided by grade_picks instead of pending
+# forever (ALCS Game 4, Oct 16, 2026: rained out, made up the next day as a new event).
+NEVER_PLAYED = {"STATUS_POSTPONED", "STATUS_CANCELED"}
+
+
 def fetch_new_games(store):
     """Fetch box scores for completed games not yet in the store, newest-first,
     capped at MAX_NEW_GAMES and BUDGET_SEC. A date safely in the past whose games
@@ -447,8 +453,11 @@ def fetch_new_games(store):
             if not gid or gid in seen:
                 continue
             comp = (ev.get("competitions") or [{}])[0]
-            if not ((comp.get("status") or {}).get("type") or {}).get("completed"):
-                complete_date = False            # still to play (or postponed): look again later
+            st = (comp.get("status") or {}).get("type") or {}
+            if not st.get("completed"):
+                if st.get("name") in NEVER_PLAYED:
+                    continue                     # never played that day (a rain-out's makeup is its own event)
+                complete_date = False            # still to play (or suspended): look again later
                 continue
             todo.append(gid)
         room = MAX_NEW_GAMES - added
