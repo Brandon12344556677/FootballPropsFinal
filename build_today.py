@@ -543,7 +543,7 @@ def main():
         fast, hist = fast_moves(cands, old, now, pool=feat)              # the site: featured picks only
         fast_all, _ = fast_moves(cands, old, now, n=FAST_ALL_N)          # the team dashboard: every pick
         # "why": what the site's own news feeds already say (ESPN injury status, MLB lineups, NFL
-        # practice reports, via botd.news_flag), or None; price_agent.py researches unexplained Value moves.
+        # practice reports, via botd.news_flag), or None; the dashboard's Moving fast panel shows it.
         info = {ckey(c): (c.get("lists") or "", c.get("flag") or None) for c in cands}
         fast_all = [dict(m, lists=info.get(ckey(m), ("", None))[0], why=info.get(ckey(m), ("", None))[1])
                     for m in fast_all]

@@ -38,10 +38,6 @@ timeout 2m python parlay.py 2>&1 | tee "$LOGDIR/parlay.log" || echo "model parla
 # Every pass: which strategies are making money (team/edges.enc, encrypted like the stats; rewritten only on a change).
 timeout 2m python edge_report.py 2>&1 | tee "$LOGDIR/edge_report.log" || echo "edge report not refreshed this run"
 
-# Team only: why Value prices moved fast (Claude with web search; team/why.enc, encrypted; needs the
-# ANTHROPIC_API_KEY secret and does nothing without it).
-timeout 3m python price_agent.py 2>&1 | tee "$LOGDIR/price_agent.log" || echo "price agent skipped this run"
-
 # Reads those logs: any data source that failed, a builder that crashed, a data file gone
 # stale, picks stuck ungraded. Records it in health.json (committed below, so it remembers
 # across passes) and flags every open problem on the run's page.
@@ -55,7 +51,7 @@ git add -A games best p 2>/dev/null || true
 for f in nba.html nba.json nba_stats.json nba_picks.json \
          nhl.html nhl.json nhl_stats.json nhl_picks.json \
          mlb.html mlb.json mlb_stats.json mlb_picks.json today.json botd.json posted.json top_cache.json health.json fast_hist.json \
-         team/stats.enc team/edges.enc team/parlays.enc team/why.enc nba_picks_recent.json nhl_picks_recent.json mlb_picks_recent.json search.json; do
+         team/stats.enc team/edges.enc team/parlays.enc nba_picks_recent.json nhl_picks_recent.json mlb_picks_recent.json search.json; do
   git add "$f" 2>/dev/null || true
 done
 if git diff --cached --quiet; then
