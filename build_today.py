@@ -542,8 +542,11 @@ def main():
         old = load(FAST_STATE) if os.path.exists(FAST_STATE) else {}
         fast, hist = fast_moves(cands, old, now, pool=feat)              # the site: featured picks only
         fast_all, _ = fast_moves(cands, old, now, n=FAST_ALL_N)          # the team dashboard: every pick
-        lists = {ckey(c): c.get("lists") or "" for c in cands}
-        fast_all = [dict(m, lists=lists.get(ckey(m), "")) for m in fast_all]
+        # "why": what the site's own news feeds already say (ESPN injury status, MLB lineups, NFL
+        # practice reports, via botd.news_flag), or None; the dashboard's Moving fast panel shows it.
+        info = {ckey(c): (c.get("lists") or "", c.get("flag") or None) for c in cands}
+        fast_all = [dict(m, lists=info.get(ckey(m), ("", None))[0], why=info.get(ckey(m), ("", None))[1])
+                    for m in fast_all]
         with open(FAST_STATE, "w", encoding="utf-8") as f:
             json.dump(hist, f, separators=(",", ":"))
     except Exception as e:
