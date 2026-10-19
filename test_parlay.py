@@ -25,19 +25,23 @@ class ParlayTest(unittest.TestCase):
     def docs(self, *rows):
         return [("nhl", doc(*rows))]
 
-    def test_picks_35_to_55_with_the_best_price(self):
-        d = self.docs(pick("1", "g1", 0.80, 0.60), pick("2", "g2", 0.75, 0.55), pick("3", "g1", 0.80, 0.78),
-                      pick("4", "g3", 0.70, 0.55))
-        c = parlay.choose(parlay.candidates(d, NOW))
-        self.assertTrue(0.35 <= c["model"] <= 0.55 and c["price"] <= 1 / 3)
-        # 1+2+4: 42% at 18.15c beats 2+4 (52.5% at 30.25c); 1+2 is 60% (too sure), 3 adds 78c for 80%
-        self.assertEqual(sorted(l["pid"] for l in c["legs"]), ["1", "2", "4"])
+    def test_picks_the_best_price_in_each_band(self):
+        d = self.docs(pick("A", "g1", 0.80, 0.60), pick("B", "g2", 0.75, 0.55), pick("C", "g3", 0.70, 0.55),
+                      pick("D", "g1", 0.85, 0.78))
+        legs = parlay.candidates(d, NOW)
+        got = {b: sorted(l["pid"] for l in parlay.choose(legs, band)["legs"]) for b, band in enumerate(parlay.BANDS)}
+        # 3-3.5x: B+C (52.5% at 30.25c, 3.31x); A+B would be 3.03x but 60% (too sure)
+        # 3.5-4x: A+B+D (51% at 25.7c, 3.89x) beats A+C+D (47.6% at the same price)
+        # 4-4.5x: B+C+D (44.6% at 23.6c, 4.24x)
+        self.assertEqual(got, {0: ["B", "C"], 1: ["A", "B", "D"], 2: ["B", "C", "D"]})
 
-    def test_pays_at_least_3x(self):
+    def test_payout_bands(self):
         d = self.docs(pick("1", "g1", 0.75, 0.60), pick("2", "g2", 0.70, 0.60))   # 52.5% but 36c: pays only 2.8x
         self.assertIsNone(parlay.choose(parlay.candidates(d, NOW)))
         d = self.docs(pick("1", "g1", 0.75, 0.60), pick("2", "g2", 0.70, 0.555))  # 33.3c: exactly 3x is fine
         self.assertIsNotNone(parlay.choose(parlay.candidates(d, NOW)))
+        d = self.docs(pick("1", "g1", 0.70, 0.45), pick("2", "g2", 0.70, 0.45))   # 20.25c: 4.94x, over every band
+        self.assertEqual([parlay.choose(parlay.candidates(d, NOW), b) for b in parlay.BANDS], [None] * 3)
 
     def test_skips_legs_that_cant_go_in(self):
         d = self.docs(pick("1", "g1", 0.8, 0.6, lk="x"), pick("2", "g1", 0.8, 0.6, th=1), pick("3", "g1", 0.8, 0.6, hd=1),
@@ -59,21 +63,25 @@ class ParlayTest(unittest.TestCase):
         leg = lambda s, pid, start, venue="Polymarket": {"key": [s, "g", pid], "sport": s, "pid": pid, "gid": "g" + pid,
                                                          "start": start, "prob": 0.7, "price": 0.55, "player": "P" + pid,
                                                          "venue": venue}
-        ok = dict(model=0.40, price=0.30)
+        ok = dict(model=0.40, price=0.30, band=0)                                                 # 3.33x
         later, started = "2026-10-17T00:00Z", "2026-10-16T15:00Z"
         state = {"days": [
             {"date": "2026-10-15", "n": 1, "res": None, "legs": [leg("nfl", "y", started)]},             # yesterday: kept
+            dict(ok, date="2026-10-16", n=1, res=None, legs=[leg("nfl", "c", started), leg("nhl", "d", later)]), # started
             dict(ok, date="2026-10-16", n=1, res=None, legs=[leg("nfl", "a", later), leg("nhl", "b", later)]),   # NFL
-            dict(ok, date="2026-10-16", n=2, res=None, legs=[leg("nfl", "c", started), leg("nhl", "d", later)]), # started
             dict(ok, date="2026-10-16", n=3, res=None, legs=[leg("nhl", "e", later), leg("nhl", "f", later, "Kalshi")]),
-            dict(model=0.50, price=0.36, date="2026-10-16", n=4, res=None, legs=[leg("nhl", "g", later)]),     # 2.8x
-            dict(ok, date="2026-10-16", n=5, res=None, legs=[leg("nhl", "h", later), leg("nhl", "i", later)])]} # fits
-        rows = [pick(str(k), "h" + str(k), 0.75, 0.55) for k in range(6)]
+            dict(model=0.40, price=0.27, band=2, date="2026-10-16", n=3, res=None,                         # 3.7x: not 4-4.5x
+                 legs=[leg("nhl", "g", later)]),
+            {"date": "2026-10-16", "n": 2, "res": None, "model": 0.4, "price": 0.27,                       # made before bands
+             "legs": [leg("nhl", "k", later)]},
+            dict(model=0.40, price=0.27, band=1, date="2026-10-16", n=2, res=None,                         # fits 3.5-4x
+                 legs=[leg("nhl", "h", later), leg("nhl", "i", later)])]}
+        rows = [pick("1", "h1", 0.70, 0.48), pick("2", "h2", 0.70, 0.49)]                             # 23.5c: 4.25x
         self.assertTrue(parlay.step(state, self.docs(*rows), NOW))
         today = [e for e in state["days"] if e["date"] == "2026-10-16"]
         self.assertEqual([[l["pid"] for l in e["legs"]] for e in today][:2], [["c", "d"], ["h", "i"]])   # kept
-        self.assertEqual([e["n"] for e in today], list(range(1, len(today) + 1)))
-        self.assertEqual(len(today), 3)                                                                   # one remade
+        self.assertEqual([(e["n"], e["band"]) for e in today], [(1, 0), (2, 1), (3, 2)])
+        self.assertEqual(sorted(l["pid"] for l in today[2]["legs"]), ["1", "2"])                       # the remake
         self.assertTrue(parlay.meets_rules(today[2]))
         self.assertEqual(state["days"][0]["date"], "2026-10-15")
 
@@ -104,23 +112,27 @@ class ParlayTest(unittest.TestCase):
         self.assertEqual([l["pid"] for l in state["days"][0]["legs"]], first)   # the first one never changes
         self.assertEqual(len(state["days"]), 1)                                  # nobody left for a second
 
-    def test_three_a_day_with_no_shared_players(self):
-        rows = [pick(str(i), "g" + str(i), 0.70, 0.55) for i in range(8)]
+    def test_one_per_band_with_no_shared_players(self):
+        rows = [pick("1", "g1", 0.70, 0.55), pick("2", "g2", 0.70, 0.55),       # 30.25c: 3.31x
+                pick("3", "g3", 0.70, 0.50), pick("4", "g4", 0.70, 0.53),       # 26.5c: 3.77x
+                pick("5", "g5", 0.70, 0.48), pick("6", "g6", 0.70, 0.49)]       # 23.5c: 4.25x
         state = {"days": []}
         parlay.step(state, self.docs(*rows), NOW)
         made = [e for e in state["days"] if e.get("legs")]
-        self.assertEqual([e["n"] for e in made], [1, 2, 3])
+        self.assertEqual([(e["n"], e["band"]) for e in made], [(1, 0), (2, 1), (3, 2)])
+        for e in made:
+            self.assertTrue(parlay.in_band(e["price"], parlay.BANDS[e["band"]]))
         pids = [l["pid"] for e in made for l in e["legs"]]
-        self.assertEqual(len(pids), len(set(pids)))
+        self.assertEqual(len(pids), len(set(pids)))                            # no player (so no prop) twice
         self.assertFalse(parlay.step(state, self.docs(*rows), NOW + datetime.timedelta(minutes=10)))   # full: nothing more
 
     def test_later_runs_fill_the_rest(self):
         state = {"days": []}
         parlay.step(state, self.docs(pick("1", "g1", 0.7, 0.55), pick("2", "g2", 0.7, 0.55)), NOW)
-        self.assertEqual(len(state["days"]), 1)
-        more = [pick(str(i), "g" + str(i), 0.7, 0.55) for i in range(1, 5)]
+        self.assertEqual([e["n"] for e in state["days"]], [1])                 # only a 3-3.5x so far
+        more = [pick("1", "g1", 0.7, 0.55), pick("2", "g2", 0.7, 0.55), pick("3", "g3", 0.7, 0.50), pick("4", "g4", 0.7, 0.53)]
         parlay.step(state, self.docs(*more), NOW + datetime.timedelta(hours=2))
-        self.assertEqual([e["n"] for e in state["days"]], [1, 2])
+        self.assertEqual([e["n"] for e in state["days"]], [1, 2])              # 3.5-4x filled; 4-4.5x still open
 
     def test_no_parlay_after_730(self):
         state = {"days": []}
