@@ -20,7 +20,7 @@ README.md has the full feature tour; this file is the working rules.
   Polymarket and Kalshi links are plain links (no referral codes) since Oct 13, 2026.
   `dashboard_check.py` (in watchdog.yml, every 30 min: the team dashboard's page, encrypted numbers, edge tracker; "Team dashboard" issue).
   Private edge-tracker strategies live encrypted in `rules.enc` on `team-data` (dashboard panel `team/rules.js`, read by `edge_report.py` load_private); never put them back in the public code.
-  `parlay.py` → `team/parlays.enc` (team only, never public): three parlays a day from 11 AM ET (no shared players), each 45-55% by the model,
+  `parlay.py` → `team/parlays.enc` (team only, never public): three parlays a day from 11 AM ET (no shared players; legs only from `TEST_PARLAY_SPORTS`, NHL only for now), each 45-55% by the model,
   frozen once made, graded from the legs' picks; the edge tracker's "parlays" row and the dashboard's Model parlays panel read it; `team/parlaylive.js` tracks today's legs live in that panel from ESPN box scores (browser-side, display only).
   `depth.guard` holds a 30c+ price jump until a second run confirms it (the `pj` pick column).
 - `team_stats.py` → `team/stats.enc`: GoatCounter visitor totals (and traffic spikes), encrypted with the
