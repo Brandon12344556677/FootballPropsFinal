@@ -2,8 +2,9 @@
 Prop Streak Lab — the model parlays: three a day, each a parlay the model gives about a coin flip
 (45-55%) that the market prices well below that, for the team only (never on the public site).
 
-Legs come from the upcoming recorded picks of the sports in TEST_PARLAY_SPORTS (NHL only for now):
-a live price on an exchange with enough money behind it (not thin), no injury hold, not locked, 6+ effective games of history, and a model
+Legs come from the upcoming recorded picks of the sports in TEST_PARLAY_SPORTS (NHL only for now),
+priced on Polymarket only (the pick's "pp", with $25+ offered there; Kalshi prices are not used):
+a live price with enough money behind it (not thin), no injury hold, not locked, 6+ effective games of history, and a model
 chance at least 3 points above the price. Each game has to start today (ET) and at least 45 minutes
 after the parlay is made; different players, at most 2 legs from one game. Of the 2-4 leg
 combinations the model puts at 45-55%, the one with the biggest model-to-market ratio is posted.
@@ -46,6 +47,7 @@ LEAD_MIN = 45              # every leg's game starts at least this long after th
 MODEL_LO, MODEL_HI = 0.45, 0.55
 MIN_NEFF = 6.0
 MIN_EDGE = 0.03
+MIN_DEPTH = 25             # dollars offered on Polymarket near its price (the pick's "pd"), like the thin rule
 MAX_PER_GAME = 2
 PER_DAY = 3
 POOL = 40                  # best legs (by model / price) searched for combinations
@@ -97,8 +99,8 @@ def candidates(docs, now, nfl_kick=None):
                 p = dict(p, start=(nfl_kick or {}).get(p.get("gid")) and nfl_kick[p["gid"]].strftime("%Y-%m-%dT%H:%M:%SZ"))
             if p.get("src", "live") != "live" or p.get("res") is not None or p.get("lk") or p.get("th") or p.get("hd"):
                 continue
-            pr, prob, t = frac(p.get("price")), p.get("prob"), start_utc(p.get("start"))
-            if pr is None or prob is None or t is None or not 0.05 < pr < 0.97:
+            pr, prob, t = frac(p.get("pp")), p.get("prob"), start_utc(p.get("start"))   # Polymarket's price only
+            if pr is None or prob is None or t is None or not 0.05 < pr < 0.97 or (p.get("pd") or 0) < MIN_DEPTH:
                 continue
             if (p.get("neff") or 0) < MIN_NEFF or prob - pr < MIN_EDGE:
                 continue
@@ -107,7 +109,7 @@ def candidates(docs, now, nfl_kick=None):
             out.append({"key": leg_key(sport, p), "sport": sport, "player": p.get("player"), "team": p.get("team"),
                         "opp": p.get("opp"), "stat": p.get("stat"), "line": p.get("line"), "side": p.get("side"),
                         "prob": round(prob, 4), "price": round(pr, 4), "start": p.get("start"), "gid": p.get("gid"),
-                        "pid": p.get("pid"), "venue": "Kalshi" if p.get("vn") == "K" else "Polymarket"})
+                        "pid": p.get("pid"), "venue": "Polymarket"})
     return out
 
 

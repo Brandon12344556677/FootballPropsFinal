@@ -670,7 +670,9 @@ def fetch_markets_us(players_by_key):
         if st is None or st <= now:
             continue            # under way: its prices are in-game, not pre-game
         mkts = ev.get("markets")
-        if mkts is None:
+        # The listing used to leave markets out; since Oct 16, 2026 it carries only the game line, so
+        # fetch the full event whenever the listing has no player markets.
+        if not any("_player_" in (mk.get("sportsMarketType") or "") for mk in mkts or []):
             try:
                 mkts = (json.loads(http_get(POLYUS_EVENT.format(slug=ev["slug"]))).get("event") or {}).get("markets")
             except Exception:  # noqa: BLE001
