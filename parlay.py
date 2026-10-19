@@ -13,8 +13,8 @@ The day's parlays never share a player, so they're three separate bets, not one 
 
 Timing (like Pick of the Day): from the first run at or after 11:00 AM ET, every run makes as many
 of today's PER_DAY parlays as it can (later runs fill the rest as more games get prices); once made
-a parlay never changes, except that one of today's using a sport since dropped from TEST_PARLAY_SPORTS is
-remade while none of its games has started. Still none at 7:30 PM ET: "No parlay today"; fewer than three is fine.
+a parlay never changes, except that one of today's that breaks rules changed since it was made (sport,
+Polymarket price, 3x payout, model range) is remade while none of its games has started. Still none at 7:30 PM ET: "No parlay today"; fewer than three is fine.
 
 Grading reads each leg's own pick in its sport's picks file: any miss loses; a push or a DNP drops
 that leg (the parlay pays on the rest); every leg dropped is a void. Still ungraded 5 days after
@@ -176,6 +176,12 @@ def grade(entry, docs, today):
     return True
 
 
+def meets_rules(e):
+    """A made parlay still fits today's rules (checked on what was recorded, not on new prices)."""
+    return (all(l["sport"] in TEST_PARLAY_SPORTS and l.get("venue") == "Polymarket" for l in e["legs"])
+            and MODEL_LO <= e.get("model", 0) <= MODEL_HI and e.get("price", 1) * MIN_PAYOUT <= 1 + 1e-9)
+
+
 def step(state, docs, now, nfl_kick=None):
     """One pass: grade open parlays, then make (or close) today's. Returns True if anything changed."""
     et = now.astimezone(ET)
@@ -184,10 +190,10 @@ def step(state, docs, now, nfl_kick=None):
     changed = False
     for e in days:
         changed |= grade(e, docs, today)
-    # A sport dropped from TEST_PARLAY_SPORTS after today's parlays were made: remake any of today's
-    # that use it while none of its games has started (no result yet, so the record is unaffected).
-    stale = [e for e in days if e["date"] == today and e.get("legs") and not e.get("res")
-             and any(l["sport"] not in TEST_PARLAY_SPORTS for l in e["legs"])
+    # The rules changed after today's parlays were made (a sport dropped, Polymarket prices only, 3x
+    # payout, the model range): remake any of today's that break them while none of its games has
+    # started (no result yet, so the record is unaffected).
+    stale = [e for e in days if e["date"] == today and e.get("legs") and not e.get("res") and not meets_rules(e)
              and all(not l.get("res") and (start_utc(l.get("start")) or now) > now for l in e["legs"])]
     if stale:
         days[:] = [e for e in days if not any(e is s for s in stale)]
