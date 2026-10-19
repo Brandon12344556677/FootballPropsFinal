@@ -1,20 +1,21 @@
 """
-Prop Streak Lab — the model parlays: three a day, each a parlay the model gives 35-55%
-that pays at least 3x the stake (the market prices it well below the model), for the team only (never on the public site).
+Prop Streak Lab — the model parlays: three a day, one in each payout band (3-3.5x, 3.5-4x, 4-4.5x
+the stake), each a parlay the model gives 35-55% that the market prices well below that, for the team
+only (never on the public site).
 
 Legs come from the upcoming recorded picks of the sports in TEST_PARLAY_SPORTS (NHL only for now),
 priced on Polymarket only (the pick's "pp", with $25+ offered there; Kalshi prices are not used):
 a live price with enough money behind it (not thin), no injury hold, not locked, 6+ effective games of history, and a model
 chance at least 3 points above the price. Each game has to start today (ET) and at least 45 minutes
-after the parlay is made; different players, at most 2 legs from one game. Of the 2-4 leg
-combinations the model puts at 35-55% that pay at least MIN_PAYOUT (3x) the stake, the one with the
-biggest model-to-market ratio is posted.
-The day's parlays never share a player, so they're three separate bets, not one bet three times.
+after the parlay is made; different players, at most 2 legs from one game. For each band in BANDS,
+of the 2-4 leg combinations the model puts at 35-55% whose payout (1 / the legs' prices multiplied)
+falls in that band, the one with the biggest model-to-market ratio is posted.
+The day's parlays never share a player (so never the same prop), so they're three separate bets.
 
 Timing (like Pick of the Day): from the first run at or after 11:00 AM ET, every run makes as many
-of today's PER_DAY parlays as it can (later runs fill the rest as more games get prices); once made
+of today's band parlays as it can (later runs fill the rest as more games get prices); once made
 a parlay never changes, except that one of today's that breaks rules changed since it was made (sport,
-Polymarket price, 3x payout, model range) is remade while none of its games has started. Still none at 7:30 PM ET: "No parlay today"; fewer than three is fine.
+Polymarket price, payout band, model range) is remade while none of its games has started. Still none at 7:30 PM ET: "No parlay today"; fewer than three is fine.
 
 Grading reads each leg's own pick in its sport's picks file: any miss loses; a push or a DNP drops
 that leg (the parlay pays on the rest); every leg dropped is a void. Still ungraded 5 days after
@@ -46,12 +47,14 @@ OPEN_AT = (11, 0)          # ET: first try
 CLOSE_AT = (19, 30)        # ET: still none -> no parlay today
 LEAD_MIN = 45              # every leg's game starts at least this long after the parlay is made
 MODEL_LO, MODEL_HI = 0.35, 0.55   # 35%+: with the 3x payout floor, 45%+ left about one parlay a day (Oct 19)
-MIN_PAYOUT = 3.0           # pays at least 3x the stake (legs' prices multiply to 33.3c or less): one hit in three covers the day
+# One parlay a day in each payout band (x the stake, both ends included): even the lowest covers the
+# day's three stakes on its own.
+BANDS = [(3.0, 3.5), (3.5, 4.0), (4.0, 4.5)]
 MIN_NEFF = 6.0
 MIN_EDGE = 0.03
 MIN_DEPTH = 25             # dollars offered on Polymarket near its price (the pick's "pd"), like the thin rule
 MAX_PER_GAME = 2
-PER_DAY = 3
+PER_DAY = len(BANDS)
 POOL = 40                  # best legs (by model / price) searched for combinations
 VOID_AFTER_DAYS = 5
 
@@ -115,8 +118,13 @@ def candidates(docs, now, nfl_kick=None):
     return out
 
 
-def choose(legs):
-    """The 2-4 leg combination the model puts at 35-55%, paying 3x+, with the biggest model / market ratio, or None."""
+def in_band(price, band):
+    return band[0] - 1e-9 <= 1 / price <= band[1] + 1e-9
+
+
+def choose(legs, band=BANDS[0]):
+    """The 2-4 leg combination the model puts at 35-55%, paying within band (x the stake), with the
+    biggest model / market ratio, or None."""
     legs = sorted(legs, key=lambda l: (-l["prob"] / l["price"], l["player"] or ""))[:POOL]
     best = None
     for k in (2, 3, 4):
@@ -132,7 +140,7 @@ def choose(legs):
             if not MODEL_LO <= m <= MODEL_HI:
                 continue
             q = math.prod(l["price"] for l in c)
-            if q * MIN_PAYOUT > 1 + 1e-9:
+            if not in_band(q, band):
                 continue
             score = (m / q, m)
             if best is None or score > best[0]:
@@ -178,8 +186,10 @@ def grade(entry, docs, today):
 
 def meets_rules(e):
     """A made parlay still fits today's rules (checked on what was recorded, not on new prices)."""
+    b = e.get("band")
     return (all(l["sport"] in TEST_PARLAY_SPORTS and l.get("venue") == "Polymarket" for l in e["legs"])
-            and MODEL_LO <= e.get("model", 0) <= MODEL_HI and e.get("price", 1) * MIN_PAYOUT <= 1 + 1e-9)
+            and MODEL_LO <= e.get("model", 0) <= MODEL_HI
+            and isinstance(b, int) and 0 <= b < len(BANDS) and in_band(e.get("price", 1), BANDS[b]))
 
 
 def step(state, docs, now, nfl_kick=None):
@@ -190,15 +200,13 @@ def step(state, docs, now, nfl_kick=None):
     changed = False
     for e in days:
         changed |= grade(e, docs, today)
-    # The rules changed after today's parlays were made (a sport dropped, Polymarket prices only, 3x
-    # payout, the model range): remake any of today's that break them while none of its games has
+    # The rules changed after today's parlays were made (a sport dropped, Polymarket prices only, the
+    # payout bands, the model range): remake any of today's that break them while none of its games has
     # started (no result yet, so the record is unaffected).
     stale = [e for e in days if e["date"] == today and e.get("legs") and not e.get("res") and not meets_rules(e)
              and all(not l.get("res") and (start_utc(l.get("start")) or now) > now for l in e["legs"])]
     if stale:
         days[:] = [e for e in days if not any(e is s for s in stale)]
-        for i, e in enumerate([e for e in days if e["date"] == today and e.get("legs")], 1):
-            e["n"] = i
         changed = True
     mine = [e for e in days if e["date"] == today]
     if (et.hour, et.minute) < OPEN_AT or any(e.get("closed") for e in mine):
@@ -207,14 +215,18 @@ def step(state, docs, now, nfl_kick=None):
     if len(made) < PER_DAY and (et.hour, et.minute) < CLOSE_AT:
         used = {(l["sport"], l["pid"]) for e in made for l in e["legs"]}
         legs = [l for l in candidates(docs, now, nfl_kick) if (l["sport"], l["pid"]) not in used]
-        while len(made) < PER_DAY:
-            pick = choose(legs)
+        filled = {e.get("band") for e in made}
+        for b, band in enumerate(BANDS):
+            if b in filled:
+                continue
+            pick = choose(legs, band)
             if not pick:
-                break
-            e = dict(pick, date=today, n=len(made) + 1, made=now.strftime("%Y-%m-%dT%H:%MZ"), res=None)
+                continue
+            e = dict(pick, date=today, n=b + 1, band=b, made=now.strftime("%Y-%m-%dT%H:%MZ"), res=None)
             days.append(e); made.append(e); changed = True
             taken = {(l["sport"], l["pid"]) for l in pick["legs"]}
             legs = [l for l in legs if (l["sport"], l["pid"]) not in taken]
+        days.sort(key=lambda e: (e["date"], e.get("n", 0)))
     if not made and (et.hour, et.minute) >= CLOSE_AT:
         days.append({"date": today, "closed": True})
         return True
