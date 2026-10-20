@@ -258,9 +258,16 @@ def script(day, rec, date, prec=None, day_no=1):
         legs = ", and ".join(f"{p['player']}, {say_line(p)}" for p in par["legs"])
         lines.append(f"Now the reach parlay. It's {len(par['legs'])} legs paying about {1 / par['price']:.1f} times your money: "
                      f"{legs}. It's a reach, so keep it small.")   # no model % here: the model runs hot on parlays
-    if rec["n"]:
-        lines.append(f"These picks are {rec['hit']} and {rec['miss']} so far, "
-                     + (f"up {rec['units']:.1f} units." if rec["units"] >= 0 else f"down {-rec['units']:.1f} units."))
+    prec = prec or {"n": 0, "units": 0.0}
+    if rec["n"] or prec["n"]:   # the series so far: the picks and the reach parlays together, 1 unit each
+        total = rec.get("units", 0.0) + prec.get("units", 0.0)
+        bits = []
+        if rec["n"]:
+            bits.append(f"the picks are {rec['hit']} and {rec['miss']}")
+        if prec["n"]:
+            bits.append(f"the reach parlays are {prec['hit']} and {prec['miss']}")
+        lines.append("So far in this series " + " and ".join(bits) + ", and we're "
+                     + (f"up {total:.1f} units." if total >= 0 else f"down {-total:.1f} units."))
     lines.append("Follow for three picks every day. Eighteen and over only, this is for entertainment, not betting advice.")
     cap = [f"Day {day_no}: {top}" + (" + a reach parlay" if par else "") + f" ({d.strftime('%b')} {d.day})"]
     for i, p in enumerate(picks):
@@ -268,10 +275,10 @@ def script(day, rec, date, prec=None, day_no=1):
     if par:
         cap.append(f"Reach parlay ({1 / par['price']:.2f}x): " + " + ".join(
             f"{p['player']} {p['side']} {p['line']:g} {(p.get('statText') or p['stat']).lower()}" for p in par["legs"]))
-    if rec["n"]:
-        cap.append(f"Record: {rec['hit']}-{rec['miss']} ({rec['units']:+.1f}u)")
-    if prec and prec["n"]:
-        cap.append(f"Parlays: {prec['hit']}-{prec['miss']} ({prec['units']:+.1f}u)")
+    if rec["n"] or prec["n"]:
+        cap.append(f"Series: {rec.get('units', 0.0) + prec.get('units', 0.0):+.1f} units"
+                   + (f" | picks {rec['hit']}-{rec['miss']}" if rec["n"] else "")
+                   + (f" | parlays {prec['hit']}-{prec['miss']}" if prec["n"] else ""))
     cap.append("18+ | For entertainment, not betting advice")
     return " ".join(lines), "\n".join(cap)
 
