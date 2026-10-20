@@ -1,0 +1,92 @@
+name: TikTok drafts
+
+# Once a day: three short videos and one photo carousel from today's picks, uploaded to the
+# @propstreaklab TikTok inbox as drafts (tiktok_post.py). The owner adds a sound and taps Post
+# in the app. Its own workflow, so a slow render or a TikTok outage never touches the site update.
+#
+# The carousel's images are pushed to main first (tiktok/<day>/c*.jpg): TikTok pulls photo posts
+# from our verified URL prefix https://propstreaklab.com/tiktok/. Videos are uploaded from here.
+on:
+  schedule:
+    # 15:40 UTC: 11:40 AM ET in summer time, 10:40 AM in winter (the script waits for 11 ET, so in
+    # winter the 16:40 slot does it). Off the update job's :05/:25/:45 and the watchdog's :17/:47.
+    - cron: "40 15,16 * * *"
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "1 = draw everything and print the uploads, send nothing, commit nothing"
+        required: false
+        default: ""
+      force:
+        description: "1 = make and send today's drafts now (even before 11 ET or after they were sent)"
+        required: false
+        default: ""
+
+permissions:
+  contents: write   # the carousel images and tiktok/posted.json on main (the deploy key), the token on team-data
+
+concurrency:
+  group: tiktok
+  cancel-in-progress: false
+
+jobs:
+  drafts:
+    runs-on: ubuntu-24.04   # comes with Google Chrome, which draws the cards (team/render.html)
+    timeout-minutes: 30
+    steps:
+      # Pushes with the DEPLOY_KEY deploy key, like the update job: main refuses the default token.
+      - uses: actions/checkout@v4
+        with:
+          ssh-key: ${{ secrets.DEPLOY_KEY }}
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install ffmpeg
+        run: command -v ffmpeg || (sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg)
+
+      - name: Draw today's drafts
+        env:
+          POST_NOW: ${{ github.event.inputs.force || github.event.inputs.dry_run }}
+        run: python tiktok_post.py render
+
+      # The carousel has to be on the live site before TikTok can pull it (send waits for it).
+      - name: Publish the carousel images
+        if: ${{ github.event.inputs.dry_run != '1' }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A tiktok
+          if git diff --cached --quiet; then echo "No new images."; exit 0; fi
+          git commit -m "TikTok drafts ($(date -u +'%Y-%m-%d'))"
+          for i in 1 2 3 4 5; do
+            if git push; then echo "pushed"; break; fi
+            echo "push rejected, rebasing (attempt $i)…"
+            git pull --rebase --autostash origin main || true
+            sleep 3
+          done
+
+      - name: Send them to the TikTok inbox
+        env:
+          TIKTOK_CLIENT_KEY: ${{ secrets.TIKTOK_CLIENT_KEY }}
+          TIKTOK_CLIENT_SECRET: ${{ secrets.TIKTOK_CLIENT_SECRET }}
+          TIKTOK_REFRESH_TOKEN: ${{ secrets.TIKTOK_REFRESH_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}   # the rotated TikTok token, encrypted on team-data
+          POST_NOW: ${{ github.event.inputs.force }}
+        run: |
+          if [ "${{ github.event.inputs.dry_run }}" = "1" ]; then python tiktok_post.py send --dry-run; exit 0; fi
+          python tiktok_post.py send
+
+      # What was sent (the dashboard's Social tab reads it), and the rotation history.
+      - name: Save what was sent
+        if: ${{ github.event.inputs.dry_run != '1' }}
+        run: |
+          git add tiktok/posted.json
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m "TikTok drafts sent ($(date -u +'%Y-%m-%d %H:%M UTC'))"
+          for i in 1 2 3 4 5; do
+            if git push; then echo "pushed"; break; fi
+            git pull --rebase --autostash origin main || true
+            sleep 3
+          done

@@ -50,6 +50,12 @@ README.md has the full feature tour; this file is the working rules.
   Its Video size hands off to `team/ads_video.js`: each ad kind's `script()` is what the owner films, and the 15s Reel
   (their clip, the story image, an optional screen recording, captions, end card) is recorded in the browser. Clips are never uploaded.
   Ad copy avoids "bet", "lock" and exchange names and carries an 18+ line (Meta restricts gambling ads).
+- `tiktok_post.py` (own workflow, `tiktok.yml`, daily after 11 ET): three short videos and one photo carousel, uploaded to the
+  TikTok inbox as drafts (the owner adds a sound and posts). `plan_day()` picks the videos from the sports playing today,
+  rotating sport × angle (value gap, hit streak, season record); `team/render.html` draws them in headless Chrome with
+  ads.js's cards (same copy rules), ffmpeg makes the slideshows. Carousel JPEGs are committed to `tiktok/<day>/` because
+  TikTok pulls photos from our verified URL prefix; `tiktok/posted.json` feeds the dashboard's Social tab.
+  `tiktok_auth.py` + `tiktok/callback.html`: the one-time sign-in that gives the `TIKTOK_REFRESH_TOKEN` secret.
 - Shared helpers: `news.py`, `holds.py`, `kalshi.py`, `depth.py`.
 - `update_pass.sh` is one full pass; `.github/workflows/update.yml` runs it twice per run, and each run starts
   the next one when it ends (the 20-minute schedule is only a backup: GitHub's scheduler stalls).
@@ -65,7 +71,8 @@ The bot overwrites these on every pass, so hand edits are lost and cause merge c
   `mlb.html` ← `mlb_template.html`. Edit the template (and the builder), never the output page.
 - `data.json`, `slate.json`, `picks.json`, `weekly.json`, `*_picks.json`, `*_stats.json`,
   `nba.json`, `nhl.json`, `mlb.json`, `today.json`, `botd.json`, `health.json`, `top_cache.json`,
-  `sitemap.xml`, `robots.txt`, `players/`, `games/`, `best/`, `p/`, `team/stats.enc`, `team/edges.enc`, `team/parlays.enc`, `team/parlays_nba.enc`, `team/parlays_nfl.enc`, `team/spreads.enc`, `team/tpod.enc`, `spread_scores.json`, `fast_hist.json`, `*_picks_recent.json`, `search.json`.
+  `sitemap.xml`, `robots.txt`, `players/`, `games/`, `best/`, `p/`, `team/stats.enc`, `team/edges.enc`, `team/parlays.enc`, `team/parlays_nba.enc`, `team/parlays_nfl.enc`, `team/spreads.enc`, `team/tpod.enc`, `spread_scores.json`, `fast_hist.json`, `*_picks_recent.json`, `search.json`,
+  `tiktok/<day>/` and `tiktok/posted.json` (the TikTok workflow; `tiktok/callback.html` is hand-written).
 
 `index.html` (home page), `methodology.html`, `guides/`, and the legal pages are hand-written and safe to edit.
 
