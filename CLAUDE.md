@@ -23,11 +23,15 @@ README.md has the full feature tour; this file is the working rules.
   `parlay.py` → `team/parlays.enc` (team only, never public): three parlays a day from 11 AM ET (no shared players; legs only from `TEST_PARLAY_SPORTS`, NHL only for now; Polymarket prices only), each 35-55% by the model, one per payout band (3-3.5x, 3.5-4x, 4-4.5x),
   plus separate NBA and NFL tracks with the same rules, each with its own three a day and record (`team/parlays_nba.enc`, `team/parlays_nfl.enc`) (all three in the dashboard's Parlays tab, with a summary of every set and each payout band; each set also has its own edge-tracker row),
   frozen once made, graded from the legs' picks; the edge tracker's "parlays" row and the dashboard's Model parlays panel read it; `team/parlaylive.js` tracks today's legs live in that panel from ESPN box scores (browser-side, display only).
+  `spreads.py` → `team/spreads.enc` (team only, encrypted): a private test of full-game spreads on Polymarket US in every sport. A
+  team-strength model per sport (margin ratings for NBA/NFL, scoring rates for NHL/MLB, calibrated on the previous season:
+  `python spreads.py backtest`) fit on ESPN final scores cached in `spread_scores.json`; a pick when the model is 5-15 points above
+  a 35-65c price with $25+ offered, one a game, frozen, graded from the final; the dashboard's Spreads tab and the edge tracker's spreads rows.
   `depth.guard` holds a 30c+ price jump until a second run confirms it (the `pj` pick column).
 - `team_stats.py` → `team/stats.enc`: GoatCounter visitor totals (and traffic spikes), encrypted with the
   `TEAM_DASH_PASSWORD` secret, for the password-protected team dashboard `team/index.html`
   (hand-written, noindex, not in the sitemap). Totals only — no IPs or per-visitor data.
-  The dashboard is split into tabs (Overview, Audience, Sign-ups, Picks & edges, Parlays, Social, Sponsors, Affiliates, Expenses: each panel has
+  The dashboard is split into tabs (Overview, Audience, Sign-ups, Picks & edges, Parlays, Spreads, Social, Sponsors, Affiliates, Expenses: each panel has
   `data-view`). `app.js` feeds it anonymous GoatCounter events, `time/<range>`, `click/<what>/<page>`, `view/<n>`, `visitor/new|returning`
   (the visitor's n-th page today: page views and unique visitors) and `ref/<code>/visit|new`; their labels are mirrored in `team_stats.py`
   (TIME_RANGES, CLICK_RE, VIEW_RE, REF_RE) and `team/index.html`. `view/<n>` and `ref/` are disclosed in privacy.html and cookies.html.
@@ -56,7 +60,7 @@ The bot overwrites these on every pass, so hand edits are lost and cause merge c
   `mlb.html` ← `mlb_template.html`. Edit the template (and the builder), never the output page.
 - `data.json`, `slate.json`, `picks.json`, `weekly.json`, `*_picks.json`, `*_stats.json`,
   `nba.json`, `nhl.json`, `mlb.json`, `today.json`, `botd.json`, `health.json`, `top_cache.json`,
-  `sitemap.xml`, `robots.txt`, `players/`, `games/`, `best/`, `p/`, `team/stats.enc`, `team/edges.enc`, `team/parlays.enc`, `team/parlays_nba.enc`, `team/parlays_nfl.enc`, `fast_hist.json`, `*_picks_recent.json`, `search.json`.
+  `sitemap.xml`, `robots.txt`, `players/`, `games/`, `best/`, `p/`, `team/stats.enc`, `team/edges.enc`, `team/parlays.enc`, `team/parlays_nba.enc`, `team/parlays_nfl.enc`, `team/spreads.enc`, `spread_scores.json`, `fast_hist.json`, `*_picks_recent.json`, `search.json`.
 
 `index.html` (home page), `methodology.html`, `guides/`, and the legal pages are hand-written and safe to edit.
 
