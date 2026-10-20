@@ -30,14 +30,15 @@ import team_stats
 
 OUT = os.path.join("team", "edges.enc")
 PARLAYS = os.path.join("team", "parlays.enc")
+PARLAYS_NBA = os.path.join("team", "parlays_nba.enc")   # parlay.py's NBA track, its own row
 BOTD = "botd.json"
 ET = ZoneInfo("America/New_York")
 FILES = [("nfl", "picks.json"), ("nhl", "nhl_picks.json"), ("mlb", "mlb_picks.json"), ("nba", "nba_picks.json")]
 NHL_REGULAR = "2026-09-29"     # NHL 2026-27 regular season opener: anything earlier is left out (current season only)
 BOOT = 400
 WAITING = {"nba"}       # rows shown even before their first graded pick (the NBA season starts Oct 2026)
-WAITING_KEYS = {"parlays", "botd-value", "botd-lock"}     # and rows for lists that start posting later
-OWN_ROWS = {"parlay", "botd"}  # rows that repeat picks already counted: only their own strategies grade them
+WAITING_KEYS = {"parlays", "parlays-nba", "botd-value", "botd-lock"}     # and rows for lists that start posting later
+OWN_ROWS = {"parlay", "parlay-nba", "botd"}  # rows that repeat picks already counted: only their own strategies grade them
 
 STRATEGIES = [   # (key, label, sport or None, test)
     ("nhl-value", "NHL Value spots", "nhl", lambda p: "V" in p["lists"]),
@@ -57,7 +58,8 @@ STRATEGIES = [   # (key, label, sport or None, test)
     ("all-nba", "Every NBA pick", "nba", lambda p: True),
     ("botd-value", "Value Shot (Pick of the Day, pays 2x+)", "botd", lambda p: p["lists"] == "value"),
     ("botd-lock", "Safe Pick of the Day", "botd", lambda p: p["lists"] == "lock"),
-    ("parlays", "Model parlays (three a day, about 50% each by the model)", "parlay", lambda p: True),
+    ("parlays", "Model parlays, NHL (three a day, 3-4.5x, 35-55% by the model)", "parlay", lambda p: True),
+    ("parlays-nba", "Model parlays, NBA (same rules, own three a day)", "parlay-nba", lambda p: True),
 ]
 # Private strategies (the unders rules and any the team adds) are not in this file: they live
 # encrypted in rules.enc on the repo's team-data branch, written from the team dashboard's
@@ -112,7 +114,7 @@ def graded(sport, doc):
     return out
 
 
-def parlay_rows(doc):
+def parlay_rows(doc, sport="parlay"):
     """The daily model parlays (parlay.py's team/parlays.enc, decrypted) that won or lost, as rows
     for the "parlay" strategy: each one bet at the product of the legs' prices."""
     out = []
@@ -122,7 +124,7 @@ def parlay_rows(doc):
         pr = e.get("paid") if e["res"] == "hit" else e.get("price")
         if not pr:
             continue
-        out.append({"sport": "parlay", "day": e["date"], "pr": float(pr), "win": e["res"] == "hit",
+        out.append({"sport": sport, "day": e["date"], "pr": float(pr), "win": e["res"] == "hit",
                     "side": "parlay", "stat": None, "line": None, "lists": ""})
     return out
 
@@ -143,12 +145,14 @@ def botd_rows(doc):
 
 
 def load_parlays(password):
-    try:
-        with open(PARLAYS, encoding="ascii") as f:
-            return parlay_rows(json.loads(team_stats.decrypt(f.read().strip(), password)))
-    except Exception as e:  # noqa: BLE001 - no parlays yet (or unreadable) only empties that row
-        print(f"edge report: no parlays loaded ({type(e).__name__})")
-        return []
+    out = []
+    for path, sport in ((PARLAYS, "parlay"), (PARLAYS_NBA, "parlay-nba")):
+        try:
+            with open(path, encoding="ascii") as f:
+                out += parlay_rows(json.loads(team_stats.decrypt(f.read().strip(), password)), sport)
+        except Exception as e:  # noqa: BLE001 - no parlays yet (or unreadable) only empties that row
+            print(f"edge report: no {sport} parlays loaded ({type(e).__name__})")
+    return out
 
 
 def pnl(p):

@@ -432,12 +432,21 @@ footer p{margin:0;max-width:80ch}
   </section>
 
   <section data-view="picks" class="panel" id="plPanel" hidden>
-    <div class="panel-h"><h2>Model parlays</h2><span class="label" id="plUpd">Team only</span></div>
-    <p class="hint">Up to three a day from 11 AM ET, any sport, no player in two of them. Each is about 50% by the model and priced lower by the market, frozen once made, and graded as a 1-unit bet at the legs’ prices multiplied (a book’s same-game parlay pays less). Team only.</p>
+    <div class="panel-h"><h2>Model parlays (NHL)</h2><span class="label" id="plUpd">Team only</span></div>
+    <p class="hint">Up to three a day from 11 AM ET, NHL picks at Polymarket prices: one paying 3-3.5x, one 3.5-4x and one 4-4.5x, each 35-55% by the model, no player in two of them. Frozen once made and graded as a 1-unit bet at the legs’ prices multiplied (a book’s same-game parlay pays less). Team only.</p>
     <div id="plToday"></div>
     <div class="kpis" id="plKpis" style="margin-top:12px"></div>
     <h3 class="subh">Past parlays</h3>
     <div class="edwrap"><table class="edges"><thead><tr><th>Day</th><th>Legs</th><th class="n">Model</th><th class="n">Pays</th><th>Result</th><th class="n">Units</th></tr></thead><tbody id="plRows"></tbody></table></div>
+  </section>
+
+  <section data-view="picks" class="panel" id="nbPanel" hidden>
+    <div class="panel-h"><h2>Model parlays (NBA)</h2><span class="label" id="nbUpd">Team only</span></div>
+    <p class="hint">Up to three a day from 11 AM ET, NBA picks at Polymarket prices, the same rules as the NHL set and its own record: one paying 3-3.5x, one 3.5-4x and one 4-4.5x, each 35-55% by the model, no player in two of them. Frozen once made and graded as a 1-unit bet at the legs’ prices multiplied (a book’s same-game parlay pays less). Team only.</p>
+    <div id="nbToday"></div>
+    <div class="kpis" id="nbKpis" style="margin-top:12px"></div>
+    <h3 class="subh">Past parlays</h3>
+    <div class="edwrap"><table class="edges"><thead><tr><th>Day</th><th>Legs</th><th class="n">Model</th><th class="n">Pays</th><th>Result</th><th class="n">Units</th></tr></thead><tbody id="nbRows"></tbody></table></div>
   </section>
 
   <section data-view="picks" class="panel" id="prPanel">
@@ -687,7 +696,7 @@ footer p{margin:0;max-width:80ch}
       snap = await load(pw);
       password = pw; store.set('psa-pw', pw);
       $('lock').hidden = true; $('app').hidden = false;
-      setRange(range); freshness(); loadHealth(); renderSpikes(); loadAgents(); loadEdges(pw); loadParlays(pw);
+      setRange(range); freshness(); loadHealth(); renderSpikes(); loadAgents(); loadEdges(pw); loadParlays(pw); loadParlays(pw, 'nb', 'parlays_nba.enc');
       window.dispatchEvent(new CustomEvent('psa-unlock', {detail: {pw}}));   // expenses.js
       clearInterval(timer);
       timer = setInterval(refresh, 5*60*1000);
@@ -702,7 +711,7 @@ footer p{margin:0;max-width:80ch}
   }
   async function refresh(){
     if (!password) return;
-    try { snap = await load(password); freshness(); render(); loadHealth(); renderSpikes(); loadAgents(); loadEdges(password); loadParlays(password); window.dispatchEvent(new Event('psa-refresh')); } catch(e){ if (e.code === 'wrong') lock(); }
+    try { snap = await load(password); freshness(); render(); loadHealth(); renderSpikes(); loadAgents(); loadEdges(password); loadParlays(password); loadParlays(password, 'nb', 'parlays_nba.enc'); window.dispatchEvent(new Event('psa-refresh')); } catch(e){ if (e.code === 'wrong') lock(); }
   }
   function lock(){
     password = null; snap = null; store.del('psa-pw'); clearInterval(timer);
@@ -1201,36 +1210,37 @@ footer p{margin:0;max-width:80ch}
     } catch(err){}
   }
 
-  // ---------- model parlay: team/parlays.enc (parlay.py), same password ----------
-  async function loadParlays(pw){
+  // ---------- model parlays: team/parlays.enc (NHL) and team/parlays_nba.enc (NBA) (parlay.py), same password ----------
+  async function loadParlays(pw, P='pl', file='parlays.enc'){   // P: the panel's id prefix (pl NHL, nb NBA)
     try {
-      const r=await fetch('parlays.enc?t='+Date.now(),{cache:'no-store'}); if(!r.ok) return;
+      const r=await fetch(file+'?t='+Date.now(),{cache:'no-store'}); if(!r.ok) return;
       const d=await decrypt(await r.text(), pw), days=(d.days||[]).slice().reverse();
-      const SP={nfl:'NFL', nba:'NBA', nhl:'NHL', mlb:'MLB'}, STAT={g:'goals', a:'assists', pts:'points', sog:'shots on goal', tb:'total bases', h:'hits', k:'strikeouts'};
+      const SP={nfl:'NFL', nba:'NBA', nhl:'NHL', mlb:'MLB'}, STAT={g:'goals', a:'assists', pts:'points', sog:'shots on goal', tb:'total bases', h:'hits', k:'strikeouts',
+        reb:'rebounds', ast:'assists', tpm:'threes', stl:'steals', blk:'blocks', pra:'pts+reb+ast', pr:'pts+reb', pa:'pts+ast', ra:'reb+ast'};
       const pc=v=>Math.round(v*100)+'%', x=q=>(1/q).toFixed(2)+'x';
       const when=s=>{ const t=Date.parse(s); return isFinite(t)? new Date(t).toLocaleTimeString('en-US',{hour:'numeric', minute:'2-digit'}) : ''; };
       const legTxt=l=>`${esc(SP[l.sport]||l.sport)} · <b>${esc(l.player)}</b> ${esc(l.side)} ${esc(l.line)} ${esc(STAT[l.stat]||l.stat)}`;
       const RES={hit:'✅ Hit', miss:'❌ Miss', push:'Push', dnp:'DNP', void:'Void'};
       const today=new Date().toLocaleDateString('en-CA',{timeZone:'America/New_York'}), mine=days.filter(e=>e.date===today).reverse(), made=mine.filter(e=>e.legs);
       const leg=(l,j)=>`<li data-leg="${j}"><span class="pl-sp">${esc(SP[l.sport]||l.sport)}</span><span class="pl-who"><b>${esc(l.player)}</b> ${esc(l.side)} ${esc(l.line)} ${esc(STAT[l.stat]||l.stat)}<small>${esc(l.team)} vs ${esc(l.opp)} · ${when(l.start)} · ${esc(l.venue)}${l.res? ' · '+(RES[l.res]||l.res) : ''}</small><span class="pl-live"></span></span><span class="pl-num">${pc(l.prob)}</span><span class="pl-num">${Math.round(l.price*100)}¢</span></li>`;
-      $('plToday').innerHTML = mine.some(e=>e.closed) ? `<p class="empty">No parlay today: nothing reached about 50% by the model with a better price.</p>` :
-        (made.length? `<p class="hint" id="plLive"></p><div class="pl-cards">`+made.map((t,i)=>`<article class="pl-card" data-pl="${i}"><header><b>Parlay #${t.n||1}${t.res? ' · '+RES[t.res] : ''} <span class="pl-livehd"></span></b><span class="pl-chips"><span>Model <b>${pc(t.model)}</b></span><span>Market <b>${pc(t.price)}</b></span><span class="pay">Pays <b>${x(t.price)}</b></span></span></header>`+
+      $(P+'Today').innerHTML = mine.some(e=>e.closed) ? `<p class="empty">No parlay today: no combination fit a payout band at 35-55% by the model.</p>` :
+        (made.length? `<p class="hint" id="${P}Live"></p><div class="pl-cards">`+made.map((t,i)=>`<article class="pl-card" data-pl="${i}"><header><b>Parlay #${t.n||1}${t.res? ' · '+RES[t.res] : ''} <span class="pl-livehd"></span></b><span class="pl-chips"><span>Model <b>${pc(t.model)}</b></span><span>Market <b>${pc(t.price)}</b></span><span class="pay">Pays <b>${x(t.price)}</b></span></span></header>`+
           `<ul class="pl-legs"><li class="pl-head"><span class="pl-sp"></span><span>Leg</span><span class="pl-num">Model</span><span class="pl-num">Price</span></li>${t.legs.map(leg).join('')}</ul></article>`).join('')+`</div>` : '')+
         (made.length<3 ? `<p class="empty" style="margin-top:10px">${made.length? 'The rest are made as more games get prices, until 7:30 PM ET.' : 'Today’s parlays are made from 11 AM ET.'}</p>` : '');
       const done=days.filter(e=>e.res==='hit'||e.res==='miss'), units=done.reduce((s,e)=>s+e.units,0), wins=done.filter(e=>e.res==='hit').length;
       const avgModel=done.length? done.reduce((s,e)=>s+e.model,0)/done.length : null;
-      $('plKpis').innerHTML=[['Parlays graded', fmt(done.length)], ['Hit', done.length? `${wins} (${pc(wins/done.length)})` : '–'],
+      $(P+'Kpis').innerHTML=[['Parlays graded', fmt(done.length)], ['Hit', done.length? `${wins} (${pc(wins/done.length)})` : '–'],
         ['Model expected', avgModel==null? '–' : pc(avgModel)],
         ['Profit', done.length? (units>=0?'+':'−')+Math.abs(units).toFixed(2)+'u' : '–', done.length? 'Return '+(units>=0?'+':'−')+Math.abs(units/done.length*100).toFixed(1)+'%' : '']]
         .map(([k,v,sub])=>`<div class="kpi"><span class="label">${k}</span><span class="v sm">${v}</span><span class="s">${sub||''}</span></div>`).join('');
       const past=days.filter(e=>e.date!==today);
-      $('plRows').innerHTML=past.length? past.slice(0,30).map(e=> e.closed? `<tr><td>${esc(e.date)}</td><td colspan="5" class="hint">No parlays</td></tr>` :
+      $(P+'Rows').innerHTML=past.length? past.slice(0,30).map(e=> e.closed? `<tr><td>${esc(e.date)}</td><td colspan="5" class="hint">No parlays</td></tr>` :
         `<tr><td>${esc(e.date)}${e.n? ' #'+e.n : ''}</td><td>${e.legs.map(l=>legTxt(l)+(l.res? ' <small>'+(RES[l.res]||l.res)+'</small>' : '')).join('<br>')}</td><td class="n">${pc(e.model)}</td><td class="n">${x(e.price)}</td>`+
         `<td>${e.res? RES[e.res] : 'Pending'}</td><td class="n ${e.units>0?'up':e.units<0?'down':''}">${e.units==null? '–' : (e.units>=0?'+':'−')+Math.abs(e.units).toFixed(2)}</td></tr>`).join('')
         : `<tr class="ed-wait"><td colspan="6">The first results show up the day after the first parlay.</td></tr>`;
-      if(window.psaParlayLive) window.psaParlayLive.track(mine.some(e=>e.closed)? [] : made);   // live box scores (parlaylive.js)
-      $('plUpd').textContent='Team only · updated '+new Date(d.gen).toLocaleString('en-US',{month:'short', day:'numeric', hour:'numeric', minute:'2-digit'});
-      $('plPanel').hidden=false;
+      if(window.psaParlayLive) window.psaParlayLive.track(mine.some(e=>e.closed)? [] : made, {root: P+'Today', note: P+'Live'});   // live box scores (parlaylive.js)
+      $(P+'Upd').textContent='Team only · updated '+new Date(d.gen).toLocaleString('en-US',{month:'short', day:'numeric', hour:'numeric', minute:'2-digit'});
+      $(P+'Panel').hidden=false;
     } catch(err){}
   }
 
@@ -1718,6 +1728,6 @@ footer p{margin:0;max-width:80ch}
 <script src="ads.js?v=20261013a"></script>
 <script src="expenses.js?v=20261015a"></script>
 <script src="rules.js?v=20261015a"></script>
-<script src="parlaylive.js?v=20261017a"></script>
+<script src="parlaylive.js?v=20261020a"></script>
 </body>
 </html>
