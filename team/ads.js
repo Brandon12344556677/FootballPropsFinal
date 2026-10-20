@@ -1,6 +1,7 @@
 // Meta ads panel on the team dashboard (team/index.html): draws feed (1080x1080) and story (1080x1920)
 // ads on a canvas from ../today.json, so every number is the live record, and saves them as PNGs.
 // Copy rules for Meta: no "bet", "lock" or exchange names, an 18+ line on every ad (see the panel's notes).
+// Each kind also has a script(): the three lines the owner films for the 15s video ad (team/ads_video.js).
 (function(){
   'use strict';
   const $ = id => document.getElementById(id);
@@ -76,6 +77,7 @@
   }
 
   // ---------- the four live ads: each draws its body from y and returns where it ended ----------
+  const CTA_LINE = "It's free, no account needed. Tap the link.";
   const ADS = {
     proof: {
       title: 'Calibration (proof)',
@@ -107,6 +109,11 @@
       },
       cta: 'See the full record',
       fine: () => `Live NFL, NBA, NHL & MLB picks, graded through ${dateLbl(T.gen)}. Past results don't guarantee future ones. 18+.`,
+      script(){
+        const b = T.calib.find(r => r.lo === 70) || T.calib[0], n = T.calib.reduce((a, r) => a + r.n, 0);
+        return {hook: `When our model says ${pc(b.said)}%, it hits ${pc(b.hit)}%.`,
+          middle: `We've graded ${fmt(n)} player props. Every one is recorded before the game and graded after, misses included.`, cta: CTA_LINE};
+      },
       copy(){
         const b = T.calib.find(r => r.lo === 70) || T.calib[0], n = T.calib.reduce((a, r) => a + r.n, 0);
         return {primary: `When our model says ${pc(b.said)}%, it hits ${pc(b.hit)}%. ${fmt(n)} player props, every one recorded before the game and graded after, misses included. Free research for NFL, NBA, NHL and MLB.`,
@@ -137,6 +144,11 @@
       },
       cta: 'See every pick',
       fine: () => `Live picks this season, through ${dateLbl(T.gen)}. Units: return on 1 unit per priced pick. Past results don't guarantee future ones. 18+.`,
+      script(s){
+        const t = T.record[s].T;
+        return {hook: `${pc(t.hit/t.n)}% of our top ${NAME[s]} player props have hit this season.`,
+          middle: `That's ${fmt(t.hit)} of ${fmt(t.n)}, each one posted before the game and graded after, so you can check every pick.`, cta: CTA_LINE};
+      },
       copy(s){
         const t = T.record[s].T;
         return {primary: `${pc(t.hit/t.n)}% of our top ${NAME[s]} player props have hit this season (${fmt(t.hit)} of ${fmt(t.n)}). Every pick is recorded before the game and graded after. See the whole record free.`,
@@ -176,6 +188,10 @@
       },
       cta: "See today's board",
       fine: () => `Model chance, not a guarantee. Market price as of ${new Date(T.gen).toLocaleTimeString('en-US', {hour:'numeric', minute:'2-digit', timeZone:'America/New_York'})} ET. 18+.`,
+      script(p){
+        return {hook: `Our model and the market disagree on ${p.player} today.`,
+          middle: `The model gives ${p.side} ${p.line} ${p.statText.toLowerCase()} ${an(pc(p.prob))} ${pc(p.prob)}% chance. The market says ${pc(p.price)}%. See the math and the last 10 games.`, cta: CTA_LINE};
+      },
       copy(p){
         return {primary: `Our model gives ${p.player} ${an(pc(p.prob))} ${pc(p.prob)}% chance of going ${p.side} ${p.line} ${p.statText.toLowerCase()}. The market says ${pc(p.price)}%. See the math, the matchup and the last 10 games, free.`,
           headline: 'See where the model disagrees', description: 'Free player prop research'};
@@ -203,6 +219,10 @@
       },
       cta: 'See the streak board',
       fine: () => 'Model chance, not a guarantee. Streaks end. 18+.',
+      script(s){
+        return {hook: `${s.player} has gone ${s.side} ${s.line} ${s.statText.toLowerCase()} in ${s.streak} straight games.`,
+          middle: `Will it be ${s.streak+1}? Our model gives it ${an(pc(s.prob))} ${pc(s.prob)}% chance to keep going, and every call is graded in public.`, cta: CTA_LINE};
+      },
       copy(s){
         return {primary: `${s.player}: ${s.streak} straight games ${s.side} ${s.line} ${s.statText.toLowerCase()}. Our model gives it ${an(pc(s.prob))} ${pc(s.prob)}% chance to keep going. Free player prop research for NFL, NBA, NHL and MLB.`,
           headline: 'Will the streak keep going?', description: 'Free player prop research'};
@@ -225,30 +245,68 @@
     for (const o of opts){ const op = document.createElement('option'); op.value = o.v; op.textContent = o.t; sel.appendChild(op); }
     if (!opts.length){ const op = document.createElement('option'); op.textContent = 'Nothing available right now'; sel.appendChild(op); }
   }
-  async function draw(){
-    const {k, ad, arg, empty} = current();
-    if (empty){ $('adMsg').textContent = 'Nothing to make this ad from right now. Try another kind, or check back after the next update.'; return; }
-    const story = $('adFmt').value === 'story', W = 1080, H = story ? 1920 : 1080;
-    try { await Promise.all(['800 92px Archivo', 'italic 600 36px Archivo', '600 32px Inter', '700 26px "Barlow Condensed"'].map(f => document.fonts.load(f))); } catch(e){}
-    const top = story ? 150 : 72, bottom = story ? H - 220 : H - 64;   // story: keep clear of Instagram's top bar and reply box
+  async function fonts(){
+    try { await Promise.all(['800 92px Archivo', 'italic 600 36px Archivo', '600 32px Inter', '800 64px Inter', '700 26px "Barlow Condensed"'].map(f => document.fonts.load(f))); } catch(e){}
+  }
+  function paint(g, W, H, k, arg, story){
+    const ad = ADS[k], top = story ? 150 : 72, bottom = story ? H - 220 : H - 64;   // story: keep clear of Instagram's top bar and reply box
     let y0 = top + 60 + (story ? 4 : 40);
     if (story){   // center the body between the header and the footer
       const m = document.createElement('canvas').getContext('2d'); const end = ad.body(m, W, 0, arg);
       y0 = Math.max(y0 + 40, Math.round((top + 60 + bottom - 130) / 2 - end / 2));
     }
-    const c = document.createElement('canvas'); c.width = W; c.height = H; const g = c.getContext('2d');
     backdrop(g, W, H); brand(g, 80, top);
     const [ptxt, gold] = ad.pill(arg); pill(g, ptxt, W-80, top+30, gold);
     ad.body(g, W, y0, arg);
     footer(g, W, bottom, ad.cta, ad.fine(arg));
+  }
+  function endCard(g, W, H, k, arg){   // the video's last two seconds (1080x1920)
+    const ad = ADS[k], top = 150;
+    backdrop(g, W, H); brand(g, 80, top);
+    const y = Math.round(H/2) - 260;
+    rich(g, [['Player prop', C.fg]], 80, y, 92);
+    rich(g, [['research, ', C.fg]], 80, y+92, 92);
+    rich(g, [['graded in ', C.fg], ['public.', C.green]], 80, y+184, 92);
+    lede(g, 'NFL, NBA, NHL & MLB. Every pick recorded before the game and graded after.', 80, y+262, W-160);
+    setFont(g, 700, 26, LBL, 3.5); pill(g, 'Free · No account needed', 80 + g.measureText('FREE · NO ACCOUNT NEEDED').width + 68, y+400);   // left-aligned
+    footer(g, W, H - 220, ad.cta, ad.fine(arg));
+  }
+  function copyFor(k, ad, arg, video){
+    const cp = ad.copy(arg), camp = `facebook-meta-${video ? 'video-' : ''}${k}-${dateLbl(new Date().toISOString()).toLowerCase().replace(/\W+/g, '-')}`;
+    cp.link = `https://propstreaklab.com/?utm_source=facebook&utm_campaign=${camp}`;
+    return cp;
+  }
+  function showFmt(){   // Video swaps the image preview for the video maker (team/ads_video.js)
+    const vid = $('adFmt').value === 'video';
+    $('adMake').hidden = vid;
+    if ($('adVideo')) $('adVideo').hidden = !vid;
+    if (vid){ $('adPrev').hidden = true; $('adSave').hidden = true; }
+    else if (blob){ $('adPrev').hidden = false; $('adSave').hidden = false; }
+    return vid;
+  }
+  async function draw(){
+    const {k, ad, arg, empty} = current(), vid = showFmt();
+    if (empty){
+      $('adMsg').textContent = 'Nothing to make this ad from right now. Try another kind, or check back after the next update.';
+      if ($('adVideo')) $('adVideo').hidden = true; return;
+    }
+    await fonts();
+    if (vid){
+      $('adMsg').textContent = '';
+      renderCopy(copyFor(k, ad, arg, true));
+      if (window.psaAds.onVideo) window.psaAds.onVideo({k, ad, arg});
+      return;
+    }
+    const story = $('adFmt').value === 'story', W = 1080, H = story ? 1920 : 1080;
+    const c = document.createElement('canvas'); c.width = W; c.height = H;
+    paint(c.getContext('2d'), W, H, k, arg, story);
     blob = await new Promise(res => c.toBlob(res, 'image/png'));
+    if ($('adFmt').value === 'video') return;   // switched to Video while this was drawing
     const day = new Date().toLocaleDateString('en-CA', {timeZone:'America/New_York'});
     fileName = `prop-streak-lab-meta-${k}-${story ? 'story' : 'feed'}-${day}.png`;
     $('adPrev').src = URL.createObjectURL(blob); $('adPrev').hidden = false; $('adPrev').classList.toggle('story', story);
     $('adSave').hidden = false; $('adMsg').textContent = '';
-    const cp = ad.copy(arg), camp = `facebook-meta-${k}-${dateLbl(new Date().toISOString()).toLowerCase().replace(/\W+/g, '-')}`;
-    cp.link = `https://propstreaklab.com/?utm_source=facebook&utm_campaign=${camp}`;
-    renderCopy(cp);
+    renderCopy(copyFor(k, ad, arg, false));
   }
   function renderCopy(cp){
     const box = $('adCopy'); box.textContent = ''; box.hidden = false;
@@ -277,10 +335,11 @@
     $('adMake').disabled = false; $('adMsg').textContent = '';
     fillPicks();
   }
+  window.psaAds = {ADS, paint, endCard, fonts, current, data: () => T};
   if ($('adKind')){
     $('adKind').addEventListener('change', () => { fillPicks(); if (T) draw(); });
     $('adPick').addEventListener('change', () => { if (T) draw(); });
-    $('adFmt').addEventListener('change', () => { if (T && blob) draw(); });
+    $('adFmt').addEventListener('change', () => { if (showFmt() || blob){ if (T) draw(); } });
     $('adMake').addEventListener('click', draw);
     $('adSave').addEventListener('click', save);
     init();

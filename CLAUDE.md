@@ -47,6 +47,8 @@ README.md has the full feature tour; this file is the working rules.
   with the warning email. Keep the dashboard constants, the warning email text and the signed agreement in sync.
 - `team/ads.js`: the dashboard's Meta ads panel. Draws feed and story ads on a canvas from the public `today.json`
   (`calib`, `record`, `picks`, `streaks`) and writes the Ads Manager text; `team/ads/` holds the example PNGs.
+  Its Video size hands off to `team/ads_video.js`: each ad kind's `script()` is what the owner films, and the 15s Reel
+  (their clip, the story image, an optional screen recording, captions, end card) is recorded in the browser. Clips are never uploaded.
   Ad copy avoids "bet", "lock" and exchange names and carries an 18+ line (Meta restricts gambling ads).
 - Shared helpers: `news.py`, `holds.py`, `kalshi.py`, `depth.py`.
 - `update_pass.sh` is one full pass; `.github/workflows/update.yml` runs it twice per run, and each run starts
