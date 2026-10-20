@@ -125,11 +125,12 @@ class PrivateRuleFilterTest(unittest.TestCase):
         priv = E.private_strategies({"items": [{"key": "nhl-assist-unders", "label": "Old rule", "sport": "nhl"},
                                                {"key": "private-new", "label": "New rule", "sport": "nhl", "stat": "zz", "since": "2026-10-20"}]})
         self.assertEqual([k for k, _, _, _ in priv], ["private-all", "private-nhl-assist-unders", "private-new"])
-        rows = [{"sport": "nhl", "day": "2026-10-18", "pr": 0.5, "win": True, "side": "under", "stat": "zz", "line": 0.5, "lists": ""}]
-        out = E.build(rows, "2026-10-20", strategies=priv, waiting={k for k, _, _, _ in priv})
-        E.mark_private(out, priv, rows, "2026-10-20")
+        rows = [{"sport": "nhl", "day": "2026-10-18", "pr": 0.5, "win": True, "side": "under", "stat": "zz", "line": 0.5, "lists": ""},
+                {"sport": "nhl", "day": "2026-10-21", "pr": 0.5, "win": False, "side": "under", "stat": "zz", "line": 0.5, "lists": ""}]
+        out = E.build(rows, "2026-10-22", strategies=priv, waiting={k for k, _, _, _ in priv})
+        E.mark_private(out, priv, rows, "2026-10-22")
         new = {s["key"]: s for s in out}["private-new"]
-        self.assertEqual((new["n"], new["verdict"], new["since"], new["past"]["n"]), (0, "Waiting for games", "2026-10-20", 1))
+        self.assertEqual((new["n"], new["since"], new["live"]["n"]), (2, "2026-10-20", 1))   # all past picks; live = from Oct 20
         self.assertTrue(all(s.get("private") for s in out))
         self.assertTrue(E.rule_test({"sport": "nhl"})(self.pick(prob=None, p0=None, pos=None, lists="")))
 

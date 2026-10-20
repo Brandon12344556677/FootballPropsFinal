@@ -290,7 +290,11 @@ def private_strategies(doc):
     def key(r, i):
         k = r.get("key") or str(i)
         return k if k.startswith("private") else "private-" + k   # the dashboard's Secret methods tab shows "private..." rows
-    out = [(key(r, i), r["label"], r.get("sport") or None, rule_test(r)) for i, r in enumerate(items)]
+    def test(r):   # every past pick that fits counts; the day it was added ("since") only splits off its live record
+        t = rule_test(dict(r, since=None))
+        t.since, t.live = r.get("since") or None, rule_test(r) if r.get("since") else None
+        return t
+    out = [(key(r, i), r["label"], r.get("sport") or None, test(r)) for i, r in enumerate(items)]
     if len(out) > 1:
         tests = [t for _, _, _, t in out]
         out.insert(0, ("private-all", "Private strategies, all together", None, lambda p: any(t(p) for t in tests)))
@@ -310,8 +314,9 @@ def load_private(password):
 
 
 def mark_private(out, private, rows, today, seed=2):
-    """Flag the private rows, and give each rule with a start day ("since") its record on the picks
-    before that day ("past"): what it was found on, kept apart from the record that counts."""
+    """Flag the private rows, and give each rule with a day it was added ("since") its record on the
+    picks from that day on ("live"): its main row counts every past pick that fits, including the ones
+    it was found on, so the live record is the one that shows whether it really works."""
     rng = random.Random(seed)
     rows = [p for p in current_season(rows) if p["sport"] not in OWN_ROWS]
     tests = {k: (sport, t) for k, _, sport, t in private}
@@ -322,9 +327,8 @@ def mark_private(out, private, rows, today, seed=2):
         s["private"] = True
         if getattr(t, "since", None):
             s["since"] = t.since
-            past = summary([p for p in rows if p["day"] < t.since and (not sport or p["sport"] == sport) and t.past(p)], today, rng)
-            if past:
-                s["past"] = {k: past[k] for k in ("n", "hit", "roi", "lo", "hi")}
+            live = summary([p for p in rows if (not sport or p["sport"] == sport) and t.live(p)], today, rng)
+            s["live"] = {k: live[k] for k in ("n", "hit", "roi", "lo", "hi", "units")} if live else {"n": 0}
 
 
 def build(rows, today, seed=1, strategies=None, waiting=()):
