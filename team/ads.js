@@ -248,7 +248,7 @@
   async function fonts(){
     try { await Promise.all(['800 92px Archivo', 'italic 600 36px Archivo', '600 32px Inter', '800 64px Inter', '700 26px "Barlow Condensed"'].map(f => document.fonts.load(f))); } catch(e){}
   }
-  function paint(g, W, H, k, arg, story){
+  function paint(g, W, H, k, arg, story, cta){
     const ad = ADS[k], top = story ? 150 : 72, bottom = story ? H - 220 : H - 64;   // story: keep clear of Instagram's top bar and reply box
     let y0 = top + 60 + (story ? 4 : 40);
     if (story){   // center the body between the header and the footer
@@ -258,9 +258,9 @@
     backdrop(g, W, H); brand(g, 80, top);
     const [ptxt, gold] = ad.pill(arg); pill(g, ptxt, W-80, top+30, gold);
     ad.body(g, W, y0, arg);
-    footer(g, W, bottom, ad.cta, ad.fine(arg));
+    footer(g, W, bottom, cta || ad.cta, ad.fine(arg));
   }
-  function endCard(g, W, H, k, arg){   // the video's last two seconds (1080x1920)
+  function endCard(g, W, H, k, arg, cta){   // the video's last two seconds (1080x1920)
     const ad = ADS[k], top = 150;
     backdrop(g, W, H); brand(g, 80, top);
     const y = Math.round(H/2) - 260;
@@ -269,7 +269,7 @@
     rich(g, [['graded in ', C.fg], ['public.', C.green]], 80, y+184, 92);
     lede(g, 'NFL, NBA, NHL & MLB. Every pick recorded before the game and graded after.', 80, y+262, W-160);
     setFont(g, 700, 26, LBL, 3.5); pill(g, 'Free · No account needed', 80 + g.measureText('FREE · NO ACCOUNT NEEDED').width + 68, y+400);   // left-aligned
-    footer(g, W, H - 220, ad.cta, ad.fine(arg));
+    footer(g, W, H - 220, cta || ad.cta, ad.fine(arg));
   }
   function copyFor(k, ad, arg, video){
     const cp = ad.copy(arg), camp = `facebook-meta-${video ? 'video-' : ''}${k}-${dateLbl(new Date().toISOString()).toLowerCase().replace(/\W+/g, '-')}`;
@@ -335,7 +335,9 @@
     $('adMake').disabled = false; $('adMsg').textContent = '';
     fillPicks();
   }
-  window.psaAds = {ADS, paint, endCard, fonts, current, data: () => T};
+  // team/render.html (the daily TikTok drafts, tiktok_post.py) draws with the same pieces, without the panel
+  window.psaAds = {ADS, paint, endCard, fonts, current, data: () => T, setData: d => { T = d; },
+    draw: {C, DISP, BODY, LBL, NAME, pc, fmt, side, an, dateLbl, txt, rich, setFont, wrap, backdrop, brand, pill, card, label, lede, footer}};
   if ($('adKind')){
     $('adKind').addEventListener('change', () => { fillPicks(); if (T) draw(); });
     $('adPick').addEventListener('change', () => { if (T) draw(); });

@@ -578,6 +578,13 @@ details.plpast>summary:focus-visible{outline:2px solid var(--accent);outline-off
     <div class="posts" id="posts"></div>
   </section>
 
+  <section data-view="social" class="panel" id="ttPanel" hidden>
+    <div class="panel-h"><h2>TikTok drafts</h2><span class="label" id="ttWhen">3 videos + 1 carousel a day</span></div>
+    <p class="hint">Every day after 11 AM ET the bot puts three short videos and one photo carousel in the @propstreaklab TikTok inbox as drafts (tiktok_post.py): the sports playing that day, rotating between value spots, hit streaks and the season record. Open TikTok, add a sound, paste the caption and post. Post or delete them the same day: TikTok holds about 5 drafts at a time.</p>
+    <p class="hint" id="ttStatus" style="margin-top:8px"></p>
+    <div class="posts" id="ttPosts"></div>
+  </section>
+
   <div class="grid">
     <section data-view="audience" class="panel">
       <div class="panel-h"><h2>Visitors by sport</h2><span class="label">Board, game, player and best-props pages</span></div>
@@ -1242,7 +1249,8 @@ details.plpast>summary:focus-visible{outline:2px solid var(--accent);outline-off
   }
   async function loadAgents(){
     const get=u=>fetch(u+'?t='+Date.now(),{cache:'no-store'}).then(r=>r.ok? r.json() : null).catch(()=>null);
-    const [t, b]=await Promise.all([get('../today.json'), get('../botd.json')]);
+    const [t, b, tt]=await Promise.all([get('../today.json'), get('../botd.json'), get('../tiktok/posted.json')]);
+    renderTikTok(tt);
     if(!t) return;
     const up=p=>Date.parse(p.start)>Date.now();
     // promo day (build_today.promo_day)
@@ -1296,14 +1304,34 @@ details.plpast>summary:focus-visible{outline:2px solid var(--accent);outline-off
     LAST_POSTS = posts;
     const box=$('posts'); box.textContent='';
     if(!posts.length){ box.innerHTML='<p class="empty">No upcoming picks or recent results to write about right now.</p>'; return; }
-    posts.forEach(p=>{
-      const d=document.createElement('div'); d.className='post';
-      d.innerHTML=`<div class="post-h"><b>${esc(p.title)}</b><button class="btn ghost-btn" type="button">Copy</button></div><textarea readonly rows="${Math.min(9, p.text.split('\n').length+1)}"></textarea><span class="copied" role="status"></span>`;
-      const ta=d.querySelector('textarea'); ta.value=p.text;
-      d.querySelector('button').onclick=async()=>{ const m=d.querySelector('.copied');
-        try { await navigator.clipboard.writeText(p.text); m.textContent='Copied'; } catch(e){ ta.select(); m.textContent='Selected: press Copy on your keyboard'; }
-        setTimeout(()=>m.textContent='', 2500); };
-      box.appendChild(d);
+    posts.forEach(p=>box.appendChild(postBox(p.title, p.text)));
+  }
+  function postBox(title, text){   // a caption with its Copy button
+    const d=document.createElement('div'); d.className='post';
+    d.innerHTML=`<div class="post-h"><b>${esc(title)}</b><button class="btn ghost-btn" type="button">Copy</button></div><textarea readonly rows="${Math.min(9, Math.max(text.split('\n').length, Math.ceil(text.length/60))+1)}"></textarea><span class="copied" role="status"></span>`;
+    const ta=d.querySelector('textarea'); ta.value=text;
+    d.querySelector('button').onclick=async()=>{ const m=d.querySelector('.copied');
+      try { await navigator.clipboard.writeText(text); m.textContent='Copied'; } catch(e){ ta.select(); m.textContent='Selected: press Copy on your keyboard'; }
+      setTimeout(()=>m.textContent='', 2500); };
+    return d;
+  }
+  // ---------- TikTok drafts: tiktok/posted.json (tiktok_post.py), with each draft's caption to paste ----------
+  const ANGLE={gap:'value spots', streak:'hit streaks', record:'season record'};
+  function renderTikTok(s){
+    if(!s) return;
+    $('ttPanel').hidden=false;
+    const ds=s.drafts||{}, keys=Object.keys(ds).sort((a,b)=>(a==='c')-(b==='c')||a.localeCompare(b)), ok=keys.filter(k=>ds[k].ok).length;
+    const day=new Date(s.date+'T12:00:00Z').toLocaleDateString('en-US',{weekday:'short', month:'short', day:'numeric', timeZone:'UTC'});
+    $('ttWhen').textContent=s.at? 'Last run '+new Date(s.at).toLocaleString('en-US',{month:'short', day:'numeric', hour:'numeric', minute:'2-digit'}) : day;
+    $('ttStatus').innerHTML= s.reconnect? '<b>Reconnect TikTok:</b> the sign-in has expired or was revoked. Run <code>python tiktok_auth.py</code> and update the TIKTOK_REFRESH_TOKEN secret.' :
+      s.error? `<b>Not sent:</b> ${esc(s.error)}` : keys.length? `${day}: ${ok} of ${keys.length} drafts in the inbox.` : `${day}: nothing sent yet.`;
+    const box=$('ttPosts'); box.textContent='';
+    keys.forEach(k=>{
+      const d=ds[k], c=d.caption||'', text= typeof c==='string'? c : c.description||'';
+      const title=(k==='c'? 'Photo carousel' : `Video ${k.slice(1)}: ${SP[d.sport]||d.sport} · ${ANGLE[d.angle]||d.angle}`)+(d.ok? ' ✓' : ' ✗ not sent');
+      const el=postBox(title, text);
+      if(!d.ok && d.error){ const e=document.createElement('small'); e.className='empty'; e.textContent=d.error; el.appendChild(e); }
+      box.appendChild(el);
     });
   }
   // ---------- edge tracker: team/edges.enc (edge_report.py), same password as the stats ----------
@@ -1963,7 +1991,7 @@ details.plpast>summary:focus-visible{outline:2px solid var(--accent);outline-off
   if (saved) unlock(saved, true); else $('pw').focus();
 })();
 </script>
-<script src="ads.js?v=20261020a"></script>
+<script src="ads.js?v=20261020b"></script>
 <script src="ads_video.js?v=20261020a"></script>
 <script src="expenses.js?v=20261020a"></script>
 <script src="rules.js?v=20261020c"></script>
