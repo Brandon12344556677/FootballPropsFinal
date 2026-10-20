@@ -1257,7 +1257,7 @@ details.plpast>summary:focus-visible{outline:2px solid var(--accent);outline-off
       return {n:g.length, w, units, model: g.length? g.reduce((s,e)=>s+e.model,0)/g.length : null, pays: g.length? g.reduce((s,e)=>s+1/e.price,0)/g.length : null}; };
     const row=(name, days, sets=1)=>{ const a=stats(days), wk=stats(days.filter(e=>e.date>=week)), td=days.filter(e=>e.date===today);
       const made=td.filter(e=>e.legs), open=made.filter(e=>!e.res).length, hit=made.filter(e=>e.res==='hit').length, miss=made.filter(e=>e.res==='miss').length;
-      const tdTxt= !made.length && td.filter(e=>e.closed).length>=sets? 'No parlays' : made.length? `${made.length} made`+(hit? ` · ${hit} hit` : '')+(miss? ` · ${miss} missed` : '')+(open? ` · ${open} open` : '') : 'From 11 AM ET';
+      const tdTxt= !days.length? 'None yet' : !made.length && td.filter(e=>e.closed).length>=sets? 'No parlays' : made.length? `${made.length} made`+(hit? ` · ${hit} hit` : '')+(miss? ` · ${miss} missed` : '')+(open? ` · ${open} open` : '') : 'From 11 AM ET';
       return `<tr><td><b>${name}</b></td><td class="n">${a.n}</td><td class="n">${a.n? `${a.w} (${pc(a.w/a.n)})` : '–'}</td><td class="n">${a.model==null? '–' : pc(a.model)}</td>`+
         `<td class="n">${a.pays==null? '–' : a.pays.toFixed(2)+'x'}</td><td class="n ${cls(a.units)}">${a.n? u(a.units) : '–'}</td><td class="n ${cls(a.units)}">${a.n? (a.units>=0?'+':'−')+Math.abs(a.units/a.n*100).toFixed(1)+'%' : '–'}</td>`+
         `<td class="n ${cls(wk.units)}">${wk.n? `${wk.w}/${wk.n} · ${u(wk.units)}` : '–'}</td><td>${esc(tdTxt)}</td></tr>`; };
@@ -1276,7 +1276,7 @@ details.plpast>summary:focus-visible{outline:2px solid var(--accent);outline-off
       if(r.status===404){   // a new set before its first file (made at its first parlay, or 7:30 PM ET on a day without one)
         $(P+'Today').innerHTML='<p class="empty">No parlays from this set yet. The first are made from 11 AM ET on its next game day.</p>';
         $(P+'Kpis').innerHTML=''; $(P+'Rows').innerHTML='<tr class="ed-wait"><td colspan="6">The first results show up the day after the first parlay.</td></tr>';
-        $(P+'Panel').hidden=false; return;
+        $(P+'Panel').hidden=false; PLDATA[P]={days: [], gen: null}; renderParlaySummary(); return;
       }
       if(!r.ok) return;
       const d=await decrypt(await r.text(), pw), days=(d.days||[]).slice().reverse();
