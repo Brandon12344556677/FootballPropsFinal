@@ -118,7 +118,8 @@ def graded(sport, doc):
         if not day:
             continue
         out.append({"sport": sport, "day": day, "pr": pr, "win": p["res"] == "hit", "side": p.get("side") or "over",
-                    "stat": p.get("stat"), "line": p.get("line"), "lists": p.get("lists") or ""})
+                    "stat": p.get("stat"), "line": p.get("line"), "lists": p.get("lists") or "",
+                    "p0": p0, "prob": p.get("prob"), "pos": p.get("pos")})   # for the private rules' filters
     return out
 
 
@@ -241,7 +242,11 @@ def current_season(rows):
 
 
 def rule_test(r):
-    """A private rule ({sport, side, stat, line, pmin, pmax}; any field may be empty) as a pick test."""
+    """A private rule as a pick test. Fields (any may be empty): sport, side, stat, line, pmin/pmax (the
+    price), list ("V" Value spots, "T" Top 25), emin/emax (the model's chance minus the price, in points),
+    xpos (positions left out, comma-separated), drop (cents: a pick whose price fell this much or more
+    from its first price is skipped, as the Secret methods tab flags it before the game) and since (a
+    day: only picks from then on count, so a rule found on past picks is judged on new ones)."""
     def num(v):
         try:
             return None if v in (None, "") else float(v)
@@ -249,11 +254,30 @@ def rule_test(r):
             return None
     sport, side, stat = r.get("sport") or None, r.get("side") or None, r.get("stat") or None
     line, lo, hi = num(r.get("line")), num(r.get("pmin")), num(r.get("pmax"))
+    lst, emin, emax, drop = r.get("list") or None, num(r.get("emin")), num(r.get("emax")), num(r.get("drop"))
+    xpos = {x.strip().upper() for x in str(r.get("xpos") or "").split(",") if x.strip()}
+    since = r.get("since") or None
 
     def test(p):
-        return ((sport is None or p["sport"] == sport) and (side is None or p["side"] == side)
+        if not ((sport is None or p["sport"] == sport) and (side is None or p["side"] == side)
                 and (stat is None or p["stat"] == stat) and (line is None or p.get("line") == line)
-                and (lo is None or p["pr"] >= lo) and (hi is None or p["pr"] < hi))
+                and (lo is None or p["pr"] >= lo) and (hi is None or p["pr"] < hi)):
+            return False
+        if since and p.get("day", "") < since:
+            return False
+        if lst and lst not in (p.get("lists") or ""):
+            return False
+        if xpos and (p.get("pos") or "").upper() in xpos:
+            return False
+        if emin is not None or emax is not None:
+            if p.get("prob") is None:
+                return False
+            edge = (float(p["prob"]) - p["pr"]) * 100
+            if (emin is not None and edge < emin) or (emax is not None and edge >= emax):
+                return False
+        if drop is not None and p.get("p0") is not None and round((p["pr"] - p["p0"]) * 100) <= -drop:   # whole cents
+            return False
+        return True
     return test
 
 

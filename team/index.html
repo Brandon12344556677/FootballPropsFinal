@@ -110,11 +110,12 @@ footer p{margin:0;max-width:80ch}
 #app[data-cur="picks"] [data-view]:not([data-view="picks"]){display:none!important}
 #app[data-cur="parlays"] [data-view]:not([data-view="parlays"]){display:none!important}
 #app[data-cur="spreads"] [data-view]:not([data-view="spreads"]){display:none!important}
+#app[data-cur="secret"] [data-view]:not([data-view="secret"]){display:none!important}
 #app[data-cur="social"] [data-view]:not([data-view="social"]){display:none!important}
 #app[data-cur="sponsors"] [data-view]:not([data-view="sponsors"]){display:none!important}
 #app[data-cur="expenses"] [data-view]:not([data-view="expenses"]){display:none!important}
 #app[data-cur="affiliates"] [data-view]:not([data-view="affiliates"]){display:none!important}
-#app[data-cur="picks"] #tabs, #app[data-cur="parlays"] #tabs, #app[data-cur="spreads"] #tabs, #app[data-cur="social"] #tabs, #app[data-cur="expenses"] #tabs, #app[data-cur="affiliates"] #tabs{display:none}
+#app[data-cur="picks"] #tabs, #app[data-cur="parlays"] #tabs, #app[data-cur="spreads"] #tabs, #app[data-cur="secret"] #tabs, #app[data-cur="social"] #tabs, #app[data-cur="expenses"] #tabs, #app[data-cur="affiliates"] #tabs{display:none}
 /* expenses (expenses.js) */
 .exform{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:10px;align-items:end}
 .exform label{display:grid;gap:4px;font-size:13px;color:var(--muted);min-width:0}
@@ -211,6 +212,8 @@ details.plpast>summary:focus-visible{outline:2px solid var(--accent);outline-off
 .aglist .why{margin-top:4px;font-size:13px;color:var(--soft)}
 .aglist .chip{margin-left:4px;font-size:11px;padding:1px 6px}
 .chip.bad{color:var(--down);border-color:rgba(235,111,125,.5)}
+tr.sm-skip td{opacity:.55}
+tr.sm-skip td:last-child{opacity:1}
 .edwrap{overflow-x:auto;margin-top:12px}
 .edges.vwt{min-width:0}
 .edges{width:100%;border-collapse:collapse;font-size:14px;min-width:640px}
@@ -329,6 +332,7 @@ details.plpast>summary:focus-visible{outline:2px solid var(--accent);outline-off
     <button role="tab" data-v="picks">Picks &amp; edges</button>
     <button role="tab" data-v="parlays">Parlays</button>
     <button role="tab" data-v="spreads">Spreads</button>
+    <button role="tab" data-v="secret">Secret methods</button>
     <button role="tab" data-v="social">Social</button>
     <button role="tab" data-v="sponsors">Sponsors</button>
     <button role="tab" data-v="affiliates">Affiliates</button>
@@ -495,7 +499,19 @@ details.plpast>summary:focus-visible{outline:2px solid var(--accent);outline-off
     </details>
   </section>
 
-  <section data-view="picks" class="panel" id="prPanel">
+  <section data-view="secret" class="panel" id="smRecPanel">
+    <div class="panel-h"><h2>Secret methods: record</h2><span class="label" id="smUpd">Encrypted, team only</span></div>
+    <p class="hint">Each private strategy graded by the edge tracker on every update: every pick that fit it, each a 1-unit bet at its price. The likely range is where the true return probably is; a range above 0 is an edge holding up.</p>
+    <div class="edwrap"><table class="edges"><thead><tr><th>Method</th><th class="n">Picks</th><th class="n">Hit</th><th class="n">Return</th><th class="n">Likely range</th><th class="n">Last 7 days</th><th>Verdict</th></tr></thead><tbody id="smRows"><tr class="ed-wait"><td colspan="7">Loading…</td></tr></tbody></table></div>
+  </section>
+
+  <section data-view="secret" class="panel" id="smMatchPanel">
+    <div class="panel-h"><h2>Today's matches</h2><span class="label">Upcoming picks that fit each method</span></div>
+    <p class="hint"><b>Fits</b>: bet it (check the price on the exchange first). <b>Skip</b>: it fits, but its price dropped by the method's limit since it was first posted, which has meant the market knows something. First → now is the first price the site saw and the latest.</p>
+    <div id="smMatches"><p class="empty">Loading…</p></div>
+  </section>
+
+  <section data-view="secret" class="panel" id="prPanel">
     <div class="panel-h"><h2>Private strategies</h2><span class="label">Encrypted, team only</span></div>
     <p class="hint">Rules the edge tracker grades without them being in the public code. They're saved encrypted with the team password and show up in the tracker from the next update. Empty fields mean any. Saving uses the GitHub connection from the Expenses tab.</p>
     <ul class="list" id="prList"><li class="empty">Loading…</li></ul>
@@ -508,6 +524,11 @@ details.plpast>summary:focus-visible{outline:2px solid var(--accent);outline-off
       <label>Line<input id="prLine" inputmode="decimal" placeholder="e.g. 1.5"></label>
       <label>Price from (¢)<input id="prMin" inputmode="numeric" placeholder="e.g. 50"></label>
       <label>Price under (¢)<input id="prMax" inputmode="numeric" placeholder="e.g. 65"></label>
+      <label>List<select id="prList2"><option value="">Any list</option><option value="V">Value spots only</option><option value="T">Top 25 only</option></select></label>
+      <label>Model over price from (pts)<input id="prEmin" inputmode="numeric" placeholder="e.g. 15"></label>
+      <label>Model over price under (pts)<input id="prEmax" inputmode="numeric" placeholder="e.g. 40"></label>
+      <label>Leave out positions<input id="prXpos" maxlength="20" placeholder="e.g. C"></label>
+      <label>Skip if price dropped (¢)<input id="prDrop" inputmode="numeric" placeholder="e.g. 3"></label>
       <div><button class="btn" type="submit" id="prSave">Add strategy</button> <button class="ghost" type="button" id="prCancel">Clear</button></div>
     </form>
     <p id="prMsg" role="status"></p>
@@ -1118,8 +1139,8 @@ details.plpast>summary:focus-visible{outline:2px solid var(--accent);outline-off
   });
 
 
-  // ---------- section menu: Overview / Audience / Sign-ups / Picks / Parlays / Spreads / Social / Sponsors ----------
-  const VIEWS = ['overview','audience','signups','picks','parlays','spreads','social','sponsors','affiliates','expenses'];
+  // ---------- section menu: Overview / Audience / Sign-ups / Picks / Parlays / Spreads / Secret methods / Social / Sponsors ----------
+  const VIEWS = ['overview','audience','signups','picks','parlays','spreads','secret','social','sponsors','affiliates','expenses'];
   function setView(v, push){
     if (!VIEWS.includes(v)) v = 'overview';
     $('app').dataset.cur = v;
@@ -1247,11 +1268,16 @@ details.plpast>summary:focus-visible{outline:2px solid var(--accent);outline-off
       const arw=(cur, prev, shown, day)=>{ if(cur==null || prev==null) return ''; const a=shown(cur), b=shown(prev); if(a===b) return '';
         const up=a>b; return ` <span class="arw ${up?'up':'down'}" title="${up?'Up':'Down'} from ${esc(String(b))}${day? ' before the '+esc(day)+' results' : ''}">${up?'▲':'▼'}</span>`; };
       const pctShown=v=>Math.round(v*1000)/10, hitShown=v=>Math.round(v*100);
-      $('edRows').innerHTML=(e.strategies||[]).map(s=> !s.n ? `<tr class="ed-wait"><td>${esc(s.label)}</td><td class="n">0</td><td class="n" colspan="4">fills in once its games are graded</td><td><span class="chip">${esc(s.verdict||'Waiting')}</span></td></tr>` :
+      // private strategies (rules.enc, keys "private-...") show in the Secret methods tab, the rest here
+      const isPriv=s=>String(s.key||'').startsWith('private'), rowHtml=s=> !s.n ? `<tr class="ed-wait"><td>${esc(s.label)}</td><td class="n">0</td><td class="n" colspan="4">fills in once its games are graded</td><td><span class="chip">${esc(s.verdict||'Waiting')}</span></td></tr>` :
         `<tr><td>${esc(s.label)}</td><td class="n">${fmt(s.n)}${arw(s.n, s.prev&&s.prev.n, v=>v, s.prev_day)}</td><td class="n">${Math.round(s.hit*100)}%${arw(s.hit, s.prev&&s.prev.hit, hitShown, s.prev_day)}</td>`+
         `<td class="n ${cls(s.roi)}"><b>${p(s.roi)}</b>${arw(s.roi, s.prev&&s.prev.roi, pctShown, s.prev_day)}</td><td class="n">${p(s.lo)} to ${p(s.hi)}</td><td class="n ${cls(s.roi7)}">${p(s.roi7)}${arw(s.roi7, s.prev&&s.prev.roi7, pctShown, s.prev_day)}${s.n7? ' <small>('+s.n7+')</small>' : ''}</td>`+
-        `<td><span class="chip ${s.verdict==='Edge holding'?'do':s.verdict==='Losing'?'bad':''}">${esc(s.verdict)}</span></td></tr>`).join('');
+        `<td><span class="chip ${s.verdict==='Edge holding'?'do':s.verdict==='Losing'?'bad':''}">${esc(s.verdict)}</span></td></tr>`;
+      $('edRows').innerHTML=(e.strategies||[]).filter(s=>!isPriv(s)).map(rowHtml).join('');
+      const priv=(e.strategies||[]).filter(isPriv);
+      $('smRows').innerHTML= priv.length? priv.map(rowHtml).join('') : '<tr class="ed-wait"><td colspan="7">No private strategies graded yet. Add one below; it shows here from the next update.</td></tr>';
       $('edUpd').textContent=`${fmt(e.picks)} graded picks · updated ${new Date(e.generated_at).toLocaleString('en-US',{month:'short', day:'numeric', hour:'numeric', minute:'2-digit'})}`;
+      $('smUpd').textContent='Encrypted, team only · updated '+new Date(e.generated_at).toLocaleString('en-US',{month:'short', day:'numeric', hour:'numeric', minute:'2-digit'});
       $('edPanel').hidden=false;
     } catch(err){}
   }
@@ -1841,7 +1867,7 @@ details.plpast>summary:focus-visible{outline:2px solid var(--accent);outline-off
 </script>
 <script src="ads.js?v=20261013a"></script>
 <script src="expenses.js?v=20261020a"></script>
-<script src="rules.js?v=20261015a"></script>
+<script src="rules.js?v=20261020a"></script>
 <script src="parlaylive.js?v=20261020a"></script>
 </body>
 </html>
