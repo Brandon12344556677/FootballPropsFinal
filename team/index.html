@@ -109,11 +109,12 @@ footer p{margin:0;max-width:80ch}
 #app[data-cur="signups"] [data-view]:not([data-view="signups"]){display:none!important}
 #app[data-cur="picks"] [data-view]:not([data-view="picks"]){display:none!important}
 #app[data-cur="parlays"] [data-view]:not([data-view="parlays"]){display:none!important}
+#app[data-cur="spreads"] [data-view]:not([data-view="spreads"]){display:none!important}
 #app[data-cur="social"] [data-view]:not([data-view="social"]){display:none!important}
 #app[data-cur="sponsors"] [data-view]:not([data-view="sponsors"]){display:none!important}
 #app[data-cur="expenses"] [data-view]:not([data-view="expenses"]){display:none!important}
 #app[data-cur="affiliates"] [data-view]:not([data-view="affiliates"]){display:none!important}
-#app[data-cur="picks"] #tabs, #app[data-cur="parlays"] #tabs, #app[data-cur="social"] #tabs, #app[data-cur="expenses"] #tabs, #app[data-cur="affiliates"] #tabs{display:none}
+#app[data-cur="picks"] #tabs, #app[data-cur="parlays"] #tabs, #app[data-cur="spreads"] #tabs, #app[data-cur="social"] #tabs, #app[data-cur="expenses"] #tabs, #app[data-cur="affiliates"] #tabs{display:none}
 /* expenses (expenses.js) */
 .exform{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:10px;align-items:end}
 .exform label{display:grid;gap:4px;font-size:13px;color:var(--muted);min-width:0}
@@ -327,6 +328,7 @@ details.plpast>summary:focus-visible{outline:2px solid var(--accent);outline-off
     <button role="tab" data-v="signups">Sign-ups</button>
     <button role="tab" data-v="picks">Picks &amp; edges</button>
     <button role="tab" data-v="parlays">Parlays</button>
+    <button role="tab" data-v="spreads">Spreads</button>
     <button role="tab" data-v="social">Social</button>
     <button role="tab" data-v="sponsors">Sponsors</button>
     <button role="tab" data-v="affiliates">Affiliates</button>
@@ -479,6 +481,17 @@ details.plpast>summary:focus-visible{outline:2px solid var(--accent);outline-off
     <div class="kpis" id="nfKpis" style="margin-top:12px"></div>
     <details class="plpast"><summary><span>Past parlays</span><span class="label" id="nfPastN"></span></summary>
     <div class="edwrap"><table class="edges"><thead><tr><th>Day</th><th>Legs</th><th class="n">Model</th><th class="n">Pays</th><th>Result</th><th class="n">Units</th></tr></thead><tbody id="nfRows"></tbody></table></div>
+    </details>
+  </section>
+
+  <section data-view="spreads" class="panel" id="sdPanel">
+    <div class="panel-h"><h2>Game spreads (private test)</h2><span class="label" id="sdUpd">Team only · 1 unit a pick</span></div>
+    <p class="hint">Full-game spreads on Polymarket US in every sport, picked by a team-strength model built from final scores (spreads.py). A pick when the model is 5-15 points above a price of 35-65¢ with $25+ offered, at most one a game, from 11 AM ET; frozen once made and graded from the final score (overtime counts). Model expected is the average chance the model gave the picks.</p>
+    <div class="edwrap"><table class="edges pst"><thead><tr><th>Sport</th><th class="n">Graded</th><th class="n">Hit</th><th class="n">Model expected</th><th class="n">Avg price</th><th class="n">Profit</th><th class="n">Return</th><th class="n">Last 7 days</th><th>Today</th></tr></thead><tbody id="sdSum"></tbody></table></div>
+    <h3 class="subh">Today</h3>
+    <div class="edwrap"><table class="edges pst"><thead><tr><th>Game</th><th>Pick</th><th class="n">Price</th><th class="n">Model</th><th class="n">Edge</th><th>Starts</th><th>Result</th></tr></thead><tbody id="sdToday"></tbody></table></div>
+    <details class="plpast"><summary><span>Past picks</span><span class="label" id="sdPastN"></span></summary>
+    <div class="edwrap"><table class="edges pst"><thead><tr><th>Day</th><th>Game</th><th>Pick</th><th class="n">Price</th><th class="n">Model</th><th>Final</th><th>Result</th><th class="n">Units</th></tr></thead><tbody id="sdRows"></tbody></table></div>
     </details>
   </section>
 
@@ -729,7 +742,7 @@ details.plpast>summary:focus-visible{outline:2px solid var(--accent);outline-off
       snap = await load(pw);
       password = pw; store.set('psa-pw', pw);
       $('lock').hidden = true; $('app').hidden = false;
-      setRange(range); freshness(); loadHealth(); renderSpikes(); loadAgents(); loadEdges(pw); loadParlays(pw); loadParlays(pw, 'nb', 'parlays_nba.enc'); loadParlays(pw, 'nf', 'parlays_nfl.enc');
+      setRange(range); freshness(); loadHealth(); renderSpikes(); loadAgents(); loadEdges(pw); loadParlays(pw); loadParlays(pw, 'nb', 'parlays_nba.enc'); loadParlays(pw, 'nf', 'parlays_nfl.enc'); loadSpreads(pw);
       window.dispatchEvent(new CustomEvent('psa-unlock', {detail: {pw}}));   // expenses.js
       clearInterval(timer);
       timer = setInterval(refresh, 5*60*1000);
@@ -744,7 +757,7 @@ details.plpast>summary:focus-visible{outline:2px solid var(--accent);outline-off
   }
   async function refresh(){
     if (!password) return;
-    try { snap = await load(password); freshness(); render(); loadHealth(); renderSpikes(); loadAgents(); loadEdges(password); loadParlays(password); loadParlays(password, 'nb', 'parlays_nba.enc'); loadParlays(password, 'nf', 'parlays_nfl.enc'); window.dispatchEvent(new Event('psa-refresh')); } catch(e){ if (e.code === 'wrong') lock(); }
+    try { snap = await load(password); freshness(); render(); loadHealth(); renderSpikes(); loadAgents(); loadEdges(password); loadParlays(password); loadParlays(password, 'nb', 'parlays_nba.enc'); loadParlays(password, 'nf', 'parlays_nfl.enc'); loadSpreads(password); window.dispatchEvent(new Event('psa-refresh')); } catch(e){ if (e.code === 'wrong') lock(); }
   }
   function lock(){
     password = null; snap = null; store.del('psa-pw'); clearInterval(timer);
@@ -1105,8 +1118,8 @@ details.plpast>summary:focus-visible{outline:2px solid var(--accent);outline-off
   });
 
 
-  // ---------- section menu: Overview / Audience / Sign-ups / Picks / Parlays / Social / Sponsors ----------
-  const VIEWS = ['overview','audience','signups','picks','parlays','social','sponsors','affiliates','expenses'];
+  // ---------- section menu: Overview / Audience / Sign-ups / Picks / Parlays / Spreads / Social / Sponsors ----------
+  const VIEWS = ['overview','audience','signups','picks','parlays','spreads','social','sponsors','affiliates','expenses'];
   function setView(v, push){
     if (!VIEWS.includes(v)) v = 'overview';
     $('app').dataset.cur = v;
@@ -1269,6 +1282,39 @@ details.plpast>summary:focus-visible{outline:2px solid var(--accent);outline-off
     const gens=SETS.map(([P])=>Date.parse(PLDATA[P].gen)).filter(isFinite);
     if(gens.length) $('psUpd').textContent='Team only · 1 unit a parlay · updated '+new Date(Math.max(...gens)).toLocaleString('en-US',{month:'short', day:'numeric', hour:'numeric', minute:'2-digit'});
     $('psPanel').hidden=false;
+  }
+  // ---------- game spreads: team/spreads.enc (spreads.py), same password ----------
+  async function loadSpreads(pw){
+    try {
+      const r=await fetch('spreads.enc?t='+Date.now(),{cache:'no-store'});
+      if(!r.ok && r.status!==404) return;
+      const d= r.ok? await decrypt(await r.text(), pw) : {picks: []}, picks=(d.picks||[]).slice();
+      const SPN={nba:'NBA', nfl:'NFL', nhl:'NHL', mlb:'MLB'}, RES={hit:'✅ Hit', miss:'❌ Miss', void:'Void'};
+      const today=new Date().toLocaleDateString('en-CA',{timeZone:'America/New_York'});
+      const week=new Date(Date.now()-7*864e5).toLocaleDateString('en-CA',{timeZone:'America/New_York'});
+      const pc=v=>Math.round(v*100)+'%', c=v=>Math.round(v*100)+'¢', u=v=>(v>=0?'+':'−')+Math.abs(v).toFixed(2)+'u', cls=v=>v>0?'up':v<0?'down':'';
+      const ln=v=>(v>0?'+':'')+v, pickTxt=p=>`<b>${esc(p.team)} ${esc(ln(p.line))}</b>`;
+      const when=s=>{ const t=Date.parse(s); return isFinite(t)? new Date(t).toLocaleTimeString('en-US',{hour:'numeric', minute:'2-digit'}) : ''; };
+      const stats=list=>{ const g=list.filter(p=>p.res==='hit'||p.res==='miss'), w=g.filter(p=>p.res==='hit').length, units=g.reduce((s,p)=>s+(+p.units||0),0);
+        return {n:g.length, w, units, model: g.length? g.reduce((s,p)=>s+p.model,0)/g.length : null, px: g.length? g.reduce((s,p)=>s+p.price,0)/g.length : null}; };
+      const row=(name, list)=>{ const a=stats(list), wk=stats(list.filter(p=>p.date>=week)), td=list.filter(p=>p.date===today);
+        const open=td.filter(p=>!p.res).length, hit=td.filter(p=>p.res==='hit').length, miss=td.filter(p=>p.res==='miss').length;
+        const tdTxt= td.length? `${td.length} pick${td.length===1?'':'s'}`+(hit? ` · ${hit} hit` : '')+(miss? ` · ${miss} missed` : '')+(open? ` · ${open} open` : '') : 'None yet';
+        return `<tr><td><b>${name}</b></td><td class="n">${a.n}</td><td class="n">${a.n? `${a.w} (${pc(a.w/a.n)})` : '–'}</td><td class="n">${a.model==null? '–' : pc(a.model)}</td>`+
+          `<td class="n">${a.px==null? '–' : c(a.px)}</td><td class="n ${cls(a.units)}">${a.n? u(a.units) : '–'}</td><td class="n ${cls(a.units)}">${a.n? (a.units>=0?'+':'−')+Math.abs(a.units/a.n*100).toFixed(1)+'%' : '–'}</td>`+
+          `<td class="n ${cls(wk.units)}">${wk.n? `${wk.w}/${wk.n} · ${u(wk.units)}` : '–'}</td><td>${esc(tdTxt)}</td></tr>`; };
+      $('sdSum').innerHTML=['nba','nfl','nhl','mlb'].map(s=>row(SPN[s], picks.filter(p=>p.sport===s))).join('')+row('All', picks);
+      const tdy=picks.filter(p=>p.date===today).sort((a,b)=>(a.start||'').localeCompare(b.start||''));
+      $('sdToday').innerHTML= tdy.length? tdy.map(p=>`<tr><td>${esc(SPN[p.sport]||p.sport)} · ${esc(p.game)}</td><td>${pickTxt(p)}</td><td class="n">${c(p.price)}</td><td class="n">${pc(p.model)}</td>`+
+        `<td class="n">+${Math.round(p.edge*100)}</td><td>${when(p.start)}</td><td>${p.res? RES[p.res]+(p.final? ' <small>'+esc(p.final)+'</small>' : '') : 'Pending'}</td></tr>`).join('')
+        : `<tr class="ed-wait"><td colspan="7">No spread picks yet today. They're made from 11 AM ET when the model and a price disagree by 5+ points.</td></tr>`;
+      const past=picks.filter(p=>p.date!==today).sort((a,b)=>b.date.localeCompare(a.date)||(b.start||'').localeCompare(a.start||''));
+      $('sdPastN').textContent= past.length? `${past.length} pick${past.length===1?'':'s'}` : '';
+      $('sdRows').innerHTML= past.length? past.slice(0,200).map(p=>`<tr><td>${esc(p.date)}</td><td>${esc(SPN[p.sport]||p.sport)} · ${esc(p.game)}</td><td>${pickTxt(p)}</td><td class="n">${c(p.price)}</td><td class="n">${pc(p.model)}</td>`+
+        `<td>${esc(p.final||'')}</td><td>${p.res? RES[p.res] : 'Pending'}</td><td class="n ${cls(p.units)}">${p.units==null? '–' : (p.units>=0?'+':'−')+Math.abs(p.units).toFixed(2)}</td></tr>`).join('')
+        : `<tr class="ed-wait"><td colspan="8">The first results show up the day after the first pick.</td></tr>`;
+      if(d.gen) $('sdUpd').textContent='Team only · 1 unit a pick · updated '+new Date(d.gen).toLocaleString('en-US',{month:'short', day:'numeric', hour:'numeric', minute:'2-digit'});
+    } catch(err){}
   }
   async function loadParlays(pw, P='pl', file='parlays.enc'){   // P: the panel's id prefix (pl NHL, nb NBA, nf NFL)
     try {

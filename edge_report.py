@@ -32,14 +32,15 @@ OUT = os.path.join("team", "edges.enc")
 PARLAYS = os.path.join("team", "parlays.enc")
 PARLAYS_NBA = os.path.join("team", "parlays_nba.enc")   # parlay.py's NBA track, its own row
 PARLAYS_NFL = os.path.join("team", "parlays_nfl.enc")   # and its NFL track
+SPREADS = os.path.join("team", "spreads.enc")           # spreads.py: the private game-spread test
 BOTD = "botd.json"
 ET = ZoneInfo("America/New_York")
 FILES = [("nfl", "picks.json"), ("nhl", "nhl_picks.json"), ("mlb", "mlb_picks.json"), ("nba", "nba_picks.json")]
 NHL_REGULAR = "2026-09-29"     # NHL 2026-27 regular season opener: anything earlier is left out (current season only)
 BOOT = 400
 WAITING = {"nba"}       # rows shown even before their first graded pick (the NBA season starts Oct 2026)
-WAITING_KEYS = {"parlays", "parlays-nba", "parlays-nfl", "botd-value", "botd-lock"}     # and rows for lists that start posting later
-OWN_ROWS = {"parlay", "parlay-nba", "parlay-nfl", "botd"}  # rows that repeat picks already counted: only their own strategies grade them
+WAITING_KEYS = {"parlays", "parlays-nba", "parlays-nfl", "spreads-all", "spreads-nba", "spreads-nfl", "spreads-nhl", "spreads-mlb", "botd-value", "botd-lock"}     # and rows for lists that start posting later
+OWN_ROWS = {"parlay", "parlay-nba", "parlay-nfl", "spread", "botd"}  # rows that repeat picks already counted: only their own strategies grade them
 
 STRATEGIES = [   # (key, label, sport or None, test)
     ("nhl-value", "NHL Value spots", "nhl", lambda p: "V" in p["lists"]),
@@ -62,6 +63,11 @@ STRATEGIES = [   # (key, label, sport or None, test)
     ("parlays", "Model parlays, NHL (three a day, 3-4.5x, 35-55% by the model)", "parlay", lambda p: True),
     ("parlays-nba", "Model parlays, NBA (same rules, own three a day)", "parlay-nba", lambda p: True),
     ("parlays-nfl", "Model parlays, NFL (same rules, own three a day)", "parlay-nfl", lambda p: True),
+    ("spreads-all", "Game spreads, every sport (private test)", "spread", lambda p: True),
+    ("spreads-nba", "Game spreads, NBA", "spread", lambda p: p["lists"] == "nba"),
+    ("spreads-nfl", "Game spreads, NFL", "spread", lambda p: p["lists"] == "nfl"),
+    ("spreads-nhl", "Game spreads, NHL", "spread", lambda p: p["lists"] == "nhl"),
+    ("spreads-mlb", "Game spreads, MLB", "spread", lambda p: p["lists"] == "mlb"),
 ]
 # Private strategies (the unders rules and any the team adds) are not in this file: they live
 # encrypted in rules.enc on the repo's team-data branch, written from the team dashboard's
@@ -129,6 +135,27 @@ def parlay_rows(doc, sport="parlay"):
         out.append({"sport": sport, "day": e["date"], "pr": float(pr), "win": e["res"] == "hit",
                     "side": "parlay", "stat": None, "line": None, "lists": ""})
     return out
+
+
+def spread_rows(doc):
+    """spreads.py's game-spread picks (team/spreads.enc, decrypted) that won or lost, as rows for the
+    "spread" strategies: each a 1-unit bet at its recorded price, the sport in lists."""
+    out = []
+    for p in (doc or {}).get("picks") or []:
+        if p.get("res") not in ("hit", "miss") or not p.get("price"):
+            continue
+        out.append({"sport": "spread", "day": p["date"], "pr": float(p["price"]), "win": p["res"] == "hit",
+                    "side": "spread", "stat": None, "line": p.get("line"), "lists": p["sport"]})
+    return out
+
+
+def load_spreads(password):
+    try:
+        with open(SPREADS, encoding="ascii") as f:
+            return spread_rows(json.loads(team_stats.decrypt(f.read().strip(), password)))
+    except Exception as e:  # noqa: BLE001 - no spread picks yet (or unreadable) only empties those rows
+        print(f"edge report: no spread picks loaded ({type(e).__name__})")
+        return []
 
 
 def botd_rows(doc):
@@ -282,7 +309,7 @@ def main():
         if doc:
             rows += graded(sport, doc)
     report = {"generated_at": now.strftime("%Y-%m-%dT%H:%M:%SZ"), "day": today, "picks": len(current_season(rows)),
-              "strategies": build(rows + load_parlays(password) + botd_rows(load(BOTD)), today, strategies=STRATEGIES + load_private(password))}
+              "strategies": build(rows + load_parlays(password) + load_spreads(password) + botd_rows(load(BOTD)), today, strategies=STRATEGIES + load_private(password))}
     try:   # the same numbers as the last pass: leave the file alone (a new salt would change it every time)
         with open(OUT, encoding="ascii") as f:
             old = json.loads(team_stats.decrypt(f.read().strip(), password))
