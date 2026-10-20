@@ -95,6 +95,19 @@ class ParlayTest(unittest.TestCase):
         self.assertEqual({l["pid"]: l["price"] for l in legs}["3"], 0.62)
         self.assertEqual({l["venue"] for l in legs}, {"Polymarket"})
 
+    def test_nba_track_uses_nba_legs_only(self):
+        d = [(s, doc(pick(s + "1", s + "g1", 0.70, 0.55), pick(s + "2", s + "g2", 0.70, 0.55)))
+             for s in ("nhl", "nba")]
+        self.assertEqual({l["sport"] for l in parlay.candidates(d, NOW, sports={"nba"})}, {"nba"})
+        state = {"days": []}
+        parlay.step(state, d, NOW, sports={"nba"})
+        made = [e for e in state["days"] if e.get("legs")]
+        self.assertEqual([{l["sport"] for l in e["legs"]} for e in made], [{"nba"}])
+        self.assertTrue(parlay.meets_rules(made[0], {"nba"}))
+        self.assertFalse(parlay.meets_rules(made[0]))                  # not an NHL-track parlay
+        self.assertEqual([t[0] for t in parlay.TRACKS], ["nhl", "nba"])
+        self.assertEqual(len({t[2] for t in parlay.TRACKS}), 2)        # each track has its own file
+
     def test_at_most_two_legs_per_game_and_one_per_player(self):
         d = self.docs(pick("1", "g1", 0.8, 0.6), pick("2", "g1", 0.8, 0.6), pick("3", "g1", 0.8, 0.6))
         self.assertIsNone(parlay.choose(parlay.candidates(d, NOW)))   # 3 legs from one game: no
@@ -166,6 +179,9 @@ class ParlayTest(unittest.TestCase):
         self.assertEqual((out["parlays"]["n"], out["parlays"]["units"]), (2, 2.0))
         self.assertNotIn("all-nhl", out)                     # parlays never count as sport picks
         self.assertEqual(edge_report.build([], "2026-10-16")[-1]["verdict"], "Waiting for games")
+        nba = edge_report.parlay_rows({"days": state["days"][:1]}, "parlay-nba")   # the NBA track: its own row
+        out = {s["key"]: s for s in edge_report.build(rows + nba, "2026-10-16")}
+        self.assertEqual((out["parlays"]["n"], out["parlays-nba"]["n"]), (2, 1))
 
 
 if __name__ == "__main__":

@@ -5,7 +5,8 @@
    against its line, its game clock, and whether the parlay is still alive. Display only: the record
    is still parlay.py's grading. NHL, MLB and NBA players match on ESPN's player id (the builders use
    ESPN's); NFL picks carry nflverse ids, so those match on name and team.
-   Index: window.psaParlayLive.track(parlays) after the panel renders; cards carry data-pl, legs data-leg. */
+   Index: window.psaParlayLive.track(parlays, {root, note}) after a panel renders: root is the id of the element holding
+   its cards (data-pl, legs data-leg), note the id of its status line. Each root is tracked on its own (NHL and NBA panels). */
 (function(){
   const POLL_MS = 30000;
   const PATH = {nfl: 'football/nfl', nba: 'basketball/nba', nhl: 'hockey/nhl', mlb: 'baseball/mlb'};
@@ -20,7 +21,7 @@
   const second = v => { const n = parseFloat(String(v ?? '').split(/[-/]/)[1]); return isFinite(n) ? n : 0; };
   const outs = ip => { const [w, p] = String(ip || '0').split('.'); return (parseInt(w) || 0) * 3 + (parseInt(p) || 0); };
 
-  let parlays = [], timer = null, updated = null;
+  const groups = {};   // root id -> {parlays, timer, updated, note}
   const boards = {};    // `${sport}|${yyyymmdd}` -> {at, events}
   const boxes = {};     // `${sport}|${eventId}` -> {final, players: {id: athlete}, byName: {team|name: athlete}}
 
@@ -169,12 +170,13 @@
     return `<span class="pl-alive up">${live ? '<span class="pl-dot"></span>' : ''}Alive · ${inn} of ${counted} in${live ? ` · ${live} live` : ''}</span>`;
   }
 
-  async function tick(){
-    if (!parlays.length) return stop();
+  async function tick(G){
+    if (!G.parlays.length) return stop(G);
+    const root = document.getElementById(G.root) || document;
     let busy = false;
-    for (const [i, t] of parlays.entries()){
+    for (const [i, t] of G.parlays.entries()){
       const rs = await Promise.all(t.legs.map(l => legLive(l).catch(() => ({state: 'na'}))));
-      const card = document.querySelector(`.pl-card[data-pl="${i}"]`);
+      const card = root.querySelector(`.pl-card[data-pl="${i}"]`);
       if (!card) continue;
       rs.forEach((r, j) => {
         const el = card.querySelector(`[data-leg="${j}"] .pl-live`);
@@ -184,24 +186,29 @@
       const hd = card.querySelector('.pl-livehd');
       if (hd) hd.innerHTML = cardHTML(t, rs);
     }
-    updated = new Date();
-    const note = document.getElementById('plLive');
-    if (note) note.textContent = busy ? `Live from ESPN box scores · refreshed ${updated.toLocaleTimeString('en-US', {hour: 'numeric', minute: '2-digit', second: '2-digit'})} · every 30 seconds`
-      : updated && parlays.some(t => t.legs.some(l => !l.res)) ? 'All of today’s games are final: official grades come with the next update.' : '';
-    if (!busy) stop();
+    G.updated = new Date();
+    const note = document.getElementById(G.note);
+    if (note) note.textContent = busy ? `Live from ESPN box scores · refreshed ${G.updated.toLocaleTimeString('en-US', {hour: 'numeric', minute: '2-digit', second: '2-digit'})} · every 30 seconds`
+      : G.parlays.some(t => t.legs.some(l => !l.res)) ? 'All of today’s games are final: official grades come with the next update.' : '';
+    if (!busy) stop(G);
   }
 
-  function stop(){ clearInterval(timer); timer = null; }
+  function stop(G){ clearInterval(G.timer); G.timer = null; }
 
   window.psaParlayLive = {
-    track(list){
-      parlays = (list || []).filter(t => t && t.legs && t.legs.length);
-      stop();
-      if (!parlays.length) return;
-      tick();
-      timer = setInterval(() => { if (document.visibilityState === 'visible') tick(); }, POLL_MS);
+    track(list, opts){
+      const root = (opts && opts.root) || 'plToday', note = (opts && opts.note) || 'plLive';
+      const G = groups[root] || (groups[root] = {root, timer: null});
+      G.note = note;
+      G.parlays = (list || []).filter(t => t && t.legs && t.legs.length);
+      stop(G);
+      if (!G.parlays.length) return;
+      tick(G);
+      G.timer = setInterval(() => { if (document.visibilityState === 'visible') tick(G); }, POLL_MS);
     },
     _value: value, _judge: judge, _parseBox: parseBox
   };
-  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && timer) tick(); });
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') Object.values(groups).forEach(G => { if (G.timer) tick(G); });
+  });
 })();

@@ -3,8 +3,9 @@ Prop Streak Lab — the model parlays: three a day, one in each payout band (3-3
 the stake), each a parlay the model gives 35-55% that the market prices well below that, for the team
 only (never on the public site).
 
-Legs come from the upcoming recorded picks of the sports in TEST_PARLAY_SPORTS (NHL only for now),
-priced on Polymarket only (the pick's "pp", with $25+ offered there; Kalshi prices are not used):
+Two separate tracks, each with these rules and its own three a day and record (TRACKS): NHL in
+team/parlays.enc and NBA in team/parlays_nba.enc. Legs come from the upcoming recorded picks of the
+track's sports, priced on Polymarket only (the pick's "pp", with $25+ offered there; Kalshi prices are not used):
 a live price with enough money behind it (not thin), no injury hold, not locked, 6+ effective games of history, and a model
 chance at least 3 points above the price. Each game has to start today (ET) and at least 45 minutes
 after the parlay is made; different players, at most 2 legs from one game. For each band in BANDS,
@@ -23,8 +24,8 @@ the day, the open legs are dropped too. A win pays 1/price - 1 units, where pric
 of the winning legs' recorded prices (a flat 1-unit parlay at fair prices; a book's parlay price
 for linked legs can be lower). edge_report.py grades it in the edge tracker.
 
-State and output: team/parlays.enc, encrypted with TEAM_DASH_PASSWORD like team/edges.enc, rewritten
-only on a change. Without the password it does nothing. Standard library only; never fails the deploy.
+State and output: each track's file (team/parlays.enc, team/parlays_nba.enc), encrypted with
+TEAM_DASH_PASSWORD like team/edges.enc, rewritten only on a change. Without the password it does nothing. Standard library only; never fails the deploy.
 """
 import datetime
 import itertools
@@ -43,6 +44,10 @@ FILES = [("nfl", "picks.json"), ("nba", "nba_picks.json"), ("nhl", "nhl_picks.js
 # The sports new parlays may take legs from (hockey only for now: NFL has been doing poorly). Add a
 # sport back here to use it again; every file in FILES is still read so older legs keep grading.
 TEST_PARLAY_SPORTS = {"nhl"}
+OUT_NBA = os.path.join("team", "parlays_nba.enc")
+# (name, sports, file): each track makes its own three a day and keeps its own record. NBA added
+# Oct 20, 2026 to see how the same rules do there; it never changes the NHL track.
+TRACKS = [("nhl", TEST_PARLAY_SPORTS, OUT), ("nba", {"nba"}, OUT_NBA)]
 OPEN_AT = (11, 0)          # ET: first try
 CLOSE_AT = (19, 30)        # ET: still none -> no parlay today
 LEAD_MIN = 45              # every leg's game starts at least this long after the parlay is made
@@ -91,13 +96,13 @@ def leg_key(sport, p):
     return [sport, p.get("gid"), p.get("pid"), p.get("stat"), p.get("line"), p.get("side")]
 
 
-def candidates(docs, now, nfl_kick=None):
+def candidates(docs, now, nfl_kick=None, sports=None):
     """Legs that may go in today's parlay (see the module docstring). NFL picks carry no start
     time: nfl_kick maps their gid to the kickoff (build_today.nfl_kickoffs)."""
     today = now.astimezone(ET).date()
     out = []
     for sport, doc in docs:
-        if sport not in TEST_PARLAY_SPORTS:
+        if sport not in (TEST_PARLAY_SPORTS if sports is None else sports):
             continue
         for p in rows_of(doc):
             if sport == "nfl":
@@ -184,15 +189,16 @@ def grade(entry, docs, today):
     return True
 
 
-def meets_rules(e):
+def meets_rules(e, sports=None):
     """A made parlay still fits today's rules (checked on what was recorded, not on new prices)."""
     b = e.get("band")
-    return (all(l["sport"] in TEST_PARLAY_SPORTS and l.get("venue") == "Polymarket" for l in e["legs"])
+    sports = TEST_PARLAY_SPORTS if sports is None else sports
+    return (all(l["sport"] in sports and l.get("venue") == "Polymarket" for l in e["legs"])
             and MODEL_LO <= e.get("model", 0) <= MODEL_HI
             and isinstance(b, int) and 0 <= b < len(BANDS) and in_band(e.get("price", 1), BANDS[b]))
 
 
-def step(state, docs, now, nfl_kick=None):
+def step(state, docs, now, nfl_kick=None, sports=None):
     """One pass: grade open parlays, then make (or close) today's. Returns True if anything changed."""
     et = now.astimezone(ET)
     today = et.date().isoformat()
@@ -203,7 +209,7 @@ def step(state, docs, now, nfl_kick=None):
     # The rules changed after today's parlays were made (a sport dropped, Polymarket prices only, the
     # payout bands, the model range): remake any of today's that break them while none of its games has
     # started (no result yet, so the record is unaffected).
-    stale = [e for e in days if e["date"] == today and e.get("legs") and not e.get("res") and not meets_rules(e)
+    stale = [e for e in days if e["date"] == today and e.get("legs") and not e.get("res") and not meets_rules(e, sports)
              and all(not l.get("res") and (start_utc(l.get("start")) or now) > now for l in e["legs"])]
     if stale:
         days[:] = [e for e in days if not any(e is s for s in stale)]
@@ -214,7 +220,7 @@ def step(state, docs, now, nfl_kick=None):
     made = [e for e in mine if e.get("legs")]
     if len(made) < PER_DAY and (et.hour, et.minute) < CLOSE_AT:
         used = {(l["sport"], l["pid"]) for e in made for l in e["legs"]}
-        legs = [l for l in candidates(docs, now, nfl_kick) if (l["sport"], l["pid"]) not in used]
+        legs = [l for l in candidates(docs, now, nfl_kick, sports) if (l["sport"], l["pid"]) not in used]
         filled = {e.get("band") for e in made}
         for b, band in enumerate(BANDS):
             if b in filled:
@@ -233,12 +239,26 @@ def step(state, docs, now, nfl_kick=None):
     return changed
 
 
-def read_state(password):
+def read_state(password, path=OUT):
     try:
-        with open(OUT, encoding="ascii") as f:
+        with open(path, encoding="ascii") as f:
             return json.loads(team_stats.decrypt(f.read().strip(), password))
     except FileNotFoundError:
         return {"days": []}
+
+
+def run_track(name, sports, path, docs, now, nfl_kick, password):
+    state = read_state(password, path)    # an unreadable file raises: never start over and lose the record
+    if not step(state, docs, now, nfl_kick, sports):
+        print(f"parlay {name}: no change ({len(state.get('days', []))} day(s) on record)")
+        return
+    state["gen"] = now.strftime("%Y-%m-%dT%H:%M:%SZ")
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    with open(path, "w", encoding="ascii") as f:
+        f.write(team_stats.encrypt(json.dumps(state, separators=(",", ":")), password) + "\n")
+    last = state["days"][-1] if state["days"] else {}
+    print(f"parlay {name}: wrote {path} (latest {last.get('date')}: "
+          f"{'no parlay' if last.get('closed') else str(len(last.get('legs', []))) + ' legs, model ' + str(last.get('model'))})")
 
 
 def main():
@@ -246,19 +266,14 @@ def main():
     if not password:
         print("parlay: TEAM_DASH_PASSWORD not set, skipping")
         return 0
-    state = read_state(password)    # an unreadable file raises: never start over and lose the record
     docs = [(s, load(p)) for s, p in FILES]
     now = datetime.datetime.now(datetime.timezone.utc)
-    if not step(state, docs, now, build_today.nfl_kickoffs(load("data.json") or {})):
-        print(f"parlay: no change ({len(state.get('days', []))} day(s) on record)")
-        return 0
-    state["gen"] = now.strftime("%Y-%m-%dT%H:%M:%SZ")
-    os.makedirs(os.path.dirname(OUT), exist_ok=True)
-    with open(OUT, "w", encoding="ascii") as f:
-        f.write(team_stats.encrypt(json.dumps(state, separators=(",", ":")), password) + "\n")
-    last = state["days"][-1] if state["days"] else {}
-    print(f"parlay: wrote {OUT} (latest {last.get('date')}: "
-          f"{'no parlay' if last.get('closed') else str(len(last.get('legs', []))) + ' legs, model ' + str(last.get('model'))})")
+    nfl_kick = build_today.nfl_kickoffs(load("data.json") or {})
+    for name, sports, path in TRACKS:
+        try:   # one track failing never stops the other
+            run_track(name, sports, path, docs, now, nfl_kick, password)
+        except Exception as e:  # noqa: BLE001
+            print(f"parlay {name} failed ({type(e).__name__}: {e})")
     return 0
 
 
