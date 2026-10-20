@@ -154,6 +154,13 @@ footer p{margin:0;max-width:80ch}
 .extbl td small.exrep{display:inline;white-space:nowrap}
 .exacts{display:inline-flex;gap:6px;white-space:nowrap}
 .edges.pst th,.edges.pst td{white-space:nowrap}
+/* past parlays: closed by default, opened with the arrow */
+details.plpast{margin-top:16px}
+details.plpast>summary{display:flex;align-items:center;gap:10px;cursor:pointer;list-style:none;font-family:var(--f-display,inherit);font-weight:700;font-size:16px;padding:6px 0}
+details.plpast>summary::-webkit-details-marker{display:none}
+details.plpast>summary::before{content:"\25B8";display:inline-block;transition:transform .15s;color:var(--accent)}
+details.plpast[open]>summary::before{transform:rotate(90deg)}
+details.plpast>summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:6px}
 .exbtns{display:flex;gap:8px;flex-wrap:wrap}
 #exRec .row{grid-template-columns:minmax(0,1fr) auto auto}
 #exRec .name small{display:block;color:var(--muted);font-size:12.5px;white-space:normal}
@@ -438,11 +445,11 @@ footer p{margin:0;max-width:80ch}
 
   <section data-view="parlays" class="panel" id="psPanel" hidden>
     <div class="panel-h"><h2>Parlays at a glance</h2><span class="label" id="psUpd">Team only · 1 unit a parlay</span></div>
-    <p class="hint">Every graded model parlay, each counted as a 1-unit bet at the legs’ prices multiplied. Hit rate is what happened; Model expected is the average chance the model gave them. Voids (every leg dropped) don’t count.</p>
+    <p class="hint">Every graded model parlay (NHL, NBA and NFL sets), each counted as a 1-unit bet at the legs’ prices multiplied. Hit rate is what happened; Model expected is the average chance the model gave them. Voids (every leg dropped) don’t count.</p>
     <div class="edwrap"><table class="edges pst"><thead><tr><th>Set</th><th class="n">Graded</th><th class="n">Hit</th><th class="n">Model expected</th><th class="n">Avg pays</th><th class="n">Profit</th><th class="n">Return</th><th class="n">Last 7 days</th><th>Today</th></tr></thead><tbody id="psRows"></tbody></table></div>
     <h3 class="subh">By payout band</h3>
-    <div class="edwrap"><table class="edges pst"><thead><tr><th>Band</th><th class="n">NHL</th><th class="n">NBA</th><th class="n">Both</th></tr></thead><tbody id="psBands"></tbody></table></div>
-    <p class="hint" style="margin-top:6px">Each cell: hits of graded, and profit in units. A 3-3.5x parlay needs to hit about 1 in 3 to break even, a 4-4.5x one about 1 in 4.</p>
+    <div class="edwrap"><table class="edges pst"><thead><tr><th>Band</th><th class="n">NHL</th><th class="n">NBA</th><th class="n">NFL</th><th class="n">All</th></tr></thead><tbody id="psBands"></tbody></table></div>
+    <p class="hint" style="margin-top:6px">Each cell: hits of graded, and profit in units. All: the three sets together. A 3-3.5x parlay needs to hit about 1 in 3 to break even, a 4-4.5x one about 1 in 4.</p>
   </section>
 
   <section data-view="parlays" class="panel" id="plPanel" hidden>
@@ -450,8 +457,9 @@ footer p{margin:0;max-width:80ch}
     <p class="hint">Up to three a day from 11 AM ET, NHL picks at Polymarket prices: one paying 3-3.5x, one 3.5-4x and one 4-4.5x, each 35-55% by the model, no player in two of them. Frozen once made and graded as a 1-unit bet at the legs’ prices multiplied (a book’s same-game parlay pays less). Team only.</p>
     <div id="plToday"></div>
     <div class="kpis" id="plKpis" style="margin-top:12px"></div>
-    <h3 class="subh">Past parlays</h3>
+    <details class="plpast"><summary><span>Past parlays</span><span class="label" id="plPastN"></span></summary>
     <div class="edwrap"><table class="edges"><thead><tr><th>Day</th><th>Legs</th><th class="n">Model</th><th class="n">Pays</th><th>Result</th><th class="n">Units</th></tr></thead><tbody id="plRows"></tbody></table></div>
+    </details>
   </section>
 
   <section data-view="parlays" class="panel" id="nbPanel" hidden>
@@ -459,8 +467,19 @@ footer p{margin:0;max-width:80ch}
     <p class="hint">Up to three a day from 11 AM ET, NBA picks at Polymarket prices, the same rules as the NHL set and its own record: one paying 3-3.5x, one 3.5-4x and one 4-4.5x, each 35-55% by the model, no player in two of them. Frozen once made and graded as a 1-unit bet at the legs’ prices multiplied (a book’s same-game parlay pays less). Team only.</p>
     <div id="nbToday"></div>
     <div class="kpis" id="nbKpis" style="margin-top:12px"></div>
-    <h3 class="subh">Past parlays</h3>
+    <details class="plpast"><summary><span>Past parlays</span><span class="label" id="nbPastN"></span></summary>
     <div class="edwrap"><table class="edges"><thead><tr><th>Day</th><th>Legs</th><th class="n">Model</th><th class="n">Pays</th><th>Result</th><th class="n">Units</th></tr></thead><tbody id="nbRows"></tbody></table></div>
+    </details>
+  </section>
+
+  <section data-view="parlays" class="panel" id="nfPanel" hidden>
+    <div class="panel-h"><h2>Model parlays (NFL)</h2><span class="label" id="nfUpd">Team only</span></div>
+    <p class="hint">Up to three a day from 11 AM ET, NFL picks at Polymarket prices, the same rules as the NHL set and its own record (tracking only; most days have no NFL games): one paying 3-3.5x, one 3.5-4x and one 4-4.5x, each 35-55% by the model, no player in two of them. Frozen once made and graded as a 1-unit bet at the legs’ prices multiplied (a book’s same-game parlay pays less). Team only.</p>
+    <div id="nfToday"></div>
+    <div class="kpis" id="nfKpis" style="margin-top:12px"></div>
+    <details class="plpast"><summary><span>Past parlays</span><span class="label" id="nfPastN"></span></summary>
+    <div class="edwrap"><table class="edges"><thead><tr><th>Day</th><th>Legs</th><th class="n">Model</th><th class="n">Pays</th><th>Result</th><th class="n">Units</th></tr></thead><tbody id="nfRows"></tbody></table></div>
+    </details>
   </section>
 
   <section data-view="picks" class="panel" id="prPanel">
@@ -710,7 +729,7 @@ footer p{margin:0;max-width:80ch}
       snap = await load(pw);
       password = pw; store.set('psa-pw', pw);
       $('lock').hidden = true; $('app').hidden = false;
-      setRange(range); freshness(); loadHealth(); renderSpikes(); loadAgents(); loadEdges(pw); loadParlays(pw); loadParlays(pw, 'nb', 'parlays_nba.enc');
+      setRange(range); freshness(); loadHealth(); renderSpikes(); loadAgents(); loadEdges(pw); loadParlays(pw); loadParlays(pw, 'nb', 'parlays_nba.enc'); loadParlays(pw, 'nf', 'parlays_nfl.enc');
       window.dispatchEvent(new CustomEvent('psa-unlock', {detail: {pw}}));   // expenses.js
       clearInterval(timer);
       timer = setInterval(refresh, 5*60*1000);
@@ -725,7 +744,7 @@ footer p{margin:0;max-width:80ch}
   }
   async function refresh(){
     if (!password) return;
-    try { snap = await load(password); freshness(); render(); loadHealth(); renderSpikes(); loadAgents(); loadEdges(password); loadParlays(password); loadParlays(password, 'nb', 'parlays_nba.enc'); window.dispatchEvent(new Event('psa-refresh')); } catch(e){ if (e.code === 'wrong') lock(); }
+    try { snap = await load(password); freshness(); render(); loadHealth(); renderSpikes(); loadAgents(); loadEdges(password); loadParlays(password); loadParlays(password, 'nb', 'parlays_nba.enc'); loadParlays(password, 'nf', 'parlays_nfl.enc'); window.dispatchEvent(new Event('psa-refresh')); } catch(e){ if (e.code === 'wrong') lock(); }
   }
   function lock(){
     password = null; snap = null; store.del('psa-pw'); clearInterval(timer);
@@ -1225,10 +1244,10 @@ footer p{margin:0;max-width:80ch}
   }
 
   // ---------- model parlays: team/parlays.enc (NHL) and team/parlays_nba.enc (NBA) (parlay.py), same password ----------
-  // The Parlays tab: a summary of both sets (psPanel), then each set's own panel.
-  var PLDATA={};   // P ('pl' NHL, 'nb' NBA) -> {days, gen}; var: loadParlays can run before this line of the script
+  // The Parlays tab: a summary of every set (psPanel), then each set's own panel.
+  var PLDATA={};   // P ('pl' NHL, 'nb' NBA, 'nf' NFL) -> {days, gen}; var: loadParlays can run before this line of the script
   function renderParlaySummary(){
-    const SETS=[['pl','NHL'],['nb','NBA']].filter(([P])=>PLDATA[P]), BANDS=['3-3.5x','3.5-4x','4-4.5x'];
+    const SETS=[['pl','NHL'],['nb','NBA'],['nf','NFL']].filter(([P])=>PLDATA[P]), BANDS=['3-3.5x','3.5-4x','4-4.5x'];
     if(!SETS.length) return;
     const today=new Date().toLocaleDateString('en-CA',{timeZone:'America/New_York'});
     const week=new Date(Date.now()-7*864e5).toLocaleDateString('en-CA',{timeZone:'America/New_York'});
@@ -1236,35 +1255,36 @@ footer p{margin:0;max-width:80ch}
     const graded=days=>days.filter(e=>e.res==='hit'||e.res==='miss');
     const stats=days=>{ const g=graded(days), w=g.filter(e=>e.res==='hit').length, units=g.reduce((s,e)=>s+(+e.units||0),0);
       return {n:g.length, w, units, model: g.length? g.reduce((s,e)=>s+e.model,0)/g.length : null, pays: g.length? g.reduce((s,e)=>s+1/e.price,0)/g.length : null}; };
-    const row=(name, days)=>{ const a=stats(days), wk=stats(days.filter(e=>e.date>=week)), td=days.filter(e=>e.date===today);
+    const row=(name, days, sets=1)=>{ const a=stats(days), wk=stats(days.filter(e=>e.date>=week)), td=days.filter(e=>e.date===today);
       const made=td.filter(e=>e.legs), open=made.filter(e=>!e.res).length, hit=made.filter(e=>e.res==='hit').length, miss=made.filter(e=>e.res==='miss').length;
-      const tdTxt= td.some(e=>e.closed)? 'No parlays' : made.length? `${made.length} made`+(hit? ` · ${hit} hit` : '')+(miss? ` · ${miss} missed` : '')+(open? ` · ${open} open` : '') : 'From 11 AM ET';
+      const tdTxt= !made.length && td.filter(e=>e.closed).length>=sets? 'No parlays' : made.length? `${made.length} made`+(hit? ` · ${hit} hit` : '')+(miss? ` · ${miss} missed` : '')+(open? ` · ${open} open` : '') : 'From 11 AM ET';
       return `<tr><td><b>${name}</b></td><td class="n">${a.n}</td><td class="n">${a.n? `${a.w} (${pc(a.w/a.n)})` : '–'}</td><td class="n">${a.model==null? '–' : pc(a.model)}</td>`+
         `<td class="n">${a.pays==null? '–' : a.pays.toFixed(2)+'x'}</td><td class="n ${cls(a.units)}">${a.n? u(a.units) : '–'}</td><td class="n ${cls(a.units)}">${a.n? (a.units>=0?'+':'−')+Math.abs(a.units/a.n*100).toFixed(1)+'%' : '–'}</td>`+
         `<td class="n ${cls(wk.units)}">${wk.n? `${wk.w}/${wk.n} · ${u(wk.units)}` : '–'}</td><td>${esc(tdTxt)}</td></tr>`; };
     const all=SETS.flatMap(([P])=>PLDATA[P].days);
-    $('psRows').innerHTML=SETS.map(([P,name])=>row(name, PLDATA[P].days)).join('')+(SETS.length>1? row('Both', all) : '');
+    $('psRows').innerHTML=SETS.map(([P,name])=>row(name, PLDATA[P].days)).join('')+(SETS.length>1? row('All', all, SETS.length) : '');
     const cell=days=>{ const a=stats(days); return a.n? `${a.w}/${a.n} · <span class="${cls(a.units)}">${u(a.units)}</span>` : '–'; };
     const inBand=b=>days=>days.filter(e=>e.band===b);
-    $('psBands').innerHTML=BANDS.map((name,b)=>`<tr><td>${name}</td>${['pl','nb'].map(P=>`<td class="n">${PLDATA[P]? cell(inBand(b)(PLDATA[P].days)) : '–'}</td>`).join('')}<td class="n">${cell(inBand(b)(all))}</td></tr>`).join('');
+    $('psBands').innerHTML=BANDS.map((name,b)=>`<tr><td>${name}</td>${['pl','nb','nf'].map(P=>`<td class="n">${PLDATA[P]? cell(inBand(b)(PLDATA[P].days)) : '–'}</td>`).join('')}<td class="n">${cell(inBand(b)(all))}</td></tr>`).join('');
     const gens=SETS.map(([P])=>Date.parse(PLDATA[P].gen)).filter(isFinite);
     if(gens.length) $('psUpd').textContent='Team only · 1 unit a parlay · updated '+new Date(Math.max(...gens)).toLocaleString('en-US',{month:'short', day:'numeric', hour:'numeric', minute:'2-digit'});
     $('psPanel').hidden=false;
   }
-  async function loadParlays(pw, P='pl', file='parlays.enc'){   // P: the panel's id prefix (pl NHL, nb NBA)
+  async function loadParlays(pw, P='pl', file='parlays.enc'){   // P: the panel's id prefix (pl NHL, nb NBA, nf NFL)
     try {
       const r=await fetch(file+'?t='+Date.now(),{cache:'no-store'}); if(!r.ok) return;
       const d=await decrypt(await r.text(), pw), days=(d.days||[]).slice().reverse();
       PLDATA[P]={days: d.days||[], gen: d.gen}; renderParlaySummary();
       const SP={nfl:'NFL', nba:'NBA', nhl:'NHL', mlb:'MLB'}, STAT={g:'goals', a:'assists', pts:'points', sog:'shots on goal', tb:'total bases', h:'hits', k:'strikeouts',
-        reb:'rebounds', ast:'assists', tpm:'threes', stl:'steals', blk:'blocks', pra:'pts+reb+ast', pr:'pts+reb', pa:'pts+ast', ra:'reb+ast'};
+        reb:'rebounds', ast:'assists', tpm:'threes', stl:'steals', blk:'blocks', pra:'pts+reb+ast', pr:'pts+reb', pa:'pts+ast', ra:'reb+ast',
+        pass_yds:'passing yards', pass_att:'pass attempts', pass_cmp:'completions', pass_td:'passing TDs', rush_yds:'rushing yards', rec:'receptions', rec_yds:'receiving yards', rec_td:'receiving TDs', rush_rec_yds:'rush+rec yards'};
       const pc=v=>Math.round(v*100)+'%', x=q=>(1/q).toFixed(2)+'x';
       const when=s=>{ const t=Date.parse(s); return isFinite(t)? new Date(t).toLocaleTimeString('en-US',{hour:'numeric', minute:'2-digit'}) : ''; };
       const legTxt=l=>`${esc(SP[l.sport]||l.sport)} · <b>${esc(l.player)}</b> ${esc(l.side)} ${esc(l.line)} ${esc(STAT[l.stat]||l.stat)}`;
       const RES={hit:'✅ Hit', miss:'❌ Miss', push:'Push', dnp:'DNP', void:'Void'};
       const today=new Date().toLocaleDateString('en-CA',{timeZone:'America/New_York'}), mine=days.filter(e=>e.date===today).reverse(), made=mine.filter(e=>e.legs);
       const leg=(l,j)=>`<li data-leg="${j}"><span class="pl-sp">${esc(SP[l.sport]||l.sport)}</span><span class="pl-who"><b>${esc(l.player)}</b> ${esc(l.side)} ${esc(l.line)} ${esc(STAT[l.stat]||l.stat)}<small>${esc(l.team)} vs ${esc(l.opp)} · ${when(l.start)} · ${esc(l.venue)}${l.res? ' · '+(RES[l.res]||l.res) : ''}</small><span class="pl-live"></span></span><span class="pl-num">${pc(l.prob)}</span><span class="pl-num">${Math.round(l.price*100)}¢</span></li>`;
-      $(P+'Today').innerHTML = mine.some(e=>e.closed) ? `<p class="empty">No parlay today: no combination fit a payout band at 35-55% by the model.</p>` :
+      $(P+'Today').innerHTML = mine.some(e=>e.closed) ? `<p class="empty">No parlay today: no games today, or no combination fit a payout band at 35-55% by the model.</p>` :
         (made.length? `<p class="hint" id="${P}Live"></p><div class="pl-cards">`+made.map((t,i)=>`<article class="pl-card" data-pl="${i}"><header><b>Parlay #${t.n||1}${t.res? ' · '+RES[t.res] : ''} <span class="pl-livehd"></span></b><span class="pl-chips"><span>Model <b>${pc(t.model)}</b></span><span>Market <b>${pc(t.price)}</b></span><span class="pay">Pays <b>${x(t.price)}</b></span></span></header>`+
           `<ul class="pl-legs"><li class="pl-head"><span class="pl-sp"></span><span>Leg</span><span class="pl-num">Model</span><span class="pl-num">Price</span></li>${t.legs.map(leg).join('')}</ul></article>`).join('')+`</div>` : '')+
         (made.length<3 ? `<p class="empty" style="margin-top:10px">${made.length? 'The rest are made as more games get prices, until 7:30 PM ET.' : 'Today’s parlays are made from 11 AM ET.'}</p>` : '');
@@ -1275,6 +1295,7 @@ footer p{margin:0;max-width:80ch}
         ['Profit', done.length? (units>=0?'+':'−')+Math.abs(units).toFixed(2)+'u' : '–', done.length? 'Return '+(units>=0?'+':'−')+Math.abs(units/done.length*100).toFixed(1)+'%' : '']]
         .map(([k,v,sub])=>`<div class="kpi"><span class="label">${k}</span><span class="v sm">${v}</span><span class="s">${sub||''}</span></div>`).join('');
       const past=days.filter(e=>e.date!==today);
+      const np=past.filter(e=>e.legs).length; $(P+'PastN').textContent= np? `${np} parlay${np===1?'':'s'}` : '';
       $(P+'Rows').innerHTML=past.length? past.slice(0,30).map(e=> e.closed? `<tr><td>${esc(e.date)}</td><td colspan="5" class="hint">No parlays</td></tr>` :
         `<tr><td>${esc(e.date)}${e.n? ' #'+e.n : ''}</td><td>${e.legs.map(l=>legTxt(l)+(l.res? ' <small>'+(RES[l.res]||l.res)+'</small>' : '')).join('<br>')}</td><td class="n">${pc(e.model)}</td><td class="n">${x(e.price)}</td>`+
         `<td>${e.res? RES[e.res] : 'Pending'}</td><td class="n ${e.units>0?'up':e.units<0?'down':''}">${e.units==null? '–' : (e.units>=0?'+':'−')+Math.abs(e.units).toFixed(2)}</td></tr>`).join('')

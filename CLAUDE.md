@@ -21,7 +21,7 @@ README.md has the full feature tour; this file is the working rules.
   `dashboard_check.py` (in watchdog.yml, every 30 min: the team dashboard's page, encrypted numbers, edge tracker; "Team dashboard" issue).
   Private edge-tracker strategies live encrypted in `rules.enc` on `team-data` (dashboard panel `team/rules.js`, read by `edge_report.py` load_private); never put them back in the public code.
   `parlay.py` → `team/parlays.enc` (team only, never public): three parlays a day from 11 AM ET (no shared players; legs only from `TEST_PARLAY_SPORTS`, NHL only for now; Polymarket prices only), each 35-55% by the model, one per payout band (3-3.5x, 3.5-4x, 4-4.5x),
-  plus a separate NBA track with the same rules, its own three a day and record in `team/parlays_nba.enc` (both in the dashboard's Parlays tab, with a summary of both sets and each payout band; each set also has its own edge-tracker row),
+  plus separate NBA and NFL tracks with the same rules, each with its own three a day and record (`team/parlays_nba.enc`, `team/parlays_nfl.enc`) (all three in the dashboard's Parlays tab, with a summary of every set and each payout band; each set also has its own edge-tracker row),
   frozen once made, graded from the legs' picks; the edge tracker's "parlays" row and the dashboard's Model parlays panel read it; `team/parlaylive.js` tracks today's legs live in that panel from ESPN box scores (browser-side, display only).
   `depth.guard` holds a 30c+ price jump until a second run confirms it (the `pj` pick column).
 - `team_stats.py` → `team/stats.enc`: GoatCounter visitor totals (and traffic spikes), encrypted with the
@@ -56,7 +56,7 @@ The bot overwrites these on every pass, so hand edits are lost and cause merge c
   `mlb.html` ← `mlb_template.html`. Edit the template (and the builder), never the output page.
 - `data.json`, `slate.json`, `picks.json`, `weekly.json`, `*_picks.json`, `*_stats.json`,
   `nba.json`, `nhl.json`, `mlb.json`, `today.json`, `botd.json`, `health.json`, `top_cache.json`,
-  `sitemap.xml`, `robots.txt`, `players/`, `games/`, `best/`, `p/`, `team/stats.enc`, `team/edges.enc`, `team/parlays.enc`, `team/parlays_nba.enc`, `fast_hist.json`, `*_picks_recent.json`, `search.json`.
+  `sitemap.xml`, `robots.txt`, `players/`, `games/`, `best/`, `p/`, `team/stats.enc`, `team/edges.enc`, `team/parlays.enc`, `team/parlays_nba.enc`, `team/parlays_nfl.enc`, `fast_hist.json`, `*_picks_recent.json`, `search.json`.
 
 `index.html` (home page), `methodology.html`, `guides/`, and the legal pages are hand-written and safe to edit.
 

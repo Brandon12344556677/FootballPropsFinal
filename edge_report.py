@@ -31,14 +31,15 @@ import team_stats
 OUT = os.path.join("team", "edges.enc")
 PARLAYS = os.path.join("team", "parlays.enc")
 PARLAYS_NBA = os.path.join("team", "parlays_nba.enc")   # parlay.py's NBA track, its own row
+PARLAYS_NFL = os.path.join("team", "parlays_nfl.enc")   # and its NFL track
 BOTD = "botd.json"
 ET = ZoneInfo("America/New_York")
 FILES = [("nfl", "picks.json"), ("nhl", "nhl_picks.json"), ("mlb", "mlb_picks.json"), ("nba", "nba_picks.json")]
 NHL_REGULAR = "2026-09-29"     # NHL 2026-27 regular season opener: anything earlier is left out (current season only)
 BOOT = 400
 WAITING = {"nba"}       # rows shown even before their first graded pick (the NBA season starts Oct 2026)
-WAITING_KEYS = {"parlays", "parlays-nba", "botd-value", "botd-lock"}     # and rows for lists that start posting later
-OWN_ROWS = {"parlay", "parlay-nba", "botd"}  # rows that repeat picks already counted: only their own strategies grade them
+WAITING_KEYS = {"parlays", "parlays-nba", "parlays-nfl", "botd-value", "botd-lock"}     # and rows for lists that start posting later
+OWN_ROWS = {"parlay", "parlay-nba", "parlay-nfl", "botd"}  # rows that repeat picks already counted: only their own strategies grade them
 
 STRATEGIES = [   # (key, label, sport or None, test)
     ("nhl-value", "NHL Value spots", "nhl", lambda p: "V" in p["lists"]),
@@ -60,6 +61,7 @@ STRATEGIES = [   # (key, label, sport or None, test)
     ("botd-lock", "Safe Pick of the Day", "botd", lambda p: p["lists"] == "lock"),
     ("parlays", "Model parlays, NHL (three a day, 3-4.5x, 35-55% by the model)", "parlay", lambda p: True),
     ("parlays-nba", "Model parlays, NBA (same rules, own three a day)", "parlay-nba", lambda p: True),
+    ("parlays-nfl", "Model parlays, NFL (same rules, own three a day)", "parlay-nfl", lambda p: True),
 ]
 # Private strategies (the unders rules and any the team adds) are not in this file: they live
 # encrypted in rules.enc on the repo's team-data branch, written from the team dashboard's
@@ -146,7 +148,7 @@ def botd_rows(doc):
 
 def load_parlays(password):
     out = []
-    for path, sport in ((PARLAYS, "parlay"), (PARLAYS_NBA, "parlay-nba")):
+    for path, sport in ((PARLAYS, "parlay"), (PARLAYS_NBA, "parlay-nba"), (PARLAYS_NFL, "parlay-nfl")):
         try:
             with open(path, encoding="ascii") as f:
                 out += parlay_rows(json.loads(team_stats.decrypt(f.read().strip(), password)), sport)
