@@ -31,7 +31,7 @@
     if (has(r.emin) || has(r.emax)) bits.push('model ' + (has(r.emin) ? r.emin : 'any') + ' to ' + (has(r.emax) ? 'under ' + r.emax : 'any') + ' pts over the price');
     if (r.xpos) bits.push('not ' + r.xpos);
     if (has(r.drop)) bits.push('skip if the price dropped ' + r.drop + '¢+');
-    bits.push(r.since ? 'graded from ' + r.since : 'graded on all picks');
+    if (r.since) bits.push('added ' + r.since + ' (graded on all past picks; the record since then shows apart)');
     return bits.join(' · ');
   }
   function render(){
@@ -79,7 +79,7 @@
                     emin: num($('prEmin').value), emax: num($('prEmax').value),
                     xpos: $('prXpos').value.trim().toUpperCase(), drop: num($('prDrop').value)};
       const at = editing;
-      // a new rule is graded only on picks from today on (it was likely found on the past ones); an edited one keeps its date
+      // the day a rule is added: its record from then on shows apart in the Secret methods record; an edited one keeps its date
       rule.since = at != null && list0()[at] ? (list0()[at].since || '') : new Date().toLocaleDateString('en-CA', {timeZone: 'America/New_York'});
       save(list => { if (at != null && list[at]) list[at] = Object.assign({}, list[at], rule, {key: list[at].key || rule.key}); else list.push(rule); return list; })
         .then(() => fill(null));
