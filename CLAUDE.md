@@ -27,11 +27,14 @@ README.md has the full feature tour; this file is the working rules.
   team-strength model per sport (margin ratings for NBA/NFL, scoring rates for NHL/MLB, calibrated on the previous season:
   `python spreads.py backtest`) fit on ESPN final scores cached in `spread_scores.json`; a pick when the model is 5-15 points above
   a 35-65c price with $25+ offered, one a game, frozen, graded from the final; the dashboard's Spreads tab and the edge tracker's spreads rows.
+  `tpod.py` → `team/tpod.enc` (team only, encrypted; build_today.py runs it after Pick of the Day): 3 Picks of the Day for TikTok from the
+  private methods (rules.enc): 35-65c, model 60%+ and 5+ points over the price, no news flag or price drop, three games, at most two of a kind;
+  plus a fun parlay paying 2.8-3.4x. Frozen once made, graded like Pick of the Day; a script and caption that never name a method. Dashboard tab 3 Picks of the Day.
   `depth.guard` holds a 30c+ price jump until a second run confirms it (the `pj` pick column).
 - `team_stats.py` → `team/stats.enc`: GoatCounter visitor totals (and traffic spikes), encrypted with the
   `TEAM_DASH_PASSWORD` secret, for the password-protected team dashboard `team/index.html`
   (hand-written, noindex, not in the sitemap). Totals only — no IPs or per-visitor data.
-  The dashboard is split into tabs (Overview, Audience, Sign-ups, Picks & edges, Parlays, Spreads, Secret methods, Social, Sponsors, Affiliates, Expenses: each panel has
+  The dashboard is split into tabs (Overview, Audience, Sign-ups, Picks & edges, Parlays, Spreads, Secret methods, 3 Picks of the Day, Social, Sponsors, Affiliates, Expenses: each panel has
   `data-view`). `app.js` feeds it anonymous GoatCounter events, `time/<range>`, `click/<what>/<page>`, `view/<n>`, `visitor/new|returning`
   (the visitor's n-th page today: page views and unique visitors) and `ref/<code>/visit|new`; their labels are mirrored in `team_stats.py`
   (TIME_RANGES, CLICK_RE, VIEW_RE, REF_RE) and `team/index.html`. `view/<n>` and `ref/` are disclosed in privacy.html and cookies.html.
@@ -60,7 +63,7 @@ The bot overwrites these on every pass, so hand edits are lost and cause merge c
   `mlb.html` ← `mlb_template.html`. Edit the template (and the builder), never the output page.
 - `data.json`, `slate.json`, `picks.json`, `weekly.json`, `*_picks.json`, `*_stats.json`,
   `nba.json`, `nhl.json`, `mlb.json`, `today.json`, `botd.json`, `health.json`, `top_cache.json`,
-  `sitemap.xml`, `robots.txt`, `players/`, `games/`, `best/`, `p/`, `team/stats.enc`, `team/edges.enc`, `team/parlays.enc`, `team/parlays_nba.enc`, `team/parlays_nfl.enc`, `team/spreads.enc`, `spread_scores.json`, `fast_hist.json`, `*_picks_recent.json`, `search.json`.
+  `sitemap.xml`, `robots.txt`, `players/`, `games/`, `best/`, `p/`, `team/stats.enc`, `team/edges.enc`, `team/parlays.enc`, `team/parlays_nba.enc`, `team/parlays_nfl.enc`, `team/spreads.enc`, `team/tpod.enc`, `spread_scores.json`, `fast_hist.json`, `*_picks_recent.json`, `search.json`.
 
 `index.html` (home page), `methodology.html`, `guides/`, and the legal pages are hand-written and safe to edit.
 
