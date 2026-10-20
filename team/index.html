@@ -1272,7 +1272,13 @@ details.plpast>summary:focus-visible{outline:2px solid var(--accent);outline-off
   }
   async function loadParlays(pw, P='pl', file='parlays.enc'){   // P: the panel's id prefix (pl NHL, nb NBA, nf NFL)
     try {
-      const r=await fetch(file+'?t='+Date.now(),{cache:'no-store'}); if(!r.ok) return;
+      const r=await fetch(file+'?t='+Date.now(),{cache:'no-store'});
+      if(r.status===404){   // a new set before its first file (made at its first parlay, or 7:30 PM ET on a day without one)
+        $(P+'Today').innerHTML='<p class="empty">No parlays from this set yet. The first are made from 11 AM ET on its next game day.</p>';
+        $(P+'Kpis').innerHTML=''; $(P+'Rows').innerHTML='<tr class="ed-wait"><td colspan="6">The first results show up the day after the first parlay.</td></tr>';
+        $(P+'Panel').hidden=false; return;
+      }
+      if(!r.ok) return;
       const d=await decrypt(await r.text(), pw), days=(d.days||[]).slice().reverse();
       PLDATA[P]={days: d.days||[], gen: d.gen}; renderParlaySummary();
       const SP={nfl:'NFL', nba:'NBA', nhl:'NHL', mlb:'MLB'}, STAT={g:'goals', a:'assists', pts:'points', sog:'shots on goal', tb:'total bases', h:'hits', k:'strikeouts',
