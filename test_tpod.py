@@ -90,7 +90,13 @@ class TpodTest(unittest.TestCase):
         self.assertIn("Now the reach parlay. It's 2 legs paying about", text)
         self.assertIn("Day 1: my top pick + a reach parlay", cap)
         self.assertIn("Player 1, no assists, paying about 1.8 times your money", text)
-        self.assertIn("6 and 4 so far, up 1.5 units", tpod.script({"picks": day["picks"]}, {"n": 10, "hit": 6, "miss": 4, "units": 1.5}, "2026-10-20")[0])
+        text, cap = tpod.script({"picks": day["picks"]}, {"n": 10, "hit": 6, "miss": 4, "units": 1.5}, "2026-10-20",
+                                {"n": 3, "hit": 1, "miss": 2, "units": -0.2}, day_no=5)
+        self.assertIn("So far in this series the picks are 6 and 4 and the reach parlays are 1 and 2, and we're up 1.3 units.", text)
+        self.assertIn("Series: +1.3 units | picks 6-4 | parlays 1-2", cap)
+        text, cap = tpod.script({"picks": day["picks"]}, {"n": 2, "hit": 0, "miss": 2, "units": -2.0}, "2026-10-20")
+        self.assertIn("we're down 2.0 units.", text)
+        self.assertNotIn("series", tpod.script({"picks": day["picks"]}, {"n": 0}, "2026-10-20")[0])   # day 1: no record yet
         self.assertIn("18+", cap)
 
 
