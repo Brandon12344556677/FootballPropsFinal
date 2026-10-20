@@ -82,10 +82,15 @@ class TpodTest(unittest.TestCase):
 
     def test_script_and_caption(self):
         day = {"picks": [tpod.choose([cand("1", "g1", 0.75, 0.55)], methods(NHL_A), NOW, set())]}
-        text, cap = tpod.script(day, {"n": 10, "hit": 6, "miss": 4, "units": 1.5}, "2026-10-20")
-        self.assertIn("Tuesday", text)
+        text, cap = tpod.script(day, {"n": 10, "hit": 6, "miss": 4, "units": 1.5}, "2026-10-20", day_no=4)
+        self.assertTrue(text.startswith("This is day 4 of giving you guys my top pick for the day."))
+        day["parlay"] = tpod.choose_parlay([cand("2", "g2", 0.80, 0.58), cand("3", "g3", 0.80, 0.58)], methods(NHL_A), NOW, set())
+        text, cap = tpod.script(day, {"n": 0}, "2026-10-20")
+        self.assertIn("for the day, plus one more of a reach parlay.", text)
+        self.assertIn("Now the reach parlay. It's 2 legs paying about", text)
+        self.assertIn("Day 1: my top pick + a reach parlay", cap)
         self.assertIn("Player 1, no assists, paying about 1.8 times your money", text)
-        self.assertIn("6 and 4 so far, up 1.5 units", text)
+        self.assertIn("6 and 4 so far, up 1.5 units", tpod.script({"picks": day["picks"]}, {"n": 10, "hit": 6, "miss": 4, "units": 1.5}, "2026-10-20")[0])
         self.assertIn("18+", cap)
 
 

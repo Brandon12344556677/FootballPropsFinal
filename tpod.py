@@ -244,30 +244,29 @@ def grade_parlay(par, index, now):
             par["res"], par["units"], par["paid"] = "hit", round(1 / q - 1, 3), round(q, 4)
 
 
-def script(day, rec, date, prec=None):
-    """What to say on camera, and the caption."""
+def script(day, rec, date, prec=None, day_no=1):
+    """What to say on camera, and the caption. day_no: which day of the series this is (day 1 = the first)."""
     d = datetime.date.fromisoformat(date)
-    when = d.strftime("%A")
     picks = day.get("picks") or []
-    nums = ["First", "Second", "Third"]
-    lines = [f"Here are today's {len(picks)} picks of the day for {when}." if len(picks) != 3 else
-             f"Here are your 3 picks of the day for {when}."]
+    par = day.get("parlay")
+    nums = ["First up", "Second", "And third"]
+    top = f"my top {len(picks)} picks" if len(picks) != 1 else "my top pick"
+    lines = [f"This is day {day_no} of giving you guys {top} for the day" + (", plus one more of a reach parlay." if par else ".")]
     for i, p in enumerate(picks):
         lines.append(f"{nums[i]}: {SPORT_NAME.get(p['sport'], '')}, {p['spoken']}")
-    par = day.get("parlay")
     if par:
-        legs = "; ".join(f"{p['player']}, {say_line(p)}" for p in par["legs"])
-        lines.append(f"And for fun, a longer-shot {len(par['legs'])}-leg parlay paying about {1 / par['price']:.1f} times "
-                     f"your money: {legs}. It's a long shot, so keep it small.")   # no model % here: the model runs hot on parlays
+        legs = ", and ".join(f"{p['player']}, {say_line(p)}" for p in par["legs"])
+        lines.append(f"Now the reach parlay. It's {len(par['legs'])} legs paying about {1 / par['price']:.1f} times your money: "
+                     f"{legs}. It's a reach, so keep it small.")   # no model % here: the model runs hot on parlays
     if rec["n"]:
         lines.append(f"These picks are {rec['hit']} and {rec['miss']} so far, "
                      + (f"up {rec['units']:.1f} units." if rec["units"] >= 0 else f"down {-rec['units']:.1f} units."))
     lines.append("Follow for three picks every day. Eighteen and over only, this is for entertainment, not betting advice.")
-    cap = [f"3 Picks of the Day, {d.strftime('%b')} {d.day}"]
+    cap = [f"Day {day_no}: {top}" + (" + a reach parlay" if par else "") + f" ({d.strftime('%b')} {d.day})"]
     for i, p in enumerate(picks):
         cap.append(f"{i + 1}) {p['player']} {p['side']} {p['line']:g} {(p.get('statText') or p['stat']).lower()} ({1 / p['price']:.2f}x)")
     if par:
-        cap.append(f"Fun parlay ({1 / par['price']:.2f}x): " + " + ".join(
+        cap.append(f"Reach parlay ({1 / par['price']:.2f}x): " + " + ".join(
             f"{p['player']} {p['side']} {p['line']:g} {(p.get('statText') or p['stat']).lower()}" for p in par["legs"]))
     if rec["n"]:
         cap.append(f"Record: {rec['hit']}-{rec['miss']} ({rec['units']:+.1f}u)")
@@ -306,7 +305,8 @@ def update(state, cands, docs, methods, now):
             day["parlay"] = par
     if day is not None:
         past = [d for d in days if d["date"] < today]
-        day["script"], day["caption"] = script(day, record(past), today, parlay_record(past))
+        day_no = 1 + sum(1 for d in past if d.get("picks"))   # the series counts days with picks
+        day["script"], day["caption"] = script(day, record(past), today, parlay_record(past), day_no)
     return json.dumps(days, sort_keys=True) != before
 
 
