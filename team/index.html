@@ -213,6 +213,7 @@ details.plpast>summary:focus-visible{outline:2px solid var(--accent);outline-off
 .aglist .chip{margin-left:4px;font-size:11px;padding:1px 6px}
 .chip.bad{color:var(--down);border-color:rgba(235,111,125,.5)}
 tr.sm-skip td{opacity:.55}
+#prPaste{width:100%;font:500 13px/1.4 ui-monospace,Menlo,Consolas,monospace;color:var(--fg);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:9px 10px;resize:vertical}
 tr.sm-skip td:last-child{opacity:1}
 .edwrap{overflow-x:auto;margin-top:12px}
 .edges.vwt{min-width:0}
@@ -532,6 +533,11 @@ tr.sm-skip td:last-child{opacity:1}
       <div><button class="btn" type="submit" id="prSave">Add strategy</button> <button class="ghost" type="button" id="prCancel">Clear</button></div>
     </form>
     <p id="prMsg" role="status"></p>
+    <details class="plpast"><summary><span>Import methods</span><span class="label">paste a list</span></summary>
+      <p class="hint">Paste a list of methods (the text block shared in a private chat, as JSON) and click Import. They're added like the form adds them: encrypted, and graded from today. A method with the same name as one already here is skipped.</p>
+      <textarea id="prPaste" rows="6" spellcheck="false" placeholder='[{"label": "...", "sport": "nhl", "side": "under"}]'></textarea>
+      <p><button class="btn" type="button" id="prPasteBtn">Import</button></p>
+    </details>
   </section>
 
   <section data-view="social" class="panel">

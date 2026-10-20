@@ -152,6 +152,25 @@
       const i = +del.dataset.del; save(list => { list.splice(i, 1); return list; }, 'Deleted.');
     });
     $('prImport').addEventListener('click', () => save(list => list.concat(ORIGINAL), 'Added the three original unders rules.'));
+    // Import methods: a pasted JSON list (from a private chat), so a set of rules never passes through the public code
+    $('prPasteBtn').addEventListener('click', () => {
+      let got;
+      try { got = JSON.parse($('prPaste').value); } catch(e){ msg('That isn’t a list the importer can read. Paste the whole block, from [ to ].', true); return; }
+      got = Array.isArray(got) ? got : (got && got.items) || [];
+      const today = new Date().toLocaleDateString('en-CA', {timeZone: 'America/New_York'});
+      const num = v => v === '' || v == null || isNaN(+v) ? '' : +v, str = v => v == null ? '' : String(v).trim();
+      const clean = got.filter(r => r && str(r.label)).map(r => ({
+        key: 'private-' + str(r.label).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40),
+        label: str(r.label).slice(0, 80), sport: ['nfl', 'nba', 'nhl', 'mlb'].includes(r.sport) ? r.sport : '',
+        side: ['over', 'under'].includes(r.side) ? r.side : '', stat: str(r.stat).toLowerCase().slice(0, 12), line: num(r.line),
+        pmin: num(r.pmin), pmax: num(r.pmax), list: ['V', 'T'].includes(r.list) ? r.list : '', emin: num(r.emin), emax: num(r.emax),
+        xpos: str(r.xpos).toUpperCase().slice(0, 20), drop: num(r.drop), since: /^\d{4}-\d\d-\d\d$/.test(str(r.since)) ? str(r.since) : today}));
+      if (!clean.length) { msg('No methods with a name in what was pasted.', true); return; }
+      let added = 0;
+      save(list => { const have = new Set(list.map(r => (r.label || '').toLowerCase()));
+        clean.forEach(r => { if (!have.has(r.label.toLowerCase())) { list.push(r); have.add(r.label.toLowerCase()); added++; } }); return list; },
+        'Imported.').then(() => { if (!$('prMsg').classList.contains('bad')) { msg(`Imported ${added} method${added === 1 ? '' : 's'}` + (clean.length > added ? ` (${clean.length - added} already here, skipped)` : '') + '. They show in the record from the next update.'); $('prPaste').value = ''; } });
+    });
     $('prCancel').addEventListener('click', () => { fill(null); msg(''); });
   }
   window.addEventListener('psa-unlock', () => { wire(); setTimeout(load, 300); loadUpcoming(); });
