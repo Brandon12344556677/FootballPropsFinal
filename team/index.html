@@ -212,8 +212,7 @@ details.plpast>summary:focus-visible{outline:2px solid var(--accent);outline-off
 .aglist .why{margin-top:4px;font-size:13px;color:var(--soft)}
 .aglist .chip{margin-left:4px;font-size:11px;padding:1px 6px}
 .chip.bad{color:var(--down);border-color:rgba(235,111,125,.5)}
-tr.sm-skip td{opacity:.55}
-tr.sm-skip td:last-child{opacity:1}
+#prPaste{width:100%;font:500 13px/1.4 ui-monospace,Menlo,Consolas,monospace;color:var(--fg);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:9px 10px;resize:vertical}
 .edwrap{overflow-x:auto;margin-top:12px}
 .edges.vwt{min-width:0}
 .edges{width:100%;border-collapse:collapse;font-size:14px;min-width:640px}
@@ -501,14 +500,8 @@ tr.sm-skip td:last-child{opacity:1}
 
   <section data-view="secret" class="panel" id="smRecPanel">
     <div class="panel-h"><h2>Secret methods: record</h2><span class="label" id="smUpd">Encrypted, team only</span></div>
-    <p class="hint">Each private strategy graded by the edge tracker on every update: every pick that fit it, each a 1-unit bet at its price. The likely range is where the true return probably is; a range above 0 is an edge holding up.</p>
-    <div class="edwrap"><table class="edges"><thead><tr><th>Method</th><th class="n">Picks</th><th class="n">Hit</th><th class="n">Return</th><th class="n">Likely range</th><th class="n">Last 7 days</th><th>Verdict</th></tr></thead><tbody id="smRows"><tr class="ed-wait"><td colspan="7">Loading…</td></tr></tbody></table></div>
-  </section>
-
-  <section data-view="secret" class="panel" id="smMatchPanel">
-    <div class="panel-h"><h2>Today's matches</h2><span class="label">Upcoming picks that fit each method</span></div>
-    <p class="hint"><b>Fits</b>: bet it (check the price on the exchange first). <b>Skip</b>: it fits, but its price dropped by the method's limit since it was first posted, which has meant the market knows something. First → now is the first price the site saw and the latest.</p>
-    <div id="smMatches"><p class="empty">Loading…</p></div>
+    <p class="hint">How each private method performs, graded by the edge tracker every update: every pick that fit it, each a 1-unit bet at its price. A method added from Oct 20 on counts only picks from the day it was added (its live record); the backtest under its name is how it did on the earlier picks it was found on, which is not proof. Likely range: where the true return probably is; a range above 0 is an edge holding up.</p>
+    <div class="edwrap"><table class="edges pst"><thead><tr><th>Method</th><th class="n">Picks</th><th class="n">Hit</th><th class="n">Avg price</th><th class="n">Units</th><th class="n">Return</th><th class="n">Likely range</th><th class="n">Last 7 days</th><th>Verdict</th></tr></thead><tbody id="smRows"><tr class="ed-wait"><td colspan="9">Loading…</td></tr></tbody></table></div>
   </section>
 
   <section data-view="secret" class="panel" id="prPanel">
@@ -532,6 +525,11 @@ tr.sm-skip td:last-child{opacity:1}
       <div><button class="btn" type="submit" id="prSave">Add strategy</button> <button class="ghost" type="button" id="prCancel">Clear</button></div>
     </form>
     <p id="prMsg" role="status"></p>
+    <details class="plpast"><summary><span>Import methods</span><span class="label">paste a list</span></summary>
+      <p class="hint">Paste a list of methods (the text block shared in a private chat, as JSON) and click Import. They're added like the form adds them: encrypted, and graded from today. A method with the same name as one already here is skipped.</p>
+      <textarea id="prPaste" rows="6" spellcheck="false" placeholder='[{"label": "...", "sport": "nhl", "side": "under"}]'></textarea>
+      <p><button class="btn" type="button" id="prPasteBtn">Import</button></p>
+    </details>
   </section>
 
   <section data-view="social" class="panel">
@@ -1269,13 +1267,24 @@ tr.sm-skip td:last-child{opacity:1}
         const up=a>b; return ` <span class="arw ${up?'up':'down'}" title="${up?'Up':'Down'} from ${esc(String(b))}${day? ' before the '+esc(day)+' results' : ''}">${up?'▲':'▼'}</span>`; };
       const pctShown=v=>Math.round(v*1000)/10, hitShown=v=>Math.round(v*100);
       // private strategies (rules.enc, keys "private-...") show in the Secret methods tab, the rest here
-      const isPriv=s=>String(s.key||'').startsWith('private'), rowHtml=s=> !s.n ? `<tr class="ed-wait"><td>${esc(s.label)}</td><td class="n">0</td><td class="n" colspan="4">fills in once its games are graded</td><td><span class="chip">${esc(s.verdict||'Waiting')}</span></td></tr>` :
-        `<tr><td>${esc(s.label)}</td><td class="n">${fmt(s.n)}${arw(s.n, s.prev&&s.prev.n, v=>v, s.prev_day)}</td><td class="n">${Math.round(s.hit*100)}%${arw(s.hit, s.prev&&s.prev.hit, hitShown, s.prev_day)}</td>`+
+      const isPriv=s=>s.private || String(s.key||'').startsWith('private');
+      const day=d=>new Date(d+'T12:00:00').toLocaleDateString('en-US',{month:'short', day:'numeric'});
+      // a private rule's start day and its record on the picks before it (what it was found on), under its name
+      const sub=s=>!s.since? '' : `<br><small>Tracking since ${day(s.since)}`+(s.past? ` · backtest before that: ${p(s.past.roi)} on ${fmt(s.past.n)} picks, ${Math.round(s.past.hit*100)}% hit (found on these, so not proof)` : '')+'</small>';
+      const rowHtml=s=> !s.n ? `<tr class="ed-wait"><td>${esc(s.label)}${sub(s)}</td><td class="n">0</td><td class="n" colspan="4">fills in once its games are graded</td><td><span class="chip">${esc(s.verdict||'Waiting')}</span></td></tr>` :
+        `<tr><td>${esc(s.label)}${sub(s)}</td><td class="n">${fmt(s.n)}${arw(s.n, s.prev&&s.prev.n, v=>v, s.prev_day)}</td><td class="n">${Math.round(s.hit*100)}%${arw(s.hit, s.prev&&s.prev.hit, hitShown, s.prev_day)}</td>`+
         `<td class="n ${cls(s.roi)}"><b>${p(s.roi)}</b>${arw(s.roi, s.prev&&s.prev.roi, pctShown, s.prev_day)}</td><td class="n">${p(s.lo)} to ${p(s.hi)}</td><td class="n ${cls(s.roi7)}">${p(s.roi7)}${arw(s.roi7, s.prev&&s.prev.roi7, pctShown, s.prev_day)}${s.n7? ' <small>('+s.n7+')</small>' : ''}</td>`+
         `<td><span class="chip ${s.verdict==='Edge holding'?'do':s.verdict==='Losing'?'bad':''}">${esc(s.verdict)}</span></td></tr>`;
       $('edRows').innerHTML=(e.strategies||[]).filter(s=>!isPriv(s)).map(rowHtml).join('');
+      // Secret methods: the same numbers plus average price and units, the backtest under the name
+      const u=v=>(v>=0?'+':'−')+Math.abs(v).toFixed(1)+'u';
+      const smRow=s=> !s.n ? `<tr class="ed-wait"><td>${esc(s.label)}${sub(s)}</td><td class="n">0</td><td class="n" colspan="6">waiting for its first graded picks</td><td><span class="chip">Waiting</span></td></tr>` :
+        `<tr><td>${esc(s.label)}${sub(s)}</td><td class="n">${fmt(s.n)}</td><td class="n">${Math.round(s.hit*100)}%</td><td class="n">${s.px==null? '–' : Math.round(s.px*100)+'¢'}</td>`+
+        `<td class="n ${cls(s.units)}">${s.units==null? '–' : u(s.units)}</td><td class="n ${cls(s.roi)}"><b>${p(s.roi)}</b>${arw(s.roi, s.prev&&s.prev.roi, pctShown, s.prev_day)}</td>`+
+        `<td class="n">${p(s.lo)} to ${p(s.hi)}</td><td class="n ${cls(s.roi7)}">${p(s.roi7)}${s.n7? ' <small>('+s.n7+')</small>' : ''}</td>`+
+        `<td><span class="chip ${s.verdict==='Edge holding'?'do':s.verdict==='Losing'?'bad':''}">${esc(s.verdict)}</span></td></tr>`;
       const priv=(e.strategies||[]).filter(isPriv);
-      $('smRows').innerHTML= priv.length? priv.map(rowHtml).join('') : '<tr class="ed-wait"><td colspan="7">No private strategies graded yet. Add one below; it shows here from the next update.</td></tr>';
+      $('smRows').innerHTML= priv.length? priv.map(smRow).join('') : '<tr class="ed-wait"><td colspan="9">No private methods graded yet. Add one below; it shows here from the next update.</td></tr>';
       $('edUpd').textContent=`${fmt(e.picks)} graded picks · updated ${new Date(e.generated_at).toLocaleString('en-US',{month:'short', day:'numeric', hour:'numeric', minute:'2-digit'})}`;
       $('smUpd').textContent='Encrypted, team only · updated '+new Date(e.generated_at).toLocaleString('en-US',{month:'short', day:'numeric', hour:'numeric', minute:'2-digit'});
       $('edPanel').hidden=false;
@@ -1867,7 +1876,7 @@ tr.sm-skip td:last-child{opacity:1}
 </script>
 <script src="ads.js?v=20261013a"></script>
 <script src="expenses.js?v=20261020a"></script>
-<script src="rules.js?v=20261020a"></script>
+<script src="rules.js?v=20261020b"></script>
 <script src="parlaylive.js?v=20261020a"></script>
 </body>
 </html>

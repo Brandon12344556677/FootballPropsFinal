@@ -68,7 +68,7 @@ class Summary(unittest.TestCase):
                          {"key": "b", "label": "MLB total bases under 1.5", "sport": "mlb", "side": "under", "stat": "tb", "line": 1.5}]}
         strategies = E.STRATEGIES + E.private_strategies(doc)
         out = {s["key"]: s for s in E.build(self.rows(6, 4) + self.rows(3, 7, side="over", pr=0.6), "2026-10-10", strategies=strategies)}
-        self.assertEqual((out["a"]["n"], out["b"]["n"], out["private-all"]["n"]), (10, 10, 10))
+        self.assertEqual((out["private-a"]["n"], out["private-b"]["n"], out["private-all"]["n"]), (10, 10, 10))   # every private row is "private-..."
         self.assertEqual(E.private_strategies({"items": []}), [])
 
     def test_previous_day_numbers_leave_out_the_latest_day(self):
@@ -118,8 +118,19 @@ class PrivateRuleFilterTest(unittest.TestCase):
         self.assertTrue(t(self.pick(p0=0.62)))                 # 2c: kept
         self.assertTrue(t(self.pick(p0=None)))                 # no first price recorded: kept
         dated = E.rule_test({"sport": "nhl", "since": "2026-10-20"})
+        self.assertEqual(dated.since, "2026-10-20")
+        self.assertTrue(dated.past(self.pick(day="2026-10-19")))   # the copy without the start day
         self.assertFalse(dated(self.pick(day="2026-10-19")))   # before the rule was added: not counted
         self.assertTrue(dated(self.pick(day="2026-10-20")))
+        priv = E.private_strategies({"items": [{"key": "nhl-assist-unders", "label": "Old rule", "sport": "nhl"},
+                                               {"key": "private-new", "label": "New rule", "sport": "nhl", "stat": "zz", "since": "2026-10-20"}]})
+        self.assertEqual([k for k, _, _, _ in priv], ["private-all", "private-nhl-assist-unders", "private-new"])
+        rows = [{"sport": "nhl", "day": "2026-10-18", "pr": 0.5, "win": True, "side": "under", "stat": "zz", "line": 0.5, "lists": ""}]
+        out = E.build(rows, "2026-10-20", strategies=priv, waiting={k for k, _, _, _ in priv})
+        E.mark_private(out, priv, rows, "2026-10-20")
+        new = {s["key"]: s for s in out}["private-new"]
+        self.assertEqual((new["n"], new["verdict"], new["since"], new["past"]["n"]), (0, "Waiting for games", "2026-10-20", 1))
+        self.assertTrue(all(s.get("private") for s in out))
         self.assertTrue(E.rule_test({"sport": "nhl"})(self.pick(prob=None, p0=None, pos=None, lists="")))
 
 

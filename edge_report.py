@@ -278,6 +278,8 @@ def rule_test(r):
         if drop is not None and p.get("p0") is not None and round((p["pr"] - p["p0"]) * 100) <= -drop:   # whole cents
             return False
         return True
+    test.since = since
+    test.past = rule_test(dict(r, since=None)) if since else None   # the same rule on the picks before it
     return test
 
 
@@ -285,7 +287,10 @@ def private_strategies(doc):
     """Strategy rows from the decrypted rules.enc document ({"items": [rule, ...]}), plus one row for
     all of them together when there are two or more."""
     items = [r for r in (doc or {}).get("items") or [] if r.get("label")]
-    out = [(r.get("key") or "private-" + str(i), r["label"], r.get("sport") or None, rule_test(r)) for i, r in enumerate(items)]
+    def key(r, i):
+        k = r.get("key") or str(i)
+        return k if k.startswith("private") else "private-" + k   # the dashboard's Secret methods tab shows "private..." rows
+    out = [(key(r, i), r["label"], r.get("sport") or None, rule_test(r)) for i, r in enumerate(items)]
     if len(out) > 1:
         tests = [t for _, _, _, t in out]
         out.insert(0, ("private-all", "Private strategies, all together", None, lambda p: any(t(p) for t in tests)))
@@ -304,7 +309,25 @@ def load_private(password):
         return []
 
 
-def build(rows, today, seed=1, strategies=None):
+def mark_private(out, private, rows, today, seed=2):
+    """Flag the private rows, and give each rule with a start day ("since") its record on the picks
+    before that day ("past"): what it was found on, kept apart from the record that counts."""
+    rng = random.Random(seed)
+    rows = [p for p in current_season(rows) if p["sport"] not in OWN_ROWS]
+    tests = {k: (sport, t) for k, _, sport, t in private}
+    for s in out:
+        if s.get("key") not in tests:
+            continue
+        sport, t = tests[s["key"]]
+        s["private"] = True
+        if getattr(t, "since", None):
+            s["since"] = t.since
+            past = summary([p for p in rows if p["day"] < t.since and (not sport or p["sport"] == sport) and t.past(p)], today, rng)
+            if past:
+                s["past"] = {k: past[k] for k in ("n", "hit", "roi", "lo", "hi")}
+
+
+def build(rows, today, seed=1, strategies=None, waiting=()):
     rng = random.Random(seed)
     rows = current_season(rows)
     latest = max((p["day"] for p in rows), default=None)   # the most recent day with graded picks
@@ -315,7 +338,7 @@ def build(rows, today, seed=1, strategies=None):
         if s:
             prev = before(mine, latest) if latest else None
             out.append(dict(s, key=key, label=label, sport=sport, prev=prev, prev_day=latest))
-        elif sport in WAITING or key in WAITING_KEYS:   # not started yet: shown empty, fills in by itself
+        elif sport in WAITING or key in WAITING_KEYS or key in waiting:   # not started yet: shown empty, fills in by itself
             out.append({"key": key, "label": label, "sport": sport, "n": 0, "verdict": "Waiting for games"})
     return out
 
@@ -332,8 +355,11 @@ def main():
         doc = load(path)
         if doc:
             rows += graded(sport, doc)
+    private = load_private(password)
     report = {"generated_at": now.strftime("%Y-%m-%dT%H:%M:%SZ"), "day": today, "picks": len(current_season(rows)),
-              "strategies": build(rows + load_parlays(password) + load_spreads(password) + botd_rows(load(BOTD)), today, strategies=STRATEGIES + load_private(password))}
+              "strategies": build(rows + load_parlays(password) + load_spreads(password) + botd_rows(load(BOTD)), today,
+                                  strategies=STRATEGIES + private, waiting={k for k, _, _, _ in private})}
+    mark_private(report["strategies"], private, rows, today)
     try:   # the same numbers as the last pass: leave the file alone (a new salt would change it every time)
         with open(OUT, encoding="ascii") as f:
             old = json.loads(team_stats.decrypt(f.read().strip(), password))
