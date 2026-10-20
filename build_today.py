@@ -33,6 +33,7 @@ import sys
 from zoneinfo import ZoneInfo
 
 import botd
+import tpod
 
 SPORTS = [
     # sport, dataset (has "record"), picks file, template (has the stat labels)
@@ -182,6 +183,7 @@ def upcoming(sport, db, picks_doc, labels, getters, now):
             "neff": p.get("neff"),
             "px0": round(float(p["px0"]) / cents, 3) if p.get("px0") is not None else None,   # price when recorded (moves)
             "flag": botd.news_flag(sport, p.get("nw"), players.get(str(p["pid"])) if sport == "nfl" else None, week),
+            "pos": p.get("pos"),    # for the private methods' position filter (tpod.py); not written to today.json
         })
     return out
 
@@ -536,7 +538,7 @@ def main():
             print(f"  {sport}: skipped ({e})")
     okc = [c for c in cands if recommendable(c)]   # what the home page, Pick of the Day and posts may feature
     top = best(okc)
-    picks = [{k: v for k, v in c.items() if k not in ("neff", "flag", "px0", "lists")} for c in top]
+    picks = [{k: v for k, v in c.items() if k not in ("neff", "flag", "px0", "lists", "pos")} for c in top]
     feat = featured(okc, top)
     try:
         old = load(FAST_STATE) if os.path.exists(FAST_STATE) else {}
@@ -573,6 +575,10 @@ def main():
         botd.run(okc, docs, now)
     except Exception as e:     # never costs the home page its Today feed
         print(f"  {botd.OUT}: not updated ({e})")
+    try:   # team only: the 3 Picks of the Day posted on TikTok (team/tpod.enc, encrypted)
+        tpod.run(okc, docs, now)
+    except Exception as e:
+        print(f"  3 picks of the day: not updated ({type(e).__name__}: {e})")
 
 
 if __name__ == "__main__":

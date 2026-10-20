@@ -111,11 +111,12 @@ footer p{margin:0;max-width:80ch}
 #app[data-cur="parlays"] [data-view]:not([data-view="parlays"]){display:none!important}
 #app[data-cur="spreads"] [data-view]:not([data-view="spreads"]){display:none!important}
 #app[data-cur="secret"] [data-view]:not([data-view="secret"]){display:none!important}
+#app[data-cur="tpod"] [data-view]:not([data-view="tpod"]){display:none!important}
 #app[data-cur="social"] [data-view]:not([data-view="social"]){display:none!important}
 #app[data-cur="sponsors"] [data-view]:not([data-view="sponsors"]){display:none!important}
 #app[data-cur="expenses"] [data-view]:not([data-view="expenses"]){display:none!important}
 #app[data-cur="affiliates"] [data-view]:not([data-view="affiliates"]){display:none!important}
-#app[data-cur="picks"] #tabs, #app[data-cur="parlays"] #tabs, #app[data-cur="spreads"] #tabs, #app[data-cur="secret"] #tabs, #app[data-cur="social"] #tabs, #app[data-cur="expenses"] #tabs, #app[data-cur="affiliates"] #tabs{display:none}
+#app[data-cur="picks"] #tabs, #app[data-cur="parlays"] #tabs, #app[data-cur="spreads"] #tabs, #app[data-cur="secret"] #tabs, #app[data-cur="tpod"] #tabs, #app[data-cur="social"] #tabs, #app[data-cur="expenses"] #tabs, #app[data-cur="affiliates"] #tabs{display:none}
 /* expenses (expenses.js) */
 .exform{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:10px;align-items:end}
 .exform label{display:grid;gap:4px;font-size:13px;color:var(--muted);min-width:0}
@@ -125,6 +126,12 @@ footer p{margin:0;max-width:80ch}
 #exMsg,#prMsg{font-size:14px;color:var(--accent);min-height:1.4em;margin:10px 0 0} #exMsg.bad,#prMsg.bad{color:var(--down)}
 .pl-cards{display:grid;gap:12px;margin-top:14px}
 .pl-card{border:1px solid var(--line);border-radius:12px;padding:12px 14px;background:rgba(255,255,255,.02)}
+/* 3 Picks of the Day */
+.tp-card h3{margin:0 0 4px;font-size:17px}
+.tp-card .tp-meta{color:var(--muted);font-size:13px}
+.tp-card ul{margin:8px 0 0;padding-left:18px;font-size:14px;color:var(--soft)}
+.tp-card ul li{margin:3px 0}
+.tp-copy textarea{width:100%;font:500 14px/1.5 var(--f-body);color:var(--fg);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:10px;resize:vertical}
 .pl-card header{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px}
 .pl-chips{display:flex;flex-wrap:wrap;gap:6px}
 .pl-chips span{font-size:12.5px;color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:2px 10px;white-space:nowrap}
@@ -332,6 +339,7 @@ details.plpast>summary:focus-visible{outline:2px solid var(--accent);outline-off
     <button role="tab" data-v="parlays">Parlays</button>
     <button role="tab" data-v="spreads">Spreads</button>
     <button role="tab" data-v="secret">Secret methods</button>
+    <button role="tab" data-v="tpod">3 Picks of the Day</button>
     <button role="tab" data-v="social">Social</button>
     <button role="tab" data-v="sponsors">Sponsors</button>
     <button role="tab" data-v="affiliates">Affiliates</button>
@@ -495,6 +503,25 @@ details.plpast>summary:focus-visible{outline:2px solid var(--accent);outline-off
     <div class="edwrap"><table class="edges pst"><thead><tr><th>Game</th><th>Pick</th><th class="n">Price</th><th class="n">Model</th><th class="n">Edge</th><th>Starts</th><th>Result</th></tr></thead><tbody id="sdToday"></tbody></table></div>
     <details class="plpast"><summary><span>Past picks</span><span class="label" id="sdPastN"></span></summary>
     <div class="edwrap"><table class="edges pst"><thead><tr><th>Day</th><th>Game</th><th>Pick</th><th class="n">Price</th><th class="n">Model</th><th>Final</th><th>Result</th><th class="n">Units</th></tr></thead><tbody id="sdRows"></tbody></table></div>
+    </details>
+  </section>
+
+  <section data-view="tpod" class="panel" id="tpPanel">
+    <div class="panel-h"><h2>3 Picks of the Day</h2><span class="label" id="tpUpd">Team only · for TikTok</span></div>
+    <p class="hint">Three picks a day from the Secret methods, made from 11 AM ET and never changed after: priced 35-65¢ (pays about 1.5x-2.9x), the model at 60%+ and 5+ points over the price, no injury news, a price that hasn't dropped, three different games. Plus one fun parlay paying about 3x. The script and caption never name a method.</p>
+    <div id="tpToday"><p class="empty">Loading…</p></div>
+    <div class="tp-copy" id="tpCopy" hidden>
+      <h3 class="subh">Video script</h3>
+      <textarea id="tpScript" rows="7" readonly></textarea>
+      <p><button class="btn" type="button" id="tpScriptBtn">Copy script</button></p>
+      <h3 class="subh">Caption</h3>
+      <textarea id="tpCaption" rows="6" readonly></textarea>
+      <p><button class="btn" type="button" id="tpCaptionBtn">Copy caption</button></p>
+    </div>
+    <h3 class="subh">Record</h3>
+    <div class="kpis" id="tpKpis"></div>
+    <details class="plpast"><summary><span>Past days</span><span class="label" id="tpPastN"></span></summary>
+    <div class="edwrap"><table class="edges pst"><thead><tr><th>Day</th><th>Picks</th><th>Fun parlay</th><th class="n">Units</th></tr></thead><tbody id="tpRows"></tbody></table></div>
     </details>
   </section>
 
@@ -761,7 +788,7 @@ details.plpast>summary:focus-visible{outline:2px solid var(--accent);outline-off
       snap = await load(pw);
       password = pw; store.set('psa-pw', pw);
       $('lock').hidden = true; $('app').hidden = false;
-      setRange(range); freshness(); loadHealth(); renderSpikes(); loadAgents(); loadEdges(pw); loadParlays(pw); loadParlays(pw, 'nb', 'parlays_nba.enc'); loadParlays(pw, 'nf', 'parlays_nfl.enc'); loadSpreads(pw);
+      setRange(range); freshness(); loadHealth(); renderSpikes(); loadAgents(); loadEdges(pw); loadParlays(pw); loadParlays(pw, 'nb', 'parlays_nba.enc'); loadParlays(pw, 'nf', 'parlays_nfl.enc'); loadSpreads(pw); loadTpod(pw);
       window.dispatchEvent(new CustomEvent('psa-unlock', {detail: {pw}}));   // expenses.js
       clearInterval(timer);
       timer = setInterval(refresh, 5*60*1000);
@@ -776,7 +803,7 @@ details.plpast>summary:focus-visible{outline:2px solid var(--accent);outline-off
   }
   async function refresh(){
     if (!password) return;
-    try { snap = await load(password); freshness(); render(); loadHealth(); renderSpikes(); loadAgents(); loadEdges(password); loadParlays(password); loadParlays(password, 'nb', 'parlays_nba.enc'); loadParlays(password, 'nf', 'parlays_nfl.enc'); loadSpreads(password); window.dispatchEvent(new Event('psa-refresh')); } catch(e){ if (e.code === 'wrong') lock(); }
+    try { snap = await load(password); freshness(); render(); loadHealth(); renderSpikes(); loadAgents(); loadEdges(password); loadParlays(password); loadParlays(password, 'nb', 'parlays_nba.enc'); loadParlays(password, 'nf', 'parlays_nfl.enc'); loadSpreads(password); loadTpod(password); window.dispatchEvent(new Event('psa-refresh')); } catch(e){ if (e.code === 'wrong') lock(); }
   }
   function lock(){
     password = null; snap = null; store.del('psa-pw'); clearInterval(timer);
@@ -1137,8 +1164,8 @@ details.plpast>summary:focus-visible{outline:2px solid var(--accent);outline-off
   });
 
 
-  // ---------- section menu: Overview / Audience / Sign-ups / Picks / Parlays / Spreads / Secret methods / Social / Sponsors ----------
-  const VIEWS = ['overview','audience','signups','picks','parlays','spreads','secret','social','sponsors','affiliates','expenses'];
+  // ---------- section menu: Overview / Audience / Sign-ups / Picks / Parlays / Spreads / Secret methods / 3 Picks / Social / Sponsors ----------
+  const VIEWS = ['overview','audience','signups','picks','parlays','spreads','secret','tpod','social','sponsors','affiliates','expenses'];
   function setView(v, push){
     if (!VIEWS.includes(v)) v = 'overview';
     $('app').dataset.cur = v;
@@ -1352,6 +1379,42 @@ details.plpast>summary:focus-visible{outline:2px solid var(--accent);outline-off
       if(d.gen) $('sdUpd').textContent='Team only · 1 unit a pick · updated '+new Date(d.gen).toLocaleString('en-US',{month:'short', day:'numeric', hour:'numeric', minute:'2-digit'});
     } catch(err){}
   }
+  // ---------- 3 Picks of the Day: team/tpod.enc (tpod.py, run by build_today.py), same password ----------
+  async function loadTpod(pw){
+    try {
+      const r=await fetch('tpod.enc?t='+Date.now(),{cache:'no-store'});
+      if(!r.ok && r.status!==404) return;
+      const d= r.ok? await decrypt(await r.text(), pw) : {days: []}, days=d.days||[];
+      const SPN={nba:'NBA', nfl:'NFL', nhl:'NHL', mlb:'MLB'}, RES={hit:'✅ Hit', miss:'❌ Miss', push:'Push', void:'Void'};
+      const today=new Date().toLocaleDateString('en-CA',{timeZone:'America/New_York'}), day=days.find(x=>x.date===today);
+      const when=s=>{ const t=Date.parse(s); return isFinite(t)? new Date(t).toLocaleTimeString('en-US',{hour:'numeric', minute:'2-digit'}) : ''; };
+      const bet=p=>`${esc(p.player)} ${esc(p.side)} ${esc(p.line)} ${esc(String(p.statText||p.stat).toLowerCase())}`;
+      const card=(p,i)=>`<article class="pl-card tp-card"><h3>${i+1}. ${bet(p)} ${p.res? '· '+(RES[p.res]||p.res) : ''}</h3>`+
+        `<div class="tp-meta">${esc(SPN[p.sport]||p.sport)} · ${esc(p.team)} vs ${esc(p.opp)} · ${when(p.start)} · <b>${Math.round(p.price*100)}¢, pays ${(1/p.price).toFixed(2)}x</b> · model ${Math.round(p.prob*100)}% <span class="chip">${esc(p.method||'')}</span></div>`+
+        `<ul>${(p.why||[]).map(w=>`<li>${esc(w)}</li>`).join('')}</ul></article>`;
+      const par=day&&day.parlay;
+      $('tpToday').innerHTML= !day||!(day.picks||[]).length ? `<p class="empty">No picks yet today. They're made from 11 AM ET once picks fit the Secret methods (60%+ by the model, 35-65¢).</p>` :
+        `<div class="pl-cards">${day.picks.map(card).join('')}</div>`+(day.picks.length<3? '<p class="empty" style="margin-top:8px">The rest are made as more picks qualify, until 7:30 PM ET.</p>' : '')+
+        (par? `<h3 class="subh">Fun parlay · pays ${(1/par.price).toFixed(2)}x${par.res? ' · '+(RES[par.res]||par.res) : ''}</h3><div class="pl-cards">${par.legs.map(card).join('')}</div>` : '');
+      $('tpCopy').hidden=!day; if(day){ $('tpScript').value=day.script||''; $('tpCaption').value=day.caption||''; }
+      const rec=d.record||{n:0}, prec=d.parlay_record||{n:0}, pc=v=>Math.round(v*100)+'%';
+      const done=days.flatMap(x=>x.picks||[]).filter(p=>p.res==='hit'||p.res==='miss'), staked=done.length;
+      $('tpKpis').innerHTML=[['Picks record', rec.n? `${rec.hit}-${rec.miss}` : '–', rec.n? pc(rec.hit/rec.n)+' hit' : 'starts after the first games'],
+        ['Picks profit', rec.n? (rec.units>=0?'+':'−')+Math.abs(rec.units).toFixed(2)+'u' : '–', staked? 'Return '+(rec.units>=0?'+':'−')+Math.abs(rec.units/staked*100).toFixed(1)+'%' : '1 unit a pick'],
+        ['Fun parlays', prec.n? `${prec.hit}-${prec.miss}` : '–', prec.n? pc(prec.hit/prec.n)+' hit' : ''],
+        ['Parlay profit', prec.n? (prec.units>=0?'+':'−')+Math.abs(prec.units).toFixed(2)+'u' : '–', '1 unit a parlay']]
+        .map(([k,v,sub])=>`<div class="kpi"><span class="label">${k}</span><span class="v sm">${v}</span><span class="s">${sub}</span></div>`).join('');
+      const past=days.filter(x=>x.date!==today).slice().reverse();
+      $('tpPastN').textContent= past.length? `${past.length} day${past.length===1?'':'s'}` : '';
+      const u=x=>(x.picks||[]).reduce((s,p)=>s+(p.res==='hit'? 1/p.price-1 : p.res==='miss'? -1 : 0),0)+((x.parlay&&x.parlay.units)||0);
+      $('tpRows').innerHTML= past.length? past.map(x=>`<tr><td>${esc(x.date)}</td><td>${(x.picks||[]).map(p=>bet(p)+' <small>'+(p.res? RES[p.res]||p.res : 'Pending')+'</small>').join('<br>')}</td>`+
+        `<td>${x.parlay? x.parlay.legs.map(bet).join(' + ')+' <small>'+(x.parlay.res? RES[x.parlay.res]||x.parlay.res : 'Pending')+'</small>' : '–'}</td><td class="n">${(v=>(v>=0?'+':'−')+Math.abs(v).toFixed(2))(u(x))}</td></tr>`).join('')
+        : '<tr class="ed-wait"><td colspan="4">The first day shows here tomorrow.</td></tr>';
+      if(d.gen) $('tpUpd').textContent='Team only · for TikTok · updated '+new Date(d.gen).toLocaleString('en-US',{month:'short', day:'numeric', hour:'numeric', minute:'2-digit'});
+    } catch(err){}
+  }
+  [['tpScriptBtn','tpScript'],['tpCaptionBtn','tpCaption']].forEach(([b,t])=>{ const el=$(b); if(el) el.addEventListener('click', async ()=>{
+    const ok=await copyText($(t).value, $(t)); el.textContent= ok? 'Copied' : 'Press Ctrl+C'; setTimeout(()=>{ el.textContent= b==='tpScriptBtn'? 'Copy script' : 'Copy caption'; }, 2000); }); });
   async function loadParlays(pw, P='pl', file='parlays.enc'){   // P: the panel's id prefix (pl NHL, nb NBA, nf NFL)
     try {
       const r=await fetch(file+'?t='+Date.now(),{cache:'no-store'});

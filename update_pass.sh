@@ -54,7 +54,7 @@ git add -A games best p 2>/dev/null || true
 for f in nba.html nba.json nba_stats.json nba_picks.json \
          nhl.html nhl.json nhl_stats.json nhl_picks.json \
          mlb.html mlb.json mlb_stats.json mlb_picks.json today.json botd.json posted.json top_cache.json health.json fast_hist.json \
-         team/stats.enc team/edges.enc team/parlays.enc team/parlays_nba.enc team/parlays_nfl.enc team/spreads.enc spread_scores.json nba_picks_recent.json nhl_picks_recent.json mlb_picks_recent.json search.json; do
+         team/stats.enc team/edges.enc team/parlays.enc team/parlays_nba.enc team/parlays_nfl.enc team/spreads.enc spread_scores.json team/tpod.enc nba_picks_recent.json nhl_picks_recent.json mlb_picks_recent.json search.json; do
   git add "$f" 2>/dev/null || true
 done
 if git diff --cached --quiet; then
