@@ -22,6 +22,7 @@
   const today = () => new Date().toLocaleDateString('en-CA');
 
   let pw = null, data = {v: 1, items: []}, sha = null, loaded = false, busy = false, login = null;
+  let editing = null;   // {kind: 'item' | 'rec', id} while the form edits a saved entry
 
   // ---------- crypto (OpenSSL-compatible) ----------
   async function keyIv(pass, salt){
@@ -114,6 +115,33 @@
     sel.innerHTML = CATS[type].map(c => `<option>${esc(c)}</option>`).join('');
     if (CATS[type].includes(keep)) sel.value = keep;
   }
+  // A select gets a value even when it isn't one of its options (an entry saved with an older name).
+  function setSel(sel, v){
+    if (v && ![...sel.options].some(o => o.value === v)) sel.insertAdjacentHTML('beforeend', `<option>${esc(v)}</option>`);
+    if (v) sel.value = v;
+  }
+  // ---- editing: the form above loads a saved entry; Save changes replaces it, keeping its id ----
+  function startEdit(kind, id){
+    const e = kind === 'rec' ? (data.recurring || []).find(r => r.id === id) : (data.items || []).find(i => i.id === id);
+    if (!e) { msg('That entry is gone: someone may have deleted it.', true); return; }
+    editing = {kind, id};
+    $('exDate').value = (kind === 'rec' ? e.start : e.date) || today();
+    $('exType').value = e.type; fillCats(); setSel($('exCat'), e.cat);
+    $('exDesc').value = e.desc || ''; $('exAmt').value = (+e.amount || 0).toFixed(2);
+    $('exBy').innerHTML = WHO.map(w => `<option>${esc(w)}</option>`).join(''); setSel($('exBy'), e.by);
+    $('exRep').value = kind === 'rec' ? e.freq : ''; $('exRep').disabled = kind !== 'rec';
+    $('exHead').textContent = kind === 'rec' ? 'Edit a repeating charge' : 'Edit an entry';
+    $('exSave').textContent = 'Save changes'; $('exCancel').hidden = false;
+    msg(kind === 'rec' ? 'Changes apply to every time it was counted, past ones too. To change only future charges, Stop it and add a new one.' : '');
+    $('exPanel').scrollIntoView({behavior: 'smooth', block: 'start'}); $('exDesc').focus({preventScroll: true});
+  }
+  function endEdit(){
+    editing = null;
+    $('exHead').textContent = 'Add an expense or money in';
+    $('exSave').textContent = 'Save'; $('exCancel').hidden = true; $('exRep').disabled = false;
+    $('exDate').value = today(); $('exDesc').value = ''; $('exAmt').value = ''; $('exRep').value = '';
+    $('exBy').innerHTML = WHO.map(w => `<option>${esc(w)}</option>`).join(''); fillCats();
+  }
   function render(){
     if (!$('exPanel')) return;
     const items = allItems().sort((a, b) => (b.date || '').localeCompare(a.date || '') || (b.added || 0) - (a.added || 0));
@@ -135,13 +163,13 @@
     $('exRows').innerHTML = items.length ? items.map(i =>
       `<tr><td>${esc(i.date)}</td><td>${esc(i.desc)}<small>${esc(i.cat)}${i.by ? ' · ' + esc(i.by) : ''}</small></td>` +
       `<td class="n ${i.type === 'income' ? 'up' : ''}">${i.type === 'income' ? '+' : '−'}${money(+i.amount || 0).replace('−', '')}</td>` +
-      `<td>${i.rid ? `<small class="exrep" title="A repeating charge: stop it in Repeating charges above">\u21bb ${esc(FREQ[(data.recurring.find(r => r.id === i.rid) || {}).freq] || 'repeats')}</small>` : `<button type="button" class="ghost exdel" data-id="${esc(i.id)}" aria-label="Delete ${esc(i.desc)}">Delete</button>`}</td></tr>`).join('')
+      `<td>${i.rid ? `<small class="exrep" title="A repeating charge: stop it in Repeating charges above">\u21bb ${esc(FREQ[(data.recurring.find(r => r.id === i.rid) || {}).freq] || 'repeats')}</small>` : `<span class="exacts"><button type="button" class="ghost exedit" data-id="${esc(i.id)}" aria-label="Edit ${esc(i.desc)}">Edit</button><button type="button" class="ghost exdel" data-id="${esc(i.id)}" aria-label="Delete ${esc(i.desc)}">Delete</button></span>`}</td></tr>`).join('')
       : `<tr><td colspan="4" class="empty">${loaded ? 'Nothing recorded yet. Add the first entry above.' : 'Loading…'}</td></tr>`;
     const rec = (data.recurring || []).slice().sort((a, b) => (a.end ? 1 : 0) - (b.end ? 1 : 0) || a.desc.localeCompare(b.desc));
     $('exRecWrap').hidden = !rec.length;
     $('exRec').innerHTML = rec.map(r => { const nx = upcoming(r), n = occurrences(r, today()).length;
       return `<li class="row"><span class="name">${esc(r.desc)} <small>${esc(r.cat)} · ${money(+r.amount || 0)} ${esc(FREQ[r.freq] || '')} since ${esc(r.start)}${r.end ? ' · stopped ' + esc(r.end) : nx ? ' · next ' + esc(nx) : ''}</small></span>` +
-        `<span class="pct">${n}\u00d7</span><span class="n">${r.end ? '' : `<button type="button" class="ghost exstop" data-id="${esc(r.id)}">Stop</button> `}<button type="button" class="ghost exrdel" data-id="${esc(r.id)}" title="Remove it and every time it was counted">Delete</button></span></li>`; }).join('');
+        `<span class="pct">${n}\u00d7</span><span class="n"><button type="button" class="ghost exredit" data-id="${esc(r.id)}">Edit</button> ${r.end ? '' : `<button type="button" class="ghost exstop" data-id="${esc(r.id)}">Stop</button> `}<button type="button" class="ghost exrdel" data-id="${esc(r.id)}" title="Remove it and every time it was counted">Delete</button></span></li>`; }).join('');
     const t = token();
     $('exConn').innerHTML = t
       ? `Saving as <b>${esc(login || 'your GitHub account')}</b> on this device. <button type="button" class="ghost" id="exDisc">Disconnect</button>`
@@ -182,6 +210,22 @@
       if (!desc) { msg('Add a short description.', true); return; }
       const item = {id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), date: $('exDate').value || today(),
                     type: $('exType').value, cat: $('exCat').value, desc, amount, by: $('exBy').value, added: Date.now()};
+      if (editing){   // replace the saved entry, keeping its id and when it was first added
+        const {kind, id} = editing, fields = {type: item.type, cat: item.cat, desc, amount, by: item.by, edited: Date.now()};
+        let found = false;
+        change(doc => {
+          if (kind === 'rec') {
+            const freq = $('exRep').value || 'monthly';
+            doc.recurring = (doc.recurring || []).map(r => r.id === id ? (found = true, Object.assign({}, r, fields, {start: item.date, freq})) : r);
+          } else doc.items = (doc.items || []).map(i => i.id === id ? (found = true, Object.assign({}, i, fields, {date: item.date})) : i);
+          return doc;
+        }).then(() => {
+          if ($('exMsg').classList.contains('bad')) return;
+          if (!found) { msg('That entry is gone: someone may have deleted it. Nothing was changed.', true); return; }
+          endEdit(); msg('Changes saved. Your teammate sees them on their next refresh.');
+        });
+        return;
+      }
       const freq = $('exRep').value;
       if (freq){   // a repeating charge: saved once, counted on each date it falls on
         const r = {id: item.id, start: item.date, freq, type: item.type, cat: item.cat, desc, amount, by: item.by, added: item.added, end: null};
@@ -190,13 +234,17 @@
       }
       change(doc => { (doc.items = doc.items || []).push(item); return doc; }).then(() => { if (!$('exMsg').classList.contains('bad')) { $('exDesc').value = ''; $('exAmt').value = ''; } });
     });
+    $('exCancel').addEventListener('click', () => { endEdit(); msg(''); });
     $('exRows').addEventListener('click', e => {
+      const ed = e.target.closest('.exedit'); if (ed) { startEdit('item', ed.dataset.id); return; }
       const b = e.target.closest('.exdel'); if (!b) return;
       if (b.dataset.sure !== '1') { b.dataset.sure = '1'; b.textContent = 'Sure?'; setTimeout(() => { if (b.isConnected) { b.dataset.sure = ''; b.textContent = 'Delete'; } }, 3000); return; }
       const id = b.dataset.id;
+      if (editing && editing.id === id) endEdit();
       change(doc => { doc.items = (doc.items || []).filter(i => i.id !== id); return doc; });
     });
     $('exRec').addEventListener('click', e => {
+      const ed = e.target.closest('.exredit'); if (ed) { startEdit('rec', ed.dataset.id); return; }
       const b = e.target.closest('.exstop, .exrdel'); if (!b) return;
       if (b.dataset.sure !== '1') { b.dataset.sure = '1'; b.dataset.was = b.textContent; b.textContent = 'Sure?'; setTimeout(() => { if (b.isConnected) { b.dataset.sure = ''; b.textContent = b.dataset.was; } }, 3000); return; }
       const id = b.dataset.id, stop = b.classList.contains('exstop');

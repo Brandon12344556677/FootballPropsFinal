@@ -151,6 +151,8 @@ footer p{margin:0;max-width:80ch}
 .extbl td{padding:8px;border-bottom:1px solid var(--line);vertical-align:top}
 .extbl td small{display:block;color:var(--muted);font-size:12.5px}
 .extbl td small.exrep{display:inline;white-space:nowrap}
+.exacts{display:inline-flex;gap:6px;white-space:nowrap}
+.exbtns{display:flex;gap:8px;flex-wrap:wrap}
 #exRec .row{grid-template-columns:minmax(0,1fr) auto auto}
 #exRec .name small{display:block;color:var(--muted);font-size:12.5px;white-space:normal}
 .extbl .n{text-align:right;font-weight:600;white-space:nowrap}
@@ -377,7 +379,7 @@ footer p{margin:0;max-width:80ch}
 
   <section data-view="expenses" class="kpis" id="exKpis" aria-label="Money totals"></section>
   <section data-view="expenses" class="panel" id="exPanel">
-    <div class="panel-h"><h2>Add an expense or money in</h2><span class="label">Shared with the team</span></div>
+    <div class="panel-h"><h2 id="exHead">Add an expense or money in</h2><span class="label">Shared with the team</span></div>
     <form class="exform" id="exForm" autocomplete="off">
       <label>Date<input type="date" id="exDate" required></label>
       <label>Type<select id="exType"><option value="expense">Expense</option><option value="income">Money in</option></select></label>
@@ -386,7 +388,7 @@ footer p{margin:0;max-width:80ch}
       <label>Amount ($)<input id="exAmt" inputmode="decimal" placeholder="0.00"></label>
       <label>Paid by / from<select id="exBy"></select></label>
       <label>Repeats<select id="exRep"><option value="">Doesn't repeat</option><option value="daily">Every day</option><option value="weekly">Every week</option><option value="monthly">Every month</option><option value="yearly">Every year</option></select></label>
-      <div><button class="btn" type="submit">Save</button></div>
+      <div class="exbtns"><button class="btn" type="submit" id="exSave">Save</button><button class="btn ghost-btn" type="button" id="exCancel" hidden>Cancel</button></div>
     </form>
     <p id="exMsg" role="status"></p>
     <div id="exRecWrap" hidden>
@@ -1726,7 +1728,7 @@ footer p{margin:0;max-width:80ch}
 })();
 </script>
 <script src="ads.js?v=20261013a"></script>
-<script src="expenses.js?v=20261015a"></script>
+<script src="expenses.js?v=20261020a"></script>
 <script src="rules.js?v=20261015a"></script>
 <script src="parlaylive.js?v=20261020a"></script>
 </body>
