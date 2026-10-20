@@ -19,7 +19,7 @@ README.md has the full feature tour; this file is the working rules.
   `site_checks.py` (own daily workflow: search basics, keeps a "Site checks" GitHub issue).
   Polymarket and Kalshi links are plain links (no referral codes) since Oct 13, 2026.
   `dashboard_check.py` (in watchdog.yml, every 30 min: the team dashboard's page, encrypted numbers, edge tracker; "Team dashboard" issue).
-  Private edge-tracker strategies live encrypted in `rules.enc` on `team-data` (dashboard panel `team/rules.js`, read by `edge_report.py` load_private); never put them back in the public code.
+  Private edge-tracker strategies live encrypted in `rules.enc` on `team-data` (the dashboard's Secret methods tab, `team/rules.js`: the rules, their record from the edge tracker, and today's upcoming picks that fit each; read by `edge_report.py` load_private and rule_test, which also filter on list, model edge, positions, a price drop since the first price, and a start day); never put them back in the public code.
   `parlay.py` → `team/parlays.enc` (team only, never public): three parlays a day from 11 AM ET (no shared players; legs only from `TEST_PARLAY_SPORTS`, NHL only for now; Polymarket prices only), each 35-55% by the model, one per payout band (3-3.5x, 3.5-4x, 4-4.5x),
   plus separate NBA and NFL tracks with the same rules, each with its own three a day and record (`team/parlays_nba.enc`, `team/parlays_nfl.enc`) (all three in the dashboard's Parlays tab, with a summary of every set and each payout band; each set also has its own edge-tracker row),
   frozen once made, graded from the legs' picks; the edge tracker's "parlays" row and the dashboard's Model parlays panel read it; `team/parlaylive.js` tracks today's legs live in that panel from ESPN box scores (browser-side, display only).
@@ -31,7 +31,7 @@ README.md has the full feature tour; this file is the working rules.
 - `team_stats.py` → `team/stats.enc`: GoatCounter visitor totals (and traffic spikes), encrypted with the
   `TEAM_DASH_PASSWORD` secret, for the password-protected team dashboard `team/index.html`
   (hand-written, noindex, not in the sitemap). Totals only — no IPs or per-visitor data.
-  The dashboard is split into tabs (Overview, Audience, Sign-ups, Picks & edges, Parlays, Spreads, Social, Sponsors, Affiliates, Expenses: each panel has
+  The dashboard is split into tabs (Overview, Audience, Sign-ups, Picks & edges, Parlays, Spreads, Secret methods, Social, Sponsors, Affiliates, Expenses: each panel has
   `data-view`). `app.js` feeds it anonymous GoatCounter events, `time/<range>`, `click/<what>/<page>`, `view/<n>`, `visitor/new|returning`
   (the visitor's n-th page today: page views and unique visitors) and `ref/<code>/visit|new`; their labels are mirrored in `team_stats.py`
   (TIME_RANGES, CLICK_RE, VIEW_RE, REF_RE) and `team/index.html`. `view/<n>` and `ref/` are disclosed in privacy.html and cookies.html.

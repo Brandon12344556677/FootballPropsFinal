@@ -99,5 +99,29 @@ class PickOfTheDay(unittest.TestCase):
         self.assertEqual(E.botd_rows(None), [])
 
 
+class PrivateRuleFilterTest(unittest.TestCase):
+    def pick(self, **kw):
+        p = {"sport": "nhl", "side": "under", "stat": "a", "line": 0.5, "pr": 0.60, "lists": "V", "p0": 0.61, "prob": 0.75, "pos": "D"}
+        p.update(kw)
+        return p
+
+    def test_list_edge_positions_and_price_drop(self):
+        t = E.rule_test({"sport": "nhl", "side": "under", "stat": "a", "list": "V", "drop": 3,
+                                   "emin": 10, "emax": 30, "xpos": "C, "})
+        self.assertTrue(t(self.pick()))
+        self.assertFalse(t(self.pick(lists="T")))              # not a Value spot
+        self.assertFalse(t(self.pick(pos="C")))                # centers left out
+        self.assertFalse(t(self.pick(prob=0.66)))              # model only 6 points over the price
+        self.assertFalse(t(self.pick(prob=0.95)))              # 35 points: over emax
+        self.assertFalse(t(self.pick(p0=0.64)))                # the price fell 4c from its first price
+        self.assertFalse(t(self.pick(pr=0.44, p0=0.47)))       # exactly 3c (0.44 - 0.47 is -2.999... in floats)
+        self.assertTrue(t(self.pick(p0=0.62)))                 # 2c: kept
+        self.assertTrue(t(self.pick(p0=None)))                 # no first price recorded: kept
+        dated = E.rule_test({"sport": "nhl", "since": "2026-10-20"})
+        self.assertFalse(dated(self.pick(day="2026-10-19")))   # before the rule was added: not counted
+        self.assertTrue(dated(self.pick(day="2026-10-20")))
+        self.assertTrue(E.rule_test({"sport": "nhl"})(self.pick(prob=None, p0=None, pos=None, lists="")))
+
+
 if __name__ == "__main__":
     unittest.main()
