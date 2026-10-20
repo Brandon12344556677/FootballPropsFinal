@@ -90,13 +90,19 @@ class TpodTest(unittest.TestCase):
         self.assertIn("Now the reach parlay. It's 2 legs paying about", text)
         self.assertIn("Day 1: my top pick + a reach parlay", cap)
         self.assertIn("Player 1, no assists, paying about 1.8 times your money", text)
-        text, cap = tpod.script({"picks": day["picks"]}, {"n": 10, "hit": 6, "miss": 4, "units": 1.5}, "2026-10-20",
-                                {"n": 3, "hit": 1, "miss": 2, "units": -0.2}, day_no=5)
-        self.assertIn("So far in this series the picks are 6 and 4 and the reach parlays are 1 and 2, and we're up 1.3 units.", text)
-        self.assertIn("Series: +1.3 units | picks 6-4 | parlays 1-2", cap)
-        text, cap = tpod.script({"picks": day["picks"]}, {"n": 2, "hit": 0, "miss": 2, "units": -2.0}, "2026-10-20")
-        self.assertIn("we're down 2.0 units.", text)
-        self.assertNotIn("series", tpod.script({"picks": day["picks"]}, {"n": 0}, "2026-10-20")[0])   # day 1: no record yet
+        yday = {"date": "2026-10-19", "picks": [dict(cand("a", "ga", 0.7, 0.5), res="hit"), dict(cand("b", "gb", 0.7, 0.5), res="hit"),
+                                                dict(cand("c", "gc", 0.7, 0.5), res="miss")],
+                "parlay": {"res": "miss", "units": -1.0, "legs": []}}
+        last = tpod.last_day([yday])
+        self.assertEqual(last, ("2026-10-19", 2, 4, 0.0))                               # +1 +1 -1, parlay -1
+        text, cap = tpod.script({"picks": day["picks"]}, {"n": 10, "hit": 6, "miss": 4, "units": 4.3}, "2026-10-20",
+                                {"n": 3, "hit": 1, "miss": 2, "units": 1.0}, day_no=5, last=("2026-10-19", 3, 4, 2.0))
+        self.assertIn("for the day. Yesterday we went 3 for 4, which is +2 units, bringing the series total to +5.3 units.", text)
+        self.assertIn("Yesterday: 3/4 (+2 units) | Series: +5.3 units", cap)
+        text, _ = tpod.script({"picks": day["picks"]}, {"n": 2, "hit": 0, "miss": 2, "units": -2.0}, "2026-10-20",
+                              last=("2026-10-17", 0, 2, -2.0))
+        self.assertIn("On Saturday we went 0 for 2, which is -2 units, bringing the series total to -2 units.", text)
+        self.assertNotIn("we went", tpod.script({"picks": day["picks"]}, {"n": 0}, "2026-10-20")[0])   # day 1: nothing yet
         self.assertIn("18+", cap)
 
 

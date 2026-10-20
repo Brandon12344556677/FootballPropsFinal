@@ -244,8 +244,30 @@ def grade_parlay(par, index, now):
             par["res"], par["units"], par["paid"] = "hit", round(1 / q - 1, 3), round(q, 4)
 
 
-def script(day, rec, date, prec=None, day_no=1):
-    """What to say on camera, and the caption. day_no: which day of the series this is (day 1 = the first)."""
+def last_day(past):
+    """(date, won, graded, units) of the latest earlier day with a graded pick or parlay, or None."""
+    for d in sorted(past, key=lambda x: x["date"], reverse=True):
+        bets = [p for p in d.get("picks") or [] if p.get("res") in ("hit", "miss")]
+        par = d.get("parlay") or {}
+        units = sum((1 / p["price"] - 1) if p["res"] == "hit" else -1.0 for p in bets)
+        won = sum(1 for p in bets if p["res"] == "hit")
+        if par.get("res") in ("hit", "miss"):
+            bets.append(par)
+            won += par["res"] == "hit"
+            units += par.get("units") or 0.0
+        if bets:
+            return d["date"], won, len(bets), units
+    return None
+
+
+def units_said(u):
+    """+2 units / -1.5 units, as read out."""
+    return f"{u:+.1f}".replace(".0", "") + (" unit" if abs(round(u, 1)) == 1 else " units")
+
+
+def script(day, rec, date, prec=None, day_no=1, last=None):
+    """What to say on camera, and the caption. day_no: which day of the series this is (day 1 = the first);
+    last: last_day() of the earlier days, for "Yesterday we went 2 for 4, which is +2 units..."."""
     d = datetime.date.fromisoformat(date)
     picks = day.get("picks") or []
     par = day.get("parlay")
@@ -259,15 +281,12 @@ def script(day, rec, date, prec=None, day_no=1):
         lines.append(f"Now the reach parlay. It's {len(par['legs'])} legs paying about {1 / par['price']:.1f} times your money: "
                      f"{legs}. It's a reach, so keep it small.")   # no model % here: the model runs hot on parlays
     prec = prec or {"n": 0, "units": 0.0}
-    if rec["n"] or prec["n"]:   # the series so far: the picks and the reach parlays together, 1 unit each
-        total = rec.get("units", 0.0) + prec.get("units", 0.0)
-        bits = []
-        if rec["n"]:
-            bits.append(f"the picks are {rec['hit']} and {rec['miss']}")
-        if prec["n"]:
-            bits.append(f"the reach parlays are {prec['hit']} and {prec['miss']}")
-        lines.append("So far in this series " + " and ".join(bits) + ", and we're "
-                     + (f"up {total:.1f} units." if total >= 0 else f"down {-total:.1f} units."))
+    total = rec.get("units", 0.0) + prec.get("units", 0.0)   # the series: picks and reach parlays, 1 unit each
+    if last:   # right after the intro: how the last day went and where the series stands
+        when = ("Yesterday" if (d - datetime.date.fromisoformat(last[0])).days == 1
+                else "On " + datetime.date.fromisoformat(last[0]).strftime("%A"))
+        lines.insert(1, f"{when} we went {last[1]} for {last[2]}, which is {units_said(last[3])}, "
+                        f"bringing the series total to {units_said(total)}.")
     lines.append("Follow for three picks every day. Eighteen and over only, this is for entertainment, not betting advice.")
     cap = [f"Day {day_no}: {top}" + (" + a reach parlay" if par else "") + f" ({d.strftime('%b')} {d.day})"]
     for i, p in enumerate(picks):
@@ -275,10 +294,10 @@ def script(day, rec, date, prec=None, day_no=1):
     if par:
         cap.append(f"Reach parlay ({1 / par['price']:.2f}x): " + " + ".join(
             f"{p['player']} {p['side']} {p['line']:g} {(p.get('statText') or p['stat']).lower()}" for p in par["legs"]))
-    if rec["n"] or prec["n"]:
-        cap.append(f"Series: {rec.get('units', 0.0) + prec.get('units', 0.0):+.1f} units"
-                   + (f" | picks {rec['hit']}-{rec['miss']}" if rec["n"] else "")
-                   + (f" | parlays {prec['hit']}-{prec['miss']}" if prec["n"] else ""))
+    if last:
+        cap.append(("Yesterday" if (d - datetime.date.fromisoformat(last[0])).days == 1 else
+                    datetime.date.fromisoformat(last[0]).strftime("%A")) + f": {last[1]}/{last[2]} ({units_said(last[3])})"
+                   + f" | Series: {units_said(total)}")
     cap.append("18+ | For entertainment, not betting advice")
     return " ".join(lines), "\n".join(cap)
 
@@ -313,7 +332,7 @@ def update(state, cands, docs, methods, now):
     if day is not None:
         past = [d for d in days if d["date"] < today]
         day_no = 1 + sum(1 for d in past if d.get("picks"))   # the series counts days with picks
-        day["script"], day["caption"] = script(day, record(past), today, parlay_record(past), day_no)
+        day["script"], day["caption"] = script(day, record(past), today, parlay_record(past), day_no, last_day(past))
     return json.dumps(days, sort_keys=True) != before
 
 
