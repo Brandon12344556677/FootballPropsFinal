@@ -1269,8 +1269,12 @@ tr.sm-skip td:last-child{opacity:1}
         const up=a>b; return ` <span class="arw ${up?'up':'down'}" title="${up?'Up':'Down'} from ${esc(String(b))}${day? ' before the '+esc(day)+' results' : ''}">${up?'▲':'▼'}</span>`; };
       const pctShown=v=>Math.round(v*1000)/10, hitShown=v=>Math.round(v*100);
       // private strategies (rules.enc, keys "private-...") show in the Secret methods tab, the rest here
-      const isPriv=s=>String(s.key||'').startsWith('private'), rowHtml=s=> !s.n ? `<tr class="ed-wait"><td>${esc(s.label)}</td><td class="n">0</td><td class="n" colspan="4">fills in once its games are graded</td><td><span class="chip">${esc(s.verdict||'Waiting')}</span></td></tr>` :
-        `<tr><td>${esc(s.label)}</td><td class="n">${fmt(s.n)}${arw(s.n, s.prev&&s.prev.n, v=>v, s.prev_day)}</td><td class="n">${Math.round(s.hit*100)}%${arw(s.hit, s.prev&&s.prev.hit, hitShown, s.prev_day)}</td>`+
+      const isPriv=s=>s.private || String(s.key||'').startsWith('private');
+      const day=d=>new Date(d+'T12:00:00').toLocaleDateString('en-US',{month:'short', day:'numeric'});
+      // a private rule's start day and its record on the picks before it (what it was found on), under its name
+      const sub=s=>!s.since? '' : `<br><small>Tracking since ${day(s.since)}`+(s.past? ` · before that: ${p(s.past.roi)} on ${fmt(s.past.n)} picks (found on these, so not proof)` : '')+'</small>';
+      const rowHtml=s=> !s.n ? `<tr class="ed-wait"><td>${esc(s.label)}${sub(s)}</td><td class="n">0</td><td class="n" colspan="4">fills in once its games are graded</td><td><span class="chip">${esc(s.verdict||'Waiting')}</span></td></tr>` :
+        `<tr><td>${esc(s.label)}${sub(s)}</td><td class="n">${fmt(s.n)}${arw(s.n, s.prev&&s.prev.n, v=>v, s.prev_day)}</td><td class="n">${Math.round(s.hit*100)}%${arw(s.hit, s.prev&&s.prev.hit, hitShown, s.prev_day)}</td>`+
         `<td class="n ${cls(s.roi)}"><b>${p(s.roi)}</b>${arw(s.roi, s.prev&&s.prev.roi, pctShown, s.prev_day)}</td><td class="n">${p(s.lo)} to ${p(s.hi)}</td><td class="n ${cls(s.roi7)}">${p(s.roi7)}${arw(s.roi7, s.prev&&s.prev.roi7, pctShown, s.prev_day)}${s.n7? ' <small>('+s.n7+')</small>' : ''}</td>`+
         `<td><span class="chip ${s.verdict==='Edge holding'?'do':s.verdict==='Losing'?'bad':''}">${esc(s.verdict)}</span></td></tr>`;
       $('edRows').innerHTML=(e.strategies||[]).filter(s=>!isPriv(s)).map(rowHtml).join('');
