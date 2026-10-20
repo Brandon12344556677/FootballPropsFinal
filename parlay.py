@@ -3,8 +3,8 @@ Prop Streak Lab — the model parlays: three a day, one in each payout band (3-3
 the stake), each a parlay the model gives 35-55% that the market prices well below that, for the team
 only (never on the public site).
 
-Two separate tracks, each with these rules and its own three a day and record (TRACKS): NHL in
-team/parlays.enc and NBA in team/parlays_nba.enc. Legs come from the upcoming recorded picks of the
+Separate tracks, each with these rules and its own three a day and record (TRACKS): NHL in
+team/parlays.enc, NBA in team/parlays_nba.enc and NFL in team/parlays_nfl.enc. Legs come from the upcoming recorded picks of the
 track's sports, priced on Polymarket only (the pick's "pp", with $25+ offered there; Kalshi prices are not used):
 a live price with enough money behind it (not thin), no injury hold, not locked, 6+ effective games of history, and a model
 chance at least 3 points above the price. Each game has to start today (ET) and at least 45 minutes
@@ -24,7 +24,7 @@ the day, the open legs are dropped too. A win pays 1/price - 1 units, where pric
 of the winning legs' recorded prices (a flat 1-unit parlay at fair prices; a book's parlay price
 for linked legs can be lower). edge_report.py grades it in the edge tracker.
 
-State and output: each track's file (team/parlays.enc, team/parlays_nba.enc), encrypted with
+State and output: each track's file (team/parlays.enc, team/parlays_nba.enc, team/parlays_nfl.enc), encrypted with
 TEAM_DASH_PASSWORD like team/edges.enc, rewritten only on a change. Without the password it does nothing. Standard library only; never fails the deploy.
 """
 import datetime
@@ -45,9 +45,10 @@ FILES = [("nfl", "picks.json"), ("nba", "nba_picks.json"), ("nhl", "nhl_picks.js
 # sport back here to use it again; every file in FILES is still read so older legs keep grading.
 TEST_PARLAY_SPORTS = {"nhl"}
 OUT_NBA = os.path.join("team", "parlays_nba.enc")
+OUT_NFL = os.path.join("team", "parlays_nfl.enc")
 # (name, sports, file): each track makes its own three a day and keeps its own record. NBA added
-# Oct 20, 2026 to see how the same rules do there; it never changes the NHL track.
-TRACKS = [("nhl", TEST_PARLAY_SPORTS, OUT), ("nba", {"nba"}, OUT_NBA)]
+# Oct 20, 2026 to see how the same rules do there, and NFL the same day (tracking only); neither changes the NHL track.
+TRACKS = [("nhl", TEST_PARLAY_SPORTS, OUT), ("nba", {"nba"}, OUT_NBA), ("nfl", {"nfl"}, OUT_NFL)]
 OPEN_AT = (11, 0)          # ET: first try
 CLOSE_AT = (19, 30)        # ET: still none -> no parlay today
 LEAD_MIN = 45              # every leg's game starts at least this long after the parlay is made
