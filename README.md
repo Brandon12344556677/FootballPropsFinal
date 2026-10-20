@@ -147,6 +147,7 @@ group" button links to the Prop Streak Lab squad, also without a referral tag.
 | `today.json` | The home page's cross-sport **Today** feed (the best upcoming value spots, at most 3 per sport up top, each linking to its prop) and the season records on the sport tiles. |
 | `botd.py` | **Pick of the Day** for the home page (renamed from "Bet of the Day", its Lock now "Safe Pick", for Meta ad review), run by `build_today.py`: a **Safe Pick** (`lock` in the data) (Polymarket price 90–96¢ and a model chance of 90%+: 135 of 138 graded picks like that hit) and a **Value Shot** (price 30–50¢, so 2x or more, and a model chance of 70–80%), from every sport's upcoming picks. Picked from 11 AM ET, never swapped once posted, "No bet today" if nothing qualifies by 7:30 PM ET. Skips players the news flags (injury status, limited practice, not in a posted lineup) and props with under 6 effective games. Graded from each sport's own picks file; a DNP is a void. |
 | `botd.json` | Every Bet of the Day ever posted (that's the record), its results, the running record per slot, and how picks inside each slot's price/chance window have done on the whole graded record (the "picks like this" rate the home page quotes). |
+| `tiktok_post.py` | Once a day (its own workflow, `tiktok.yml`): three short videos and one photo carousel from today's picks, sent to the TikTok inbox as drafts to post from the app. See *Daily TikTok drafts* below. |
 | `post_daily.py` | Once a day, posts yesterday's Value results and today's best value (with links) to Discord and/or Telegram, and emails it (with Bet of the Day) to the daily picks list through Buttondown (`BUTTONDOWN_API_KEY`). Needs the secrets below; does nothing without them. |
 | `health.py` | Last in every run (every 10 minutes): reads every step's log for a data source that failed (`skipped (…)`), a builder that crashed, a stale data file or picks stuck ungraded, and keeps `health.json`. A problem that lasts 18 runs in a row (~3 hours) turns the run red, so GitHub emails you (then at most once a day while it lasts). The site still deploys either way. |
 | `news.py` | Pre-game news in **test mode**, used by the NFL, NBA and MLB builders: ESPN injury reports, MLB's posted lineups, and Open-Meteo forecasts at outdoor NFL stadiums and MLB parks. It's recorded on each pending pick (`nw`) with `p2`, the chance the pick would have with the news at the strength the backtest found. It changes no chance or list. Each build logs `news test: ...` lines, including how `p2` compares with the live chance on graded picks. A feed that can't be reached records nothing. |
@@ -220,6 +221,33 @@ New repository secret**:
 
 To test right away: **Actions → Update NFL data → Run workflow**, set *post* to `1`.
 `python post_daily.py --dry-run` prints the message without sending it.
+
+## Daily TikTok drafts (optional)
+Every day after 11 AM ET, `.github/workflows/tiktok.yml` puts three short videos and one photo
+carousel in the @propstreaklab TikTok inbox as drafts. Open TikTok, add a sound, paste the caption
+from the team dashboard's Social tab and post. The videos follow the sports playing that day and
+rotate between value spots, hit streaks and the season record, so every sport and kind of fan gets
+a turn. TikTok holds about 5 drafts at a time, so post or delete each day's drafts the same day.
+
+One-time setup (steps 1–3 were done on Oct 20, 2026):
+1. developers.tiktok.com: organization **Prop Streak Lab**, app **Prop Streak Lab** (type Other) with
+   **Login Kit** (redirect URI `https://propstreaklab.com/tiktok/callback.html`) and **Content Posting API**
+   (Upload to TikTok only; Direct Post off). Scopes `user.info.basic` and `video.upload`.
+2. propstreaklab.com is verified as a domain property by DNS: two `tiktok-developers-site-verification`
+   TXT records on Namecheap, one for Production and one for the Sandbox. Leave them in place: TikTok pulls
+   the carousel images from the verified domain.
+3. The app runs from its Sandbox, **Daily drafts**, with @propstreaklab as the target user. Production
+   needs TikTok's review, which asks for a screen recording of the flow working; until then the Sandbox
+   works for our own account.
+4. Save the **Sandbox's** Client key and Client secret as the repository secrets `TIKTOK_CLIENT_KEY` and
+   `TIKTOK_CLIENT_SECRET`, run `TIKTOK_CLIENT_KEY=... TIKTOK_CLIENT_SECRET=... python tiktok_auth.py` on your
+   computer, and save the refresh token it prints as `TIKTOK_REFRESH_TOKEN`. It lasts a year; the dashboard
+   says when to redo it. After switching to Production, redo this step with the Production key and secret.
+5. Set the TikTok bio link to `https://propstreaklab.com/?utm_source=tiktok&utm_campaign=tiktok-bio`.
+
+To test: **Actions → TikTok drafts → Run workflow** with *dry_run* `1` (draws everything, sends
+nothing), then *force* `1`. `team/render.html` on the site previews every draft today's data could make.
+TikTok limits gambling content, so a post may be age-restricted or kept off the For You feed.
 
 ## One-time GitHub setup
 1. Create a **public** repository and upload everything in this folder, including

@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>TikTok drafts</title>
+<link rel="icon" href="../favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="../fonts.css">
+<!-- Draws the daily TikTok drafts for tiktok_post.py, which opens this page in headless Chrome with
+     ?plan=<json> (what to draw: indexes into today.json's picks and streaks) and reads the images back
+     from #out. Opened without a plan it previews every video and the carousel it could make right now.
+     Same cards as the Meta ads (ads.js), so the same copy rules: no "bet", "lock" or exchange names, 18+. -->
+<style>
+body{margin:0;padding:16px;background:#0a1628;color:#dfe6ef;font:15px/1.5 Inter,sans-serif}
+h2{font:600 17px Archivo,Inter,sans-serif;margin:24px 0 8px}
+.row{display:flex;gap:10px;overflow-x:auto;padding-bottom:6px}
+.row img{width:180px;height:320px;border-radius:10px;border:1px solid #22354f;flex:none}
+</style>
+</head>
+<body>
+<p id="msg">Drawing…</p>
+<div id="prev"></div>
+<pre id="out" hidden></pre>
+<script src="ads.js?v=20261020b"></script>
+<script>
+(async function(){
+  'use strict';
+  const A = window.psaAds, D = A.draw, C = D.C, W = 1080, H = 1920;
+  const CTA = 'Link in bio', FINE = "Model chance, not a guarantee. Past results don't guarantee future ones. 18+.";
+  const q = new URLSearchParams(location.search), $ = id => document.getElementById(id);
+  const get = f => fetch('../' + f + '?t=' + Date.now(), {cache:'no-store'}).then(r => r.ok ? r.json() : null).catch(() => null);
+  const [T, B] = await Promise.all([get('today.json'), get('botd.json')]);
+  if (!T){ $('msg').textContent = 'Could not load today.json.'; finish({ok:false, error:'no today.json'}); return; }
+  A.setData(T); await A.fonts();
+
+  // ---------- one story-size frame: the card shrunk into TikTok's safe area, clear of the
+  // buttons down the right side and the caption along the bottom ----------
+  const S = 0.84, OY = 96*S;   // shifted one grid square down, so the backdrop's grid lines meet the card's
+  function frame(fn){
+    const c = document.createElement('canvas'); c.width = W; c.height = H; const g = c.getContext('2d');
+    g.save(); g.translate(0, OY); g.scale(S, S);
+    // ads.js backdrop() over the whole frame, in the card's coordinates: the card's own backdrop lands on an identical one
+    const x0 = 0, y0 = -96, x1 = W/S, y1 = (H-OY)/S;
+    g.fillStyle = C.bg; g.fillRect(x0, y0, x1-x0, y1-y0);
+    g.strokeStyle = 'rgba(34,208,127,.045)'; g.lineWidth = 2;
+    for (let x = 0; x <= x1; x += 96){ g.beginPath(); g.moveTo(x, y0); g.lineTo(x, y1); g.stroke(); }
+    for (let y = y0; y <= y1; y += 96){ g.beginPath(); g.moveTo(x0, y); g.lineTo(x1, y); g.stroke(); }
+    let r = g.createRadialGradient(90, -130, 0, 90, -130, 1200); r.addColorStop(0, 'rgba(34,208,127,.18)'); r.addColorStop(1, 'rgba(34,208,127,0)');
+    g.fillStyle = r; g.fillRect(x0, y0, x1-x0, y1-y0);
+    r = g.createRadialGradient(W*1.05, H*1.05, 0, W*1.05, H*1.05, 900); r.addColorStop(0, 'rgba(34,208,127,.08)'); r.addColorStop(1, 'rgba(34,208,127,0)');
+    g.fillStyle = r; g.fillRect(x0, y0, x1-x0, y1-y0);
+    fn(g); g.restore();
+    return c;
+  }
+  // a title card: big lines of colored pieces, one sentence under them
+  function hook(g, pill, lines, lede, fine){
+    const top = 150; D.backdrop(g, W, H); D.brand(g, 80, top); D.pill(g, pill[0], W-80, top+30, pill[1]);
+    const px = 100, y = Math.round(H/2) - 90 - lines.length*px/2;
+    lines.forEach((segs, i) => D.rich(g, segs, 80, y + i*(px+8), px));
+    if (lede) D.lede(g, lede, 80, y + (lines.length-1)*(px+8) + 92, W-160);
+    D.footer(g, W, H-220, CTA, fine || FINE);
+  }
+  function potd(g, lock, val){   // carousel cover: today's Pick of the Day (botd.json)
+    const top = 150; D.backdrop(g, W, H); D.brand(g, 80, top); D.pill(g, 'Pick of the Day · ' + D.dateLbl(T.gen), W-80, top+30, true);
+    const ps = [['Safe Pick', lock, true], ['Value Shot', val, false]].filter(x => x[1]), ch = 330;
+    let y = Math.round((top + 60 + H-350)/2 - (282 + ps.length*(ch+28))/2) + 100;   // centered between the header and the footer
+    D.rich(g, [['Pick of', C.fg]], 80, y, 104); D.rich(g, [['the ', C.fg], ['Day.', C.green]], 80, y+112, 104);
+    y += 170;
+    for (const [lbl, p, safe] of ps){
+      D.card(g, 80, y, W-160, ch, safe);
+      D.label(g, `${lbl} · ${D.NAME[p.sport]}`, 120, y+58, safe ? C.green : C.gold);
+      D.txt(g, p.player, 120, y+128, {w:800, px:56, fam:D.DISP, ls:-1.4});
+      D.txt(g, `${p.statText} · ${D.side(p.side)} ${p.line}` + (p.opp ? ` · vs. ${p.opp}` : ''), 120, y+176, {w:500, px:30, color:C.soft});
+      D.txt(g, D.pc(p.prob)+'%', 116, y+290, {w:800, px:96, fam:D.DISP, color:C.green, ls:-4});
+      D.label(g, 'Model chance', 340, y+262, C.green);
+      if (p.price) D.txt(g, `Market price ${D.pc(p.price)}%`, 340, y+298, {w:500, px:26, color:C.muted});
+      y += ch + 28;
+    }
+    D.footer(g, W, H-220, CTA, FINE);
+  }
+
+  // ---------- what each draft shows ----------
+  const N = s => D.NAME[s];
+  function video(v){   // {sport, angle, items}: 3-5 frames
+    const s = v.sport, out = [];
+    if (v.angle === 'gap'){
+      const ps = v.items.map(i => T.picks[i]).filter(Boolean); if (!ps.length) return [];
+      out.push(frame(g => hook(g, [N(s) + ' · today'], [[[`${ps.length} ${N(s)} prop${ps.length > 1 ? 's' : ''}`, C.green]], [['where the model', C.fg]], [['disagrees.', C.fg]]],
+        "Model chance vs. market price for today's games, with the last 10 games.")));
+      ps.forEach(p => out.push(frame(g => A.paint(g, W, H, 'gap', p, true, CTA))));
+      out.push(frame(g => A.endCard(g, W, H, 'gap', ps[0], CTA)));
+    } else if (v.angle === 'streak'){
+      const ss = v.items.map(i => T.streaks[i]).filter(Boolean); if (!ss.length) return [];
+      const t = ss[0];
+      out.push(frame(g => hook(g, [N(s) + ' · hit streaks'], [[[`${ss.length} ${N(s)}`, C.green]], [[`hit streak${ss.length > 1 ? 's' : ''}`, C.fg]], [['on the line.', C.fg]]],
+        `Longest: ${t.player}, ${t.streak} straight games ${t.side} ${t.line} ${t.statText.toLowerCase()}.`, 'Model chance, not a guarantee. Streaks end. 18+.')));
+      ss.forEach(x => out.push(frame(g => A.paint(g, W, H, 'streak', x, true, CTA))));
+      out.push(frame(g => A.endCard(g, W, H, 'streak', t, CTA)));
+    } else if (v.angle === 'record'){
+      if (!(T.record && T.record[s] && T.record[s].T)) return [];
+      out.push(frame(g => hook(g, [N(s) + ' · graded in public', true], [[['Do our ', C.fg]], [[N(s) + ' picks', C.green]], [['actually hit?', C.fg]]],
+        'Every pick is recorded before the game and graded after, misses included.')));
+      out.push(frame(g => A.paint(g, W, H, 'record', s, true, CTA)));
+      if (A.ADS.proof.ok()) out.push(frame(g => A.paint(g, W, H, 'proof', null, true, CTA)));
+      out.push(frame(g => A.endCard(g, W, H, 'record', s, CTA)));
+    }
+    return out;
+  }
+  function carousel(c){   // {potd, gap: [...], streak: [...], proof, sports}
+    const out = [], day = (B && B.days || []).find(d => d.date === c.day), lock = day && day.lock, val = day && day.value;
+    if (c.potd && (lock || val)) out.push(frame(g => potd(g, lock, val)));
+    else out.push(frame(g => hook(g, ["Today's board"], [[["Today's", C.fg]], [['best ', C.fg], ['props.', C.green]]],
+      (c.sports || []).map(N).join(', ') + ' · swipe for the picks.')));
+    (c.gap || []).map(i => T.picks[i]).filter(Boolean).forEach(p => out.push(frame(g => A.paint(g, W, H, 'gap', p, true, CTA))));
+    (c.streak || []).map(i => T.streaks[i]).filter(Boolean).forEach(x => out.push(frame(g => A.paint(g, W, H, 'streak', x, true, CTA))));
+    if (c.proof && A.ADS.proof.ok()) out.push(frame(g => A.paint(g, W, H, 'proof', null, true, CTA)));
+    out.push(frame(g => A.endCard(g, W, H, 'proof', null, CTA)));
+    return out;
+  }
+
+  // ---------- no plan: preview everything it could make from the current data ----------
+  function demo(){
+    const picks = (T.picks || []).map((p, i) => [p, i]), streaks = (T.streaks || []).map((x, i) => [x, i]), videos = [];
+    for (const s of Object.keys(D.NAME)){
+      const gap = picks.filter(([p]) => p.sport === s && p.kind === 'value' && p.price).slice(0, 3).map(([, i]) => i);
+      const st = streaks.filter(([x]) => x.sport === s && x.streak >= 5).slice(0, 3).map(([, i]) => i);
+      if (gap.length) videos.push({sport:s, angle:'gap', items:gap});
+      if (st.length) videos.push({sport:s, angle:'streak', items:st});
+      if (T.record && T.record[s] && T.record[s].T && T.record[s].T.n >= 30) videos.push({sport:s, angle:'record', items:[]});
+    }
+    const sports = [...new Set(videos.map(v => v.sport))];
+    const firstGap = sports.map(s => picks.find(([p]) => p.sport === s && p.kind === 'value' && p.price)).filter(Boolean).slice(0, 3).map(([, i]) => i);
+    return {videos, carousel:{day:(B && B.days && B.days.length) ? B.days[B.days.length-1].date : '', potd:true, gap:firstGap,
+      streak:streaks.slice(0, 1).map(([, i]) => i), proof:true, sports}};
+  }
+
+  function finish(o){ $('out').textContent = JSON.stringify(o); document.title = 'done'; }
+  try {
+    const raw = q.get('plan'), plan = raw ? JSON.parse(raw) : demo();
+    const sets = {};
+    if (plan.carousel) sets.c = carousel(plan.carousel).map(c => c.toDataURL('image/jpeg', 0.9));   // TikTok photo posts take JPEG or WebP
+    (plan.videos || []).forEach((v, i) => { sets['v' + (i+1)] = video(v).map(c => c.toDataURL('image/png')); });
+    if (raw){ $('msg').textContent = 'Done.'; finish({ok:true, sets}); return; }
+    $('msg').textContent = 'Preview: every TikTok draft this data could make. The daily run (tiktok_post.py) picks one carousel and three videos.';
+    const label = k => k === 'c' ? 'Photo carousel' : (v => `Video: ${N(v.sport)} · ${v.angle}`)(plan.videos[+k.slice(1) - 1]);
+    for (const [k, urls] of Object.entries(sets)){
+      const h = document.createElement('h2'); h.textContent = label(k) + ` (${urls.length} frames)`; $('prev').appendChild(h);
+      const row = document.createElement('div'); row.className = 'row';
+      urls.forEach(u => { const im = new Image(); im.src = u; row.appendChild(im); }); $('prev').appendChild(row);
+    }
+  } catch(e){
+    $('msg').textContent = 'Drawing failed: ' + e.message; finish({ok:false, error:String(e && e.stack || e)});
+  }
+})();
+</script>
+</body>
+</html>

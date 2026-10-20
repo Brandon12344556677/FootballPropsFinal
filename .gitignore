@@ -1,2 +1,5 @@
 __pycache__/
 model_cases.json
+# tiktok_post.py: videos are uploaded from the runner, only the carousel images are published
+tiktok/*/*.mp4
+tiktok/*/plan.json
