@@ -107,9 +107,10 @@
   async function box(sport, ev){
     const key = sport + '|' + ev.id, state = ((ev.status || {}).type || {}).state;
     if (state === 'pre') return null;
-    if (boxes[key] && boxes[key].final) return boxes[key];
+    // a final box never changes; a live one is reused within a poll (many legs can share a game)
+    if (boxes[key] && (boxes[key].final || Date.now() - boxes[key].at < POLL_MS - 2000)) return boxes[key];
     const b = parseBox(sport, await getJSON(`${API}${PATH[sport]}/summary?event=${ev.id}`));
-    b.final = state === 'post';
+    b.final = state === 'post'; b.at = Date.now();
     return boxes[key] = b;
   }
 
