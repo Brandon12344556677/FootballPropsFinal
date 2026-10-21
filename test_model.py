@@ -317,13 +317,23 @@ class ListTests(unittest.TestCase):
         return {"prob": prob, "lo": lo, "hi": min(1, prob + 0.1), "neff": neff, "price": price, "lists": "",
                 "gid": "g", "pid": pid or f"p{self._n}", "stat": "rec_yds"}
 
-    def test_value_caps_the_edge_at_20_points(self):
-        """A gap over 20 points has more often been the model missing what the market knows."""
-        ok = self._pick(0.70, 0.6, 50)               # 20 points up
+    def test_value_caps_the_edge_at_18_points(self):
+        """A gap over 18 points has more often been the model missing what the market knows."""
+        ok = self._pick(0.68, 0.6, 50)               # 18 points up
+        over = self._pick(0.70, 0.6, 50)             # 20 points up: not Value since Oct 21, 2026
         too_big = self._pick(0.75, 0.65, 50)         # 25 points up
-        B.assign_lists([ok, too_big])
+        B.assign_lists([ok, over, too_big])
         self.assertIn("V", ok["lists"])
+        self.assertNotIn("V", over["lists"])
         self.assertNotIn("V", too_big["lists"])
+
+    def test_a_rung_19_points_up_leaves_the_other_rungs(self):
+        """19 points up isn't Value, but the whole-prop exclusion is still over 20 (Top 25 too)."""
+        far = self._pick(0.69, 0.6, 50, pid="same")       # 19 points up
+        near = self._pick(0.67, 0.6, 50, pid="same")      # 17 points up, same player-prop
+        B.assign_lists([far, near])
+        self.assertEqual([("V" in p["lists"]) for p in (far, near)], [False, True])
+        self.assertIn("T", far["lists"])
 
     def test_a_rung_over_20_points_takes_the_whole_prop_off(self):
         """Over 20 points on one rung, the model is likely missing something about him: no rung lists."""
@@ -341,11 +351,11 @@ class ListTests(unittest.TestCase):
         self.assertEqual([("V" in p["lists"]) for p in rungs], [False, True, False])
 
     def test_assign_lists(self):
-        picks = [self._pick(0.9, 0.8, 70), self._pick(0.7, 0.6, 65), self._pick(0.55, 0.45, 50),
+        picks = [self._pick(0.88, 0.8, 70), self._pick(0.7, 0.6, 65), self._pick(0.55, 0.45, 50),
                  self._pick(0.86, 0.75, None), self._pick(0.7, 0.6, 65, neff=3)]
         B.assign_lists(picks)
         self.assertIn("T", picks[0]["lists"])       # all fit in the top 25 by chance
-        self.assertIn("V", picks[0]["lists"])       # price 0.70 >= 0.30, model 20 pts above
+        self.assertIn("V", picks[0]["lists"])       # price 0.70 >= 0.30, model 18 pts above
         self.assertNotIn("V", picks[1]["lists"])    # only 5 points above 0.65
         self.assertNotIn("V", picks[2]["lists"])    # only 5 points above 0.50
         self.assertNotIn("V", picks[3]["lists"])    # no price
