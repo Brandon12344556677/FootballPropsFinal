@@ -29,6 +29,12 @@ ANY_V = {"label": "Value spots", "list": "V"}
 
 
 class TpodTest(unittest.TestCase):
+    def setUp(self):   # these cases are dated Oct 20, before the real series start
+        self._start, tpod.SERIES_START = tpod.SERIES_START, "2000-01-01"
+
+    def tearDown(self):
+        tpod.SERIES_START = self._start
+
     def test_eligible_needs_payout_confidence_and_a_clean_price(self):
         self.assertTrue(tpod.eligible(cand("1", "g1", 0.72, 0.55), NOW))
         self.assertFalse(tpod.eligible(cand("1", "g1", 0.97, 0.90), NOW))               # a "lock": pays too little
@@ -67,6 +73,16 @@ class TpodTest(unittest.TestCase):
                                                   ["live", "g2", "2", "a", 0.5, "under", "miss", 1, "2026-10-20"]]})]
         tpod.update(state, [], docs, methods(NHL_A), NOW + datetime.timedelta(days=1))
         self.assertEqual(tpod.record(state["days"]), {"n": 2, "hit": 1, "miss": 1, "units": round(1 / 0.55 - 1 - 1, 2)})
+
+    def test_series_starts_on_day_one(self):
+        tpod.SERIES_START = "2026-10-21"
+        state = {"days": [{"date": "2026-10-20", "picks": [dict(cand("x", "gx", 0.7, 0.5), res="miss")]}]}
+        now = datetime.datetime(2026, 10, 21, 16, 0, tzinfo=UTC)
+        self.assertTrue(tpod.update(state, [cand("1", "g1", 0.75, 0.55, start="2026-10-21T23:00:00Z")], [], methods(NHL_A), now))
+        self.assertEqual([d["date"] for d in state["days"]], ["2026-10-21"])          # the dry-run day is gone
+        self.assertTrue(state["days"][0]["script"].startswith("This is day 1 of"))
+        self.assertNotIn("went", state["days"][0]["script"])
+        self.assertEqual(tpod.record(state["days"])["n"], 0)
 
     def test_fun_parlay_about_3x(self):
         cands = [cand("1", "g1", 0.80, 0.58), cand("2", "g2", 0.80, 0.58), cand("3", "g3", 0.70, 0.62)]

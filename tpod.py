@@ -51,6 +51,7 @@ MIN_NEFF = 6.0
 MAX_DROP = 3            # cents
 MIN_METHOD_N = 30
 PER_DAY = 3
+SERIES_START = "2026-10-21"   # the TikTok series' day 1: earlier days (a dry run on Oct 20) are dropped from the record
 PARLAY_PAYS = (2.8, 3.4)
 LEG_PRICE = (0.45, 0.85)
 LEG_EDGE = 0.03
@@ -305,8 +306,9 @@ def script(day, rec, date, prec=None, day_no=1, last=None):
 def update(state, cands, docs, methods, now):
     """Grade, then fill today's slots. Returns True if anything changed."""
     days = state.setdefault("days", [])
-    index = botd._picks_index(docs)
     before = json.dumps(days, sort_keys=True)
+    days[:] = [d for d in days if d["date"] >= SERIES_START]
+    index = botd._picks_index(docs)
     for d in days:
         for p in d.get("picks") or []:
             botd.grade(p, index, now)
