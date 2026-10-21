@@ -1559,9 +1559,15 @@ VALUE_N = 200           # a safety cap only. At 50 it bound in busy weeks (NFL w
 # 2026) picks 15-20 points up hit 56% (+7.3 units, n=43) while bigger gaps hit 42%
 # (-6.5 units, n=54) -- a gap that big has more often been the model missing a role change
 # the market already priced than a real edge.
+# Since Oct 21, 2026, no more than 18 points: after the 20 cap, Value picks 18-20 points up went
+# 8-15 (-4.7 units) in weeks 5-6. On weeks 1-6 an 18 cap would have made 89 picks for +20.2 units
+# against 128 for +11.7 under the 20 cap (weeks 5-6 alone: 62 for +9.1 vs 85 for +4.4) -- a small
+# sample, and the 18 was chosen on it. WIDE_EDGE (the whole-prop exclusion, which Top 25 uses
+# too) stays at 20.
 VALUE_MIN_PRICE = 0.30
 VALUE_MIN_EDGE = 0.15
-VALUE_MAX_EDGE = 0.20
+VALUE_MAX_EDGE = 0.18
+WIDE_EDGE = 0.20
 
 
 def value_qualifies(prob, price):
@@ -1625,7 +1631,7 @@ def assign_lists(picks, held=0):
     # waiting on injury news (a questionable teammate in his position group, or himself): no lists
     picks = [p for p in picks if not p.get("hd")]
     # The model's widest gap over the price on any rung of a player-prop (one side): over
-    # VALUE_MAX_EDGE on one rung, it's likely missing something about him this week (a role
+    # WIDE_EDGE on one rung, it's likely missing something about him this week (a role
     # change the market already priced), so no rung of that prop makes Top 25 or Value (on the
     # record, 15-20 point rungs of such props didn't pay either).
     widest = {}
@@ -1633,7 +1639,7 @@ def assign_lists(picks, held=0):
         if p.get("price") is not None:
             k = (p["gid"], p["pid"], p["stat"], p.get("side"))
             widest[k] = max(widest.get(k, -1.0), p["prob"] - p["price"] / 100.0)
-    wide = lambda p: widest.get((p["gid"], p["pid"], p["stat"], p.get("side")), -1.0) > VALUE_MAX_EDGE + 1e-9
+    wide = lambda p: widest.get((p["gid"], p["pid"], p["stat"], p.get("side")), -1.0) > WIDE_EDGE + 1e-9
     # Top 25: only props you can bet -- a live price with $25+ offered near it (depth.py; not
     # thin) -- one line per player-prop (its surest rung), none the model is that far off on
     ranked = sorted((p for p in picks if p["prob"] >= 0.5 and p.get("price") is not None and not p.get("th")
