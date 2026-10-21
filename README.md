@@ -181,9 +181,9 @@ group" button links to the Prop Streak Lab squad, also without a referral tag.
    lines, and blended defense-vs-position ranks.
 3. It grades any pending live picks whose game is final **and** whose box score is
    in the stats file.
-4. It fetches this week's Polymarket board, prices every prop off **Polymarket US**
-   where that exchange lists the same prop at the same line (one request per game;
-   the global book is the fallback), models them, assigns the Top 25 Surest / Value
+4. It fetches this week's board from **Polymarket US** (since Oct 21, 2026, when the
+   global Polymarket event list went away; the global list is only a fallback), prices
+   every prop there (one request per game), models them, assigns the Top 25 Surest / Value
    tags, and upserts them into `picks.json` (a pick is refreshed on every run until
    kickoff, then frozen and graded). Picks are keyed by side, so the opposite side of
    a market is recorded too when it is a value candidate. The slate dates Sunday- and

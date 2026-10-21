@@ -675,7 +675,7 @@ details.valrules>summary{cursor:pointer}
         <li><span class="vrnum">1</span><span class="vrtxt"><b>The market gives it at least a 30% chance.</b> The price you'd pay has to be <b>30¢ or more</b>. <span class="vrwhy">This is the rule that keeps penny longshots off the list — a 6¢ ask against an 11% model chance looks like a huge edge in percentage terms and is still a bad bet.</span></span></li>
         <li><span class="vrnum">2</span><span class="vrtxt"><b>Our model puts it 15 to 18 points higher.</b> <span class="vreg">30¢ ask → needs 45–48%</span> · <span class="vreg">50¢ → 65–68%</span> · <span class="vreg">70¢ → 85–88%</span>. <span class="vrwhy">Not more: on the record so far, the bigger the gap, the worse NFL Value picks have done (18–20 points up went 8–15 in weeks 5–6) — a gap that big has more often been the model missing a role change the market already knew. And if any line of a prop is more than 20 points up, that whole prop is left off.</span> <span class="vrwhy">The gap between the two, in percentage points, is the <b>edge</b> shown in the Best price column.</span></span></li>
       </ol>
-      <div class="vrfoot">Both rules are tested against the <b>best price in the row</b> — the cheaper of the live Polymarket US price and Kalshi's, the price you'd actually pay — so the edge shown is always the edge it qualified on, and a prop drops off the list as soon as the price moves against it. A price only counts when at least <b>$25</b> is offered at it (or within 2¢) — in a near-empty market your bet would move the price — so a thin price is skipped for the other exchange's, or the prop is left off. Polymarket's global book (shown as <span class="pmdim">board 46¢</span>) doesn't count: US users can't trade it. One line per player-prop (the rung with the biggest edge). Both rules are checked on the <b>over</b> and the <b>under</b> of every market separately, so either side can qualify, and a prop also needs <b>6+ effective games</b> of history behind it. Everything clearing both rules is listed — no fixed top 25 — ranked by that edge, and the list re-checks itself about once a minute. Props <b>waiting on injury news</b> stay off this list and Top 25 Surest: when the player, or a teammate whose snaps decide his role (a quarterback for the whole passing game), is questionable or doubtful — until ESPN shows him active or out (on game day, the inactives 90 minutes before kickoff). Ruled out: his teammates' props come back, with the model's numbers.</div>
+      <div class="vrfoot">Both rules are tested against the <b>best price in the row</b> — the cheaper of the live Polymarket US price and Kalshi's, the price you'd actually pay — so the edge shown is always the edge it qualified on, and a prop drops off the list as soon as the price moves against it. A price only counts when at least <b>$25</b> is offered at it (or within 2¢) — in a near-empty market your bet would move the price — so a thin price is skipped for the other exchange's, or the prop is left off. One line per player-prop (the rung with the biggest edge). Both rules are checked on the <b>over</b> and the <b>under</b> of every market separately, so either side can qualify, and a prop also needs <b>6+ effective games</b> of history behind it. Everything clearing both rules is listed — no fixed top 25 — ranked by that edge, and the list re-checks itself about once a minute. Props <b>waiting on injury news</b> stay off this list and Top 25 Surest: when the player, or a teammate whose snaps decide his role (a quarterback for the whole passing game), is questionable or doubtful — until ESPN shows him active or out (on game day, the inactives 90 minutes before kickoff). Ruled out: his teammates' props come back, with the model's numbers.</div>
     </details>
     <div id="valuebody"><p class="mktnote">The board scan fills this in. <span class="mktmuted">Needs the hosted website (the Polymarket API can't be reached from a local file).</span></p></div>
   </div>
@@ -926,7 +926,7 @@ details.valrules>summary{cursor:pointer}
   <footer>
     <details class="datanote"><summary>How the data works</summary>
     <b>Data:</b> nflverse public weekly stats, schedules, injury reports and rosters (regular season + playoffs). Defense ranks blend this season with last. Injury status is the latest official report and can change on game day.<br>
-    <b>Prices:</b> live odds come from Polymarket US — every few seconds on a player's page, about once a minute in the <b>Best price</b> column of the week's boards, and at build time for the picks recorded in Past picks. Kalshi's price for the same prop at the same line sits beside it (updated with the site, about every 10 minutes), and whichever is cheaper is the price a pick is judged on. Value spots are judged on that price, so the edge shown is the edge the pick qualified on. The global Polymarket book is only used where Polymarket US has no market for a prop at that line; its Under prices come off a mostly one-sided book and run rich, which is why they aren't trusted. Each share pays $1, so multiplier = $1 ÷ price. Backward-looking research, <b>not betting advice</b>; past accuracy is shown in the Past picks tab so you can judge it yourself.
+    <b>Prices:</b> live odds come from Polymarket US — every few seconds on a player's page, about once a minute in the <b>Best price</b> column of the week's boards, and at build time for the picks recorded in Past picks. Kalshi's price for the same prop at the same line sits beside it (updated with the site, about every 10 minutes), and whichever is cheaper is the price a pick is judged on. Value spots are judged on that price, so the edge shown is the edge the pick qualified on. The props themselves are listed from Polymarket US too (the global Polymarket book stopped listing NFL player props in October 2026). Each share pays $1, so multiplier = $1 ÷ price. Backward-looking research, <b>not betting advice</b>; past accuracy is shown in the Past picks tab so you can judge it yourself.
     </details>
     <div style="margin-top:16px;padding-top:12px;border-top:1px solid var(--line)">
       <a href="./#email">Free daily email</a> · <a href="players/">Players</a> · <a href="methodology.html">How the model works</a> · <a href="privacy.html">Privacy Policy</a> · <a href="terms.html">Terms &amp; Conditions</a> · <a href="cookies.html">Cookies Policy</a> · <a href="mailto:info@propstreaklab.com">Contact</a> · <a href="games/">Games</a> · <a href="best/">Best props</a> · <a href="guides/">Guides</a> · <a href="team/">Team</a><br>
@@ -1687,10 +1687,27 @@ function mktStatKey(txt){ for(const [re,k] of MKT_STAT){ if(re.test(txt)) return
 let SLATE=null; const mktCache={}; const CACHE_MS=5*60*1000;
 async function getSlate(){ if(SLATE) return SLATE;
   const r=await fetch('slate.json',{cache:'no-store'}); if(!r.ok) throw new Error('no slate'); SLATE=await r.json(); return SLATE; }
+// A game's player props, from Polymarket US (the global event list is gone since Oct 21, 2026), each
+// shaped like a global market so parseMarket() reads it. Mirrors fetch_slate_us() in build.py.
 async function getEvent(slug, force){
+  slug=slug.replace(/-player-props$/,'');     // a slate.json from before the switch
   const c=mktCache[slug]; if(c && !force && Date.now()-c.t<CACHE_MS) return c.ev;
-  const r=await fetch('https://gamma-api.polymarket.com/events/slug/'+encodeURIComponent(slug),{cache:'no-store'});
-  if(!r.ok) throw new Error('event fetch failed'); const ev=await r.json(); mktCache[slug]={t:Date.now(),ev}; return ev; }
+  const r=await fetch(PMUS+'/v1/events/slug/'+encodeURIComponent(slug),{cache:'no-store'});
+  if(!r.ok) throw new Error('event fetch failed');
+  const us=(await r.json()).event||{};
+  const ev={markets:(us.markets||[]).map(pmusAsMarket).filter(Boolean)};
+  mktCache[slug]={t:Date.now(),ev}; return ev; }
+const PMUS_SLATE_SKIP=new Set(['pass_int','rush_att','rush_rec_yds']);   // props the global book never carried
+function pmusAsMarket(m){     // "Caleb Williams 150+ passing yards" = O/U 149.5
+  const smt=m.sportsMarketType||'', sk=PMUS_STAT[smt];
+  const text=smt.replace('football_player_','').split('_').map(w=>w.charAt(0).toUpperCase()+w.slice(1)).join(' ');
+  const who=(m.subject&&m.subject.name)||(m.metadata&&m.metadata.playerName), n=parseFloat(m.line);
+  if(!sk || PMUS_SLATE_SKIP.has(sk) || mktStatKey(text)!==sk || !who || !isFinite(n)) return null;
+  const q=pmusQuoteOf(m); if(!q.open) return null;
+  const bid=q.under!=null? 1-q.under : null, ask=q.over, mid=(bid!=null&&ask!=null)? (bid+ask)/2 : null;
+  return {question:`${who}: ${text} O/U ${n-0.5}`, outcomes:['Over','Under'], outcomePrices: mid!=null? [mid,1-mid] : [],
+          bestBid:bid, bestAsk:ask, line:n-0.5, slug:m.slug};
+}
 async function mapLimit(items, limit, fn){ const out=new Array(items.length); let i=0;
   await Promise.all(new Array(Math.min(limit,items.length)).fill(0).map(async()=>{ while(i<items.length){ const k=i++; out[k]=await fn(items[k],k); } })); return out; }
 function parseMarket(m){
@@ -1943,12 +1960,9 @@ function liveCell(d){
 }
 function pmCell(d){
   const signed = v => (v>=0?'+':'\u2212')+Math.abs(Math.round(v*100));
-  // Two ways the global book's ask gets shown: as a bare comparison when the two
-  // books disagree, and with its own edge when Polymarket US has no market and the
-  // board ask is therefore the price the row was judged on.
-  const cents = d.ask==null? '' : Math.round(d.ask*100)+'\u00a2';
-  const boardBare = d.ask==null? '' : ' <span class="pmdim board" title="the ask on the global Polymarket book, which quotes separately from Polymarket US">board '+cents+'</span>';
-  const boardFull = d.ask==null? '' : ' <span class="pmdim" title="the ask on the global Polymarket book \u2014 with no Polymarket US market, this is the price the rules were tested on">board '+cents+(d.prob==null? '' : ' \u00b7 '+signed(d.prob-d.ask)+' edge')+'</span>';
+  // The board's ask used to be the global book's, shown as "board N¢" beside the live quote. Since
+  // Oct 21, 2026 the board itself comes from Polymarket US, so it would only repeat it: not shown.
+  const boardBare = '', boardFull = '';
   const L=livePx.get(d.mk);
   if(!L) return '<span class="pmdim">\u2026</span>'+boardBare;
   if(L.err) return '<span class="pmdim" title="Couldn\u2019t reach Polymarket US just now \u2014 retrying">\u2014</span>'+boardFull;
@@ -2277,7 +2291,7 @@ function renderValue(){
   const rows=sortRows(lockedV.concat(valueRows),'vedge',-1);
   const unders=rows.filter(r=>r.side==='under').length, overs=rows.length-unders;
   const stale=rows.filter(r=>!r.vlive && !r.locked).length;
-  body.innerHTML=pickTable(rows,{})+`<p class="mktnote" style="margin-top:8px"><b>${rows.length}</b> prop${rows.length===1?'':'s'} clear both rules at the price you'd pay right now — ${overs} over${overs===1?'':'s'} and ${unders} under${unders===1?'':'s'}${stale?`, ${stale} judged on the global book`:''}. Rechecked about once a minute, so a row leaves as soon as its price moves against it. Picks are recorded before kickoff and graded in <b>Past picks</b> — that record is taken from the global book at record time, so it can differ slightly from this list. Backward-looking; not advice.</p>`;
+  body.innerHTML=pickTable(rows,{})+`<p class="mktnote" style="margin-top:8px"><b>${rows.length}</b> prop${rows.length===1?'':'s'} clear both rules at the price you'd pay right now — ${overs} over${overs===1?'':'s'} and ${unders} under${unders===1?'':'s'}${stale?`, ${stale} judged on the price from the last scan`:''}. Rechecked about once a minute, so a row leaves as soon as its price moves against it. Picks are recorded before kickoff and graded in <b>Past picks</b> — that record is priced at record time, so it can differ slightly from this list. Backward-looking; not advice.</p>`;
   wireLoad(body, rows);
   trackLive('V', rows.filter(r=>!r.locked));
 }
