@@ -41,6 +41,8 @@
       : '<li class="empty">No private strategies yet.</li>';
     $('prImport').hidden = items.length > 0;
   }
+  // the Today's picks panel (methodtoday.js) lists today's picks for these rules
+  const announce = () => window.dispatchEvent(new CustomEvent('psa-rules', {detail: items.slice()}));
   function fill(r){
     editing = r ? items.indexOf(r) : null;
     $('prLabel').value = r ? r.label : ''; $('prSport').value = r ? (r.sport || '') : ''; $('prSide').value = r ? (r.side || '') : '';
@@ -56,13 +58,13 @@
     busy = true; msg('Saving…');
     try {
       const doc = await window.psaTeamData.update(PATH, d => { d.items = fn((d.items || []).slice()); return d; });
-      items = doc.items || []; render(); msg(done || 'Saved. The edge tracker grades it from the next update (about 10 minutes).');
+      items = doc.items || []; render(); announce(); msg(done || 'Saved. The edge tracker grades it from the next update (about 10 minutes).');
     } catch(e){ msg(e.status === 401 ? 'GitHub rejected the token (Expenses tab → reconnect).' : 'Couldn’t save. Check your connection and try again.', true); }
     finally { busy = false; }
   }
   async function load(){
     if (!window.psaTeamData || !window.psaTeamData.ready()) return;
-    try { items = ((await window.psaTeamData.read(PATH)) || {}).items || []; render(); }
+    try { items = ((await window.psaTeamData.read(PATH)) || {}).items || []; render(); announce(); }
     catch(e){ msg(e.message === 'format' || e.name === 'OperationError' ? 'The saved rules don’t open with this password.' : 'Couldn’t load the private strategies.', true); }
   }
   function wire(){

@@ -126,6 +126,8 @@ footer p{margin:0;max-width:80ch}
 #exMsg,#prMsg{font-size:14px;color:var(--accent);min-height:1.4em;margin:10px 0 0} #exMsg.bad,#prMsg.bad{color:var(--down)}
 .pl-cards{display:grid;gap:12px;margin-top:14px}
 .pl-card{border:1px solid var(--line);border-radius:12px;padding:12px 14px;background:rgba(255,255,255,.02)}
+tr.pl-card{border:0;border-radius:0;padding:0;background:none}   /* Secret methods today: table rows tracked like parlay cards */
+.sm-day{margin-top:10px}
 /* 3 Picks of the Day */
 .tp-card h3{margin:0 0 4px;font-size:17px}
 .tp-card .tp-meta{color:var(--muted);font-size:13px}
@@ -536,6 +538,12 @@ details.plpast>summary:focus-visible{outline:2px solid var(--accent);outline-off
     <div class="panel-h"><h2>Secret methods: record</h2><span class="label" id="smUpd">Encrypted, team only</span></div>
     <p class="hint">How each private method performs, graded by the edge tracker every update: every pick that fit it, each a 1-unit bet at its price. Each row counts every past pick that fits the method, including the ones it was found on. Under the name: the day it was added and its record since then, the live test of whether it really works (the number buyers would have seen). Likely range: where the true return probably is; a range above 0 is an edge holding up.</p>
     <div class="edwrap"><table class="edges pst"><thead><tr><th>Method</th><th class="n">Picks</th><th class="n">Hit</th><th class="n">Avg price</th><th class="n">Units</th><th class="n">Return</th><th class="n">Likely range</th><th class="n">Last 7 days</th><th>Verdict</th></tr></thead><tbody id="smRows"><tr class="ed-wait"><td colspan="9">Loading…</td></tr></tbody></table></div>
+  </section>
+
+  <section data-view="secret" class="panel" id="smTodayPanel">
+    <div class="panel-h"><h2>Secret methods: today's picks</h2><span class="label" id="smTodayUpd">Team only</span></div>
+    <p class="hint">Every pick on today's slate (ET) that fits each method, followed live from ESPN box scores: these are the picks the edge tracker will grade for it, each a 1-unit bet at its price. A pick's price can still move until it locks shortly before its game, so a pick can join or leave a method until then. Picks reload every 5 minutes; live numbers every 30 seconds.</p>
+    <div id="smToday"><p class="empty">Loading…</p></div>
   </section>
 
   <section data-view="secret" class="panel" id="prPanel">
@@ -1996,8 +2004,9 @@ details.plpast>summary:focus-visible{outline:2px solid var(--accent);outline-off
 <script src="ads.js?v=20261020b"></script>
 <script src="ads_video.js?v=20261020a"></script>
 <script src="expenses.js?v=20261020a"></script>
-<script src="rules.js?v=20261020c"></script>
-<script src="parlaylive.js?v=20261020a"></script>
+<script src="rules.js?v=20261021a"></script>
+<script src="methodtoday.js?v=20261021a"></script>
+<script src="parlaylive.js?v=20261021a"></script>
 <script src="spreadlive.js?v=20261020a"></script>
 </body>
 </html>
