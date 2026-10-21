@@ -380,7 +380,10 @@ def fetch_markets():
     try:
         events = json.loads(http_get(POLY_SLATE))
     except Exception as e:  # noqa: BLE001
-        print(f"  polymarket: skipped ({e})")
+        if getattr(e, "code", None) == 404:   # Polymarket took /events down (Oct 21, 2026); /markets still answers
+            print("  polymarket (global): event list not available from Polymarket (404); Polymarket US prices still used")
+        else:
+            print(f"  polymarket: skipped ({e})")
         return []
     games = []
     for ev in events if isinstance(events, list) else []:
