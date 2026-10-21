@@ -1,0 +1,53 @@
+{
+ "date": "2026-10-20",
+ "drafts": {
+  "c": {
+   "caption": {
+    "title": "Pick of the Day + today's best props",
+    "description": "Pick of the Day: Adam Fantilli under 1.5 Goals (96% model chance). Swipe for today's best NBA, NHL props → Free research, link in bio. Model chance, not a guarantee. 18+. #NBA #NBAProps #NHL #NHLProps #PlayerProps"
+   },
+   "ok": true,
+   "id": "p_inbox_url~v2.7698906034152179725"
+  },
+  "v1": {
+   "sport": "nba",
+   "angle": "gap",
+   "caption": "2 NBA player props where our model and the market disagree today 👀 Biggest gap: Devin Vassell over 4.5 Rebounds, model 67% vs. market 38%. Free research, link in bio. Model chance, not a guarantee. 18+. #NBA #NBAProps #PlayerProps #SportsAnalytics",
+   "ok": true,
+   "id": "v_inbox_file~v2.7698906061297698829"
+  },
+  "v2": {
+   "sport": "nhl",
+   "angle": "record",
+   "caption": "Do our NHL picks actually hit? Top 25: 638 of 678 this season (94%), every pick recorded before the game and graded after ✅ Free research, link in bio. Model chance, not a guarantee. 18+. #NHL #NHLProps #PlayerProps #SportsAnalytics",
+   "ok": true,
+   "id": "v_inbox_file~v2.7698906132627539982"
+  },
+  "v3": {
+   "sport": "nba",
+   "angle": "streak",
+   "caption": "3 NBA hit streaks on the line today 🔥 Longest: De'Aaron Fox, 10 straight games over 4.5 assists. Will it keep going? Free research, link in bio. Model chance, not a guarantee. 18+. #NBA #NBAProps #PlayerProps #SportsAnalytics",
+   "ok": true,
+   "id": "v_inbox_file~v2.7698906179346712589"
+  }
+ },
+ "history": [
+  {
+   "date": "2026-10-20",
+   "sport": "nba",
+   "angle": "gap"
+  },
+  {
+   "date": "2026-10-20",
+   "sport": "nhl",
+   "angle": "record"
+  },
+  {
+   "date": "2026-10-20",
+   "sport": "nba",
+   "angle": "streak"
+  }
+ ],
+ "reconnect": false,
+ "at": "2026-10-21T00:08:38Z"
+}
