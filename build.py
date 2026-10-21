@@ -1392,8 +1392,8 @@ def fetch_pmus_prices(slate_games, sched=None):
             dates.append(sg["date"])
         if g["date"] not in dates:
             dates.append(g["date"])
-        ev = None
-        for d in dates:
+        ev = g.get("us_event")      # the slate came from Polymarket US: already fetched
+        for d in ([] if ev else dates):
             try:
                 raw = http_get(PMUS_BASE + "/v1/events/slug/"
                                + urllib.parse.quote(pmus_event_slug(g["away"], g["home"], d)),
@@ -1430,8 +1430,84 @@ def fetch_pmus_prices(slate_games, sched=None):
     return out, games
 
 
+PMUS_EVENTS = (PMUS_BASE + "/v1/events?tagSlug=nfl&active=true&closed=false"
+               "&startDateMin={a}T00:00:00Z&startDateMax={b}T00:00:00Z&limit=100")
+PMUS_SLUG_RE = re.compile(r"^nfl-([a-z]+)-([a-z]+)-(\d{4}-\d{2}-\d{2})$")
+PMUS_FROM = {v: k for k, v in PMUS_TEAM.items()}     # Polymarket US code -> nflverse code
+# Props the global book never carried: left off the slate so the lists keep the stats they were built on.
+PMUS_SLATE_SKIP = {"pass_int", "rush_att", "rush_rec_yds"}
+
+
+def pmus_as_market(m):
+    """One Polymarket US "N+" player market in the global book's shape, so parse_market() reads it
+    unchanged ("Caleb Williams 150+ passing yards" = O/U 149.5), or None if it isn't a prop we model."""
+    smt = m.get("sportsMarketType") or ""
+    sk = PMUS_STAT.get(smt)
+    text = smt.replace("football_player_", "").replace("_", " ").title()
+    who = (m.get("subject") or {}).get("name") or (m.get("metadata") or {}).get("playerName")
+    n = fnum(m.get("line"))
+    if not sk or sk in PMUS_SLATE_SKIP or mkt_stat_key(text) != sk or not who or n is None:
+        return None
+    if m.get("closed") or m.get("active") is False or (m.get("status") and m["status"] != "MARKET_STATUS_OPEN"):
+        return None
+    bid, ask = _pmus_quote(m.get("bestBidQuote")), _pmus_quote(m.get("bestAskQuote"))
+    mid = round((bid + ask) / 2, 4) if bid is not None and ask is not None else None
+    return {"question": f"{who}: {text} O/U {n - 0.5:g}", "outcomes": ["Over", "Under"],
+            "outcomePrices": [mid, round(1 - mid, 4)] if mid is not None else [],
+            "bestBid": bid, "bestAsk": ask, "line": n - 0.5, "slug": m.get("slug")}
+
+
+def fetch_slate_us():
+    """The slate from Polymarket US: its NFL games in a [-1, +10] day window, each with its player
+    props as global-shaped markets ("markets") and the raw event ("us_event", which
+    fetch_pmus_prices() then prices without fetching it again)."""
+    a = (TODAY - datetime.timedelta(days=1)).isoformat()
+    b = (TODAY + datetime.timedelta(days=11)).isoformat()
+    data = json.loads(http_get(PMUS_EVENTS.format(a=a, b=b), timeout=60))
+    games = []
+    for ev in (data.get("events") if isinstance(data, dict) else None) or []:
+        m = PMUS_SLUG_RE.match(ev.get("slug", "") or "")
+        if not m:
+            continue
+        try:
+            d = datetime.date.fromisoformat(m.group(3))
+        except ValueError:
+            continue
+        if not (TODAY - datetime.timedelta(days=1) <= d <= TODAY + datetime.timedelta(days=10)):
+            continue
+        away, home = (team_code(PMUS_FROM.get(t, t)) for t in (m.group(1), m.group(2)))
+        games.append({"slug": ev["slug"], "away": away, "home": home, "date": m.group(3),
+                      "start": ev.get("startDate", ""), "title": ev.get("title", ""), "markets": []})
+    games.sort(key=lambda g: (g["date"], g["slug"]))
+    for g in games:
+        # the listing carries only the game line: the player props come with the full event
+        try:
+            ev = (json.loads(http_get(PMUS_BASE + "/v1/events/slug/" + urllib.parse.quote(g["slug"]),
+                                      timeout=45, tries=2)) or {}).get("event") or {}
+        except Exception as e:  # noqa: BLE001
+            print(f"    event {g['slug']}: skipped ({e})")
+            continue
+        g["us_event"] = ev
+        g["markets"] = [x for x in map(pmus_as_market, ev.get("markets") or []) if x]
+    return games
+
+
 def fetch_slate():
-    """Polymarket player-prop events in a [-1, +10] day window, with their markets."""
+    """The NFL games with player props in a [-1, +10] day window, with their markets. Polymarket
+    stopped serving its global event list (404 since Oct 21, 2026) and lists NFL player props
+    only on Polymarket US now, so the slate comes from there; the global list is the fallback."""
+    try:
+        games = fetch_slate_us()
+        if any(g["markets"] for g in games):
+            return games
+        print("  slate: no player props on Polymarket US; trying the global list")
+    except Exception as e:  # noqa: BLE001
+        print(f"  slate: Polymarket US list unavailable ({e}); trying the global list")
+    return fetch_slate_global()
+
+
+def fetch_slate_global():
+    """Polymarket (global) player-prop events in a [-1, +10] day window, with their markets."""
     events = json.loads(http_get(SLATE_URL))
     games = []
     for ev in events:
