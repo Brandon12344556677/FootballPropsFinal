@@ -2,7 +2,11 @@
 One-time TikTok sign-in for tiktok_post.py: prints the refresh token to save as the
 TIKTOK_REFRESH_TOKEN repository secret. Run it on your own computer:
 
-    TIKTOK_CLIENT_KEY=... TIKTOK_CLIENT_SECRET=... python tiktok_auth.py
+    python tiktok_auth.py
+
+It asks for the app's client key and secret (developers.tiktok.com → the app → Credentials;
+the Sandbox's while the app runs from its Sandbox). Input is hidden and nothing is saved.
+TIKTOK_CLIENT_KEY / TIKTOK_CLIENT_SECRET in the environment are used instead when set.
 
 1. It prints a TikTok link. Open it, sign in as @propstreaklab and allow access.
 2. TikTok sends you to propstreaklab.com/tiktok/callback.html, which shows a code. Paste it here.
@@ -12,6 +16,7 @@ TIKTOK_REFRESH_TOKEN repository secret. Run it on your own computer:
 The token lasts a year. Run this again when the team dashboard's Social tab says to reconnect
 TikTok. Standard library only.
 """
+import getpass
 import os
 import secrets
 import sys
@@ -24,9 +29,10 @@ SCOPES = "user.info.basic,video.upload"                       # video.upload: dr
 
 
 def main():
-    key, secret = os.environ.get("TIKTOK_CLIENT_KEY", "").strip(), os.environ.get("TIKTOK_CLIENT_SECRET", "").strip()
+    key = os.environ.get("TIKTOK_CLIENT_KEY", "").strip() or getpass.getpass("TikTok client key (hidden): ").strip()
+    secret = os.environ.get("TIKTOK_CLIENT_SECRET", "").strip() or getpass.getpass("TikTok client secret (hidden): ").strip()
     if not key or not secret:
-        sys.exit("Set TIKTOK_CLIENT_KEY and TIKTOK_CLIENT_SECRET (developers.tiktok.com → your app) first.")
+        sys.exit("Need the client key and secret (developers.tiktok.com → the app → Credentials).")
     state = secrets.token_urlsafe(12)
     q = urllib.parse.urlencode({"client_key": key, "scope": SCOPES, "response_type": "code",
                                 "redirect_uri": REDIRECT, "state": state})

@@ -240,8 +240,8 @@ One-time setup (steps 1–3 were done on Oct 20, 2026):
    needs TikTok's review, which asks for a screen recording of the flow working; until then the Sandbox
    works for our own account.
 4. Save the **Sandbox's** Client key and Client secret as the repository secrets `TIKTOK_CLIENT_KEY` and
-   `TIKTOK_CLIENT_SECRET`, run `TIKTOK_CLIENT_KEY=... TIKTOK_CLIENT_SECRET=... python tiktok_auth.py` on your
-   computer, and save the refresh token it prints as `TIKTOK_REFRESH_TOKEN`. It lasts a year; the dashboard
+   `TIKTOK_CLIENT_SECRET`, run `python tiktok_auth.py` on your computer (it asks for the key and secret,
+   hidden), and save the refresh token it prints as `TIKTOK_REFRESH_TOKEN`. It lasts a year; the dashboard
    says when to redo it. After switching to Production, redo this step with the Production key and secret.
 5. Set the TikTok bio link to `https://propstreaklab.com/?utm_source=tiktok&utm_campaign=tiktok-bio`.
 
