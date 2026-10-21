@@ -517,7 +517,7 @@ details.plpast>summary:focus-visible{outline:2px solid var(--accent);outline-off
 
   <section data-view="tpod" class="panel" id="tpPanel">
     <div class="panel-h"><h2>3 Picks of the Day</h2><span class="label" id="tpUpd">Team only · for TikTok</span></div>
-    <p class="hint">Three picks a day from the Secret methods, made from 11 AM ET and never changed after: priced 35-65¢ (pays about 1.5x-2.9x), the model at 60%+ and 5+ points over the price, no injury news, a price that hasn't dropped, three different games. Plus one fun parlay paying about 3x. The script and caption never name a method.</p>
+    <p class="hint">Three picks a day from the Secret methods, made from 11 AM ET and never changed after: fitting a method that's in profit in that sport (30+ graded picks there), priced 35-75¢ (pays about 1.33x-2.9x), the model at 60%+ and 5+ points over the price, no injury news, a price that hasn't dropped, three different games. Plus one fun parlay paying about 3x. The script and caption never name a method.</p>
     <div id="tpToday"><p class="empty">Loading…</p></div>
     <div class="tp-copy" id="tpCopy" hidden>
       <h3 class="subh">Video script</h3>
@@ -1452,10 +1452,10 @@ details.plpast>summary:focus-visible{outline:2px solid var(--accent);outline-off
       const when=s=>{ const t=Date.parse(s); return isFinite(t)? new Date(t).toLocaleTimeString('en-US',{hour:'numeric', minute:'2-digit'}) : ''; };
       const bet=p=>`${esc(p.player)} ${esc(p.side)} ${esc(p.line)} ${esc(String(p.statText||p.stat).toLowerCase())}`;
       const card=(p,i)=>`<article class="pl-card tp-card"><h3>${i+1}. ${bet(p)} ${p.res? '· '+(RES[p.res]||p.res) : ''}</h3>`+
-        `<div class="tp-meta">${esc(SPN[p.sport]||p.sport)} · ${esc(p.team)} vs ${esc(p.opp)} · ${when(p.start)} · <b>${Math.round(p.price*100)}¢, pays ${(1/p.price).toFixed(2)}x</b> · model ${Math.round(p.prob*100)}% <span class="chip">${esc(p.method||'')}</span></div>`+
+        `<div class="tp-meta">${esc(SPN[p.sport]||p.sport)} · ${esc(p.team)} vs ${esc(p.opp)} · ${when(p.start)} · <b>${Math.round(p.price*100)}¢, pays ${(1/p.price).toFixed(2)}x</b> · model ${Math.round(p.prob*100)}% <span class="chip">${esc(p.method||'')}</span>${p.tier? ' <span class="chip bad">Fill-in</span>' : ''}</div>`+
         `<ul>${(p.why||[]).map(w=>`<li>${esc(w)}</li>`).join('')}</ul></article>`;
       const par=day&&day.parlay;
-      $('tpToday').innerHTML= !day||!(day.picks||[]).length ? `<p class="empty">No picks yet today. They're made from 11 AM ET once picks fit the Secret methods (60%+ by the model, 35-65¢).</p>` :
+      $('tpToday').innerHTML= !day||!(day.picks||[]).length ? `<p class="empty">No picks yet today. They're made from 11 AM ET once picks fit a proven Secret method (60%+ by the model, 35-75¢). On a light night there may be fewer than three, or none.</p>` :
         `<div class="pl-cards">${day.picks.map(card).join('')}</div>`+(day.picks.length<3? '<p class="empty" style="margin-top:8px">The rest are made as more picks qualify, until 7:30 PM ET.</p>' : '')+
         (par? `<h3 class="subh">Fun parlay · pays ${(1/par.price).toFixed(2)}x${par.res? ' · '+(RES[par.res]||par.res) : ''}</h3><div class="pl-cards">${par.legs.map(card).join('')}</div>` : '');
       $('tpCopy').hidden=!day; if(day){ $('tpScript').value=day.script||''; $('tpCaption').value=day.caption||''; }
