@@ -38,6 +38,8 @@ class TpodTest(unittest.TestCase):
     def test_eligible_needs_payout_confidence_and_a_clean_price(self):
         self.assertTrue(tpod.eligible(cand("1", "g1", 0.72, 0.55), NOW))
         self.assertFalse(tpod.eligible(cand("1", "g1", 0.97, 0.90), NOW))               # a "lock": pays too little
+        self.assertTrue(tpod.eligible(cand("1", "g1", 0.84, 0.74), NOW))                # 74c: allowed (1.35x)
+        self.assertFalse(tpod.eligible(cand("1", "g1", 0.90, 0.78), NOW))               # 78c: over the cap
         self.assertFalse(tpod.eligible(cand("1", "g1", 0.58, 0.45), NOW))               # model under 60%
         self.assertFalse(tpod.eligible(cand("1", "g1", 0.63, 0.60), NOW))               # only 3 points over the price
         self.assertFalse(tpod.eligible(cand("1", "g1", 0.72, 0.55, px0=0.58), NOW))     # price dropped 3c
@@ -84,6 +86,43 @@ class TpodTest(unittest.TestCase):
         self.assertNotIn("went", state["days"][0]["script"])
         self.assertEqual(tpod.record(state["days"])["n"], 0)
 
+    def test_methods_judged_by_sport(self):
+        rows = lambda sport, n, win: [["live", f"{sport}{i}", str(i), "a", 0.5, "under", "hit" if i < win else "miss", 0, "2026-10-1%d" % (i % 9), 0.55, None]
+                                      for i in range(n)]
+        cols = ["src", "gid", "pid", "stat", "line", "side", "res", "actual", "date", "price", "lists"]
+        docs = [("nhl", {"cols": cols, "picks": rows("nhl", 60, 45)}), ("nba", {"cols": cols, "picks": rows("nba", 40, 10)}),
+                ("mlb", {"cols": cols, "picks": rows("mlb", 10, 9)})]
+        ranked = tpod.rank_methods(edge_report.private_strategies({"items": [{"label": "Any assist unders", "side": "under", "stat": "a"}]}),
+                                   docs, "2026-10-21")
+        self.assertEqual([m[1] for m in ranked if m[3]["tier"] == 0], ["nhl"])   # NBA loses money; MLB has too few picks
+        self.assertEqual(ranked[0][1], "nhl")                                      # proven pairs first, then the fill-ins
+        state = {"days": [{"date": "2026-10-20", "v": 1, "picks": [cand("old", "go", 0.75, 0.55, sport="nba")]}]}
+        cands = [cand("1", "g1", 0.75, 0.55), cand("2", "g2", 0.75, 0.55, sport="nba")]
+        tpod.update(state, cands, [], ranked, NOW)                # today's old-rule picks, nothing started: remade
+        picks = state["days"][0]["picks"]
+        self.assertEqual([(p["pid"], p["sport"], p["tier"]) for p in picks], [("1", "nhl", 0), ("2", "nba", 1)])   # proven, then a fill-in
+        self.assertIn("which in the NHL has hit 75%", " ".join(picks[0]["why"]))
+        self.assertIn("Fill-in: fits Any assist unders, which isn't proven in the NBA yet", " ".join(picks[1]["why"]))
+        self.assertNotIn("Fill-in", state["days"][0]["script"])
+        started = {"days": [{"date": "2026-10-20", "v": 1, "picks": [dict(cand("old", "go", 0.75, 0.55, start="2026-10-20T15:00:00Z"),
+                                                                              spoken="Player old, no assists")]}]}
+        tpod.update(started, cands, [], ranked, NOW)              # a game already started: kept as it was
+        self.assertEqual(started["days"][0]["picks"][0]["pid"], "old")
+
+    def test_always_three_picks_on_a_thin_night(self):
+        # one proven pick; the rest: no method fits, and one only passes the relaxed bar
+        cands = [cand("1", "g1", 0.75, 0.55), cand("2", "g2", 0.66, 0.60, sport="nba", stat="reb"),
+                 cand("3", "g3", 0.58, 0.55, sport="nba", stat="pts", lists="")]
+        state = {"days": []}
+        tpod.update(state, cands, [], methods(NHL_A), NOW)
+        picks = state["days"][0]["picks"]
+        self.assertEqual([(p["pid"], p["tier"], p["relaxed"]) for p in picks], [("1", 0, False), ("2", 2, False), ("3", 2, True)])
+        self.assertIn("Thin night", " ".join(picks[2]["why"]))
+
+    def test_combo_stats_read_out(self):
+        self.assertEqual(tpod.say_line(cand("1", "g", 0.7, 0.5, line=34.5, side="over", statText="Pts+Reb+Ast")),
+                         "over 34.5 points, rebounds and assists")
+
     def test_fun_parlay_about_3x(self):
         cands = [cand("1", "g1", 0.80, 0.58), cand("2", "g2", 0.80, 0.58), cand("3", "g3", 0.70, 0.62)]
         par = tpod.choose_parlay(cands, methods(NHL_A), NOW, avoid=set())
@@ -119,6 +158,7 @@ class TpodTest(unittest.TestCase):
                               last=("2026-10-17", 0, 2, -2.0))
         self.assertIn("On Saturday we went 0 for 2, which is -2 units, bringing the series total to -2 units.", text)
         self.assertNotIn("we went", tpod.script({"picks": day["picks"]}, {"n": 0}, "2026-10-20")[0])   # day 1: nothing yet
+        self.assertTrue(tpod.script({"picks": []}, {"n": 0}, "2026-10-20")[0].startswith("No picks from me today"))
         self.assertIn("18+", cap)
 
 

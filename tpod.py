@@ -6,9 +6,13 @@ good payouts the model is confident in, not 95c "locks". build_today.py calls ru
 upcoming priced pick (its candidates) after Pick of the Day.
 
 A pick qualifies when:
-  - it fits at least one private method with MIN_METHOD_N+ graded picks (the methods are ranked by
-    the low end of their likely return, so a lucky small sample doesn't rank first);
-  - its price is PRICE (pays about 1.54x-2.9x) and the model gives it MIN_PROB+, MIN_EDGE+ over the price;
+  - proven first: it fits a private method that has MIN_METHOD_N+ graded picks IN THE PICK'S SPORT and
+    is in profit there (a method is judged sport by sport, so one whose record comes from the NHL can't
+    vouch for a new NBA pick: these go out in public), ranked by the low end of their likely return.
+    The day always gets three picks and a parlay: short of proven picks, the next best fill the rest
+    (a method not proven in that sport, then no method with Value spots first, then relaxed filters),
+    each marked as a fill-in for the team (never in the script);
+  - its price is PRICE (pays about 1.33x-2.9x) and the model gives it MIN_PROB+, MIN_EDGE+ over the price;
   - no news flag or injury hold, MIN_NEFF+ effective games of history, its price hasn't dropped
     MAX_DROP+ cents since it was first recorded, and its game starts today (ET), LEAD+ from now.
 Ranked by the best method it fits, then by how far the model is over the price; three different
@@ -44,13 +48,14 @@ OUT = os.path.join("team", "tpod.enc")
 ET = botd.ET
 PICK_FROM, PICK_UNTIL = datetime.time(11, 0), datetime.time(19, 30)
 LEAD = datetime.timedelta(minutes=60)
-PRICE = (0.35, 0.65)    # pays about 1.54x-2.9x
+PRICE = (0.35, 0.75)    # pays about 1.33x-2.9x (75c, not 65c: on light nights the proven methods' picks sit at 65-75c)
 MIN_PROB = 0.60
 MIN_EDGE = 0.05         # the model at least 5 points over the price
 MIN_NEFF = 6.0
 MAX_DROP = 3            # cents
 MIN_METHOD_N = 30
 PER_DAY = 3
+RULES_V = 2   # bump when the selection changes: today's picks are remade if none has started (2: methods judged by sport)
 SERIES_START = "2026-10-21"   # the TikTok series' day 1: earlier days (a dry run on Oct 20) are dropped from the record
 PARLAY_PAYS = (2.8, 3.4)
 LEG_PRICE = (0.45, 0.85)
@@ -72,26 +77,38 @@ def as_rule_pick(c):
 
 
 def rank_methods(private, docs, today):
-    """[(label, test, record)] of the methods with enough graded picks, best first."""
+    """[(label, sport, test, record)]: every method in every sport it covers, best first. A pair with
+    MIN_METHOD_N+ graded picks in that sport and a positive return there is proven (record["tier"] 0),
+    ranked by the low end of its likely return; the rest are fill-ins (tier 1), ranked by the method's
+    record over every sport. record also says how many graded picks it has in that sport ("sport_n")."""
     rows = []
     for sport, doc in docs:
         rows += edge_report.graded(sport, doc)
     rows = [p for p in edge_report.current_season(rows) if p["sport"] not in edge_report.OWN_ROWS]
     rng = random.Random(3)
-    out = []
+    keep = ("n", "hit", "roi", "lo", "hi")
+    proven, fill = [], []
     for key, label, sport, test in private:
         if key == "private-all":
             continue
-        s = edge_report.summary([p for p in rows if (not sport or p["sport"] == sport) and test(p)], today, rng)
-        if s and s["n"] >= MIN_METHOD_N:
-            out.append((label, sport, test, {k: s[k] for k in ("n", "hit", "roi", "lo", "hi")}))
-    out.sort(key=lambda m: -m[3]["lo"])
-    return out
+        overall = edge_report.summary([p for p in rows if (not sport or p["sport"] == sport) and test(p)], today, rng)
+        for sp in ([sport] if sport else list(SPORT_NAME)):
+            s = edge_report.summary([p for p in rows if p["sport"] == sp and test(p)], today, rng)
+            if s and s["n"] >= MIN_METHOD_N and s["roi"] > 0:
+                proven.append((label, sp, test, dict({k: s[k] for k in keep}, tier=0, sport_n=s["n"])))
+            elif overall:
+                fill.append((label, sp, test, dict({k: overall[k] for k in keep}, tier=1, sport_n=s["n"] if s else 0)))
+    proven.sort(key=lambda m: -m[3]["lo"])
+    fill.sort(key=lambda m: -m[3]["lo"])
+    return proven + fill
 
 
-def eligible(c, now):
+def eligible(c, now, relaxed=False):
+    """The pick filters; relaxed (only to fill the last slots on a thin night): model 55%+ and at the
+    price or above, 30-85c."""
     start = utc(c["start"])
-    if not (PRICE[0] <= c["price"] <= PRICE[1]) or c["prob"] < MIN_PROB or c["prob"] - c["price"] < MIN_EDGE:
+    lo, hi, prob, edge = (0.30, 0.85, 0.55, 0.0) if relaxed else (PRICE[0], PRICE[1], MIN_PROB, MIN_EDGE)
+    if not (lo <= c["price"] <= hi) or c["prob"] < prob or c["prob"] - c["price"] < edge:
         return False
     if c.get("flag") or c.get("lk") or (c.get("neff") or 0) < MIN_NEFF:
         return False
@@ -111,9 +128,16 @@ def say_line(c):
     """'under 0.5 assists' in words."""
     line = c["line"]
     words = (c.get("statText") or c["stat"]).lower()
+    if "+" in words:   # combos read out: "pts+reb+ast" -> "points, rebounds and assists"
+        parts = [{"pts": "points", "reb": "rebounds", "ast": "assists", "r": "runs", "h": "hits", "rbi": "RBIs"}.get(w.strip(), w.strip())
+                 for w in words.split("+")]
+        words = ", ".join(parts[:-1]) + " and " + parts[-1]
     if line == 0.5:
         return ("at least one " + words.rstrip("s")) if c["side"] == "over" else ("no " + words)
     return f"{c['side']} {line:g} {words}"
+
+
+NO_METHOD = ("No method", None, None, {"tier": 2})
 
 
 def explain(c, method):
@@ -135,7 +159,16 @@ def explain(c, method):
                    f"The market has moved toward it: {round(c['px0'] * 100)}c to {round(c['price'] * 100)}c." if move > 0 else
                    f"The price has slipped {-move}c since it was posted (within the {MAX_DROP}c limit).")
     label, rec = method
-    why.append(f"Fits {label}: {round(rec['hit'] * 100)}% hit, {rec['roi'] * 100:+.1f}% return on {rec['n']} graded picks.")
+    sp = SPORT_NAME.get(c["sport"], c["sport"])
+    tier = rec.get("tier", 0)
+    if tier == 0:
+        why.append(f"Fits {label}, which in the {sp} has hit {round(rec['hit'] * 100)}% "
+                   f"for a {rec['roi'] * 100:+.1f}% return on {rec['n']} graded picks.")
+    elif tier == 1:
+        why.append(f"Fill-in: fits {label}, which isn't proven in the {sp} yet ({rec.get('sport_n', 0)} graded picks there); "
+                   f"over every sport it has hit {round(rec['hit'] * 100)}% for {rec['roi'] * 100:+.1f}% on {rec['n']}.")
+    else:
+        why.append("Fill-in: fits none of the methods; the best remaining pick by the model's edge on a thin night.")
     spoken = (f"{c['player']}, {say_line(c)}"
               + f", paying about {pays:.1f} times your money. Our model has it at {round(c['prob'] * 100)} percent"
               + (f", and it would have cashed in {hit} of his last {n} games." if n else "."))
@@ -146,28 +179,38 @@ def kind(c):
     return (c["sport"], c["stat"], c["side"])
 
 
+def fit_of(c, methods):
+    """(rank, method) of the best method c fits (proven pairs first), or (len(methods), NO_METHOD)."""
+    rp = as_rule_pick(c)
+    return next(((i, m) for i, m in enumerate(methods) if (not m[1] or m[1] == c["sport"]) and m[2](rp)),
+                (len(methods), NO_METHOD))
+
+
 def choose(cands, methods, now, taken, used=()):
-    """The next best pick for an empty slot, or None. taken: (gid, pid) already used today; used:
-    the kinds of bet today's picks are (one kind at most MAX_PER_KIND times)."""
-    best = None
-    full = {k for k in used if list(used).count(k) >= MAX_PER_KIND}
-    for c in cands:
-        if not eligible(c, now) or kind(c) in full or (c.get("gid"), c["pid"]) in taken or any(c.get("gid") == g for g, _ in taken):
-            continue
-        rp = as_rule_pick(c)
-        fit = next(((i, m) for i, m in enumerate(methods) if (not m[1] or m[1] == c["sport"]) and m[2](rp)), None)
-        if fit is None:
-            continue
-        score = (-fit[0], c["prob"] - c["price"], c["prob"])
-        if best is None or score > best[0]:
-            best = (score, c, fit[1])
-    if not best:
-        return None
-    _, c, (label, _, _, rec) = best
-    why, spoken = explain(c, (label, rec))
-    keep = {k: c.get(k) for k in botd.KEEP}
-    return dict(keep, method=label, method_rec=rec, why=why, spoken=spoken, px0=c.get("px0"), res=None,
-                made=now.strftime("%Y-%m-%dT%H:%MZ"))
+    """The next best pick for an empty slot, or None. Proven methods first, then fill-ins (a method not
+    proven in that sport, then no method, Value spots first), then on a thin night the relaxed filters.
+    taken: (gid, pid) already used today; used: the kinds of bet today's picks are (at most MAX_PER_KIND
+    of one kind; dropped too if that's the only way to fill the day)."""
+    for relaxed, varied in ((False, True), (True, True), (True, False)):
+        full = {k for k in used if list(used).count(k) >= MAX_PER_KIND} if varied else set()
+        best = None
+        for c in cands:
+            if not eligible(c, now, relaxed) or kind(c) in full or (c.get("gid"), c["pid"]) in taken \
+                    or any(c.get("gid") == g for g, _ in taken):
+                continue
+            rank, m = fit_of(c, methods)
+            score = (-rank, "V" in (c.get("lists") or ""), c["prob"] - c["price"], c["prob"])
+            if best is None or score > best[0]:
+                best = (score, c, m)
+        if best:
+            _, c, (label, _, _, rec) = best
+            why, spoken = explain(c, (label, rec))
+            if relaxed:
+                why.append("Thin night: picked under the relaxed bar (model 55%+, 30-85c) to fill the day.")
+            keep = {k: c.get(k) for k in botd.KEEP}
+            return dict(keep, method=label, method_rec=rec, tier=rec.get("tier", 0), relaxed=relaxed,
+                        why=why, spoken=spoken, px0=c.get("px0"), res=None, made=now.strftime("%Y-%m-%dT%H:%MZ"))
+    return None
 
 
 def record(days):
@@ -184,7 +227,8 @@ def parlay_record(days):
 
 
 def choose_parlay(cands, methods, now, avoid):
-    """The fun parlay, or None. avoid: player ids in the day's picks."""
+    """The reach parlay, or None if there aren't two games left. Legs: proven methods first, then the
+    fill-ins; 2-3 legs paying PARLAY_PAYS, widening to 2.5-4x and then 2-5x when nothing fits."""
     import itertools
     import math
     legs = []
@@ -198,31 +242,34 @@ def choose_parlay(cands, methods, now, avoid):
             continue
         if start.astimezone(ET).date() != now.astimezone(ET).date() or start < now + LEAD:
             continue
-        rp = as_rule_pick(c)
-        fit = next(((i, m) for i, m in enumerate(methods) if (not m[1] or m[1] == c["sport"]) and m[2](rp)), None)
-        if fit:
-            legs.append((fit[0], c, fit[1]))
+        rank, m = fit_of(c, methods)
+        legs.append((rank, c, m))
     legs.sort(key=lambda x: (x[0], -(x[1]["prob"] - x[1]["price"])))
     legs = legs[:POOL]
     best = None
-    for k in (2, 3):
-        for combo in itertools.combinations(legs, k):
-            cs = [x[1] for x in combo]
-            if len({c.get("gid") for c in cs}) < k or len({c["pid"] for c in cs}) < k:
-                continue
-            q = math.prod(c["price"] for c in cs)
-            if not PARLAY_PAYS[0] <= 1 / q <= PARLAY_PAYS[1]:
-                continue
-            m = math.prod(c["prob"] for c in cs)
-            if best is None or m > best[0]:
-                best = (m, q, combo)
+    for band in (PARLAY_PAYS, (2.5, 4.0), (2.0, 5.0)):
+        for k in (2, 3):
+            for combo in itertools.combinations(legs, k):
+                cs = [x[1] for x in combo]
+                if len({c.get("gid") for c in cs}) < k or len({c["pid"] for c in cs}) < k:
+                    continue
+                q = math.prod(c["price"] for c in cs)
+                if not band[0] <= 1 / q <= band[1]:
+                    continue
+                # proven legs first (lower rank sum), then the best model chance
+                score = (-sum(x[0] for x in combo), math.prod(c["prob"] for c in cs))
+                if best is None or score > best[0]:
+                    best = (score, q, combo)
+        if best:
+            break
     if not best:
         return None
-    m, q, combo = best
+    (_, m), q, combo = best
     out = []
     for _, c, (label, _, _, rec) in combo:
         why, spoken = explain(c, (label, rec))
-        out.append(dict({k: c.get(k) for k in botd.KEEP}, method=label, why=why, spoken=spoken, px0=c.get("px0"), res=None))
+        out.append(dict({k: c.get(k) for k in botd.KEEP}, method=label, tier=rec.get("tier", 0), why=why, spoken=spoken,
+                        px0=c.get("px0"), res=None))
     return {"legs": out, "price": round(q, 4), "model": round(m, 4), "res": None, "made": now.strftime("%Y-%m-%dT%H:%MZ")}
 
 
@@ -272,6 +319,10 @@ def script(day, rec, date, prec=None, day_no=1, last=None):
     d = datetime.date.fromisoformat(date)
     picks = day.get("picks") or []
     par = day.get("parlay")
+    if not picks and not par:   # a light day: nothing fit the proven methods at a good price
+        return ("No picks from me today: nothing fit my best methods at a good enough price, and I'd rather skip a day "
+                "than force it. Back tomorrow. Eighteen and over only, this is for entertainment, not betting advice.",
+                f"No picks today ({d.strftime('%b')} {d.day}): nothing fit the best methods at a good price.\n18+ | For entertainment, not betting advice")
     nums = ["First up", "Second", "And third"]
     top = f"my top {len(picks)} picks" if len(picks) != 1 else "my top pick"
     lines = [f"This is day {day_no} of giving you guys {top} for the day" + (", plus one more of a reach parlay." if par else ".")]
@@ -316,9 +367,14 @@ def update(state, cands, docs, methods, now):
     et = now.astimezone(ET)
     today = et.date().isoformat()
     day = next((d for d in days if d["date"] == today), None)
+    if day is not None and day.get("v") != RULES_V:
+        made = (day.get("picks") or []) + ((day.get("parlay") or {}).get("legs") or [])
+        if not any(p.get("res") or utc(p["start"]) <= now for p in made):   # nothing started: remake under the new rules
+            day["picks"], day["v"] = [], RULES_V
+            day.pop("parlay", None)
     if PICK_FROM <= et.time() < PICK_UNTIL and methods and (day is None or len(day["picks"]) < PER_DAY):
         if day is None:
-            day = {"date": today, "picks": []}
+            day = {"date": today, "picks": [], "v": RULES_V}
             days.append(day)
         taken = {(p.get("gid"), p["pid"]) for p in day["picks"]}
         while len(day["picks"]) < PER_DAY:
