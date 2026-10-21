@@ -1,34 +1,34 @@
 {
- "date": "2026-10-20",
+ "date": "2026-10-21",
  "drafts": {
   "c": {
    "caption": {
     "title": "Pick of the Day + today's best props",
-    "description": "Pick of the Day: Adam Fantilli under 1.5 Goals (96% model chance). Swipe for today's best NBA, NHL props → Free research, link in bio. Model chance, not a guarantee. 18+. #NBA #NBAProps #NHL #NHLProps #PlayerProps"
+    "description": "Pick of the Day: Drake Batherson under 2.5 Points (97% model chance). Swipe for today's best NBA, NHL props → Free research, link in bio. Model chance, not a guarantee. 18+. #NBA #NBAProps #NHL #NHLProps #PlayerProps"
    },
    "ok": true,
-   "id": "p_inbox_url~v2.7698906034152179725"
+   "id": "p_inbox_url~v2.7699207462993496078"
   },
   "v1": {
-   "sport": "nba",
+   "sport": "nhl",
    "angle": "gap",
-   "caption": "2 NBA player props where our model and the market disagree today 👀 Biggest gap: Devin Vassell over 4.5 Rebounds, model 67% vs. market 38%. Free research, link in bio. Model chance, not a guarantee. 18+. #NBA #NBAProps #PlayerProps #SportsAnalytics",
+   "caption": "1 NHL player prop where our model and the market disagree today 👀 Biggest gap: Jamie Drysdale under 0.5 Assists, model 84% vs. market 68%. Free research, link in bio. Model chance, not a guarantee. 18+. #NHL #NHLProps #PlayerProps #SportsAnalytics",
    "ok": true,
-   "id": "v_inbox_file~v2.7698906061297698829"
+   "id": "v_inbox_file~v2.7699207521860847630"
   },
   "v2": {
-   "sport": "nhl",
-   "angle": "record",
-   "caption": "Do our NHL picks actually hit? Top 25: 638 of 678 this season (94%), every pick recorded before the game and graded after ✅ Free research, link in bio. Model chance, not a guarantee. 18+. #NHL #NHLProps #PlayerProps #SportsAnalytics",
-   "ok": true,
-   "id": "v_inbox_file~v2.7698906132627539982"
-  },
-  "v3": {
    "sport": "nba",
    "angle": "streak",
-   "caption": "3 NBA hit streaks on the line today 🔥 Longest: De'Aaron Fox, 10 straight games over 4.5 assists. Will it keep going? Free research, link in bio. Model chance, not a guarantee. 18+. #NBA #NBAProps #PlayerProps #SportsAnalytics",
+   "caption": "3 NBA hit streaks on the line today 🔥 Longest: Isaiah Collier, 10 straight games over 4.5 points. Will it keep going? Free research, link in bio. Model chance, not a guarantee. 18+. #NBA #NBAProps #PlayerProps #SportsAnalytics",
    "ok": true,
-   "id": "v_inbox_file~v2.7698906179346712589"
+   "id": "v_inbox_file~v2.7699207612755707917"
+  },
+  "v3": {
+   "sport": "nhl",
+   "angle": "record",
+   "caption": "Do our NHL picks actually hit? Top 25: 701 of 744 this season (94%), every pick recorded before the game and graded after ✅ Free research, link in bio. Model chance, not a guarantee. 18+. #NHL #NHLProps #PlayerProps #SportsAnalytics",
+   "ok": false,
+   "error": "spam_risk_too_many_pending_share: spam_risk_too_many_pending_share"
   }
  },
  "history": [
@@ -46,8 +46,18 @@
    "date": "2026-10-20",
    "sport": "nba",
    "angle": "streak"
+  },
+  {
+   "date": "2026-10-21",
+   "sport": "nhl",
+   "angle": "gap"
+  },
+  {
+   "date": "2026-10-21",
+   "sport": "nba",
+   "angle": "streak"
   }
  ],
  "reconnect": false,
- "at": "2026-10-21T00:08:38Z"
+ "at": "2026-10-21T19:38:41Z"
 }
