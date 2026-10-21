@@ -506,7 +506,8 @@ details.plpast>summary:focus-visible{outline:2px solid var(--accent);outline-off
     <p class="hint">Full-game spreads on Polymarket US in every sport, picked by a team-strength model built from final scores (spreads.py). A pick when the model is 5-15 points above a price of 35-65¢ with $25+ offered, at most one a game, from 11 AM ET; frozen once made and graded from the final score (overtime counts). Model expected is the average chance the model gave the picks.</p>
     <div class="edwrap"><table class="edges pst"><thead><tr><th>Sport</th><th class="n">Graded</th><th class="n">Hit</th><th class="n">Model expected</th><th class="n">Avg price</th><th class="n">Profit</th><th class="n">Return</th><th class="n">Last 7 days</th><th>Today</th></tr></thead><tbody id="sdSum"></tbody></table></div>
     <h3 class="subh">Today</h3>
-    <div class="edwrap"><table class="edges pst"><thead><tr><th>Game</th><th>Pick</th><th class="n">Price</th><th class="n">Model</th><th class="n">Edge</th><th>Starts</th><th>Result</th></tr></thead><tbody id="sdToday"></tbody></table></div>
+    <div class="edwrap"><table class="edges pst"><thead><tr><th>Game</th><th>Pick</th><th class="n">Price</th><th class="n">Model</th><th class="n">Edge</th><th>Starts</th><th>Live</th><th>Result</th></tr></thead><tbody id="sdToday"></tbody></table></div>
+    <p class="hint" id="sdLive"></p>
     <details class="plpast"><summary><span>Past picks</span><span class="label" id="sdPastN"></span></summary>
     <div class="edwrap"><table class="edges pst"><thead><tr><th>Day</th><th>Game</th><th>Pick</th><th class="n">Price</th><th class="n">Model</th><th>Final</th><th>Result</th><th class="n">Units</th></tr></thead><tbody id="sdRows"></tbody></table></div>
     </details>
@@ -1420,9 +1421,10 @@ details.plpast>summary:focus-visible{outline:2px solid var(--accent);outline-off
           `<td class="n ${cls(wk.units)}">${wk.n? `${wk.w}/${wk.n} · ${u(wk.units)}` : '–'}</td><td>${esc(tdTxt)}</td></tr>`; };
       $('sdSum').innerHTML=['nba','nfl','nhl','mlb'].map(s=>row(SPN[s], picks.filter(p=>p.sport===s))).join('')+row('All', picks);
       const tdy=picks.filter(p=>p.date===today).sort((a,b)=>(a.start||'').localeCompare(b.start||''));
-      $('sdToday').innerHTML= tdy.length? tdy.map(p=>`<tr><td>${esc(SPN[p.sport]||p.sport)} · ${esc(p.game)}</td><td>${pickTxt(p)}</td><td class="n">${c(p.price)}</td><td class="n">${pc(p.model)}</td>`+
-        `<td class="n">+${Math.round(p.edge*100)}</td><td>${when(p.start)}</td><td>${p.res? RES[p.res]+(p.final? ' <small>'+esc(p.final)+'</small>' : '') : 'Pending'}</td></tr>`).join('')
-        : `<tr class="ed-wait"><td colspan="7">No spread picks yet today. They're made from 11 AM ET when the model and a price disagree by 5+ points.</td></tr>`;
+      $('sdToday').innerHTML= tdy.length? tdy.map((p,i)=>`<tr><td>${esc(SPN[p.sport]||p.sport)} · ${esc(p.game)}</td><td>${pickTxt(p)}</td><td class="n">${c(p.price)}</td><td class="n">${pc(p.model)}</td>`+
+        `<td class="n">+${Math.round(p.edge*100)}</td><td>${when(p.start)}</td><td data-sd="${i}">${p.res? '–' : Date.parse(p.start)>Date.now()? 'Starts '+when(p.start) : '…'}</td><td>${p.res? RES[p.res]+(p.final? ' <small>'+esc(p.final)+'</small>' : '') : 'Pending'}</td></tr>`).join('')
+        : `<tr class="ed-wait"><td colspan="8">No spread picks yet today. They're made from 11 AM ET when the model and a price disagree by 5+ points.</td></tr>`;
+      if(window.psaSpreadLive) window.psaSpreadLive.track(tdy, {root: 'sdToday', note: 'sdLive'});   // live scores (spreadlive.js)
       const past=picks.filter(p=>p.date!==today).sort((a,b)=>b.date.localeCompare(a.date)||(b.start||'').localeCompare(a.start||''));
       $('sdPastN').textContent= past.length? `${past.length} pick${past.length===1?'':'s'}` : '';
       $('sdRows').innerHTML= past.length? past.slice(0,200).map(p=>`<tr><td>${esc(p.date)}</td><td>${esc(SPN[p.sport]||p.sport)} · ${esc(p.game)}</td><td>${pickTxt(p)}</td><td class="n">${c(p.price)}</td><td class="n">${pc(p.model)}</td>`+
@@ -1996,5 +1998,6 @@ details.plpast>summary:focus-visible{outline:2px solid var(--accent);outline-off
 <script src="expenses.js?v=20261020a"></script>
 <script src="rules.js?v=20261020c"></script>
 <script src="parlaylive.js?v=20261020a"></script>
+<script src="spreadlive.js?v=20261020a"></script>
 </body>
 </html>
