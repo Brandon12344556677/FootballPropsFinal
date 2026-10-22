@@ -58,6 +58,18 @@ class FetchUS(unittest.TestCase):
         self.assertEqual([p["line"] for p in pm], [19.5, 24.5, 29.5])
         self.assertEqual((pm[0]["over"], pm[0]["under"], pm[0]["tradeable"]), (0.55, 0.5, True))
 
+    def test_unread_event_is_skipped_not_emptied(self):
+        # Listing read, event refused (Polymarket's firewall 403s some GitHub runners): the game must not come
+        # back with nothing listed, or depth.drop_vanished strips every pending pick's Polymarket price
+        listing = {"events": [{"slug": "nba-lal-gs-2026-10-21", "markets": [market("x", "total", 220.5, smt="basketball_total")]}]}
+
+        def http_get(url, *a, **k):
+            if "/events/slug/" in url:
+                raise N.urllib.error.HTTPError(url, 403, "Forbidden", None, None)
+            return json.dumps(listing)
+        with mock.patch.object(N, "http_get", side_effect=http_get), mock.patch.object(N.time, "sleep"):
+            self.assertEqual(N.fetch_markets_us(PLAYERS, today=TODAY), [])
+
     def test_team_codes_match_the_nba_data(self):
         self.assertEqual((N.us_team("uta"), N.us_team("was"), N.us_team("ny")), ("UTAH", "WSH", "NY"))
 
