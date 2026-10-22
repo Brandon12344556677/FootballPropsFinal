@@ -496,6 +496,7 @@ def fetch_markets_us(players_by_key):
             smt = mk.get("sportsMarketType") or ""
             if "_player_" not in smt or mk.get("closed"):
                 continue
+            depth.note_sides(mk)      # NBA unders can't be bought on Polymarket US (side not tradable)
             stat_text = smt.split("_player_", 1)[1].replace("_", " ")
             tm = US_TITLE.match(mk.get("title") or "")
             n = fnum(mk.get("line"))
@@ -528,6 +529,8 @@ def fetch_markets_us(players_by_key):
             ask, bid = md["ask"], md["bid"]
             over = ask if ok(ask) else None                     # buy Yes = over
             under = (1 - bid) if bid is not None and ok(1 - bid) else None   # buy No = under
+            over = over if depth.side_ok(us_slug, "over") else None      # a side nobody can buy has no price
+            under = under if depth.side_ok(us_slug, "under") else None
             spread = (ask - bid) if ask is not None and bid is not None else None
             tradeable = (over is not None or under is not None) and (spread is None or spread <= 0.15)
             g["markets"].append({"pm": {"player": name, "statText": stat_text, "line": line,

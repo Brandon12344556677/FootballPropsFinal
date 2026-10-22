@@ -70,6 +70,34 @@ def pmus_book(md):
             "under": usd_within([(1 - p, q) for p, q in bids if p is not None])}
 
 
+# Polymarket US marks each side of a market tradable or not ("marketSides"). Since at least Oct 22, 2026
+# every NBA player prop's No side (the under) is not tradable: it shows a price and even a book, but
+# nobody can buy it. The builders note each market's sides as they read them (note_sides) and drop the
+# Polymarket price of a side that can't be bought (side_ok), so it never counts as a price.
+_SIDES = {}
+
+
+def tradable_sides(mk):
+    """{"over": bool, "under": bool} from a Polymarket US market's marketSides (Yes = over, No = under);
+    a side that isn't listed counts as tradable (older data)."""
+    out = {"over": True, "under": True}
+    for s in mk.get("marketSides") or []:
+        side = "over" if s.get("long") is True or s.get("description") == "Yes" else \
+               "under" if s.get("long") is False or s.get("description") == "No" else None
+        if side and s.get("tradable") is False:
+            out[side] = False
+    return out
+
+
+def note_sides(mk):
+    if mk.get("slug"):
+        _SIDES[mk["slug"]] = tradable_sides(mk)
+
+
+def side_ok(slug, side):
+    return (_SIDES.get(slug) or {}).get(side, True)
+
+
 def kalshi_book(ob):
     """Kalshi orderbook -> {"over", "under"}: dollars within 2c to buy each side."""
     o = (ob or {}).get("orderbook_fp") or {}

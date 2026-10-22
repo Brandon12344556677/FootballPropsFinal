@@ -1419,8 +1419,9 @@ def fetch_pmus_prices(slate_games, sched=None):
             if m.get("status") and m["status"] != "MARKET_STATUS_OPEN":
                 continue
             bid, ask = _pmus_quote(m.get("bestBidQuote")), _pmus_quote(m.get("bestAskQuote"))
-            over = ask
-            under = (1 - bid) if bid is not None else None
+            sides = depth.tradable_sides(m)     # a side Polymarket US won't sell has no price
+            over = ask if sides["over"] else None
+            under = (1 - bid) if bid is not None and sides["under"] else None
             if over is None and under is None:
                 continue
             out[(pkey(who), sk, round(n - 0.5, 1))] = {
@@ -1451,6 +1452,9 @@ def pmus_as_market(m):
     if m.get("closed") or m.get("active") is False or (m.get("status") and m["status"] != "MARKET_STATUS_OPEN"):
         return None
     bid, ask = _pmus_quote(m.get("bestBidQuote")), _pmus_quote(m.get("bestAskQuote"))
+    sides = depth.tradable_sides(m)     # a side Polymarket US won't sell has no price
+    ask = ask if sides["over"] else None
+    bid = bid if sides["under"] else None
     mid = round((bid + ask) / 2, 4) if bid is not None and ask is not None else None
     return {"question": f"{who}: {text} O/U {n - 0.5:g}", "outcomes": ["Over", "Under"],
             "outcomePrices": [mid, round(1 - mid, 4)] if mid is not None else [],

@@ -73,6 +73,26 @@ class UsSlate(unittest.TestCase):
         self.assertEqual(prices[(B.pkey("Caleb Williams"), "pass_yds", 149.5)]["over"], 72)
         self.assertEqual(prices[(B.pkey("Puka Nacua"), "rec_yds", 69.5)]["under"], 45)
 
+    def test_a_side_nobody_can_buy_has_no_price(self):
+        # NBA-style: the No side (the under) marked not tradable on Polymarket US
+        sides = [{"description": "Yes", "long": True, "tradable": True}, {"description": "No", "long": False, "tradable": False}]
+        m = us_market("Caleb Williams", "football_player_passing_yards", 150, 0.68, 0.72, marketSides=sides)
+        self.assertEqual(B.depth.tradable_sides(m), {"over": True, "under": False})
+        pm = B.parse_market(B.pmus_as_market(m))
+        self.assertAlmostEqual(pm["over"], 0.72)
+        self.assertIsNone(pm["under"])
+        ev = {"event": {"markets": [m]}}
+        with mock.patch.object(B, "http_get", side_effect=lambda *a, **k: json.dumps(ev)):
+            prices, _ = B.fetch_pmus_prices([{"slug": "x", "away": "NE", "home": "CHI", "date": "2026-10-22"}])
+        self.assertEqual(prices[(B.pkey("Caleb Williams"), "pass_yds", 149.5)]["under"], None)
+        self.assertEqual(prices[(B.pkey("Caleb Williams"), "pass_yds", 149.5)]["over"], 72)
+
+    def test_builders_note_sides(self):
+        B.depth.note_sides({"slug": "s1", "marketSides": [{"description": "No", "long": False, "tradable": False}]})
+        self.assertTrue(B.depth.side_ok("s1", "over"))
+        self.assertFalse(B.depth.side_ok("s1", "under"))
+        self.assertTrue(B.depth.side_ok("never-seen", "under"))   # unknown: tradable
+
     def test_global_list_is_the_fallback(self):
         def us_down(url, timeout=None, tries=None):
             if "polymarket.us" in url:
