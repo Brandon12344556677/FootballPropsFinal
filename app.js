@@ -774,13 +774,20 @@ window.PS = (function(){
   // pp/kp: what you'd pay for the pick's side on each exchange, as fractions (null = that
   // exchange doesn't list this exact prop at this line). vn: the one the pick is judged on —
   // the cheaper — "P" or "K". Picks recorded before Kalshi was added have only a Polymarket price.
+  // The main price of a pick whose best price is a thin Polymarket one (Kalshi thin too, or not listing it): no number.
+  function thinPrice(){ return `<span class="pmdim" title="Less than $25 is offered near the Polymarket price for this side, so there\u2019s no price you can really get right now">not enough offered</span>`; }
   function venueName(vn){ return vn==='K'? 'Kalshi' : 'Polymarket'; }
   // thinP/thinK: under $25 is offered within 2\u00a2 of that price (depth.py), so a bet would move it.
+  // A thin Polymarket price isn't shown at all: on Polymarket US one side of a prop often has a dollar or two
+  // behind it (NBA unders), so the number isn't a price you can actually get. It reads "not enough offered".
   function venues(pp, kp, vn, thinP, thinK){
     if(pp==null && kp==null) return '';
     const one=(name, v, on, thin)=>`<span class="vq${on?' best':''}${thin && v!=null?' thin':''}">${name} <b>${v==null? '\u2014' : Math.round(v*100)+'\u00a2'}</b>${thin && v!=null? ' <i>thin</i>' : ''}</span>`;
+    const pmOne=(on)=> pp!=null && thinP
+      ? `<span class="vq thin" title="Less than $25 is offered near this price on Polymarket, so it isn\u2019t a price you can really get">Polymarket <i>not enough offered</i></span>`
+      : one('Polymarket', pp, on, false);
     const title=`What you'd pay for this side on each exchange (\u2014 = not listed at this line). The highlighted one is the price the edge, Top 25 Surest and Value use: the cheaper exchange with $25+ offered within 2\u00a2 of its price. \u201cthin\u201d = less than that is offered, so a bet would move the price.`;
-    return `<span class="venues" title="${esc(title)}">${one('Polymarket', pp, vn!=='K' && pp!=null, thinP)}${one('Kalshi', kp, vn==='K', thinK)}</span>`;
+    return `<span class="venues" title="${esc(title)}">${pmOne(vn!=='K' && pp!=null)}${one('Kalshi', kp, vn==='K', thinK)}</span>`;
   }
 
   // ---- locked picks: the builders lock a pick when its game starts within 30 minutes (lock_picks) ----
@@ -804,7 +811,7 @@ window.PS = (function(){
   }
 
   return {teamVars, ticker, until, skeleton, esc, hashFor, pickHash, parsePickHash, syncHash, sharePick, toast, helpBtn, spark, verdict, icon, sheet, closeSheet, pickSheet, relatedPicks,
-          isTracked, toggleBet, renderBets, loadBets, fairOf, setFair, pxMove, lockBadge, lockRibbon, lockNote, startLabel, gameTime, liveUS, venues, venueName, cap, capPick, thinOut, getView, setView};
+          isTracked, toggleBet, renderBets, loadBets, fairOf, setFair, pxMove, lockBadge, lockRibbon, lockNote, startLabel, gameTime, liveUS, venues, venueName, thinPrice, cap, capPick, thinOut, getView, setView};
 })();
 
 // ---- live tracker: follows picks through today's games from ESPN's public box scores ----

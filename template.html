@@ -621,7 +621,7 @@ details.valrules>summary{cursor:pointer}
 </style>
 
 <link rel="stylesheet" href="app.css?v=20261015b">
-<script src="app.js?v=20261015b"></script>
+<script src="app.js?v=20261022a"></script>
 <script src="/halloween.js?v=20261013a"></script>
 
 <header class="apptop">
@@ -1977,6 +1977,7 @@ function pmCell(d){
   }
   const px = d.side==='over'? L.over : L.under;
   if(px==null) return '<span class="pmdim" title="Nobody is offering this side on Polymarket US at the moment">no ask</span>'+boardFull;
+  if(isThin(pmUsd(L.slug, d.side))) return PS.thinPrice();   // under $25 near it: not a price you can really get
   const edge = d.prob==null? null : d.prob-px;
   const cls = edge==null? '' : edge>=0.04? 'pos' : edge<=-0.04? 'neg' : '';
   const off = '';   // an off-line market never reaches here
