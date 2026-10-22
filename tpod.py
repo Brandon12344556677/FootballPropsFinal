@@ -41,6 +41,7 @@ import os
 import random
 
 import botd
+import combos
 import edge_report
 import team_stats
 
@@ -238,6 +239,8 @@ def choose_parlay(cands, methods, now, avoid):
         if not (LEG_PRICE[0] <= c["price"] <= LEG_PRICE[1]) or c["prob"] < MIN_PROB or c["prob"] - c["price"] < LEG_EDGE:
             continue
         if c.get("flag") or c.get("lk") or (c.get("neff") or 0) < MIN_NEFF or c["pid"] in avoid:
+            continue
+        if not combos.allowed(c["sport"], c["stat"]):     # Polymarket US won't parlay it (NHL assists)
             continue
         if c.get("px0") is not None and round((c["price"] - c["px0"]) * 100) <= -MAX_DROP:
             continue

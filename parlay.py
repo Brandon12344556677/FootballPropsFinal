@@ -6,7 +6,8 @@ only (never on the public site).
 Separate tracks, each with these rules and its own three a day and record (TRACKS): NHL in
 team/parlays.enc, NBA in team/parlays_nba.enc and NFL in team/parlays_nfl.enc. Legs come from the upcoming recorded picks of the
 track's sports, priced on Polymarket only (the pick's "pp", with $25+ offered there; Kalshi prices are not used):
-a live price with enough money behind it (not thin), no injury hold, not locked, 6+ effective games of history, and a model
+a live price with enough money behind it (not thin), a prop type Polymarket US lets you parlay (combos.py: not NHL
+assists), no injury hold, not locked, 6+ effective games of history, and a model
 chance at least 3 points above the price. Each game has to start today (ET) and at least 45 minutes
 after the parlay is made; different players, at most 2 legs from one game. For each band in BANDS,
 of the 2-4 leg combinations the model puts at 35-55% whose payout (1 / the legs' prices multiplied)
@@ -36,6 +37,7 @@ import sys
 from zoneinfo import ZoneInfo
 
 import build_today
+import combos
 import team_stats
 
 OUT = os.path.join("team", "parlays.enc")
@@ -114,6 +116,8 @@ def candidates(docs, now, nfl_kick=None, sports=None):
             if pr is None or prob is None or t is None or not 0.05 < pr < 0.97 or (p.get("pd") or 0) < MIN_DEPTH:
                 continue
             if (p.get("neff") or 0) < MIN_NEFF or prob - pr < MIN_EDGE:
+                continue
+            if not combos.allowed(sport, p.get("stat"), today):    # Polymarket won't parlay it (NHL assists)
                 continue
             if t.astimezone(ET).date() != today or t < now + datetime.timedelta(minutes=LEAD_MIN):
                 continue
@@ -194,7 +198,8 @@ def meets_rules(e, sports=None):
     """A made parlay still fits today's rules (checked on what was recorded, not on new prices)."""
     b = e.get("band")
     sports = TEST_PARLAY_SPORTS if sports is None else sports
-    return (all(l["sport"] in sports and l.get("venue") == "Polymarket" for l in e["legs"])
+    return (all(l["sport"] in sports and l.get("venue") == "Polymarket" and combos.allowed(l["sport"], l.get("stat"))
+                for l in e["legs"])
             and MODEL_LO <= e.get("model", 0) <= MODEL_HI
             and isinstance(b, int) and 0 <= b < len(BANDS) and in_band(e.get("price", 1), BANDS[b]))
 
