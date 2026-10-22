@@ -1761,7 +1761,9 @@ function pmusEventSlug(g){ const c=t=>PMUS_TEAM[t]||String(t).toLowerCase(); ret
 function pmusQuoteOf(m){
   const px=q=>{ const v=(q&&q.value!=null)? parseFloat(q.value) : NaN; return (v>0&&v<1)? v : null; };
   const bid=px(m.bestBidQuote), ask=px(m.bestAskQuote);
-  return { over:ask, under: bid!=null? 1-bid : null,
+  // a side Polymarket US marks not tradable (NBA unders, since Oct 2026) has no price: nobody can buy it
+  const no=s=>(m.marketSides||[]).some(x=>(x.description===s) && x.tradable===false);
+  return { over: no('Yes')? null : ask, under: bid!=null && !no('No')? 1-bid : null,
            open: m.closed!==true && m.active!==false && (!m.status || m.status==='MARKET_STATUS_OPEN') };
 }
 async function pmusGame(g, force){
