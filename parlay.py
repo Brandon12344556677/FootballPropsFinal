@@ -175,7 +175,7 @@ def grade(entry, docs, today):
         if l.get("res"):
             continue
         r = index.get(json.dumps(l["key"]))
-        if r in ("hit", "miss", "push", "dnp"):
+        if r in ("hit", "miss", "push", "dnp", "void"):     # void: dropped like a DNP
             l["res"] = r; changed = True
         elif late:
             l["res"] = "void"; changed = True

@@ -149,7 +149,7 @@ def grade(pick, index, now):
         if p.get("res") in ("hit", "miss", "push"):
             pick["res"], pick["actual"] = p["res"], p.get("actual")
             return
-        if p.get("res") == "dnp":
+        if p.get("res") in ("dnp", "void"):
             pick["res"] = "void"
             return
     if now - start > VOID_AFTER:

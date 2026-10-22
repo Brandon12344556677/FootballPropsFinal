@@ -73,5 +73,23 @@ class StatNames(unittest.TestCase):
                          ["pts", "reb", "ast", "tpm", "stl", "blk"])
 
 
+class VoidPRA(unittest.TestCase):
+    def test_listed_picks_are_voided_once(self):
+        import os, tempfile
+        path = os.path.join(tempfile.mkdtemp(), "void.json")
+        with open(path, "w") as f:
+            json.dump([["2026-10-20-BOS-DET", "3078576", "reb", 14.5]], f)
+        hit = {"src": "live", "gid": "2026-10-20-BOS-DET", "pid": "3078576", "stat": "reb", "line": 14.5, "res": "hit", "actual": 6}
+        other = dict(hit, line=4.5)
+        pending = dict(hit, gid="2026-10-20-BOS-DET", res=None)
+        picks = [hit, other]
+        self.assertEqual(N.void_pra(picks, path), 1)
+        self.assertEqual((hit["res"], hit["actual"]), ("void", None))
+        self.assertEqual(other["res"], "hit")
+        self.assertEqual(N.void_pra(picks, path), 0)                 # already void: counted once
+        self.assertEqual(N.void_pra([pending], path), 1)              # pending ones too: they were never real
+        self.assertEqual(N.void_pra(picks, path + "x"), 0)            # no file: nothing happens
+
+
 if __name__ == "__main__":
     unittest.main()

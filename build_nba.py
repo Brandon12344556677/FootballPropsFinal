@@ -1306,6 +1306,27 @@ def pick_box_game(p, games):
     return next(((x, away, home) for x in dates if (x, away, home) in games), None)
 
 
+# Rebounds picks that were really points+rebounds+assists markets: Polymarket US's combo name read as
+# rebounds from Oct 16 to Oct 22, 2026 (see MKT_STAT_NBA), so the pick carried the PRA market's line and
+# price. Each [gid, pid, stat, line] here had a PRA market at that exact line for that player in that game
+# (matched against Polymarket US's events). They're voided ("void": no win, no loss), not graded.
+VOID_PRA_FILE = "nba_void_pra.json"
+
+
+def void_pra(picks, path=VOID_PRA_FILE):
+    try:
+        with open(path, encoding="utf-8") as f:
+            keys = {(g, str(pid), st, float(ln)) for g, pid, st, ln in json.load(f)}
+    except (OSError, ValueError):
+        return 0
+    n = 0
+    for p in picks:
+        if p.get("src") == "live" and p.get("res") != "void" and                 (p.get("gid"), str(p.get("pid")), p.get("stat"), float(p.get("line") or 0)) in keys:
+            p["res"], p["actual"] = "void", None
+            n += 1
+    return n
+
+
 def grade_picks(picks, by_pid, games):
     """Grade pending picks once their game's box score is in the store. A player with no
     row in that game didn't dress (scratched, hurt, or traded since last season — board
@@ -1653,6 +1674,9 @@ def main():
     if dropped:
         print(f"  picks: removed {dropped} pick(s) on preseason games")
     graded, dnp = grade_picks(picks, by_pid, box_games(store["rows"]))
+    voided = void_pra(picks)
+    if voided:
+        print(f"  picks: voided {voided} rebounds pick(s) that were points+rebounds+assists markets")
     try:
         mkt_added = build_market_picks(picks, poly_games, players_by_key, slate, defense, defavg)
     except Exception as e:  # noqa: BLE001

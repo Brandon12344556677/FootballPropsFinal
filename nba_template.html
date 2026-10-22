@@ -1502,7 +1502,7 @@ function buildPickFilters(){
     sel('side','Side',[['','Both'],['over','Over'],['under','Under']])+
     sel('pmin','Model chance ≥',pctOpts)+
     sel('pmax','Model chance ≤',pctOpts)+
-    sel('res','Result',[['','All'],['graded','Graded (hit/miss)'],['hit','Hit'],['miss','Miss'],['push','Push'],['dnp','Did not play'],['pending','Pending']])+
+    sel('res','Result',[['','All'],['graded','Graded (hit/miss)'],['hit','Hit'],['miss','Miss'],['push','Push'],['dnp','Did not play'],['void','Void'],['pending','Pending']])+
     `<div><label for="pk_q">Player</label><input type="search" id="pk_q" placeholder="Search name…"></div>`+
     `<div><label>&nbsp;</label><button id="pk_reset" class="btn ghost" style="width:100%">Reset</button></div>`;
   const weekOpts=()=>{ const s=$('pk_season').value; const wks=uniq(PICKS.filter(p=>!s||String(p.season)===s).map(p=>weekOf(p.date))).sort().reverse();
@@ -1637,7 +1637,7 @@ function renderPickTable(rows){
   const shown=sorted.slice(0,pkShown);
   const cols=[['date','Date'],['player','Player'],['team','Team'],['opp','Opp'],['stat','Prop'],['line','Line'],['side','Bet'],['prob','Model'],['px0','Price'],['actual','Actual'],['res','Result'],['lists','Lists']];
   const th=(kk,l)=>`<th data-k="${kk}" class="${pkSort.key===kk?'sorted'+(pkSort.dir>0?' asc':''):''}">${l}</th>`;
-  const resTag=p=> p.res==='hit'?'<span class="res h">Hit</span>': p.res==='miss'?'<span class="res m">Miss</span>': p.res==='push'?'<span class="res p">Push</span>': p.res==='dnp'?'<span class="res d">DNP</span>':'<span class="res w">Pending</span>';
+  const resTag=p=> p.res==='hit'?'<span class="res h">Hit</span>': p.res==='miss'?'<span class="res m">Miss</span>': p.res==='push'?'<span class="res p">Push</span>': p.res==='dnp'?'<span class="res d">DNP</span>': p.res==='void'?'<span class="res d" title="Voided: no win, no loss">Void</span>':'<span class="res w">Pending</span>';
   let h=`<thead><tr>${cols.map(c=>th(c[0],c[1])).join('')}</tr></thead><tbody>`;
   shown.forEach(p=>{
     h+=`<tr><td class="tnum">${esc(dlabel(p.date))}</td><td>${esc(p.player)} <span class="mktmuted">${esc(p.pos)}</span></td><td>${esc(p.team)}</td><td>${esc(p.opp)}</td><td>${esc(statLabel(p.stat))}</td><td class="tnum">${p.line}</td>`+
