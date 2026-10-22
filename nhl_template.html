@@ -628,7 +628,7 @@ details.valrules>summary{cursor:pointer}
 </style>
 
 <link rel="stylesheet" href="app.css?v=20261015b">
-<script src="app.js?v=20261015b"></script>
+<script src="app.js?v=20261022a"></script>
 <script src="/halloween.js?v=20261013a"></script>
 
 <header class="apptop">
@@ -1296,6 +1296,7 @@ function sortRows(rows, key, dir){ return [...rows].sort((a,b)=>{
 function liveHead(sort){ return `<th data-k="edge" class="${sort&&sort.key==='edge'?'sorted'+(sort.dir>0?' asc':''):''}" title="Best price for the side listed — the cheaper of Polymarket and Kalshi, what you'd pay, plus the model's edge over it"><span class="livehead"><span class="livedot"></span>Best price</span></th>`; }
 function priceCell(r){
   if(r.price==null) return `<span class="pmdim" title="Neither Polymarket nor Kalshi lists this exact prop right now — the price appears here automatically once one does">no market yet</span>`;
+  if(r.vn!=='K' && r.pd!=null && r.pd<25) return PS.thinPrice()+PS.venues(r.pp, r.kp, r.vn, true, r.kd!=null && r.kd<25);   // no price you can get
   const signed=v=>(v>=0?'+':'−')+Math.abs(Math.round(v*100));
   const cls=r.edge==null? '' : r.edge>=0.04? 'pos' : r.edge<=-0.04? 'neg' : '';
   return `<span class="pmpx ${cls}">${Math.round(r.price*100)}¢</span> <span class="rng">${r.edge==null?'':'<span class="edgebit">'+signed(r.edge)+' edge · </span>'}${(1/r.price).toFixed(2)}×</span>`+PS.pxMove(r.px0, r.price)+PS.venues(r.pp, r.kp, r.vn, r.pd!=null && r.pd<25, r.kd!=null && r.kd<25); }
@@ -1323,7 +1324,7 @@ function pickTable(rows, sort){
 function openPickSheet(r){ const p=byId[r.pid]; if(!p){ loadPick(r); return; }
   const g=r.game||{}, vs=r.team===g.home? 'vs '+g.away : r.team===g.away? '@ '+g.home : '';
   PS.pickSheet({name:r.name, team:r.team, sport:SPORT_KEY, vs, prob:r.prob, lo:r.lo, hi:r.hi, neff:r.n, side:r.side, line:r.line, statText:r.statText,
-    price:r.price, vn:r.vn, live:false, vals:valuesOf(p, r.sk), onOpen:()=>loadPick(r),
+    price:(r.vn!=='K' && r.pd!=null && r.pd<25)? null : r.price, vn:r.vn, live:false, vals:valuesOf(p, r.sk), onOpen:()=>loadPick(r),
     track:trackFor(betFor(p, r.sk, r.line, r.side, r.prob, r.price, r.gid)),
     more:PS.relatedPicks(r, upcomingPicks().filter(x=>x.prob!=null).map(normPick), {key:x=>[x.pid,x.sk,x.line,x.side].join("|"), game:x=>x.gid, pid:x=>x.pid, open:openPickSheet}),
     onShare:()=>PS.sharePick({player:p, stat:r.sk, line:r.line, ou:r.side}, r.statText)}); }
