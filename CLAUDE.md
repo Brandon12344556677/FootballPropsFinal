@@ -29,7 +29,7 @@ README.md has the full feature tour; this file is the working rules.
   a 35-65c price with $25+ offered, one a game, frozen, graded from the final; the dashboard's Spreads tab and the edge tracker's spreads rows; `team/spreadlive.js`
   shows today's picks' live ESPN scores and whether each is covering in that tab (browser-side, display only).
   `tpod.py` → `team/tpod.enc` (team only, encrypted; build_today.py runs it after Pick of the Day): 3 Picks of the Day for TikTok from the
-  private methods (rules.enc), each judged by its record in the pick's sport (30+ picks there, in profit): 35-75c, model 60%+ and 5+ points over the price, no news flag or price drop, three games, at most two of a kind;
+  private methods (rules.enc), each judged by its record in the pick's sport (30+ picks there, in profit): 35-75c on Polymarket with $25+ offered on that side (NBA unders are often empty there), model 60%+ and 5+ points over the price, no news flag or price drop, three games, at most two of a kind;
   plus a fun parlay paying 2.8-3.4x. Frozen once made, graded like Pick of the Day; a script and caption that never name a method. Dashboard tab 3 Picks of the Day (today's picks and parlay followed live through `parlaylive.js`).
   `depth.guard` holds a 30c+ price jump until a second run confirms it (the `pj` pick column).
 - `team_stats.py` → `team/stats.enc`: GoatCounter visitor totals (and traffic spikes), encrypted with the

@@ -55,6 +55,7 @@ MIN_NEFF = 6.0
 MAX_DROP = 3            # cents
 MIN_METHOD_N = 30
 PER_DAY = 3
+MIN_PM_USD = 25.0   # dollars offered near the Polymarket price for the side (depth.MIN_USD), or it isn't a pick
 RULES_V = 2   # bump when the selection changes: today's picks are remade if none has started (2: methods judged by sport)
 SERIES_START = "2026-10-21"   # the TikTok series' day 1: earlier days (a dry run on Oct 20) are dropped from the record
 PARLAY_PAYS = (2.8, 3.4)
@@ -359,8 +360,17 @@ def script(day, rec, date, prec=None, day_no=1, last=None):
     return " ".join(lines), "\n".join(cap)
 
 
+def on_polymarket(cands):
+    """The candidates as bets on Polymarket US, the exchange the picks are posted for: priced at its
+    price for the side, and only when MIN_PM_USD+ is offered near that price (on NBA props the under
+    side is often nearly empty, so an under there can't really be bought)."""
+    return [dict(c, price=c["pp"], vn="P") for c in cands
+            if c.get("pp") is not None and (c.get("pd") or 0) >= MIN_PM_USD]
+
+
 def update(state, cands, docs, methods, now):
     """Grade, then fill today's slots. Returns True if anything changed."""
+    cands = on_polymarket(cands)
     days = state.setdefault("days", [])
     before = json.dumps(days, sort_keys=True)
     days[:] = [d for d in days if d["date"] >= SERIES_START]

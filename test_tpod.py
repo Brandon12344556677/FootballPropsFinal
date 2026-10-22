@@ -13,7 +13,7 @@ def cand(pid, gid, prob, price, sport="nhl", stat="a", side="under", **kw):
     c = {"sport": sport, "pid": pid, "player": "Player " + pid, "team": "AAA", "opp": "BBB", "gid": gid, "stat": stat,
          "statText": "Assists", "line": 0.5, "side": side, "prob": prob, "lo": prob - 0.07, "hi": prob + 0.06,
          "price": price, "vn": "P", "start": TONIGHT, "l10": [0, 0, 1, 0, 0, 0, 0, 1, 0, 0], "lists": "V",
-         "neff": 40, "px0": price, "flag": None, "lk": None, "pos": "D"}
+         "neff": 40, "px0": price, "flag": None, "lk": None, "pos": "D", "pp": price, "pd": 200.0}
     c.update(kw)
     return c
 
@@ -134,6 +134,15 @@ class TpodTest(unittest.TestCase):
         tpod.grade_parlay(par, {}, NOW)
         self.assertEqual(par["res"], "hit")                                               # a void leg drops out
         self.assertAlmostEqual(par["units"], round(1 / par["legs"][0]["price"] - 1, 3))
+
+    def test_polymarket_money_needed(self):
+        state = {"days": []}
+        cands = [cand("1", "g1", 0.80, 0.55, pd=3.0),                      # the best, but only $3 on Polymarket
+                 cand("2", "g2", 0.75, 0.45, pp=0.55, vn="K"),             # cheaper on Kalshi: taken at Polymarket's price
+                 cand("3", "g3", 0.75, 0.50, pp=None, vn="K")]             # not on Polymarket at all
+        tpod.update(state, cands, [], methods(NHL_A), NOW)
+        picks = state["days"][0]["picks"]
+        self.assertEqual([(p["pid"], p["price"], p["vn"]) for p in picks], [("2", 0.55, "P")])
 
     def test_script_and_caption(self):
         day = {"picks": [tpod.choose([cand("1", "g1", 0.75, 0.55)], methods(NHL_A), NOW, set())]}

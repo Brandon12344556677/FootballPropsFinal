@@ -1273,7 +1273,10 @@ function normPick(p){ let px=p.price==null? null : p.price;
   // Between site updates the Polymarket price is refreshed live (PS.liveUS, about once a minute); a locked pick keeps
   // the price it locked at. The shown price is again the cheaper of Polymarket and Kalshi.
   const q=!p.lk && p.res==null && PS.liveUS.quote((DB.us||{})[p.pid+'|'+p.stat+'|'+p.line]);
-  if(q){ pp=q[p.side||'over']; vn=kp!=null && (pp==null || kp<pp)? 'K' : pp!=null? 'P' : null; px=vn==='K'? kp : vn==='P'? pp : null; }
+  // Same rule as the builder (depth.choose): the cheaper exchange with $25+ offered near its price, so a thin
+  // Polymarket side (NBA unders often have a dollar or two behind them) sends you to Kalshi when Kalshi has the money.
+  if(q){ pp=q[p.side||'over']; const thinP=p.pd!=null && p.pd<25, thinK=p.kd!=null && p.kd<25;
+    vn=kp!=null && (pp==null || (thinP && !thinK) || (!(thinK && !thinP) && kp<pp))? 'K' : pp!=null? 'P' : null; px=vn==='K'? kp : vn==='P'? pp : null; }
   return {pid:p.pid, gid:p.gid, name:p.player, team:p.team, game:gameOf(p), sk:p.stat, statText:statLabel(p.stat),
     line:p.line, side:p.side||'over', prob:p.prob, lo:p.lo, hi:p.hi, n:Math.round(p.neff||0),
     price:px, pp, kp, vn, pd:p.pd, kd:p.kd, px0:p.px0==null? null : p.px0, lk:p.lk||null, edge:(px==null||p.prob==null)? null : p.prob-px}; }
