@@ -1485,8 +1485,8 @@ details.plpast>summary:focus-visible{outline:2px solid var(--accent);outline-off
         ['Fun parlays', prec.n? `${prec.hit}-${prec.miss}` : '–', prec.n? pc(prec.hit/prec.n)+' hit' : ''],
         ['Profitable days', profTxt(profDays(days.flatMap(x=>(x.picks||[]).map(p=>({date:x.date, res:p.res, units: p.res==='hit'? 1/p.price-1 : p.res==='miss'? -1 : 0})).concat(
           x.parlay? [{date:x.date, res:x.parlay.res, units:x.parlay.units}] : [])))), 'picks + parlay, once the day is all graded'],
-        ['Series total', (rec.n||prec.n)? (v=>(v>=0?'+':'−')+Math.abs(v).toFixed(2)+'u')((rec.units||0)+(prec.units||0)) : '–',
-          (rec.n||prec.n)? `picks ${(rec.units||0)>=0?'+':'−'}${Math.abs(rec.units||0).toFixed(2)} · parlays ${(prec.units||0)>=0?'+':'−'}${Math.abs(prec.units||0).toFixed(2)}` : 'picks and parlays, from day 1']]
+        ['Series total', rec.n? (v=>(v>=0?'+':'−')+Math.abs(v).toFixed(2)+'u')(rec.units||0) : '–',   // the picks: the number the video reads out
+          prec.n? `picks only · fun parlays apart: ${(prec.units||0)>=0?'+':'−'}${Math.abs(prec.units||0).toFixed(2)}u` : 'the picks, from day 1 (as in the video)']]
         .map(([k,v,sub])=>`<div class="kpi"><span class="label">${k}</span><span class="v sm">${v}</span><span class="s">${sub}</span></div>`).join('');
       const past=days.filter(x=>x.date!==today).slice().reverse();
       $('tpPastN').textContent= past.length? `${past.length} day${past.length===1?'':'s'}` : '';
