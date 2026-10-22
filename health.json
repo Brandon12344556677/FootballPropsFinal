@@ -1,4 +1,11 @@
 {
- "problems": {},
+ "problems": {
+  "build: kalshi": {
+   "first": "2026-10-22T08:01:51Z",
+   "runs": 1,
+   "alerted": null,
+   "msg": "build.py: kalshi failed (all 10 NFL series failed)"
+  }
+ },
  "alert": []
 }
