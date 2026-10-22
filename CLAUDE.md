@@ -59,6 +59,9 @@ README.md has the full feature tour; this file is the working rules.
   ads.js's cards (same copy rules), ffmpeg makes the slideshows. Carousel JPEGs are committed to `tiktok/<day>/` because
   TikTok pulls photos from our verified URL prefix; `tiktok/posted.json` feeds the dashboard's Social tab.
   `tiktok_auth.py` + `tiktok/callback.html`: the one-time sign-in that gives the `TIKTOK_REFRESH_TOKEN` secret.
+- NBA over/under calibration (`build_nba.py` fit_side_cal/apply_side_cal, since Oct 23, 2026): a per-stat log-odds shift toward the over,
+  refitted each run from graded picks (half the fitted gap, capped), applied to pending picks (`sb` column) and on the page (`DB.sideCal`, `calMp`);
+  edge tracker row `nba-value-cal`.
 - Shared helpers: `news.py`, `holds.py`, `kalshi.py`, `depth.py`.
 - `update_pass.sh` is one full pass; `.github/workflows/update.yml` runs it twice per run, and each run starts
   the next one when it ends (the 20-minute schedule is only a backup: GitHub's scheduler stalls).

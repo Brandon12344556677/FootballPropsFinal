@@ -39,7 +39,7 @@ FILES = [("nfl", "picks.json"), ("nhl", "nhl_picks.json"), ("mlb", "mlb_picks.js
 NHL_REGULAR = "2026-09-29"     # NHL 2026-27 regular season opener: anything earlier is left out (current season only)
 BOOT = 400
 WAITING = {"nba"}       # rows shown even before their first graded pick (the NBA season starts Oct 2026)
-WAITING_KEYS = {"parlays", "parlays-nba", "parlays-nfl", "spreads-all", "spreads-nba", "spreads-nfl", "spreads-nhl", "spreads-mlb", "botd-value", "botd-lock"}     # and rows for lists that start posting later
+WAITING_KEYS = {"nba-value-cal", "parlays", "parlays-nba", "parlays-nfl", "spreads-all", "spreads-nba", "spreads-nfl", "spreads-nhl", "spreads-mlb", "botd-value", "botd-lock"}     # and rows for lists that start posting later
 OWN_ROWS = {"parlay", "parlay-nba", "parlay-nfl", "spread", "botd"}  # rows that repeat picks already counted: only their own strategies grade them
 
 STRATEGIES = [   # (key, label, sport or None, test)
@@ -52,6 +52,8 @@ STRATEGIES = [   # (key, label, sport or None, test)
     ("mlb-top", "MLB Top 25 Surest", "mlb", lambda p: "T" in p["lists"]),
     ("nba-value", "NBA Value spots", "nba", lambda p: "V" in p["lists"]),
     ("nba-top", "NBA Top 25 Surest", "nba", lambda p: "T" in p["lists"]),
+    ("nba-value-cal", "NBA Value spots, with the over/under calibration (from Oct 23)", "nba",
+     lambda p: "V" in p["lists"] and p.get("sb") is not None),
     ("nba-unders", "NBA unders", "nba", lambda p: p["side"] == "under"),
     ("nba-overs", "NBA overs", "nba", lambda p: p["side"] == "over"),
     ("all-nhl", "Every NHL pick", "nhl", lambda p: True),
@@ -119,7 +121,8 @@ def graded(sport, doc):
             continue
         out.append({"sport": sport, "day": day, "pr": pr, "win": p["res"] == "hit", "side": p.get("side") or "over",
                     "stat": p.get("stat"), "line": p.get("line"), "lists": p.get("lists") or "",
-                    "p0": p0, "prob": p.get("prob"), "pos": p.get("pos")})   # for the private rules' filters
+                    "p0": p0, "prob": p.get("prob"), "pos": p.get("pos"),   # for the private rules' filters
+                    "sb": p.get("sb")})     # NBA over/under calibration shift, when the pick had one
     return out
 
 

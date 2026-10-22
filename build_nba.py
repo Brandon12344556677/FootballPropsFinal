@@ -1025,7 +1025,8 @@ PICK_COLS = ["src", "gid", "season", "date", "pid", "player", "pos", "team", "op
              "vn",           # which one "price" is: the cheaper with $25+ offered, "P" Polymarket, "K" Kalshi
              "th",           # 1 = thin: neither has $25 offered near its price, so no Value
              "hd",           # what it waits on: injury news not settled yet (holds.py), so no lists
-             "pj"]           # a price jump not yet confirmed by a second run (depth.guard): price stays at the old one
+             "pj",           # a price jump not yet confirmed by a second run (depth.guard): price stays at the old one
+             "sb"]           # the over/under shift (log-odds, toward the over) applied to its chance (fit_side_cal)
 BOARD_STATS = ["pts", "reb", "ast", "tpm", "pra"]
 TOP_N = 25
 VALUE_MIN_NEFF = 6.0
@@ -1427,6 +1428,85 @@ def fit_temperature(picks):
     return round(min(2.0, max(0.7, best_T)), 3)
 
 
+# Over/under calibration (since Oct 23, 2026). On the season's first 2,334 graded picks the model put
+# overs at 66-67% that hit 55-57% and unders at 65-71% that hit 72-85%, every night (assist overs 18
+# points high, threes 14, points 13, PRA 11, rebounds 7), which filled Value with overs that lost
+# (-18% on 118). Every run fits a shift in log-odds toward the over for each stat from the graded
+# picks (the over's raw chance, before any shift), cautiously: SIDE_CAL_MIN graded picks before any
+# shift, each stat pulled toward the all-stat shift until it has its own evidence, only SIDE_CAL_SHARE
+# of the fitted shift applied, capped at SIDE_CAL_MAX. Pending picks are re-scored with it before the
+# lists are made (recorded as "sb"); the page applies the same shift (DB.sideCal) to the chances it shows.
+SIDE_CAL_MIN = 400
+SIDE_CAL_SHARE = 0.5
+SIDE_CAL_MAX = 0.5
+
+
+def _logit(p):
+    q = min(1 - 1e-4, max(1e-4, p))
+    return math.log(q / (1 - q))
+
+
+def fit_side_cal(picks):
+    """{stat: shift, "*": all-stat shift}: log-odds added to the over's chance (negative = overs were
+    rated too high). {} with too few graded picks."""
+    data = []
+    for p in picks:
+        if p.get("src") != "live" or p.get("res") not in ("hit", "miss") or p.get("prob") is None or p.get("mv") != MODEL_V:
+            continue
+        over = p.get("side") == "over"
+        po = float(p["prob"]) if over else 1 - float(p["prob"])
+        y = 1.0 if (p["res"] == "hit") == over else 0.0         # did the over hit?
+        data.append((p["stat"], _logit(po) - (p.get("sb") or 0.0), y))
+    if len(data) < SIDE_CAL_MIN:
+        return {}
+
+    def best(rows, center, lam):
+        top = None
+        for i in range(-150, 151):
+            d = i / 100.0
+            loss = lam * (d - center) ** 2
+            for _, lg, y in rows:
+                q = min(1 - 1e-6, max(1e-6, 1 / (1 + math.exp(-(lg + d)))))
+                loss -= y * math.log(q) + (1 - y) * math.log(1 - q)
+            if top is None or loss < top[0]:
+                top = (loss, d)
+        return top[1]
+
+    allstat = best(data, 0.0, 30.0)
+    out = {"*": round(max(-SIDE_CAL_MAX, min(SIDE_CAL_MAX, SIDE_CAL_SHARE * allstat)), 3)}
+    for st in sorted({s for s, _, _ in data}):
+        rows = [r for r in data if r[0] == st]
+        d = best(rows, allstat, 100.0) if len(rows) >= 100 else allstat
+        out[st] = round(max(-SIDE_CAL_MAX, min(SIDE_CAL_MAX, SIDE_CAL_SHARE * d)), 3)
+    return out
+
+
+def apply_side_cal(picks, cal):
+    """Re-score every pending, unlocked pick with this run's shift for its stat (replacing the shift it
+    had). Its side stays the same; only its chance and range move. Returns how many changed."""
+    n = 0
+    for p in picks:
+        if p.get("src") != "live" or p.get("res") is not None or pick_locked(p) or p.get("prob") is None or p.get("mv") != MODEL_V:
+            continue
+        d = cal.get(p["stat"], cal.get("*", 0.0))
+        old = p.get("sb") or 0.0
+        if abs(d - old) < 1e-9:
+            continue
+        over = p.get("side") == "over"
+        lo, hi = p.get("lo"), p.get("hi")
+
+        def f(x):
+            return min(P_MAX, max(1 - P_MAX, 1 / (1 + math.exp(-(_logit(x) - old + d)))))
+        po = f(p["prob"] if over else 1 - p["prob"])
+        p["prob"] = round(po if over else 1 - po, 3)
+        if lo is not None and hi is not None:     # the over's range, shifted, then back to this side's
+            olo, ohi = (f(lo), f(hi)) if over else (f(1 - hi), f(1 - lo))
+            p["lo"], p["hi"] = (round(olo, 3), round(ohi, 3)) if over else (round(1 - ohi, 3), round(1 - olo, 3))
+        p["sb"] = d or None
+        n += 1
+    return n
+
+
 def live_markets(picks):
     """Polymarket US market slug for each upcoming, unlocked, priced pick on a list (Top 25 / Value) ("pid|stat|line" -> slug),
     so the board can refresh those prices in the browser every minute between updates."""
@@ -1670,6 +1750,13 @@ def main():
         kalshi_mkts = None
     nk = kalshi.apply(picks, kalshi_mkts, pkey, lambda p: not pick_locked(p))
     print(f"  kalshi: {nk} pending pick(s) priced on Kalshi too")
+    try:
+        side_cal = fit_side_cal(picks)
+        moved = apply_side_cal(picks, side_cal)
+        print(f"  over/under calibration: {side_cal or 'not yet (too few graded picks)'}; {moved} pending pick(s) re-scored")
+    except Exception as e:  # noqa: BLE001
+        print(f"  over/under calibration: skipped ({e})")
+        side_cal = {}
     surest = sorted((p["prob"] for p in picks if p.get("res") is None and not pick_locked(p)
                      and p.get("price") is not None and not p.get("hd")), reverse=True)[:TOP_VERIFY]
     t_floor = max(0.5, surest[-1]) if len(surest) == TOP_VERIFY else 0.5
@@ -1721,6 +1808,7 @@ def main():
         "defense": defense,
         "defAvg": defavg,
         "calT": cal_t,
+        "sideCal": side_cal,      # over/under shift per stat (fit_side_cal): the page applies it too
         "record": live_record(picks),
         "us": live_markets(picks),
         "players": players,
