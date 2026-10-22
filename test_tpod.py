@@ -149,14 +149,17 @@ class TpodTest(unittest.TestCase):
                                                 dict(cand("c", "gc", 0.7, 0.5), res="miss")],
                 "parlay": {"res": "miss", "units": -1.0, "legs": []}}
         last = tpod.last_day([yday])
-        self.assertEqual(last, ("2026-10-19", 2, 4, 0.0))                               # +1 +1 -1, parlay -1
+        self.assertEqual(last, ("2026-10-19", 2, 3, 1.0, 0, 1))                         # picks +1 +1 -1; the parlay apart
         text, cap = tpod.script({"picks": day["picks"]}, {"n": 10, "hit": 6, "miss": 4, "units": 4.3}, "2026-10-20",
-                                {"n": 3, "hit": 1, "miss": 2, "units": 1.0}, day_no=5, last=("2026-10-19", 3, 4, 2.0))
-        self.assertIn("for the day. Yesterday we went 3 for 4, which is +2 units, bringing the series total to +5.3 units.", text)
-        self.assertIn("Yesterday: 3/4 (+2 units) | Series: +5.3 units", cap)
+                                {"n": 3, "hit": 1, "miss": 2, "units": 1.0}, day_no=5, last=("2026-10-19", 2, 3, 1.5, 0, 1))
+        self.assertIn("for the day. Yesterday we went 2 for 3 on picks, which is +1.5 units, bringing the series total to "
+                      "+4.3 units. And 0 for 1 on the parlay.", text)                  # the series is the picks only
+        self.assertIn("Yesterday: picks 2/3 (+1.5 units) | parlay 0/1 | Series: +4.3 units", cap)
         text, _ = tpod.script({"picks": day["picks"]}, {"n": 2, "hit": 0, "miss": 2, "units": -2.0}, "2026-10-20",
-                              last=("2026-10-17", 0, 2, -2.0))
-        self.assertIn("On Saturday we went 0 for 2, which is -2 units, bringing the series total to -2 units.", text)
+                              last=("2026-10-17", 0, 2, -2.0, 0, 0))
+        self.assertIn("On Saturday we went 0 for 2 on picks, which is -2 units, bringing the series total to -2 units. First", text)
+        self.assertEqual(tpod.last_day([{"date": "2026-10-19", "picks": [], "parlay": {"res": "hit", "units": 2.0}}]),
+                         ("2026-10-19", 0, 0, 0, 1, 1))
         self.assertNotIn("we went", tpod.script({"picks": day["picks"]}, {"n": 0}, "2026-10-20")[0])   # day 1: nothing yet
         self.assertTrue(tpod.script({"picks": []}, {"n": 0}, "2026-10-20")[0].startswith("No picks from me today"))
         self.assertIn("18+", cap)
