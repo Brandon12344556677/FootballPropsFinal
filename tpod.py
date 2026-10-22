@@ -390,6 +390,9 @@ def update(state, cands, docs, methods, now):
         if not any(p.get("res") or utc(p["start"]) <= now for p in made):   # nothing started: remake under the new rules
             day["picks"], day["v"] = [], RULES_V
             day.pop("parlay", None)
+    par = (day or {}).get("parlay")
+    if par and not par.get("res") and any(not combos.allowed(l["sport"], l["stat"]) for l in par["legs"])             and not any(l.get("res") or utc(l["start"]) <= now for l in par["legs"]):
+        day.pop("parlay")     # a leg Polymarket won't parlay (NHL assists) and nothing started: remade below
     if PICK_FROM <= et.time() < PICK_UNTIL and methods and (day is None or len(day["picks"]) < PER_DAY):
         if day is None:
             day = {"date": today, "picks": [], "v": RULES_V}

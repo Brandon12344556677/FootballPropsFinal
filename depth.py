@@ -151,6 +151,23 @@ def choose(p):
     guard(p, prev)
 
 
+def drop_vanished(picks, gid, listed, locked):
+    """A pending, unlocked pick in game gid whose Polymarket US market is no longer listed there loses its
+    Polymarket price (and goes to Kalshi's, or none): kept, it would stay on Top 25 / Value at the last
+    price seen, which nobody can get. listed: {(pid, stat, line)} of every player prop Polymarket US lists
+    in that game, read this run (only games read this run are checked). Returns how many lost it."""
+    n = 0
+    for p in picks:
+        if p.get("src", "live") != "live" or p.get("gid") != gid or p.get("res") is not None or locked(p):
+            continue
+        if p.get("pp") is None or (p.get("pid"), p.get("stat"), float(p["line"])) in listed:
+            continue
+        p["pp"] = p["pd"] = p["_us"] = p["_pt"] = None
+        choose(p)
+        n += 1
+    return n
+
+
 def guard(p, prev):
     """The price guard (see JUMP): p carries its new price/vn/th; prev is (price, vn, th) from the
     last run. A jump of JUMP or more is held at prev until a second run confirms it (p["pj"]

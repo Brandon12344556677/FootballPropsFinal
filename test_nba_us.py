@@ -62,5 +62,16 @@ class FetchUS(unittest.TestCase):
         self.assertEqual((N.us_team("uta"), N.us_team("was"), N.us_team("ny")), ("UTAH", "WSH", "NY"))
 
 
+class StatNames(unittest.TestCase):
+    def test_polymarket_us_combo_names(self):
+        # Polymarket US's prop type points_rebounds_assists arrives as "points rebounds assists" (no "+"),
+        # which read as plain rebounds until Oct 22, 2026
+        self.assertEqual(N.mkt_stat_key("points rebounds assists"), "pra")
+        self.assertEqual(N.mkt_stat_key("Points + Rebounds + Assists"), "pra")
+        self.assertEqual([N.mkt_stat_key(t) for t in ("points rebounds", "points assists", "rebounds assists")], ["pr", "pa", "ra"])
+        self.assertEqual([N.mkt_stat_key(t) for t in ("points", "rebounds", "assists", "threes", "steals", "blocks")],
+                         ["pts", "reb", "ast", "tpm", "stl", "blk"])
+
+
 if __name__ == "__main__":
     unittest.main()
