@@ -1884,8 +1884,12 @@ def build_live_picks(picks, slate_games, sched, by_key, snap, pmus=None, kal=Non
     # ...and of the surest priced ones, which could make Top 25 (it needs $25+ near the price too)
     surest = {id(f) for f in sorted((f for f in fresh if f.get("price") is not None and not f.get("hd") and f["prob"] >= 0.5),
                                     key=lambda f: -f["prob"])[:TOP_VERIFY]}
+    # ...and of the ones 3 Picks of the Day could take (tpod.py: model 60%+, a 35-75c Polymarket price, 5+ points
+    # over it), which it only takes with $25+ offered on Polymarket
+    tpod_ok = lambda f: (f.get("pp") is not None and f["prob"] >= 0.60 and 0.35 <= f["pp"] / 100.0 <= 0.75
+                         and f["prob"] - f["pp"] / 100.0 >= 0.05)
     nb = depth.verify(fresh, lambda f: f.get("th") and (id(f) in surest or f["neff"] >= VALUE_MIN_NEFF and any(
-        px is not None and value_qualifies(f["prob"], px / 100.0) for px in (f.get("pp"), f.get("kp")))))
+        px is not None and value_qualifies(f["prob"], px / 100.0) for px in (f.get("pp"), f.get("kp")))) or tpod_ok(f))
     print(f"  depth: read {nb} order book(s); {sum(1 for f in fresh if f.get('th'))} of {len(fresh)} props "
           f"too thin for Value (under ${depth.MIN_USD:.0f} offered within 2c)")
     assign_lists(fresh, held)

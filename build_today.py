@@ -167,6 +167,7 @@ def upcoming(sport, db, picks_doc, labels, getters, now):
         for k in ("pp", "kp"):
             if p.get(k) is not None:
                 venue[k] = round(float(p[k]) / cents, 3)
+        venue["pd"] = p.get("pd")     # $ offered near the Polymarket price (tpod.py); not written to today.json
         out.append({
             "sport": sport, "pid": str(p["pid"]), "player": p["player"], "team": p.get("team"),
             "opp": p.get("opp"), "gid": p.get("gid"), "stat": p["stat"],
@@ -538,7 +539,7 @@ def main():
             print(f"  {sport}: skipped ({e})")
     okc = [c for c in cands if recommendable(c)]   # what the home page, Pick of the Day and posts may feature
     top = best(okc)
-    picks = [{k: v for k, v in c.items() if k not in ("neff", "flag", "px0", "lists", "pos")} for c in top]
+    picks = [{k: v for k, v in c.items() if k not in ("neff", "flag", "px0", "lists", "pos", "pd")} for c in top]
     feat = featured(okc, top)
     try:
         old = load(FAST_STATE) if os.path.exists(FAST_STATE) else {}
