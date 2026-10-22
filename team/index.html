@@ -468,7 +468,7 @@ details.plpast>summary:focus-visible{outline:2px solid var(--accent);outline-off
   <section data-view="parlays" class="panel" id="psPanel" hidden>
     <div class="panel-h"><h2>Parlays at a glance</h2><span class="label" id="psUpd">Team only · 1 unit a parlay</span></div>
     <p class="hint">Every graded model parlay (NHL, NBA and NFL sets), each counted as a 1-unit bet at the legs’ prices multiplied. Hit rate is what happened; Model expected is the average chance the model gave them. Voids (every leg dropped) don’t count.</p>
-    <div class="edwrap"><table class="edges pst"><thead><tr><th>Set</th><th class="n">Graded</th><th class="n">Hit</th><th class="n">Model expected</th><th class="n">Avg pays</th><th class="n">Profit</th><th class="n">Return</th><th class="n">Last 7 days</th><th>Today</th></tr></thead><tbody id="psRows"></tbody></table></div>
+    <div class="edwrap"><table class="edges pst"><thead><tr><th>Set</th><th class="n">Graded</th><th class="n">Hit</th><th class="n">Model expected</th><th class="n">Avg pays</th><th class="n">Profit</th><th class="n">Return</th><th class="n" title="Days whose parlays are all graded that ended in profit">Profitable days</th><th class="n">Last 7 days</th><th>Today</th></tr></thead><tbody id="psRows"></tbody></table></div>
     <h3 class="subh">By payout band</h3>
     <div class="edwrap"><table class="edges pst"><thead><tr><th>Band</th><th class="n">NHL</th><th class="n">NBA</th><th class="n">NFL</th><th class="n">All</th></tr></thead><tbody id="psBands"></tbody></table></div>
     <p class="hint" style="margin-top:6px">Each cell: hits of graded, and profit in units. All: the three sets together. A 3-3.5x parlay needs to hit about 1 in 3 to break even, a 4-4.5x one about 1 in 4.</p>
@@ -1384,6 +1384,17 @@ details.plpast>summary:focus-visible{outline:2px solid var(--accent);outline-off
   // ---------- model parlays: team/parlays.enc (NHL) and team/parlays_nba.enc (NBA) (parlay.py), same password ----------
   // The Parlays tab: a summary of every set (psPanel), then each set's own panel.
   var PLDATA={};   // P ('pl' NHL, 'nb' NBA, 'nf' NFL) -> {days, gen}; var: loadParlays can run before this line of the script
+  // Profitable days: of the days whose bets are all graded, how many ended in profit (1 unit a bet).
+  // bets: [{date, res, units}]; a day with a bet still open isn't counted yet, pushes and voids are 0.
+  function profDays(bets){
+    const by={};
+    bets.forEach(b=>{ const d=by[b.date]=by[b.date]||{open:false, n:0, units:0};
+      if(!b.res) d.open=true; else if(b.res==='hit'||b.res==='miss'){ d.n++; d.units+=+b.units||0; } });
+    const days=Object.values(by).filter(d=>!d.open&&d.n);
+    return {n: days.length, up: days.filter(d=>d.units>0.0001).length};
+  }
+  const profTxt=p=>p.n? `${p.up} of ${p.n} (${Math.round(p.up/p.n*100)}%)` : '–';
+  const parlayBets=days=>days.filter(e=>e.legs).map(e=>({date:e.date, res:e.res, units:e.units}));
   function renderParlaySummary(){
     const SETS=[['pl','NHL'],['nb','NBA'],['nf','NFL']].filter(([P])=>PLDATA[P]), BANDS=['3-3.5x','3.5-4x','4-4.5x'];
     if(!SETS.length) return;
@@ -1398,7 +1409,7 @@ details.plpast>summary:focus-visible{outline:2px solid var(--accent);outline-off
       const tdTxt= !days.length? 'None yet' : !made.length && td.filter(e=>e.closed).length>=sets? 'No parlays' : made.length? `${made.length} made`+(hit? ` · ${hit} hit` : '')+(miss? ` · ${miss} missed` : '')+(open? ` · ${open} open` : '') : 'From 11 AM ET';
       return `<tr><td><b>${name}</b></td><td class="n">${a.n}</td><td class="n">${a.n? `${a.w} (${pc(a.w/a.n)})` : '–'}</td><td class="n">${a.model==null? '–' : pc(a.model)}</td>`+
         `<td class="n">${a.pays==null? '–' : a.pays.toFixed(2)+'x'}</td><td class="n ${cls(a.units)}">${a.n? u(a.units) : '–'}</td><td class="n ${cls(a.units)}">${a.n? (a.units>=0?'+':'−')+Math.abs(a.units/a.n*100).toFixed(1)+'%' : '–'}</td>`+
-        `<td class="n ${cls(wk.units)}">${wk.n? `${wk.w}/${wk.n} · ${u(wk.units)}` : '–'}</td><td>${esc(tdTxt)}</td></tr>`; };
+        `<td class="n">${profTxt(profDays(parlayBets(days)))}</td><td class="n ${cls(wk.units)}">${wk.n? `${wk.w}/${wk.n} · ${u(wk.units)}` : '–'}</td><td>${esc(tdTxt)}</td></tr>`; };
     const all=SETS.flatMap(([P])=>PLDATA[P].days);
     $('psRows').innerHTML=SETS.map(([P,name])=>row(name, PLDATA[P].days)).join('')+(SETS.length>1? row('All', all, SETS.length) : '');
     const cell=days=>{ const a=stats(days); return a.n? `${a.w}/${a.n} · <span class="${cls(a.units)}">${u(a.units)}</span>` : '–'; };
@@ -1472,6 +1483,8 @@ details.plpast>summary:focus-visible{outline:2px solid var(--accent);outline-off
       $('tpKpis').innerHTML=[['Picks record', rec.n? `${rec.hit}-${rec.miss}` : '–', rec.n? pc(rec.hit/rec.n)+' hit' : 'starts after the first games'],
         ['Picks profit', rec.n? (rec.units>=0?'+':'−')+Math.abs(rec.units).toFixed(2)+'u' : '–', staked? 'Return '+(rec.units>=0?'+':'−')+Math.abs(rec.units/staked*100).toFixed(1)+'%' : '1 unit a pick'],
         ['Fun parlays', prec.n? `${prec.hit}-${prec.miss}` : '–', prec.n? pc(prec.hit/prec.n)+' hit' : ''],
+        ['Profitable days', profTxt(profDays(days.flatMap(x=>(x.picks||[]).map(p=>({date:x.date, res:p.res, units: p.res==='hit'? 1/p.price-1 : p.res==='miss'? -1 : 0})).concat(
+          x.parlay? [{date:x.date, res:x.parlay.res, units:x.parlay.units}] : [])))), 'picks + parlay, once the day is all graded'],
         ['Series total', (rec.n||prec.n)? (v=>(v>=0?'+':'−')+Math.abs(v).toFixed(2)+'u')((rec.units||0)+(prec.units||0)) : '–',
           (rec.n||prec.n)? `picks ${(rec.units||0)>=0?'+':'−'}${Math.abs(rec.units||0).toFixed(2)} · parlays ${(prec.units||0)>=0?'+':'−'}${Math.abs(prec.units||0).toFixed(2)}` : 'picks and parlays, from day 1']]
         .map(([k,v,sub])=>`<div class="kpi"><span class="label">${k}</span><span class="v sm">${v}</span><span class="s">${sub}</span></div>`).join('');
@@ -1514,7 +1527,8 @@ details.plpast>summary:focus-visible{outline:2px solid var(--accent);outline-off
       const avgModel=done.length? done.reduce((s,e)=>s+e.model,0)/done.length : null;
       $(P+'Kpis').innerHTML=[['Parlays graded', fmt(done.length)], ['Hit', done.length? `${wins} (${pc(wins/done.length)})` : '–'],
         ['Model expected', avgModel==null? '–' : pc(avgModel)],
-        ['Profit', done.length? (units>=0?'+':'−')+Math.abs(units).toFixed(2)+'u' : '–', done.length? 'Return '+(units>=0?'+':'−')+Math.abs(units/done.length*100).toFixed(1)+'%' : '']]
+        ['Profit', done.length? (units>=0?'+':'−')+Math.abs(units).toFixed(2)+'u' : '–', done.length? 'Return '+(units>=0?'+':'−')+Math.abs(units/done.length*100).toFixed(1)+'%' : ''],
+        ['Profitable days', profTxt(profDays(parlayBets(days))), 'days that ended up, once all graded']]
         .map(([k,v,sub])=>`<div class="kpi"><span class="label">${k}</span><span class="v sm">${v}</span><span class="s">${sub||''}</span></div>`).join('');
       const past=days.filter(e=>e.date!==today);
       const np=past.filter(e=>e.legs).length; $(P+'PastN').textContent= np? `${np} parlay${np===1?'':'s'}` : '';
