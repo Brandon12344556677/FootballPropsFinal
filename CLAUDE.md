@@ -32,7 +32,6 @@ README.md has the full feature tour; this file is the working rules.
   private methods (rules.enc), each judged by its record in the pick's sport (30+ picks there, in profit): 35-75c on Polymarket with $25+ offered on that side (NBA unders are often empty there), model 60%+ and 5+ points over the price, no news flag or price drop, three games, at most two of a kind;
   plus a fun parlay paying 2.8-3.4x (parlay-able props only, `combos.py`). Frozen once made, graded like Pick of the Day; a script and caption that never name a method. Dashboard tab 3 Picks of the Day (today's picks and parlay followed live through `parlaylive.js`).
   A pending pick whose Polymarket US market is no longer listed loses its Polymarket price (`depth.drop_vanished`; the builders record every listed prop per game).
-  `nba_void_pra.json` (hand-made, fixed): the 108 NBA rebounds picks that were really points+rebounds+assists markets (Oct 16-22, 2026), voided by `build_nba.py` void_pra.
   `depth.guard` holds a 30c+ price jump until a second run confirms it (the `pj` pick column).
 - `team_stats.py` → `team/stats.enc`: GoatCounter visitor totals (and traffic spikes), encrypted with the
   `TEAM_DASH_PASSWORD` secret, for the password-protected team dashboard `team/index.html`
@@ -60,6 +59,8 @@ README.md has the full feature tour; this file is the working rules.
   TikTok pulls photos from our verified URL prefix; `tiktok/posted.json` feeds the dashboard's Social tab.
   `tiktok_auth.py` + `tiktok/callback.html`: the one-time sign-in that gives the `TIKTOK_REFRESH_TOKEN` secret.
 - Shared helpers: `news.py`, `holds.py`, `kalshi.py`, `depth.py`.
+- `nba_void_pra.json` (hand-made, fixed): the 108 NBA rebounds picks that were really points+rebounds+assists markets
+  (Oct 16-22, 2026), voided by `build_nba.py` void_pra.
 - `update_pass.sh` is one full pass; `.github/workflows/update.yml` runs it twice per run, and each run starts
   the next one when it ends (the 20-minute schedule is only a backup: GitHub's scheduler stalls).
 - `app.js` / `app.css`: shared look and behavior for every page. Sport pages have a Simple (default) and a Pro view:
