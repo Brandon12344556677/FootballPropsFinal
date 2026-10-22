@@ -83,7 +83,17 @@ jobs:
         run: |
           start=$(date +%s)
           bash update_pass.sh
-          if [ "${{ github.event_name }}" = "schedule" ] || [ "${{ github.event.inputs.chain }}" = "1" ]; then
+          # Polymarket US's firewall (Cloudflare) refuses some GitHub runners' addresses with a 403 for the
+          # whole run (Oct 18-22, 2026: every time exactly one run's two passes, fixed by the next run). A
+          # second pass from the same runner would fail the same way, so end here, ~10 minutes after the
+          # first pass began, and let the next run (a new runner) do the next pass.
+          L="${RUNNER_TEMP:-/tmp}"
+          if grep -qs "polymarket US: skipped (HTTP Error 403" "$L/build_nba.log" "$L/build_nhl.log" "$L/build_mlb.log" \
+             && { [ "${{ github.event_name }}" = "schedule" ] || [ "${{ github.event.inputs.chain }}" = "1" ]; }; then
+            echo "::warning::Polymarket US refused this runner (HTTP 403): one pass only, the next run starts on a new runner"
+            wait=$(( start + 540 - $(date +%s) ))
+            if [ "$wait" -gt 0 ]; then sleep "$wait"; fi
+          elif [ "${{ github.event_name }}" = "schedule" ] || [ "${{ github.event.inputs.chain }}" = "1" ]; then
             wait=$(( start + 600 - $(date +%s) ))
             if [ "$wait" -gt 0 ]; then sleep "$wait"; fi
             timeout 2m git pull --rebase --autostash origin main || true    # anything merged meanwhile

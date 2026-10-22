@@ -462,8 +462,11 @@ def fetch_markets_us(players_by_key, today=None):
         if not any("_player_" in (mk.get("sportsMarketType") or "") for mk in mkts or []):
             try:
                 mkts = (json.loads(http_get(POLYUS_EVENT.format(slug=ev["slug"]))).get("event") or {}).get("markets")
-            except Exception:  # noqa: BLE001
-                mkts = []
+            except Exception as e:  # noqa: BLE001
+                # Unread (a 403 from Polymarket's firewall, say): skip the game. Kept with nothing listed,
+                # depth.drop_vanished would take the Polymarket price off every pending pick in it.
+                print(f"    polymarket US {ev['slug']}: skipped ({e})")
+                continue
         g = {"slug": ev["slug"], "away": us_team(m.group(1)), "home": us_team(m.group(2)), "date": m.group(3), "markets": [],
              "listed": set()}     # every player prop Polymarket US lists here: (pid, stat, line), for depth.drop_vanished
         for mk in mkts or []:
