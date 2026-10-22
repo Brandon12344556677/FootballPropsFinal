@@ -1,8 +1,11 @@
 import datetime
 import unittest
 
+import combos
 import edge_report
 import parlay
+
+combos._cache.update(nhl=set(), nba=set(), nfl=set(), mlb=set())   # no network in tests: every prop type parlays
 
 COLS = ["src", "gid", "pid", "player", "team", "opp", "stat", "line", "side", "prob", "price", "neff", "start", "res", "lk", "th", "hd", "vn",
         "pp", "pd"]
@@ -84,6 +87,26 @@ class ParlayTest(unittest.TestCase):
         self.assertEqual(sorted(l["pid"] for l in today[2]["legs"]), ["1", "2"])                       # the remake
         self.assertTrue(parlay.meets_rules(today[2]))
         self.assertEqual(state["days"][0]["date"], "2026-10-15")
+
+    def test_only_props_polymarket_lets_you_parlay(self):
+        combos._cache["nhl"] = {"a"}                  # NHL assists: comboEnabled off on Polymarket US
+        try:
+            d = self.docs(pick("1", "g1", 0.7, 0.55, stat="a"), pick("2", "g2", 0.7, 0.55), pick("3", "g3", 0.7, 0.55, stat="pts"))
+            self.assertEqual(sorted(l["pid"] for l in parlay.candidates(d, NOW)), ["2", "3"])
+            leg = lambda pid, stat: {"key": ["nhl", "g", pid], "sport": "nhl", "pid": pid, "gid": "g" + pid, "stat": stat,
+                                     "start": "2026-10-17T00:00Z", "prob": 0.7, "price": 0.55, "player": "P" + pid, "venue": "Polymarket"}
+            made = dict(model=0.40, price=0.30, band=0, date="2026-10-16", n=1, res=None, legs=[leg("a", "a"), leg("b", "g")])
+            self.assertFalse(parlay.meets_rules(made))   # today's with an assists leg: remade before its games
+            self.assertTrue(parlay.meets_rules(dict(made, legs=[leg("b", "g"), leg("c", "pts")])))
+        finally:
+            combos._cache["nhl"] = set()
+
+    def test_combo_flags_by_type(self):
+        mk = lambda smt, ok, closed=False: {"sportsMarketType": smt, "comboEnabled": ok, "closed": closed}
+        markets = [mk("hockey_player_assists", False), mk("hockey_player_assists", False), mk("hockey_player_goals", True),
+                   mk("hockey_player_points", True), mk("hockey_player_points", False), mk("hockey_team_moneyline", False),
+                   mk("hockey_player_shots_on_goal", True, closed=True)]
+        self.assertEqual(combos.blocked_types(markets, "nhl"), {"a"})   # points: one market allows it, so the type does
 
     def test_polymarket_price_only(self):
         d = self.docs(pick("1", "g1", 0.80, 0.60, pp=None, vn="K"),          # Kalshi only: out

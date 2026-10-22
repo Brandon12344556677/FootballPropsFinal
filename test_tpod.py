@@ -1,12 +1,15 @@
 import datetime
 import unittest
 
+import combos
 import edge_report
 import tpod
 
 UTC = datetime.timezone.utc
 NOW = datetime.datetime(2026, 10, 20, 16, 0, tzinfo=UTC)          # 12:00 PM ET
 TONIGHT = "2026-10-20T23:00:00Z"
+
+combos._cache.update(nhl=set(), nba=set(), nfl=set(), mlb=set())   # no network in tests
 
 
 def cand(pid, gid, prob, price, sport="nhl", stat="a", side="under", **kw):
