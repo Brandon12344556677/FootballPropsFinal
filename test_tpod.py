@@ -147,6 +147,18 @@ class TpodTest(unittest.TestCase):
         picks = state["days"][0]["picks"]
         self.assertEqual([(p["pid"], p["price"], p["vn"]) for p in picks], [("2", 0.55, "P")])
 
+    def test_todays_fun_parlay_remade_if_polymarket_wont_parlay_a_leg(self):
+        combos._cache["nhl"] = {"a"}
+        try:
+            legs = [dict(cand("x", "gx", 0.8, 0.58), res=None), dict(cand("y", "gy", 0.8, 0.58), res=None)]   # NHL assists
+            state = {"days": [{"date": "2026-10-20", "v": tpod.RULES_V, "picks": [cand(f"p{i}", f"gp{i}", 0.7, 0.5, spoken="x") for i in range(3)], "parlay": {"legs": legs, "price": 0.34, "res": None}}]}
+            cands = [cand("2", "g2", 0.80, 0.58, stat="pts"), cand("3", "g3", 0.80, 0.58, stat="g")]
+            tpod.update(state, cands, [], methods({"label": "Any", "side": "under"}), NOW)
+            par = state["days"][0].get("parlay")
+            self.assertTrue(par and all(l["stat"] != "a" for l in par["legs"]))
+        finally:
+            combos._cache["nhl"] = set()
+
     def test_script_and_caption(self):
         day = {"picks": [tpod.choose([cand("1", "g1", 0.75, 0.55)], methods(NHL_A), NOW, set())]}
         text, cap = tpod.script(day, {"n": 10, "hit": 6, "miss": 4, "units": 1.5}, "2026-10-20", day_no=4)

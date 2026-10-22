@@ -50,11 +50,13 @@ POLY_EVENT = "https://gamma-api.polymarket.com/events/slug/{slug}"
 POLY_SLUG = re.compile(r"^nba-([a-z0-9]+)-([a-z0-9]+)-(\d{4}-\d{2}-\d{2})-player-props$")
 Q_RE = re.compile(r"^(.*?):\s*(.+?)\s+O/U\s+([\d.]+)", re.I)
 # Market question text -> our stat key. Order matters (combos and threes first).
+# A combo's parts are joined by "+" on the global book and by spaces on Polymarket US (its prop type
+# points_rebounds_assists -> "points rebounds assists"), which before Oct 22, 2026 read as plain rebounds.
 MKT_STAT_NBA = [
-    (re.compile(r"pts\s*\+\s*reb\s*\+\s*ast|points\s*\+\s*rebounds\s*\+\s*assists|\bpra\b", re.I), "pra"),
-    (re.compile(r"pts\s*\+\s*reb|points\s*\+\s*rebounds", re.I), "pr"),
-    (re.compile(r"pts\s*\+\s*ast|points\s*\+\s*assists", re.I), "pa"),
-    (re.compile(r"reb\s*\+\s*ast|rebounds\s*\+\s*assists", re.I), "ra"),
+    (re.compile(r"pts(?:\s*\+\s*|\s+)reb(?:\s*\+\s*|\s+)ast|points(?:\s*\+\s*|\s+)rebounds(?:\s*\+\s*|\s+)assists|\bpra\b", re.I), "pra"),
+    (re.compile(r"pts(?:\s*\+\s*|\s+)reb|points(?:\s*\+\s*|\s+)rebounds", re.I), "pr"),
+    (re.compile(r"pts(?:\s*\+\s*|\s+)ast|points(?:\s*\+\s*|\s+)assists", re.I), "pa"),
+    (re.compile(r"reb(?:\s*\+\s*|\s+)ast|rebounds(?:\s*\+\s*|\s+)assists", re.I), "ra"),
     (re.compile(r"three|3-?point|3pm|3s\b|treys", re.I), "tpm"),
     (re.compile(r"rebounds?", re.I), "reb"),
     (re.compile(r"assists?", re.I), "ast"),
@@ -462,7 +464,8 @@ def fetch_markets_us(players_by_key, today=None):
                 mkts = (json.loads(http_get(POLYUS_EVENT.format(slug=ev["slug"]))).get("event") or {}).get("markets")
             except Exception:  # noqa: BLE001
                 mkts = []
-        g = {"slug": ev["slug"], "away": us_team(m.group(1)), "home": us_team(m.group(2)), "date": m.group(3), "markets": []}
+        g = {"slug": ev["slug"], "away": us_team(m.group(1)), "home": us_team(m.group(2)), "date": m.group(3), "markets": [],
+             "listed": set()}     # every player prop Polymarket US lists here: (pid, stat, line), for depth.drop_vanished
         for mk in mkts or []:
             smt = mk.get("sportsMarketType") or ""
             if "_player_" not in smt or mk.get("closed"):
@@ -476,6 +479,8 @@ def fetch_markets_us(players_by_key, today=None):
             if not sk or not tm or n is None:
                 continue
             pl = players_by_key.get(pkey(tm.group(1)))
+            if pl:
+                g["listed"].add((pl["id"], sk, n - 0.5))
             if not pl or len(pl["g"]) < 5:
                 continue
             vals = [stat_get(r, sk) for r in pl["g"][-10:]]
@@ -1168,6 +1173,8 @@ def build_market_picks(picks, poly_games, players_by_key, espn_slate, defense, d
         if eg and game_locked(eg.get("start")):
             continue            # locked: its picks stay as published
         gid = f"{g['date']}-{g['away']}-{g['home']}"
+        if "listed" in g:       # a pick whose market Polymarket US stopped listing loses that price
+            depth.drop_vanished(picks, gid, g["listed"], pick_locked)
         for m in g.get("markets", []):
             pm = m.get("pm") or parse_market(m)     # Polymarket US markets arrive pre-parsed
             if not pm:

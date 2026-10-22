@@ -490,7 +490,8 @@ def fetch_markets_us(players_by_key):
             except Exception:  # noqa: BLE001
                 mkts = []
         g = {"slug": ev["slug"], "away": poly_team(m.group(1)), "home": poly_team(m.group(2)),
-             "date": m.group(3), "markets": []}
+             "date": m.group(3), "markets": [],
+             "listed": set()}     # every player prop Polymarket US lists here: (pid, stat, line), for depth.drop_vanished
         for mk in mkts or []:
             smt = mk.get("sportsMarketType") or ""
             if "_player_" not in smt or mk.get("closed"):
@@ -498,6 +499,9 @@ def fetch_markets_us(players_by_key):
             stat_text = smt.split("_player_", 1)[1].replace("_", " ")
             tm = US_TITLE.match(mk.get("title") or "")
             n = fnum(mk.get("line"))
+            lp = players_by_key.get(pkey(tm.group(1))) if tm else None
+            if lp and mkt_stat_key(stat_text) and n is not None:
+                g["listed"].add((lp["id"], mkt_stat_key(stat_text), n - 0.5))
             if not mkt_stat_key(stat_text) or not tm or n is None or n > US_MAX_N:
                 continue
             pl = players_by_key.get(pkey(tm.group(1)))
@@ -1201,6 +1205,8 @@ def build_market_picks(picks, poly_games, players_by_key, espn_slate, defense, d
         # grade against ESPN's (UTC) date — slugs use the ET date, which differs for late games
         date = eg["date"] if eg else g["date"]
         gid = f"{date}-{g['away']}-{g['home']}"
+        if "listed" in g:       # a pick whose market Polymarket US stopped listing loses that price
+            depth.drop_vanished(picks, gid, g["listed"], pick_locked)
         for m in g.get("markets", []):
             pm = m.get("pm") or parse_market(m)     # Polymarket US markets arrive pre-parsed
             if not pm:

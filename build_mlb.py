@@ -679,7 +679,8 @@ def fetch_markets_us(players_by_key):
                 mkts = []
         g = {"slug": ev["slug"], "away": poly_team(m.group(1)), "home": poly_team(m.group(2)),
              "date": m.group(3), "start": start, "markets": [],
-             "pst": bool(re.match(r"Game \d+:", ev.get("title") or ""))}   # "Game 2: BOS Red Sox vs. NY Yankees"
+             "pst": bool(re.match(r"Game \d+:", ev.get("title") or "")),   # "Game 2: BOS Red Sox vs. NY Yankees"
+             "listed": set()}     # every player prop Polymarket US lists here: (pid, stat, line), for depth.drop_vanished
         for mk in mkts or []:
             smt = mk.get("sportsMarketType") or ""
             if not smt.startswith("baseball_player_") or mk.get("closed"):
@@ -687,6 +688,9 @@ def fetch_markets_us(players_by_key):
             sk = SMT_STAT.get(smt[len("baseball_player_"):])
             qm = US_Q.match(mk.get("question") or "")
             n = fnum(mk.get("line"))
+            lp = players_by_key.get(pkey(qm.group(1).strip())) if qm else None
+            if lp and sk and n is not None:
+                g["listed"].add((lp["id"], sk, n - 0.5))
             if not sk or not qm or n is None or n > US_MAX_N.get(sk, 3):
                 continue
             name = qm.group(1).strip()
@@ -1021,6 +1025,8 @@ def build_market_picks(picks, poly_games, players_by_key, espn_slate, defense, d
         if eg and game_locked(eg.get("start")):
             continue            # locked: its picks stay as published
         gid = f"{date}-{away}-{home}"
+        if "listed" in g:       # a pick whose market Polymarket US stopped listing loses that price
+            depth.drop_vanished(picks, gid, g["listed"], pick_locked)
         for m in g.get("markets", []):
             pm = m.get("pm")
             if not pm:
