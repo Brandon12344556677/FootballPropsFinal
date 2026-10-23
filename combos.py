@@ -5,7 +5,7 @@ Every Polymarket US market carries "comboEnabled". On Oct 22, 2026 it was off fo
 market (over and under alike) and on for every other prop type we price, so a parlay with an NHL
 assists leg couldn't actually be placed. The flag is set by prop type, so this reads a few of each
 sport's upcoming games once per run and returns the (sport, stat) pairs where no market allows
-parlays. parlay.py and tpod.py keep those out of parlay legs.
+parlays. parlay.py keeps those out of parlay legs.
 
 Standard library only; never fatal: a sport that can't be read falls back to KNOWN.
 """

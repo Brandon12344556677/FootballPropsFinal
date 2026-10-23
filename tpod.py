@@ -9,7 +9,7 @@ A pick qualifies when:
   - proven first: it fits a private method that has MIN_METHOD_N+ graded picks IN THE PICK'S SPORT and
     is in profit there (a method is judged sport by sport, so one whose record comes from the NHL can't
     vouch for a new NBA pick: these go out in public), ranked by the low end of their likely return.
-    The day always gets three picks and a parlay: short of proven picks, the next best fill the rest
+    The day always gets three picks: short of proven picks, the next best fill the rest
     (a method not proven in that sport, then no method with Value spots first, then relaxed filters),
     each marked as a fill-in for the team (never in the script);
   - its price is PRICE (pays about 1.33x-2.9x) and the model gives it MIN_PROB+, MIN_EDGE+ over the price;
@@ -23,12 +23,8 @@ Each pick keeps "why" (for the team: the method it fits and that method's record
 the price, the last 10 games, the price's move) and a spoken line for the video; each day gets a
 script to read on camera and a caption. Neither names a method.
 
-The fun parlay: one a day, a longer shot paying PARLAY_PAYS (about 3x). 2-3 legs, each fitting a
-method, priced LEG_PRICE with the model MIN_PROB+ and LEG_EDGE+ over the price, from different games
-and not a player from the day's three picks; of the combinations paying in that band, the one the
-model gives the best chance. Frozen once made; graded like parlay.py (a miss loses, a push or DNP
-drops the leg, every leg dropped is a void; a win pays 1/price - 1 at the winning legs' prices).
-It keeps its own record.
+There was also a fun parlay (about 3x) until Oct 23, 2026; it's no longer made, graded or shown.
+Days recorded before then keep their "parlay" entry as it was, unread.
 
 Graded like Pick of the Day (botd.grade: the sport's own graded pick; a DNP or a game still
 ungraded 5 days later is void). Output: team/tpod.enc, encrypted with TEAM_DASH_PASSWORD like
@@ -41,7 +37,6 @@ import os
 import random
 
 import botd
-import combos
 import edge_report
 import team_stats
 
@@ -59,10 +54,6 @@ PER_DAY = 3
 MIN_PM_USD = 25.0   # dollars offered near the Polymarket price for the side (depth.MIN_USD), or it isn't a pick
 RULES_V = 2   # bump when the selection changes: today's picks are remade if none has started (2: methods judged by sport)
 SERIES_START = "2026-10-21"   # the TikTok series' day 1: earlier days (a dry run on Oct 20) are dropped from the record
-PARLAY_PAYS = (2.8, 3.4)
-LEG_PRICE = (0.45, 0.85)
-LEG_EDGE = 0.03
-POOL = 25
 MAX_PER_KIND = 2        # a day isn't three of the same bet (same sport, stat and side)
 SPORT_NAME = {"nfl": "NFL", "nba": "NBA", "nhl": "NHL", "mlb": "MLB"}
 
@@ -222,91 +213,14 @@ def record(days):
     return {"n": len(done), "hit": w, "miss": len(done) - w, "units": round(units, 2)}
 
 
-def parlay_record(days):
-    done = [d["parlay"] for d in days if (d.get("parlay") or {}).get("res") in ("hit", "miss")]
-    w = sum(1 for p in done if p["res"] == "hit")
-    return {"n": len(done), "hit": w, "miss": len(done) - w, "units": round(sum(p.get("units") or 0 for p in done), 2)}
-
-
-def choose_parlay(cands, methods, now, avoid):
-    """The reach parlay, or None if there aren't two games left. Legs: proven methods first, then the
-    fill-ins; 2-3 legs paying PARLAY_PAYS, widening to 2.5-4x and then 2-5x when nothing fits."""
-    import itertools
-    import math
-    legs = []
-    for c in cands:
-        start = utc(c["start"])
-        if not (LEG_PRICE[0] <= c["price"] <= LEG_PRICE[1]) or c["prob"] < MIN_PROB or c["prob"] - c["price"] < LEG_EDGE:
-            continue
-        if c.get("flag") or c.get("lk") or (c.get("neff") or 0) < MIN_NEFF or c["pid"] in avoid:
-            continue
-        if not combos.allowed(c["sport"], c["stat"]):     # Polymarket US won't parlay it (NHL assists)
-            continue
-        if c.get("px0") is not None and round((c["price"] - c["px0"]) * 100) <= -MAX_DROP:
-            continue
-        if start.astimezone(ET).date() != now.astimezone(ET).date() or start < now + LEAD:
-            continue
-        rank, m = fit_of(c, methods)
-        legs.append((rank, c, m))
-    legs.sort(key=lambda x: (x[0], -(x[1]["prob"] - x[1]["price"])))
-    legs = legs[:POOL]
-    best = None
-    for band in (PARLAY_PAYS, (2.5, 4.0), (2.0, 5.0)):
-        for k in (2, 3):
-            for combo in itertools.combinations(legs, k):
-                cs = [x[1] for x in combo]
-                if len({c.get("gid") for c in cs}) < k or len({c["pid"] for c in cs}) < k:
-                    continue
-                q = math.prod(c["price"] for c in cs)
-                if not band[0] <= 1 / q <= band[1]:
-                    continue
-                # proven legs first (lower rank sum), then the best model chance
-                score = (-sum(x[0] for x in combo), math.prod(c["prob"] for c in cs))
-                if best is None or score > best[0]:
-                    best = (score, q, combo)
-        if best:
-            break
-    if not best:
-        return None
-    (_, m), q, combo = best
-    out = []
-    for _, c, (label, _, _, rec) in combo:
-        why, spoken = explain(c, (label, rec))
-        out.append(dict({k: c.get(k) for k in botd.KEEP}, method=label, tier=rec.get("tier", 0), why=why, spoken=spoken,
-                        px0=c.get("px0"), res=None))
-    return {"legs": out, "price": round(q, 4), "model": round(m, 4), "res": None, "made": now.strftime("%Y-%m-%dT%H:%MZ")}
-
-
-def grade_parlay(par, index, now):
-    if not par or par.get("res"):
-        return
-    for leg in par["legs"]:
-        botd.grade(leg, index, now)
-    res = [leg.get("res") for leg in par["legs"]]
-    if "miss" in res:
-        par["res"], par["units"] = "miss", -1.0
-    elif all(res):
-        won = [leg for leg in par["legs"] if leg["res"] == "hit"]
-        if not won:
-            par["res"], par["units"] = "void", 0.0
-        else:
-            q = 1.0
-            for leg in won:
-                q *= leg["price"]
-            par["res"], par["units"], par["paid"] = "hit", round(1 / q - 1, 3), round(q, 4)
-
-
 def last_day(past):
-    """(date, picks won, picks graded, picks units, parlays won, parlays graded) of the latest earlier day
-    with a graded pick or parlay, or None. The picks are the record that counts; the parlay is for fun."""
+    """(date, picks won, picks graded, picks units) of the latest earlier day with a graded pick, or None."""
     for d in sorted(past, key=lambda x: x["date"], reverse=True):
         bets = [p for p in d.get("picks") or [] if p.get("res") in ("hit", "miss")]
         units = sum((1 / p["price"] - 1) if p["res"] == "hit" else -1.0 for p in bets)
         won = sum(1 for p in bets if p["res"] == "hit")
-        par = d.get("parlay") or {}
-        pn = int(par.get("res") in ("hit", "miss"))
-        if bets or pn:
-            return d["date"], won, len(bets), units, int(par.get("res") == "hit"), pn
+        if bets:
+            return d["date"], won, len(bets), units
     return None
 
 
@@ -315,50 +229,38 @@ def units_said(u):
     return f"{u:+.1f}".replace(".0", "") + (" unit" if abs(round(u, 1)) == 1 else " units")
 
 
-def script(day, rec, date, prec=None, day_no=1, last=None):
+def script(day, rec, date, day_no=1, last=None):
     """What to say on camera, and the caption. day_no: which day of the series this is (day 1 = the first);
     last: last_day() of the earlier days, for "Yesterday we went 2 for 3 on picks, which is +1.5 units, bringing the
-    series total to... And 0 for 1 on the parlay." The units and the series total are the picks' only: they're
-    the number that counts, the reach parlay is just for fun."""
+    series total to..." The units and the series total are the picks', 1 unit each."""
     d = datetime.date.fromisoformat(date)
     picks = day.get("picks") or []
-    par = day.get("parlay")
-    if not picks and not par:   # a light day: nothing fit the proven methods at a good price
+    if not picks:   # a light day: nothing fit the proven methods at a good price
         return ("No picks from me today: nothing fit my best methods at a good enough price, and I'd rather skip a day "
                 "than force it. Back tomorrow. Eighteen and over only, this is for entertainment, not betting advice.",
                 f"No picks today ({d.strftime('%b')} {d.day}): nothing fit the best methods at a good price.\n18+ | For entertainment, not betting advice")
     nums = ["First up", "Second", "And third"]
     top = f"my top {len(picks)} picks" if len(picks) != 1 else "my top pick"
-    lines = [f"This is day {day_no} of giving you guys {top} for the day" + (", plus one more of a reach parlay." if par else ".")]
+    lines = [f"This is day {day_no} of giving you guys {top} for the day."]
     for i, p in enumerate(picks):
         lines.append(f"{nums[i]}: {SPORT_NAME.get(p['sport'], '')}, {p['spoken']}")
-    if par:
-        legs = ", and ".join(f"{p['player']}, {say_line(p)}" for p in par["legs"])
-        lines.append(f"Now the reach parlay. It's {len(par['legs'])} legs paying about {1 / par['price']:.1f} times your money: "
-                     f"{legs}. It's a reach, so keep it small.")   # no model % here: the model runs hot on parlays
-    total = rec.get("units", 0.0)   # the series: the picks, 1 unit each (the reach parlay is apart, for fun)
+    total = rec.get("units", 0.0)   # the series: the picks, 1 unit each
     if last:   # right after the intro: how the last day went and where the series stands
-        _, pw, pn, pu, parw, parn = last
+        _, pw, pn, pu = last
         when = ("Yesterday" if (d - datetime.date.fromisoformat(last[0])).days == 1
                 else "On " + datetime.date.fromisoformat(last[0]).strftime("%A"))
         said = (f"{when} we went {pw} for {pn} on picks, which is {units_said(pu)}, bringing the series total to {units_said(total)}."
                 if pn else f"{when} we had no graded picks.")
-        if parn:
-            said += f" And {parw} for {parn} on the parlay." if pn else f" We went {parw} for {parn} on the parlay."
         lines.insert(1, said)
     lines.append("Follow for three picks every day. Eighteen and over only, this is for entertainment, not betting advice.")
-    cap = [f"Day {day_no}: {top}" + (" + a reach parlay" if par else "") + f" ({d.strftime('%b')} {d.day})"]
+    cap = [f"Day {day_no}: {top} ({d.strftime('%b')} {d.day})"]
     for i, p in enumerate(picks):
         cap.append(f"{i + 1}) {p['player']} {p['side']} {p['line']:g} {(p.get('statText') or p['stat']).lower()} ({1 / p['price']:.2f}x)")
-    if par:
-        cap.append(f"Reach parlay ({1 / par['price']:.2f}x): " + " + ".join(
-            f"{p['player']} {p['side']} {p['line']:g} {(p.get('statText') or p['stat']).lower()}" for p in par["legs"]))
     if last:
-        _, pw, pn, pu, parw, parn = last
+        _, pw, pn, pu = last
         cap.append(("Yesterday" if (d - datetime.date.fromisoformat(last[0])).days == 1 else
                     datetime.date.fromisoformat(last[0]).strftime("%A")) + ": "
-                   + " | ".join(([f"picks {pw}/{pn} ({units_said(pu)})"] if pn else [])
-                                + ([f"parlay {parw}/{parn}"] if parn else []) + [f"Series: {units_said(total)}"]))
+                   + " | ".join(([f"picks {pw}/{pn} ({units_said(pu)})"] if pn else []) + [f"Series: {units_said(total)}"]))
     cap.append("18+ | For entertainment, not betting advice")
     return " ".join(lines), "\n".join(cap)
 
@@ -381,18 +283,12 @@ def update(state, cands, docs, methods, now):
     for d in days:
         for p in d.get("picks") or []:
             botd.grade(p, index, now)
-        grade_parlay(d.get("parlay"), index, now)
     et = now.astimezone(ET)
     today = et.date().isoformat()
     day = next((d for d in days if d["date"] == today), None)
     if day is not None and day.get("v") != RULES_V:
-        made = (day.get("picks") or []) + ((day.get("parlay") or {}).get("legs") or [])
-        if not any(p.get("res") or utc(p["start"]) <= now for p in made):   # nothing started: remake under the new rules
+        if not any(p.get("res") or utc(p["start"]) <= now for p in day.get("picks") or []):   # nothing started: remake under the new rules
             day["picks"], day["v"] = [], RULES_V
-            day.pop("parlay", None)
-    par = (day or {}).get("parlay")
-    if par and not par.get("res") and any(not combos.allowed(l["sport"], l["stat"]) for l in par["legs"])             and not any(l.get("res") or utc(l["start"]) <= now for l in par["legs"]):
-        day.pop("parlay")     # a leg Polymarket won't parlay (NHL assists) and nothing started: remade below
     if PICK_FROM <= et.time() < PICK_UNTIL and methods and (day is None or len(day["picks"]) < PER_DAY):
         if day is None:
             day = {"date": today, "picks": [], "v": RULES_V}
@@ -404,14 +300,10 @@ def update(state, cands, docs, methods, now):
                 break
             day["picks"].append(p)
             taken.add((p.get("gid"), p["pid"]))
-    if PICK_FROM <= et.time() < PICK_UNTIL and methods and day is not None and not day.get("parlay"):
-        par = choose_parlay(cands, methods, now, {p["pid"] for p in day["picks"]})
-        if par:
-            day["parlay"] = par
     if day is not None:
         past = [d for d in days if d["date"] < today]
         day_no = 1 + sum(1 for d in past if d.get("picks"))   # the series counts days with picks
-        day["script"], day["caption"] = script(day, record(past), today, parlay_record(past), day_no, last_day(past))
+        day["script"], day["caption"] = script(day, record(past), today, day_no, last_day(past))
     return json.dumps(days, sort_keys=True) != before
 
 
@@ -432,7 +324,6 @@ def run(cands, docs, now, path=OUT):
         return
     state["gen"] = now.strftime("%Y-%m-%dT%H:%M:%SZ")
     state["record"] = record(state["days"])
-    state["parlay_record"] = parlay_record(state["days"])
     os.makedirs(os.path.dirname(path), exist_ok=True)
     with open(path, "w", encoding="ascii") as f:
         f.write(team_stats.encrypt(json.dumps(state, separators=(",", ":"), ensure_ascii=True), password) + "\n")

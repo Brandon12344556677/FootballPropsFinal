@@ -133,7 +133,6 @@ tr.pl-card{border:0;border-radius:0;padding:0;background:none}   /* Secret metho
 .tp-card .tp-meta{color:var(--muted);font-size:13px}
 .tp-card ul{margin:8px 0 0;padding-left:18px;font-size:14px;color:var(--soft)}
 .tp-card ul li{margin:3px 0}
-.tp-par.pl-card{border:0;padding:0;background:none}   /* the fun parlay: tracked as one card holding its leg cards */
 .tp-copy textarea{width:100%;font:500 14px/1.5 var(--f-body);color:var(--fg);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:10px;resize:vertical}
 .pl-card header{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px}
 .pl-chips{display:flex;flex-wrap:wrap;gap:6px}
@@ -518,7 +517,7 @@ details.plpast>summary:focus-visible{outline:2px solid var(--accent);outline-off
 
   <section data-view="tpod" class="panel" id="tpPanel">
     <div class="panel-h"><h2>3 Picks of the Day</h2><span class="label" id="tpUpd">Team only · for TikTok</span></div>
-    <p class="hint">Three picks a day from the Secret methods, made from 11 AM ET and never changed after: fitting a method that's in profit in that sport (30+ graded picks there), priced 35-75¢ (pays about 1.33x-2.9x), the model at 60%+ and 5+ points over the price, no injury news, a price that hasn't dropped, three different games. Plus one fun parlay paying about 3x. The script and caption never name a method.</p>
+    <p class="hint">Three picks a day from the Secret methods, made from 11 AM ET and never changed after: fitting a method that's in profit in that sport (30+ graded picks there), priced 35-75¢ (pays about 1.33x-2.9x), the model at 60%+ and 5+ points over the price, no injury news, a price that hasn't dropped, three different games. The script and caption never name a method.</p>
     <div id="tpToday"><p class="empty">Loading…</p></div>
     <div class="tp-copy" id="tpCopy" hidden>
       <h3 class="subh">Video script</h3>
@@ -531,7 +530,7 @@ details.plpast>summary:focus-visible{outline:2px solid var(--accent);outline-off
     <h3 class="subh">Record</h3>
     <div class="kpis" id="tpKpis"></div>
     <details class="plpast"><summary><span>Past days</span><span class="label" id="tpPastN"></span></summary>
-    <div class="edwrap"><table class="edges pst"><thead><tr><th>Day</th><th>Picks</th><th>Fun parlay</th><th class="n">Units</th></tr></thead><tbody id="tpRows"></tbody></table></div>
+    <div class="edwrap"><table class="edges pst"><thead><tr><th>Day</th><th>Picks</th><th class="n">Units</th></tr></thead><tbody id="tpRows"></tbody></table></div>
     </details>
   </section>
 
@@ -1463,37 +1462,30 @@ details.plpast>summary:focus-visible{outline:2px solid var(--accent);outline-off
       const today=new Date().toLocaleDateString('en-CA',{timeZone:'America/New_York'}), day=days.find(x=>x.date===today);
       const when=s=>{ const t=Date.parse(s); return isFinite(t)? new Date(t).toLocaleTimeString('en-US',{hour:'numeric', minute:'2-digit'}) : ''; };
       const bet=p=>`${esc(p.player)} ${esc(p.side)} ${esc(p.line)} ${esc(String(p.statText||p.stat).toLowerCase())}`;
-      // pl: data-pl for a pick tracked on its own (parlaylive.js); a parlay leg is data-leg i inside the parlay's card
-      const card=(p,i,pl)=>`<article class="pl-card tp-card"${pl? ` data-pl="${i}"` : ` data-leg="${i}"`}><h3>${i+1}. ${bet(p)} ${p.res? '· '+(RES[p.res]||p.res) : ''}</h3>`+
+      // data-pl: each pick tracked on its own (parlaylive.js)
+      const card=(p,i)=>`<article class="pl-card tp-card" data-pl="${i}"><h3>${i+1}. ${bet(p)} ${p.res? '· '+(RES[p.res]||p.res) : ''}</h3>`+
         `<div class="tp-meta">${esc(SPN[p.sport]||p.sport)} · ${esc(p.team)} vs ${esc(p.opp)} · ${when(p.start)} · <b>${Math.round(p.price*100)}¢, pays ${(1/p.price).toFixed(2)}x</b> · model ${Math.round(p.prob*100)}% <span class="chip">${esc(p.method||'')}</span>${p.tier? ' <span class="chip bad">Fill-in</span>' : ''}</div>`+
-        `<div${pl? ' data-leg="0"' : ''}><span class="pl-live"></span></div>`+
+        `<div data-leg="0"><span class="pl-live"></span></div>`+
         `<ul>${(p.why||[]).map(w=>`<li>${esc(w)}</li>`).join('')}</ul></article>`;
-      const par=day&&day.parlay;
       $('tpToday').innerHTML= !day||!(day.picks||[]).length ? `<p class="empty">No picks yet today. They're made from 11 AM ET once picks fit a proven Secret method (60%+ by the model, 35-75¢). On a light night there may be fewer than three, or none.</p>` :
-        `<p class="hint" id="tpLive"></p><div class="pl-cards" id="tpPicks">${day.picks.map((p,i)=>card(p,i,true)).join('')}</div>`+(day.picks.length<3? '<p class="empty" style="margin-top:8px">The rest are made as more picks qualify, until 7:30 PM ET.</p>' : '')+
-        (par? `<div id="tpParlay"><div class="pl-card tp-par" data-pl="0"><h3 class="subh">Fun parlay · pays ${(1/par.price).toFixed(2)}x${par.res? ' · '+(RES[par.res]||par.res) : ''} <span class="pl-livehd"></span></h3>`+
-          `<p class="hint" id="tpParLive"></p><div class="pl-cards">${par.legs.map((p,i)=>card(p,i,false)).join('')}</div></div></div>` : '');
-      if(window.psaParlayLive){   // live box scores (parlaylive.js): each pick as a one-leg parlay, and the fun parlay
+        `<p class="hint" id="tpLive"></p><div class="pl-cards" id="tpPicks">${day.picks.map((p,i)=>card(p,i)).join('')}</div>`+(day.picks.length<3? '<p class="empty" style="margin-top:8px">The rest are made as more picks qualify, until 7:30 PM ET.</p>' : '');
+      if(window.psaParlayLive)   // live box scores (parlaylive.js): each pick as a one-leg parlay
         window.psaParlayLive.track(day? (day.picks||[]).map(p=>({legs: [p], res: p.res})) : [], {root: 'tpPicks', note: 'tpLive'});
-        window.psaParlayLive.track(par? [par] : [], {root: 'tpParlay', note: 'tpParLive'});
-      }
       $('tpCopy').hidden=!day; if(day){ $('tpScript').value=day.script||''; $('tpCaption').value=day.caption||''; }
-      const rec=d.record||{n:0}, prec=d.parlay_record||{n:0}, pc=v=>Math.round(v*100)+'%';
+      const rec=d.record||{n:0}, pc=v=>Math.round(v*100)+'%';
       const done=days.flatMap(x=>x.picks||[]).filter(p=>p.res==='hit'||p.res==='miss'), staked=done.length;
       $('tpKpis').innerHTML=[['Picks record', rec.n? `${rec.hit}-${rec.miss}` : '–', rec.n? pc(rec.hit/rec.n)+' hit' : 'starts after the first games'],
         ['Picks profit', rec.n? (rec.units>=0?'+':'−')+Math.abs(rec.units).toFixed(2)+'u' : '–', staked? 'Return '+(rec.units>=0?'+':'−')+Math.abs(rec.units/staked*100).toFixed(1)+'%' : '1 unit a pick'],
-        ['Fun parlays', prec.n? `${prec.hit}-${prec.miss}` : '–', prec.n? pc(prec.hit/prec.n)+' hit' : ''],
-        ['Profitable days', profTxt(profDays(days.flatMap(x=>(x.picks||[]).map(p=>({date:x.date, res:p.res, units: p.res==='hit'? 1/p.price-1 : p.res==='miss'? -1 : 0})).concat(
-          x.parlay? [{date:x.date, res:x.parlay.res, units:x.parlay.units}] : [])))), 'picks + parlay, once the day is all graded'],
+        ['Profitable days', profTxt(profDays(days.flatMap(x=>(x.picks||[]).map(p=>({date:x.date, res:p.res, units: p.res==='hit'? 1/p.price-1 : p.res==='miss'? -1 : 0}))))), 'once the day is all graded'],
         ['Series total', rec.n? (v=>(v>=0?'+':'−')+Math.abs(v).toFixed(2)+'u')(rec.units||0) : '–',   // the picks: the number the video reads out
-          prec.n? `picks only · fun parlays apart: ${(prec.units||0)>=0?'+':'−'}${Math.abs(prec.units||0).toFixed(2)}u` : 'the picks, from day 1 (as in the video)']]
+          'the picks, from day 1 (as in the video)']]
         .map(([k,v,sub])=>`<div class="kpi"><span class="label">${k}</span><span class="v sm">${v}</span><span class="s">${sub}</span></div>`).join('');
       const past=days.filter(x=>x.date!==today).slice().reverse();
       $('tpPastN').textContent= past.length? `${past.length} day${past.length===1?'':'s'}` : '';
-      const u=x=>(x.picks||[]).reduce((s,p)=>s+(p.res==='hit'? 1/p.price-1 : p.res==='miss'? -1 : 0),0)+((x.parlay&&x.parlay.units)||0);
+      const u=x=>(x.picks||[]).reduce((s,p)=>s+(p.res==='hit'? 1/p.price-1 : p.res==='miss'? -1 : 0),0);
       $('tpRows').innerHTML= past.length? past.map(x=>`<tr><td>${esc(x.date)}</td><td>${(x.picks||[]).map(p=>bet(p)+' <small>'+(p.res? RES[p.res]||p.res : 'Pending')+'</small>').join('<br>')}</td>`+
-        `<td>${x.parlay? x.parlay.legs.map(bet).join(' + ')+' <small>'+(x.parlay.res? RES[x.parlay.res]||x.parlay.res : 'Pending')+'</small>' : '–'}</td><td class="n">${(v=>(v>=0?'+':'−')+Math.abs(v).toFixed(2))(u(x))}</td></tr>`).join('')
-        : '<tr class="ed-wait"><td colspan="4">The first day shows here tomorrow.</td></tr>';
+        `<td class="n">${(v=>(v>=0?'+':'−')+Math.abs(v).toFixed(2))(u(x))}</td></tr>`).join('')
+        : '<tr class="ed-wait"><td colspan="3">The first day shows here tomorrow.</td></tr>';
       if(d.gen) $('tpUpd').textContent='Team only · for TikTok · updated '+new Date(d.gen).toLocaleString('en-US',{month:'short', day:'numeric', hour:'numeric', minute:'2-digit'});
     } catch(err){}
   }
