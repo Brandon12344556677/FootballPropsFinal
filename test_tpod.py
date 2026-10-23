@@ -190,6 +190,7 @@ class TpodTest(unittest.TestCase):
         self.assertNotIn("we went", tpod.script({"picks": day["picks"]}, {"n": 0}, "2026-10-20")[0])   # day 1: nothing yet
         self.assertTrue(tpod.script({"picks": []}, {"n": 0}, "2026-10-20")[0].startswith("No picks from me today"))
         self.assertIn("18+", cap)
+        self.assertIn("Make sure to like and follow for more to stay posted", text)
 
 
 if __name__ == "__main__":

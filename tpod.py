@@ -260,7 +260,8 @@ def script(day, rec, date, day_no=1, last=None):
         said = (f"{when} we went {pw} for {pn} on picks, which is {units_said(pu)}, bringing the series total to {units_said(total)}."
                 if pn else f"{when} we had no graded picks.")
         lines.insert(1, said)
-    lines.append("Follow for three picks every day. Eighteen and over only, this is for entertainment, not betting advice.")
+    lines.append("Make sure to like and follow for more to stay posted, three picks every day. "
+                 "Eighteen and over only, this is for entertainment, not betting advice.")
     cap = [f"Day {day_no}: {top} ({d.strftime('%b')} {d.day})"]
     for i, p in enumerate(picks):
         cap.append(f"{i + 1}) {p['player']} {p['side']} {p['line']:g} {(p.get('statText') or p['stat']).lower()} ({1 / p['price']:.2f}x)")
