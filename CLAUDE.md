@@ -30,7 +30,7 @@ README.md has the full feature tour; this file is the working rules.
   shows today's picks' live ESPN scores and whether each is covering in that tab (browser-side, display only).
   `tpod.py` → `team/tpod.enc` (team only, encrypted; build_today.py runs it after Pick of the Day): 3 Picks of the Day for TikTok from the
   private methods (rules.enc), each judged by its record in the pick's sport (30+ picks there, in profit): 35-75c on Polymarket with $25+ offered on that side (NBA unders are often empty there), model 60%+ and 5+ points over the price, no news flag or price drop, three games, at most two of a kind;
-  plus a fun parlay paying 2.8-3.4x (parlay-able props only, `combos.py`). Frozen once made, graded like Pick of the Day; a script and caption that never name a method. Dashboard tab 3 Picks of the Day (today's picks and parlay followed live through `parlaylive.js`).
+  no parlay (the fun parlay was dropped Oct 23, 2026; older days keep theirs in the file, unread). Frozen once made, graded like Pick of the Day; a script and caption that never name a method. Dashboard tab 3 Picks of the Day (today's picks followed live through `parlaylive.js`).
   A pending pick whose Polymarket US market is no longer listed loses its Polymarket price (`depth.drop_vanished`; the builders record every listed prop per game).
   A Polymarket US side marked not tradable (every NBA player prop's under, since Oct 2026) gets no Polymarket price (`depth.tradable_sides`/`side_ok`).
   `depth.guard` holds a 30c+ price jump until a second run confirms it (the `pj` pick column).

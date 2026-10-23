@@ -1,3 +1,4 @@
+import copy
 import datetime
 import unittest
 
@@ -126,17 +127,20 @@ class TpodTest(unittest.TestCase):
         self.assertEqual(tpod.say_line(cand("1", "g", 0.7, 0.5, line=34.5, side="over", statText="Pts+Reb+Ast")),
                          "over 34.5 points, rebounds and assists")
 
-    def test_fun_parlay_about_3x(self):
-        cands = [cand("1", "g1", 0.80, 0.58), cand("2", "g2", 0.80, 0.58), cand("3", "g3", 0.70, 0.62)]
-        par = tpod.choose_parlay(cands, methods(NHL_A), NOW, avoid=set())
-        self.assertTrue(tpod.PARLAY_PAYS[0] <= 1 / par["price"] <= tpod.PARLAY_PAYS[1])
-        self.assertEqual(len({leg["gid"] for leg in par["legs"]}), len(par["legs"]))
-        self.assertIsNone(tpod.choose_parlay(cands, methods(NHL_A), NOW, avoid={"1", "2", "3"}))
-        par["legs"][0]["res"], par["legs"][1]["res"] = "hit", "void"
-        par["legs"] = par["legs"][:2]
-        tpod.grade_parlay(par, {}, NOW)
-        self.assertEqual(par["res"], "hit")                                               # a void leg drops out
-        self.assertAlmostEqual(par["units"], round(1 / par["legs"][0]["price"] - 1, 3))
+    def test_no_parlay_made_and_old_ones_left_as_recorded(self):
+        cands = [cand(str(i), "g" + str(i), 0.80, 0.58) for i in range(6)]
+        state = {"days": []}
+        tpod.update(state, cands, [], methods(NHL_A, ANY_V), NOW)
+        day = state["days"][0]
+        self.assertEqual(len(day["picks"]), 3)
+        self.assertNotIn("parlay", day)
+        self.assertNotIn("parlay", day["script"] + day["caption"])
+        self.assertFalse(hasattr(tpod, "choose_parlay"))
+        old = {"legs": [dict(cand("x", "gx", 0.8, 0.58), res=None)], "price": 0.34, "res": None}
+        state = {"days": [{"date": "2026-10-19", "v": tpod.RULES_V, "picks": [], "parlay": copy.deepcopy(old)}]}
+        tpod.update(state, cands, [], methods(NHL_A), NOW)
+        self.assertEqual(state["days"][0]["parlay"], old)                                 # not graded, not rewritten
+        self.assertNotIn("parlay", state["days"][1]["script"])
 
     def test_polymarket_money_needed(self):
         state = {"days": []}
@@ -147,43 +151,28 @@ class TpodTest(unittest.TestCase):
         picks = state["days"][0]["picks"]
         self.assertEqual([(p["pid"], p["price"], p["vn"]) for p in picks], [("2", 0.55, "P")])
 
-    def test_todays_fun_parlay_remade_if_polymarket_wont_parlay_a_leg(self):
-        combos._cache["nhl"] = {"a"}
-        try:
-            legs = [dict(cand("x", "gx", 0.8, 0.58), res=None), dict(cand("y", "gy", 0.8, 0.58), res=None)]   # NHL assists
-            state = {"days": [{"date": "2026-10-20", "v": tpod.RULES_V, "picks": [cand(f"p{i}", f"gp{i}", 0.7, 0.5, spoken="x") for i in range(3)], "parlay": {"legs": legs, "price": 0.34, "res": None}}]}
-            cands = [cand("2", "g2", 0.80, 0.58, stat="pts"), cand("3", "g3", 0.80, 0.58, stat="g")]
-            tpod.update(state, cands, [], methods({"label": "Any", "side": "under"}), NOW)
-            par = state["days"][0].get("parlay")
-            self.assertTrue(par and all(l["stat"] != "a" for l in par["legs"]))
-        finally:
-            combos._cache["nhl"] = set()
-
     def test_script_and_caption(self):
         day = {"picks": [tpod.choose([cand("1", "g1", 0.75, 0.55)], methods(NHL_A), NOW, set())]}
         text, cap = tpod.script(day, {"n": 10, "hit": 6, "miss": 4, "units": 1.5}, "2026-10-20", day_no=4)
         self.assertTrue(text.startswith("This is day 4 of giving you guys my top pick for the day."))
-        day["parlay"] = tpod.choose_parlay([cand("2", "g2", 0.80, 0.58), cand("3", "g3", 0.80, 0.58)], methods(NHL_A), NOW, set())
         text, cap = tpod.script(day, {"n": 0}, "2026-10-20")
-        self.assertIn("for the day, plus one more of a reach parlay.", text)
-        self.assertIn("Now the reach parlay. It's 2 legs paying about", text)
-        self.assertIn("Day 1: my top pick + a reach parlay", cap)
+        self.assertIn("Day 1: my top pick (Oct 20)", cap)
         self.assertIn("Player 1, no assists, paying about 1.8 times your money", text)
         yday = {"date": "2026-10-19", "picks": [dict(cand("a", "ga", 0.7, 0.5), res="hit"), dict(cand("b", "gb", 0.7, 0.5), res="hit"),
                                                 dict(cand("c", "gc", 0.7, 0.5), res="miss")],
                 "parlay": {"res": "miss", "units": -1.0, "legs": []}}
         last = tpod.last_day([yday])
-        self.assertEqual(last, ("2026-10-19", 2, 3, 1.0, 0, 1))                         # picks +1 +1 -1; the parlay apart
+        self.assertEqual(last, ("2026-10-19", 2, 3, 1.0))                               # picks +1 +1 -1; an old parlay ignored
         text, cap = tpod.script({"picks": day["picks"]}, {"n": 10, "hit": 6, "miss": 4, "units": 4.3}, "2026-10-20",
-                                {"n": 3, "hit": 1, "miss": 2, "units": 1.0}, day_no=5, last=("2026-10-19", 2, 3, 1.5, 0, 1))
+                                day_no=5, last=("2026-10-19", 2, 3, 1.5))
         self.assertIn("for the day. Yesterday we went 2 for 3 on picks, which is +1.5 units, bringing the series total to "
-                      "+4.3 units. And 0 for 1 on the parlay.", text)                  # the series is the picks only
-        self.assertIn("Yesterday: picks 2/3 (+1.5 units) | parlay 0/1 | Series: +4.3 units", cap)
+                      "+4.3 units. First", text)
+        self.assertIn("Yesterday: picks 2/3 (+1.5 units) | Series: +4.3 units", cap)
         text, _ = tpod.script({"picks": day["picks"]}, {"n": 2, "hit": 0, "miss": 2, "units": -2.0}, "2026-10-20",
-                              last=("2026-10-17", 0, 2, -2.0, 0, 0))
+                              last=("2026-10-17", 0, 2, -2.0))
         self.assertIn("On Saturday we went 0 for 2 on picks, which is -2 units, bringing the series total to -2 units. First", text)
         self.assertEqual(tpod.last_day([{"date": "2026-10-19", "picks": [], "parlay": {"res": "hit", "units": 2.0}}]),
-                         ("2026-10-19", 0, 0, 0, 1, 1))
+                         None)
         self.assertNotIn("we went", tpod.script({"picks": day["picks"]}, {"n": 0}, "2026-10-20")[0])   # day 1: nothing yet
         self.assertTrue(tpod.script({"picks": []}, {"n": 0}, "2026-10-20")[0].startswith("No picks from me today"))
         self.assertIn("18+", cap)
