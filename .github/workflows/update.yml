@@ -80,6 +80,7 @@ jobs:
           # team_stats.py: GoatCounter API key ("Read statistics" only) and the /team/ page password
           GOATCOUNTER_TOKEN: ${{ secrets.GOATCOUNTER_TOKEN }}
           TEAM_DASH_PASSWORD: ${{ secrets.TEAM_DASH_PASSWORD }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}   # tpod.py reads the Lock button's file through the API
         run: |
           start=$(date +%s)
           bash update_pass.sh

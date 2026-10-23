@@ -80,6 +80,29 @@ class TpodTest(unittest.TestCase):
         tpod.update(state, cands, [], fill, NOW)                                         # a method fill-in loses too
         self.assertEqual([p["sport"] for p in state["days"][0]["picks"]], ["nhl"] * 3)
 
+    def test_locked_day_kept_as_filmed(self):
+        state = {"days": []}
+        tpod.update(state, [cand("1", "g1", 0.75, 0.55)], [], methods(NHL_A), NOW)
+        filmed = [dict(p) for p in state["days"][0]["picks"]]
+        locks = {"2026-10-20": {"date": "2026-10-20", "at": "2026-10-20T17:00:00Z", "picks": filmed}}
+        later = NOW + datetime.timedelta(hours=1)
+        more = [cand("1", "g1", 0.75, 0.55), cand("2", "g2", 0.75, 0.55), cand("3", "g3", 0.75, 0.55)]
+        tpod.update(state, more, [], methods(NHL_A), later, locks)
+        day = state["days"][0]
+        self.assertEqual([p["pid"] for p in day["picks"]], ["1"])                       # locked: the empty slots stay empty
+        self.assertEqual(day["locked"], "2026-10-20T17:00:00Z")
+        day["picks"], day["v"] = [], tpod.RULES_V - 1                                   # remade after filming (new rules)
+        tpod.update(state, more, [], methods(NHL_A), later, locks)
+        self.assertEqual([p["pid"] for p in day["picks"]], ["1"])                       # put back as filmed
+        tpod.update(state, more, [], methods(NHL_A), later, {})                         # unlocked: fills again
+        self.assertNotIn("locked", day)
+        self.assertEqual(len(day["picks"]), 3)
+
+    def test_unreadable_locks_never_remake(self):
+        state = {"days": [{"date": "2026-10-20", "v": tpod.RULES_V - 1, "picks": [cand("old", "go", 0.75, 0.55, spoken="x")]}]}
+        tpod.update(state, [cand("1", "g1", 0.75, 0.55)], [], methods(NHL_A), NOW, None)
+        self.assertEqual(state["days"][0]["picks"][0]["pid"], "old")                    # might be locked: kept
+
     def test_frozen_once_made_and_graded(self):
         state = {"days": []}
         tpod.update(state, [cand("1", "g1", 0.75, 0.55)], [], methods(NHL_A), NOW)
