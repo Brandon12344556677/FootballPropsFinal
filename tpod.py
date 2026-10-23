@@ -18,7 +18,9 @@ A pick qualifies when:
 Ranked by the best method it fits, then by how far the model is over the price; three different
 games and players, at most MAX_PER_KIND of one kind of bet (a proven pick may go past it rather than
 leave the slot to a fill-in). From 11 AM ET each run fills the empty slots; a pick never changes once made.
-Still short at 7:30 PM ET: that day has fewer than three.
+Still short at 7:30 PM ET: that day has fewer than three. Once the team films, the dashboard's Lock button
+saves the day's picks to tpod_locks.enc on team-data (load_locks): a locked day is never remade or filled,
+and picks that changed after filming are put back.
 
 Each pick keeps "why" (for the team: the method it fits and that method's record, the model against
 the price, the last 10 games, the price's move) and a spoken line for the video; each day gets a
@@ -42,6 +44,7 @@ import edge_report
 import team_stats
 
 OUT = os.path.join("team", "tpod.enc")
+LOCKS_URL = "https://api.github.com/repos/Brandon12344556677/FootballPropsFinal/contents/tpod_locks.enc?ref=team-data"
 ET = botd.ET
 PICK_FROM, PICK_UNTIL = datetime.time(11, 0), datetime.time(19, 30)
 LEAD = datetime.timedelta(minutes=60)
@@ -282,8 +285,32 @@ def on_polymarket(cands):
             if c.get("pp") is not None and (c.get("pd") or 0) >= MIN_PM_USD]
 
 
-def update(state, cands, docs, methods, now):
-    """Grade, then fill today's slots. Returns True if anything changed."""
+def load_locks(password):
+    """{date: lock} from tpod_locks.enc on team-data (the dashboard's Lock button: the day's picks as
+    filmed), {} if there's no file yet, or None if it can't be read. Read through the GitHub API, not
+    raw.githubusercontent.com, whose 5-minute cache could miss a lock made just before this run."""
+    import urllib.error
+    import urllib.request
+    headers = {"Accept": "application/vnd.github.raw", "Cache-Control": "no-cache"}
+    if os.environ.get("GITHUB_TOKEN"):
+        headers["Authorization"] = "Bearer " + os.environ["GITHUB_TOKEN"]
+    try:
+        with urllib.request.urlopen(urllib.request.Request(LOCKS_URL, headers=headers), timeout=20) as r:
+            doc = json.loads(team_stats.decrypt(r.read().decode("ascii").strip(), password))
+        return {x["date"]: x for x in doc.get("items") or [] if x.get("date") and x.get("picks")}
+    except urllib.error.HTTPError as e:
+        if e.code == 404:
+            return {}
+        print(f"  3 picks of the day: locks not read (HTTP {e.code})")
+    except Exception as e:  # noqa: BLE001 - unreadable locks only hold today's picks as they are
+        print(f"  3 picks of the day: locks not read ({type(e).__name__})")
+    return None
+
+
+def update(state, cands, docs, methods, now, locks={}):   # noqa: B006 - only read
+    """Grade, then fill today's slots. Returns True if anything changed. locks: load_locks(); today
+    locked keeps (or puts back) the picks as filmed and is never remade or filled. None (couldn't
+    read them): today's picks aren't remade, in case they were locked, but empty slots still fill."""
     cands = on_polymarket(cands)
     days = state.setdefault("days", [])
     before = json.dumps(days, sort_keys=True)
@@ -295,10 +322,22 @@ def update(state, cands, docs, methods, now):
     et = now.astimezone(ET)
     today = et.date().isoformat()
     day = next((d for d in days if d["date"] == today), None)
-    if day is not None and day.get("v") != RULES_V:
+    lock = (locks or {}).get(today)
+    if lock:
+        if day is None:
+            day = {"date": today, "picks": []}
+            days.append(day)
+        filmed = [p["pid"] for p in lock["picks"]]
+        if [p["pid"] for p in day["picks"]] != filmed \
+                and not any(p.get("res") or utc(p["start"]) <= now for p in day["picks"]):   # changed after filming: put them back
+            day["picks"] = [dict(p, res=None) for p in lock["picks"]]
+        day["locked"], day["v"] = lock.get("at"), RULES_V
+    elif day is not None and locks is not None:
+        day.pop("locked", None)   # unlocked on the dashboard
+    if day is not None and day.get("v") != RULES_V and locks is not None:
         if not any(p.get("res") or utc(p["start"]) <= now for p in day.get("picks") or []):   # nothing started: remake under the new rules
             day["picks"], day["v"] = [], RULES_V
-    if PICK_FROM <= et.time() < PICK_UNTIL and methods and (day is None or len(day["picks"]) < PER_DAY):
+    if PICK_FROM <= et.time() < PICK_UNTIL and methods and not lock and (day is None or len(day["picks"]) < PER_DAY):
         if day is None:
             day = {"date": today, "picks": [], "v": RULES_V}
             days.append(day)
@@ -328,7 +367,7 @@ def run(cands, docs, now, path=OUT):
         state = {"days": []}
     today = now.astimezone(ET).date().isoformat()
     methods = rank_methods(edge_report.load_private(password), docs, today)
-    if not update(state, cands, docs, methods, now):
+    if not update(state, cands, docs, methods, now, load_locks(password)):
         print(f"  3 picks of the day: no change ({len(methods)} method(s) ranked)")
         return
     state["gen"] = now.strftime("%Y-%m-%dT%H:%M:%SZ")

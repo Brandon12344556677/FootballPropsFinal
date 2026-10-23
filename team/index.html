@@ -517,9 +517,10 @@ details.plpast>summary:focus-visible{outline:2px solid var(--accent);outline-off
 
   <section data-view="tpod" class="panel" id="tpPanel">
     <div class="panel-h"><h2>3 Picks of the Day</h2><span class="label" id="tpUpd">Team only · for TikTok</span></div>
-    <p class="hint">Three picks a day from the Secret methods, made from 11 AM ET and never changed after: fitting a method that's in profit in that sport (30+ graded picks there), priced 35-75¢ (pays about 1.33x-2.9x), the model at 60%+ and 5+ points over the price, no injury news, a price that hasn't dropped, three different games. The script and caption never name a method.</p>
+    <p class="hint">Three picks a day from the Secret methods, made from 11 AM ET and never changed after: fitting a method that's in profit in that sport (30+ graded picks there), priced 35-75¢ (pays about 1.33x-2.9x), the model at 60%+ and 5+ points over the price, no injury news, a price that hasn't dropped, three different games. The script and caption never name a method. Once you've filmed, press <b>Lock today's picks</b>: the updates then keep that day's picks exactly as they are (needs GitHub connected, as in Expenses).</p>
     <div id="tpToday"><p class="empty">Loading…</p></div>
     <div class="tp-copy" id="tpCopy" hidden>
+      <p class="tp-lock"><button class="btn" type="button" id="tpLockBtn" hidden>Lock today's picks</button> <span class="hint" id="tpLockMsg"></span></p>
       <h3 class="subh">Video script</h3>
       <textarea id="tpScript" rows="7" readonly></textarea>
       <p><button class="btn" type="button" id="tpScriptBtn">Copy script</button></p>
@@ -1471,6 +1472,7 @@ details.plpast>summary:focus-visible{outline:2px solid var(--accent);outline-off
         `<p class="hint" id="tpLive"></p><div class="pl-cards" id="tpPicks">${day.picks.map((p,i)=>card(p,i)).join('')}</div>`+(day.picks.length<3? '<p class="empty" style="margin-top:8px">The rest are made as more picks qualify, until 7:30 PM ET.</p>' : '');
       if(window.psaParlayLive)   // live box scores (parlaylive.js): each pick as a one-leg parlay
         window.psaParlayLive.track(day? (day.picks||[]).map(p=>({legs: [p], res: p.res})) : [], {root: 'tpPicks', note: 'tpLive'});
+      TP.day=day; TP.date=today; tpLockState();
       $('tpCopy').hidden=!day; if(day){ $('tpScript').value=day.script||''; $('tpCaption').value=day.caption||''; }
       const rec=d.record||{n:0}, pc=v=>Math.round(v*100)+'%';
       const done=days.flatMap(x=>x.picks||[]).filter(p=>p.res==='hit'||p.res==='miss'), staked=done.length;
@@ -1491,6 +1493,42 @@ details.plpast>summary:focus-visible{outline:2px solid var(--accent);outline-off
   }
   [['tpScriptBtn','tpScript'],['tpCaptionBtn','tpCaption']].forEach(([b,t])=>{ const el=$(b); if(el) el.addEventListener('click', async ()=>{
     const ok=await copyText($(t).value, $(t)); el.textContent= ok? 'Copied' : 'Press Ctrl+C'; setTimeout(()=>{ el.textContent= b==='tpScriptBtn'? 'Copy script' : 'Copy caption'; }, 2000); }); });
+  // Lock: today's picks as filmed, saved to tpod_locks.enc on team-data (expenses.js storage); tpod.py keeps a locked day as it is
+  const TP={day: null, date: null, lock: null}, TPLOCKS='tpod_locks.enc';
+  const tpAt=s=>{ const t=Date.parse(s); return isFinite(t)? 'at '+new Date(t).toLocaleTimeString('en-US',{hour:'numeric', minute:'2-digit'}) : ''; };
+  async function tpLockState(known){
+    const btn=$('tpLockBtn'), m=$('tpLockMsg'), day=TP.day;
+    if(!btn) return;
+    btn.hidden=!(day && (day.picks||[]).length);
+    if(btn.hidden){ m.textContent=''; return; }
+    let lock=known;
+    if(lock===undefined){
+      lock= day.locked? {at: day.locked} : null;   // what the last update saw, unless the storage says otherwise
+      try { if(window.psaTeamData && window.psaTeamData.ready()) lock=((await window.psaTeamData.read(TPLOCKS)).items||[]).find(x=>x.date===TP.date)||null; }
+      catch(e){}
+    }
+    TP.lock=lock;
+    btn.textContent= lock? 'Unlock' : "Lock today's picks";
+    btn.classList.toggle('ghost-btn', !!lock);
+    m.textContent= !lock? "Press after filming: today's picks then stay exactly as they are." :
+      `🔒 Locked ${tpAt(lock.at)}. ` + (day.locked? 'The updates keep these picks for today.' : 'The next update (within about 10 minutes) holds them, and puts them back if they changed.');
+  }
+  if($('tpLockBtn')) $('tpLockBtn').addEventListener('click', async ()=>{
+    const btn=$('tpLockBtn'), m=$('tpLockMsg'), day=TP.day, unlock=!!TP.lock;
+    if(!day) return;
+    if(!window.psaTeamData || !window.psaTeamData.canSave()){ m.textContent='Connect GitHub in the Expenses tab first: the lock is saved to the team storage.'; return; }
+    if(unlock && !confirm('Unlock today? Until you lock again, an update may change the picks.')) return;
+    const keep=new Date(Date.now()-14*864e5).toLocaleDateString('en-CA',{timeZone:'America/New_York'});   // the last two weeks are plenty
+    const lock={date: TP.date, at: new Date().toISOString(), picks: day.picks};
+    btn.disabled=true; m.textContent= unlock? 'Unlocking…' : 'Locking…';
+    try {
+      await window.psaTeamData.update(TPLOCKS, doc=>{ doc.items=(doc.items||[]).filter(x=>x.date!==TP.date && x.date>=keep); if(!unlock) doc.items.push(lock); return doc; });
+      if(unlock) day.locked=null;
+      await tpLockState(unlock? null : lock);
+    } catch(e){ m.textContent= e.status===401? 'GitHub said the token is wrong or expired: reconnect it in Expenses.' :
+                  e.status===403||e.status===404? 'This GitHub token can’t save to the repo.' : 'Couldn’t save just now. Try again.'; }
+    btn.disabled=false;
+  });
   async function loadParlays(pw, P='pl', file='parlays.enc'){   // P: the panel's id prefix (pl NHL, nb NBA, nf NFL)
     try {
       const r=await fetch(file+'?t='+Date.now(),{cache:'no-store'});
