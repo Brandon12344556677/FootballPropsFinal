@@ -16,7 +16,8 @@ A pick qualifies when:
   - no news flag or injury hold, MIN_NEFF+ effective games of history, its price hasn't dropped
     MAX_DROP+ cents since it was first recorded, and its game starts today (ET), LEAD+ from now.
 Ranked by the best method it fits, then by how far the model is over the price; three different
-games and players, at most MAX_PER_KIND of one kind of bet. From 11 AM ET each run fills the empty slots; a pick never changes once made.
+games and players, at most MAX_PER_KIND of one kind of bet (a proven pick may go past it rather than
+leave the slot to a fill-in). From 11 AM ET each run fills the empty slots; a pick never changes once made.
 Still short at 7:30 PM ET: that day has fewer than three.
 
 Each pick keeps "why" (for the team: the method it fits and that method's record, the model against
@@ -52,7 +53,7 @@ MAX_DROP = 3            # cents
 MIN_METHOD_N = 30
 PER_DAY = 3
 MIN_PM_USD = 25.0   # dollars offered near the Polymarket price for the side (depth.MIN_USD), or it isn't a pick
-RULES_V = 2   # bump when the selection changes: today's picks are remade if none has started (2: methods judged by sport)
+RULES_V = 3   # bump when the selection changes: today's picks are remade if none has started (2: methods judged by sport; 3: proven picks past the kind cap)
 SERIES_START = "2026-10-21"   # the TikTok series' day 1: earlier days (a dry run on Oct 20) are dropped from the record
 MAX_PER_KIND = 2        # a day isn't three of the same bet (same sport, stat and side)
 SPORT_NAME = {"nfl": "NFL", "nba": "NBA", "nhl": "NHL", "mlb": "MLB"}
@@ -183,21 +184,28 @@ def choose(cands, methods, now, taken, used=()):
     """The next best pick for an empty slot, or None. Proven methods first, then fill-ins (a method not
     proven in that sport, then no method, Value spots first), then on a thin night the relaxed filters.
     taken: (gid, pid) already used today; used: the kinds of bet today's picks are (at most MAX_PER_KIND
-    of one kind; dropped too if that's the only way to fill the day)."""
+    of one kind, unless it's a proven pick and the only other choice is a fill-in; dropped too if that's
+    the only way to fill the day)."""
     for relaxed, varied in ((False, True), (True, True), (True, False)):
         full = {k for k in used if list(used).count(k) >= MAX_PER_KIND} if varied else set()
         best = None
         for c in cands:
-            if not eligible(c, now, relaxed) or kind(c) in full or (c.get("gid"), c["pid"]) in taken \
+            if not eligible(c, now, relaxed) or (c.get("gid"), c["pid"]) in taken \
                     or any(c.get("gid") == g for g, _ in taken):
                 continue
             rank, m = fit_of(c, methods)
-            score = (-rank, "V" in (c.get("lists") or ""), c["prob"] - c["price"], c["prob"])
+            proven, over = m[3].get("tier", 0) == 0, kind(c) in full
+            if over and not proven:
+                continue
+            # proven first; among those, a new kind of bet before one more of a full kind
+            score = (proven, not over, -rank, "V" in (c.get("lists") or ""), c["prob"] - c["price"], c["prob"])
             if best is None or score > best[0]:
                 best = (score, c, m)
         if best:
-            _, c, (label, _, _, rec) = best
+            (_, fresh, *_), c, (label, _, _, rec) = best
             why, spoken = explain(c, (label, rec))
+            if not fresh:
+                why.append(f"More than {MAX_PER_KIND} of this kind of bet today: no other proven pick fit, so it beat a fill-in.")
             if relaxed:
                 why.append("Thin night: picked under the relaxed bar (model 55%+, 30-85c) to fill the day.")
             keep = {k: c.get(k) for k in botd.KEEP}

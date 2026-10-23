@@ -66,6 +66,20 @@ class TpodTest(unittest.TestCase):
         self.assertTrue(any("cashed in 8 of Player 0's last 10" in w for w in picks[0]["why"]))
         self.assertNotIn("NHL assist unders", state["days"][0]["script"])               # the method never in the script
 
+    def test_proven_pick_goes_past_the_kind_cap_before_a_fill_in(self):
+        cands = [cand(str(i), "g" + str(i), 0.75, 0.55) for i in range(3)] + \
+                [cand("n1", "gn", 0.70, 0.52, sport="nba", stat="reb", side="over", statText="Rebounds", lists="")]
+        state = {"days": []}
+        tpod.update(state, cands, [], methods(NHL_A), NOW)                              # the NBA pick fits no method
+        picks = state["days"][0]["picks"]
+        self.assertEqual([(p["sport"], p["tier"]) for p in picks], [("nhl", 0)] * 3)
+        self.assertIn("so it beat a fill-in", " ".join(picks[2]["why"]))
+        self.assertNotIn("so it beat a fill-in", " ".join(picks[1]["why"]))
+        fill = methods(NHL_A) + [("NBA rebound overs", "nba", lambda p: p["sport"] == "nba", {"tier": 1, "hit": 0.6, "roi": 0.05, "n": 50})]
+        state = {"days": []}
+        tpod.update(state, cands, [], fill, NOW)                                         # a method fill-in loses too
+        self.assertEqual([p["sport"] for p in state["days"][0]["picks"]], ["nhl"] * 3)
+
     def test_frozen_once_made_and_graded(self):
         state = {"days": []}
         tpod.update(state, [cand("1", "g1", 0.75, 0.55)], [], methods(NHL_A), NOW)
