@@ -1,34 +1,34 @@
 {
- "date": "2026-10-22",
+ "date": "2026-10-23",
  "drafts": {
   "c": {
    "caption": {
     "title": "Pick of the Day + today's best props",
-    "description": "Pick of the Day: Cole Kmet under 3.5 Receptions (96% model chance). Swipe for today's best NFL, NBA, NHL props → Free research, link in bio. Model chance, not a guarantee. 18+. #NFL #NFLProps #NBA #NBAProps #NHL #NHLProps #PlayerProps"
+    "description": "Pick of the Day: Karl-Anthony Towns under 29.5 Points (99% model chance). Swipe for today's best NBA, NHL, MLB props → Free research, link in bio. Model chance, not a guarantee. 18+. #NBA #NBAProps #NHL #NHLProps #MLB #MLBProps #PlayerProps"
    },
    "ok": true,
-   "id": "p_inbox_url~v2.7699578026660530190"
+   "id": "p_inbox_url~v2.7699948622041040909"
   },
   "v1": {
-   "sport": "nfl",
-   "angle": "record",
-   "caption": "Do our NFL picks actually hit? Top 25: 339 of 375 this season (90%), every pick recorded before the game and graded after ✅ Free research, link in bio. Model chance, not a guarantee. 18+. #NFL #NFLProps #PlayerProps #SportsAnalytics",
+   "sport": "mlb",
+   "angle": "gap",
+   "caption": "1 MLB player prop where our model and the market disagree today 👀 Biggest gap: Jacob Misiorowski under 5.5 Strikeouts, model 66% vs. market 31%. Free research, link in bio. Model chance, not a guarantee. 18+. #MLB #MLBProps #PlayerProps #SportsAnalytics",
    "ok": true,
-   "id": "v_inbox_file~v2.7699578026660612110"
+   "id": "v_inbox_file~v2.7699948569780045837"
   },
   "v2": {
    "sport": "nba",
-   "angle": "gap",
-   "caption": "3 NBA player props where our model and the market disagree today 👀 Biggest gap: Jaylen Brown over 24.5 Points, model 60% vs. market 31%. Free research, link in bio. Model chance, not a guarantee. 18+. #NBA #NBAProps #PlayerProps #SportsAnalytics",
+   "angle": "record",
+   "caption": "Do our NBA picks actually hit? Top 25: 62 of 71 this season (87%), every pick recorded before the game and graded after ✅ Free research, link in bio. Model chance, not a guarantee. 18+. #NBA #NBAProps #PlayerProps #SportsAnalytics",
    "ok": true,
-   "id": "v_inbox_file~v2.7699578052015147021"
+   "id": "v_inbox_file~v2.7699948665083725837"
   },
   "v3": {
    "sport": "nhl",
-   "angle": "record",
-   "caption": "Do our NHL picks actually hit? Top 25: 724 of 769 this season (94%), every pick recorded before the game and graded after ✅ Free research, link in bio. Model chance, not a guarantee. 18+. #NHL #NHLProps #PlayerProps #SportsAnalytics",
-   "ok": true,
-   "id": "v_inbox_file~v2.7699578052015278093"
+   "angle": "gap",
+   "caption": "3 NHL player props where our model and the market disagree today 👀 Biggest gap: Oliver Kapanen under 0.5 Points, model 76% vs. market 50%. Free research, link in bio. Model chance, not a guarantee. 18+. #NHL #NHLProps #PlayerProps #SportsAnalytics",
+   "ok": false,
+   "error": "spam_risk_too_many_pending_share: spam_risk_too_many_pending_share"
   }
  },
  "history": [
@@ -71,8 +71,18 @@
    "date": "2026-10-22",
    "sport": "nhl",
    "angle": "record"
+  },
+  {
+   "date": "2026-10-23",
+   "sport": "mlb",
+   "angle": "gap"
+  },
+  {
+   "date": "2026-10-23",
+   "sport": "nba",
+   "angle": "record"
   }
  ],
  "reconnect": false,
- "at": "2026-10-22T19:36:33Z"
+ "at": "2026-10-23T19:34:40Z"
 }
