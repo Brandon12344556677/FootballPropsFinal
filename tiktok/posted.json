@@ -1,34 +1,34 @@
 {
- "date": "2026-10-24",
+ "date": "2026-10-25",
  "drafts": {
   "c": {
    "caption": {
     "title": "Pick of the Day + today's best props",
-    "description": "Pick of the Day: Christian Dvorak under 1.5 Assists (96% model chance). Swipe for today's best NBA, NHL, MLB props → Free research, link in bio. Model chance, not a guarantee. 18+. #NBA #NBAProps #NHL #NHLProps #MLB #MLBProps #PlayerProps"
+    "description": "Pick of the Day: Daniel Jones under 299.5 Pass Yds (98% model chance). Swipe for today's best NFL, NBA, NHL props → Free research, link in bio. Model chance, not a guarantee. 18+. #NFL #NFLProps #NBA #NBAProps #NHL #NHLProps #PlayerProps"
    },
    "ok": true,
-   "id": "p_inbox_url~v2.7700301562156959758"
+   "id": "p_inbox_url~v2.7700675697232185358"
   },
   "v1": {
-   "sport": "mlb",
-   "angle": "record",
-   "caption": "Do our MLB picks actually hit? Top 25: 411 of 433 this season (95%), every pick recorded before the game and graded after ✅ Free research, link in bio. Model chance, not a guarantee. 18+. #MLB #MLBProps #PlayerProps #SportsAnalytics",
+   "sport": "nfl",
+   "angle": "gap",
+   "caption": "3 NFL player props where our model and the market disagree today 👀 Biggest gap: Jared Goff under 25.5 Completions, model 67% vs. market 49%. Free research, link in bio. Model chance, not a guarantee. 18+. #NFL #NFLProps #PlayerProps #SportsAnalytics",
    "ok": true,
-   "id": "v_inbox_file~v2.7700301535032592397"
+   "id": "v_inbox_file~v2.7700675605507082253"
   },
   "v2": {
    "sport": "nhl",
-   "angle": "gap",
-   "caption": "2 NHL player props where our model and the market disagree today 👀 Biggest gap: Kent Johnson under 0.5 Points, model 71% vs. market 53%. Free research, link in bio. Model chance, not a guarantee. 18+. #NHL #NHLProps #PlayerProps #SportsAnalytics",
+   "angle": "record",
+   "caption": "Do our NHL picks actually hit? Top 25: 853 of 913 this season (93%), every pick recorded before the game and graded after ✅ Free research, link in bio. Model chance, not a guarantee. 18+. #NHL #NHLProps #PlayerProps #SportsAnalytics",
    "ok": true,
-   "id": "v_inbox_file~v2.7700301621284079629"
+   "id": "v_inbox_file~v2.7700675694208960526"
   },
   "v3": {
    "sport": "nba",
    "angle": "streak",
-   "caption": "3 NBA hit streaks on the line today 🔥 Longest: Onyeka Okongwu, 10 straight games over 3.5 rebounds. Will it keep going? Free research, link in bio. Model chance, not a guarantee. 18+. #NBA #NBAProps #PlayerProps #SportsAnalytics",
+   "caption": "3 NBA hit streaks on the line today 🔥 Longest: Lauri Markkanen, 10 straight games over 14.5 points. Will it keep going? Free research, link in bio. Model chance, not a guarantee. 18+. #NBA #NBAProps #PlayerProps #SportsAnalytics",
    "ok": true,
-   "id": "v_inbox_file~v2.7700301634370390029"
+   "id": "v_inbox_file~v2.7700675779558148110"
   }
  },
  "history": [
@@ -96,8 +96,23 @@
    "date": "2026-10-24",
    "sport": "nba",
    "angle": "streak"
+  },
+  {
+   "date": "2026-10-25",
+   "sport": "nfl",
+   "angle": "gap"
+  },
+  {
+   "date": "2026-10-25",
+   "sport": "nhl",
+   "angle": "record"
+  },
+  {
+   "date": "2026-10-25",
+   "sport": "nba",
+   "angle": "streak"
   }
  ],
  "reconnect": false,
- "at": "2026-10-24T18:23:56Z"
+ "at": "2026-10-25T18:36:03Z"
 }
