@@ -1,4 +1,23 @@
 {
- "problems": {},
+ "problems": {
+  "build_mlb: polymarket US": {
+   "first": "2026-10-26T04:53:07Z",
+   "runs": 1,
+   "alerted": null,
+   "msg": "build_mlb.py: polymarket US failed (HTTP Error 403: Forbidden)"
+  },
+  "build_nba: polymarket US": {
+   "first": "2026-10-26T04:53:07Z",
+   "runs": 1,
+   "alerted": null,
+   "msg": "build_nba.py: polymarket US failed (HTTP Error 403: Forbidden)"
+  },
+  "build_nhl: polymarket US": {
+   "first": "2026-10-26T04:53:07Z",
+   "runs": 1,
+   "alerted": null,
+   "msg": "build_nhl.py: polymarket US failed (HTTP Error 403: Forbidden)"
+  }
+ },
  "alert": []
 }
