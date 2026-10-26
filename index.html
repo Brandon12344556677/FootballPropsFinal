@@ -173,8 +173,8 @@ h2 i{color:var(--green)}
 .demo-go:hover{text-decoration:underline}
 
 /* pick of the day: two slots, each a pick card from app.css plus the record */
-#botd{padding:20px 0 8px}
-.botdgrid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:18px}
+#botd{padding:16px 0 8px}
+.botdgrid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:12px}
 .botdslot{background:var(--surface);border:1px solid var(--line);border-radius:22px;padding:18px;display:flex;flex-direction:column;gap:12px;min-width:0}
 .botdslot.lock{border-color:rgba(34,208,127,.45);box-shadow:0 0 0 1px rgba(34,208,127,.12),0 18px 40px rgba(0,0,0,.25)}
 .bs-head{display:flex;justify-content:space-between;align-items:baseline;gap:8px 12px;flex-wrap:wrap}
@@ -184,8 +184,10 @@ h2 i{color:var(--green)}
 .bs-blurb{color:var(--muted);font-size:14px;margin:-4px 0 0}
 /* the pick itself comes right under the title, so both picks show on the first screen; the blurb follows it */
 .botdslot>.bs-head{order:-2} .botdslot>.pickcard{order:-1} .botdslot>.bs-blurb{margin:0}
-#botd h2{font-size:clamp(26px,2.8vw,36px);margin-bottom:6px}
-#botd .sub{margin:0;font-size:15px;max-width:none}
+#botd .kicker{display:inline-block;margin:0 14px 0 0;vertical-align:middle}
+#botd h2{display:inline;font-size:clamp(22px,2.2vw,28px);margin:0;vertical-align:middle}
+#botd .sub{display:none}
+@media (min-width:761px){#botd .botdslot{padding:14px;gap:8px}#botd .bs-blurb{display:none}}
 .botdslot .pickcard{color:inherit;text-decoration:none}
 .botdslot .pickcard:focus-visible{outline:2px solid var(--green);outline-offset:2px}
 .botdslot .pc-who .cd{display:inline;color:var(--soft)}
@@ -308,14 +310,18 @@ h2 i{color:var(--green)}
 .social a:hover{border-color:var(--green);color:var(--green);transform:translateY(-2px)}
 
 /* promo strip at the top of the page */
-.pickbar{padding:18px 0 4px}
+.pickbar{padding:12px 0 4px}
 .pickbar .wrap{display:grid;gap:10px}
+/* wide screens: sport tiles and the player search share one row, so both picks fit on the first screen */
+@media (min-width:1000px){.pickbar .wrap{grid-template-columns:minmax(0,1.75fr) minmax(0,1fr)}.pickbar .wrap>*{grid-column:1/-1}
+  .pickbar .wrap>.sports{grid-column:1}.pickbar .wrap>.psearch{grid-column:2;display:flex}.psearch input{height:100%}
+  .pickbar .sport{padding-top:10px;padding-bottom:10px;gap:10px}.pickbar .sport .ico{width:36px;height:36px;flex:none}.pickbar .sport small{white-space:nowrap;font-size:12px}}
 .pickbar-h{margin:0;font-family:var(--cond);font-size:14px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--green)}
 .pickbar .sports{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:0}
 .pickbar .sport{min-width:0}
 @media (max-width:620px){.pickbar{padding-top:12px}.pickbar .sports{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.pickbar .sport{padding:12px}}
-.pickbar h1{margin:10px 0 0;font-size:clamp(30px,4.2vw,50px);text-wrap:balance}
-.pickbar .lede{margin:0 0 6px;font-size:clamp(16px,1.5vw,18px);max-width:none}
+.pickbar h1{margin:6px 0 0;font-size:clamp(30px,3.6vw,44px);text-wrap:balance}
+.pickbar .lede{margin:0 0 4px;font-size:16px;max-width:none}
 .pickbar-more{margin:0;font-size:14px;color:var(--muted);white-space:nowrap}
 .calibmore{margin-top:14px}
 .calibmore summary{cursor:pointer;color:#86e6b6;font-weight:600;font-size:15px}
@@ -335,12 +341,12 @@ h2 i{color:var(--green)}
 .psearch li a[aria-selected="true"],.psearch li a:hover{background:rgba(34,208,127,.12)}
 .psearch li small{color:var(--muted);font-size:13px;white-space:nowrap}
 .psearch li.empty{padding:10px 12px;color:var(--muted);font-size:14px}
-.joinrow{padding:14px 0 0}
+.joinrow{padding:10px 0 0}
 .joinrow .wrap{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,420px),1fr));gap:12px;align-items:stretch}
-.squadcard{display:flex;align-items:center;gap:14px;padding:10px 16px 10px 10px;border-radius:16px;background:var(--surface);
+.squadcard{display:flex;align-items:center;gap:14px;padding:8px 16px 8px 8px;border-radius:16px;background:var(--surface);
   border:1px solid rgba(34,208,127,.35);color:#fff;text-decoration:none;min-width:0}
 .squadcard:hover{border-color:var(--green)}
-.squadqr{flex:none;width:68px;height:68px;border-radius:8px;background:#fff}
+.squadqr{flex:none;width:60px;height:60px;border-radius:8px;background:#fff}
 .squadcopy{display:grid;gap:2px;flex:1;min-width:0}
 .squadcard .kicker{margin:0}
 .squadcard b{font-family:var(--display);font-weight:800;letter-spacing:-.02em;font-size:clamp(17px,1.7vw,20px);line-height:1.15}
@@ -349,12 +355,13 @@ h2 i{color:var(--green)}
 .squadcard .btn{flex:none}
 @media (max-width:620px){.squadqr{display:none}.squadcard{padding:12px 14px}}
 #email{min-width:0}
-#email .emailbox{height:100%;box-sizing:border-box;grid-template-columns:1fr;padding:10px 16px;gap:8px;border-radius:16px;border-color:rgba(34,208,127,.35)}
+#email .emailbox{height:100%;box-sizing:border-box;grid-template-columns:1fr;padding:8px 14px;gap:6px;border-radius:16px;border-color:rgba(34,208,127,.35)}
 #email .emailcopy{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
 #email .emailcopy h2{font-size:clamp(17px,1.7vw,20px);margin:0;line-height:1.15}
 #email .kicker{margin:0}
-#email .emailform input[type=email]{padding:9px 12px}
-#email .emailform .btn{padding-top:9px;padding-bottom:9px}
+#email .emailform{gap:6px 10px}
+#email .emailform input[type=email]{padding:7px 12px}
+#email .emailform .btn{padding-top:7px;padding-bottom:7px}
 #email .emailfine{font-size:12px}
 .emailbox{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);gap:24px;align-items:center;background:var(--surface);border:1px solid var(--line);border-radius:20px;padding:24px}
 @media (max-width:760px){.emailbox{grid-template-columns:1fr;padding:18px}}
@@ -541,7 +548,7 @@ footer .fine a{color:#8394ab}
   <section class="pickbar" aria-labelledby="pickbar-h">
     <div class="wrap">
       <h1 id="pickbar-h">Today's best player props, <i>graded in public</i>.</h1>
-      <p class="lede">A model checks every player's game log against the market price for the NFL, NBA, NHL and MLB. Free, no account. <span class="pickbar-more"><a href="guides/">New to player props? Start here →</a></span></p>
+      <p class="lede">A model checks every player's game log against the market price for the NFL, NBA, NHL and MLB. Free, no account. <span class="pickbar-more"><a href="guides/">New to props? Start here →</a></span></p>
       <div class="sports">
         <a class="sport" href="./nfl.html"><span class="ico" aria-hidden="true">🏈</span><span><b>NFL</b><small data-rec="nfl">Football props</small></span></a>
         <a class="sport" href="./nba.html"><span class="ico" aria-hidden="true">🏀</span><span><b>NBA</b><small data-rec="nba">Basketball props</small></span></a>
@@ -550,7 +557,7 @@ footer .fine a{color:#8394ab}
       </div>
       <!-- Player search across all four sports (search.json, from build_today.py), loaded on first focus -->
       <div class="psearch">
-        <input id="psq" type="search" placeholder="Or search any player: Mahomes, Jokic, McDavid, Judge…" autocomplete="off" spellcheck="false"
+        <input id="psq" type="search" placeholder="Search any player: Mahomes, Jokic…" autocomplete="off" spellcheck="false"
                role="combobox" aria-expanded="false" aria-controls="psres" aria-autocomplete="list" aria-label="Search any player">
         <ul id="psres" role="listbox" aria-label="Players" hidden></ul>
       </div>
@@ -562,7 +569,7 @@ footer .fine a{color:#8394ab}
   <section class="joinrow" aria-label="Join the community">
     <div class="wrap">
       <a class="squadcard" href="https://polymarket.us/squad/join/CDU9RMD97K7O1G95yAao?referrer=propstreaklab" target="_blank" rel="noopener" data-place="squad">
-        <img class="squadqr" src="polymarket-squad-qr.svg" width="68" height="68" alt="QR code: scan with your phone to join the squad">
+        <img class="squadqr" src="polymarket-squad-qr.svg" width="60" height="60" alt="QR code: scan with your phone to join the squad">
         <span class="squadcopy">
           <span class="kicker">Polymarket group</span>
           <b>Join our <i>squad</i> on Polymarket</b>
