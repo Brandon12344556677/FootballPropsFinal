@@ -1,11 +1,4 @@
 {
- "problems": {
-  "team_stats: GoatCounter team stats": {
-   "first": "2026-10-26T02:01:14Z",
-   "runs": 1,
-   "alerted": null,
-   "msg": "team_stats.py: GoatCounter team stats failed (RemoteDisconnected: Remote end closed connection without response)"
-  }
- },
+ "problems": {},
  "alert": []
 }
