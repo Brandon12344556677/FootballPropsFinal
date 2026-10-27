@@ -4,7 +4,7 @@ Prop Streak Lab — edge tracker: once a day, which betting strategies are actua
 Grades every recorded live pick that has a market price and a result (picks.json and the
 other sports' picks files) as a flat $1 bet at its recorded price, for a fixed set of
 strategies: each sport's Value and Top 25 lists, NHL Value since the regular season, the
-team's private strategies (rules.enc, see load_private), the daily model parlays (parlay.py,
+team's private strategies (rules.enc, see load_private), the daily model parlays and Parlay of the Day (parlay.py,
 each graded as one bet at the product of its legs' prices), the home page's Pick of the Day
 (botd.json: the Value Shot and the Safe Pick, each at its frozen price), and the bets that were losing. Each gets its
 record, return, a likely range (a bootstrap over game days, since picks from one night win
@@ -32,6 +32,7 @@ OUT = os.path.join("team", "edges.enc")
 PARLAYS = os.path.join("team", "parlays.enc")
 PARLAYS_NBA = os.path.join("team", "parlays_nba.enc")   # parlay.py's NBA track, its own row
 PARLAYS_NFL = os.path.join("team", "parlays_nfl.enc")   # and its NFL track
+PARLAY_POTD = os.path.join("team", "parlay_potd.enc")   # and Parlay of the Day
 SPREADS = os.path.join("team", "spreads.enc")           # spreads.py: the private game-spread test
 BOTD = "botd.json"
 ET = ZoneInfo("America/New_York")
@@ -39,8 +40,8 @@ FILES = [("nfl", "picks.json"), ("nhl", "nhl_picks.json"), ("mlb", "mlb_picks.js
 NHL_REGULAR = "2026-09-29"     # NHL 2026-27 regular season opener: anything earlier is left out (current season only)
 BOOT = 400
 WAITING = {"nba"}       # rows shown even before their first graded pick (the NBA season starts Oct 2026)
-WAITING_KEYS = {"parlays", "parlays-nba", "parlays-nfl", "spreads-all", "spreads-nba", "spreads-nfl", "spreads-nhl", "spreads-mlb", "botd-value", "botd-lock"}     # and rows for lists that start posting later
-OWN_ROWS = {"parlay", "parlay-nba", "parlay-nfl", "spread", "botd"}  # rows that repeat picks already counted: only their own strategies grade them
+WAITING_KEYS = {"parlays", "parlays-nba", "parlays-nfl", "parlay-potd", "spreads-all", "spreads-nba", "spreads-nfl", "spreads-nhl", "spreads-mlb", "botd-value", "botd-lock"}     # and rows for lists that start posting later
+OWN_ROWS = {"parlay", "parlay-nba", "parlay-nfl", "parlay-potd", "spread", "botd"}  # rows that repeat picks already counted: only their own strategies grade them
 
 STRATEGIES = [   # (key, label, sport or None, test)
     ("nhl-value", "NHL Value spots", "nhl", lambda p: "V" in p["lists"]),
@@ -63,6 +64,7 @@ STRATEGIES = [   # (key, label, sport or None, test)
     ("parlays", "Model parlays, NHL (three a day, 3-4.5x, 35-55% by the model)", "parlay", lambda p: True),
     ("parlays-nba", "Model parlays, NBA (same rules, own three a day)", "parlay-nba", lambda p: True),
     ("parlays-nfl", "Model parlays, NFL (same rules, own three a day)", "parlay-nfl", lambda p: True),
+    ("parlay-potd", "Parlay of the Day (one a day, any sport, pays 3x+, over 50% by the model)", "parlay-potd", lambda p: True),
     ("spreads-all", "Game spreads, every sport (private test)", "spread", lambda p: True),
     ("spreads-nba", "Game spreads, NBA", "spread", lambda p: p["lists"] == "nba"),
     ("spreads-nfl", "Game spreads, NFL", "spread", lambda p: p["lists"] == "nfl"),
@@ -176,7 +178,8 @@ def botd_rows(doc):
 
 def load_parlays(password):
     out = []
-    for path, sport in ((PARLAYS, "parlay"), (PARLAYS_NBA, "parlay-nba"), (PARLAYS_NFL, "parlay-nfl")):
+    for path, sport in ((PARLAYS, "parlay"), (PARLAYS_NBA, "parlay-nba"), (PARLAYS_NFL, "parlay-nfl"),
+                        (PARLAY_POTD, "parlay-potd")):
         try:
             with open(path, encoding="ascii") as f:
                 out += parlay_rows(json.loads(team_stats.decrypt(f.read().strip(), password)), sport)

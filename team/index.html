@@ -109,6 +109,7 @@ footer p{margin:0;max-width:80ch}
 #app[data-cur="signups"] [data-view]:not([data-view="signups"]){display:none!important}
 #app[data-cur="picks"] [data-view]:not([data-view="picks"]){display:none!important}
 #app[data-cur="parlays"] [data-view]:not([data-view="parlays"]){display:none!important}
+#app[data-cur="potd"] [data-view]:not([data-view="potd"]){display:none!important}
 #app[data-cur="spreads"] [data-view]:not([data-view="spreads"]){display:none!important}
 #app[data-cur="secret"] [data-view]:not([data-view="secret"]){display:none!important}
 #app[data-cur="tpod"] [data-view]:not([data-view="tpod"]){display:none!important}
@@ -116,7 +117,7 @@ footer p{margin:0;max-width:80ch}
 #app[data-cur="sponsors"] [data-view]:not([data-view="sponsors"]){display:none!important}
 #app[data-cur="expenses"] [data-view]:not([data-view="expenses"]){display:none!important}
 #app[data-cur="affiliates"] [data-view]:not([data-view="affiliates"]){display:none!important}
-#app[data-cur="picks"] #tabs, #app[data-cur="parlays"] #tabs, #app[data-cur="spreads"] #tabs, #app[data-cur="secret"] #tabs, #app[data-cur="tpod"] #tabs, #app[data-cur="social"] #tabs, #app[data-cur="expenses"] #tabs, #app[data-cur="affiliates"] #tabs{display:none}
+#app[data-cur="picks"] #tabs, #app[data-cur="parlays"] #tabs, #app[data-cur="potd"] #tabs, #app[data-cur="spreads"] #tabs, #app[data-cur="secret"] #tabs, #app[data-cur="tpod"] #tabs, #app[data-cur="social"] #tabs, #app[data-cur="expenses"] #tabs, #app[data-cur="affiliates"] #tabs{display:none}
 /* expenses (expenses.js) */
 .exform{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:10px;align-items:end}
 .exform label{display:grid;gap:4px;font-size:13px;color:var(--muted);min-width:0}
@@ -347,6 +348,7 @@ details.plpast>summary:focus-visible{outline:2px solid var(--accent);outline-off
     <button role="tab" data-v="signups">Sign-ups</button>
     <button role="tab" data-v="picks">Picks &amp; edges</button>
     <button role="tab" data-v="parlays">Parlays</button>
+    <button role="tab" data-v="potd">Parlay of the Day</button>
     <button role="tab" data-v="spreads">Spreads</button>
     <button role="tab" data-v="secret">Secret methods</button>
     <button role="tab" data-v="tpod">3 Picks of the Day</button>
@@ -502,6 +504,16 @@ details.plpast>summary:focus-visible{outline:2px solid var(--accent);outline-off
     <div class="kpis" id="nfKpis" style="margin-top:12px"></div>
     <details class="plpast"><summary><span>Past parlays</span><span class="label" id="nfPastN"></span></summary>
     <div class="edwrap"><table class="edges"><thead><tr><th>Day</th><th>Legs</th><th class="n">Model</th><th class="n">Pays</th><th>Result</th><th class="n">Units</th></tr></thead><tbody id="nfRows"></tbody></table></div>
+    </details>
+  </section>
+
+  <section data-view="potd" class="panel" id="pdPanel" hidden>
+    <div class="panel-h"><h2>Parlay of the Day</h2><span class="label" id="pdUpd">Team only</span></div>
+    <p class="hint">One a day from 11 AM ET, 2-4 legs from any sport at Polymarket prices, paying 3x or more and over 50% by the model. No NBA unders and no NHL assists (Polymarket won’t parlay them). Frozen once made and graded as a 1-unit bet at the legs’ prices multiplied (a book’s same-game parlay pays less). Some days nothing fits: over 50% at 3x+ means the model rates it at least 1.5 times the market. Team only.</p>
+    <div id="pdToday"></div>
+    <div class="kpis" id="pdKpis" style="margin-top:12px"></div>
+    <details class="plpast"><summary><span>Past parlays</span><span class="label" id="pdPastN"></span></summary>
+    <div class="edwrap"><table class="edges"><thead><tr><th>Day</th><th>Legs</th><th class="n">Model</th><th class="n">Pays</th><th>Result</th><th class="n">Units</th></tr></thead><tbody id="pdRows"></tbody></table></div>
     </details>
   </section>
 
@@ -831,7 +843,7 @@ details.plpast>summary:focus-visible{outline:2px solid var(--accent);outline-off
       snap = await load(pw);
       password = pw; store.set('psa-pw', pw);
       $('lock').hidden = true; $('app').hidden = false;
-      setRange(range); freshness(); loadHealth(); renderSpikes(); loadAgents(); loadEdges(pw); loadParlays(pw); loadParlays(pw, 'nb', 'parlays_nba.enc'); loadParlays(pw, 'nf', 'parlays_nfl.enc'); loadSpreads(pw); loadTpod(pw);
+      setRange(range); freshness(); loadHealth(); renderSpikes(); loadAgents(); loadEdges(pw); loadParlays(pw); loadParlays(pw, 'nb', 'parlays_nba.enc'); loadParlays(pw, 'nf', 'parlays_nfl.enc'); loadParlays(pw, 'pd', 'parlay_potd.enc'); loadSpreads(pw); loadTpod(pw);
       window.dispatchEvent(new CustomEvent('psa-unlock', {detail: {pw}}));   // expenses.js
       clearInterval(timer);
       timer = setInterval(refresh, 5*60*1000);
@@ -846,7 +858,7 @@ details.plpast>summary:focus-visible{outline:2px solid var(--accent);outline-off
   }
   async function refresh(){
     if (!password) return;
-    try { snap = await load(password); freshness(); render(); loadHealth(); renderSpikes(); loadAgents(); loadEdges(password); loadParlays(password); loadParlays(password, 'nb', 'parlays_nba.enc'); loadParlays(password, 'nf', 'parlays_nfl.enc'); loadSpreads(password); loadTpod(password); window.dispatchEvent(new Event('psa-refresh')); } catch(e){ if (e.code === 'wrong') lock(); }
+    try { snap = await load(password); freshness(); render(); loadHealth(); renderSpikes(); loadAgents(); loadEdges(password); loadParlays(password); loadParlays(password, 'nb', 'parlays_nba.enc'); loadParlays(password, 'nf', 'parlays_nfl.enc'); loadParlays(password, 'pd', 'parlay_potd.enc'); loadSpreads(password); loadTpod(password); window.dispatchEvent(new Event('psa-refresh')); } catch(e){ if (e.code === 'wrong') lock(); }
   }
   function lock(){
     password = null; snap = null; store.del('psa-pw'); clearInterval(timer);
@@ -1208,7 +1220,7 @@ details.plpast>summary:focus-visible{outline:2px solid var(--accent);outline-off
 
 
   // ---------- section menu: Overview / Audience / Sign-ups / Picks / Parlays / Spreads / Secret methods / 3 Picks / Social / Sponsors ----------
-  const VIEWS = ['overview','audience','signups','picks','parlays','spreads','secret','tpod','social','sponsors','affiliates','expenses'];
+  const VIEWS = ['overview','audience','signups','picks','parlays','potd','spreads','secret','tpod','social','sponsors','affiliates','expenses'];
   function setView(v, push){
     if (!VIEWS.includes(v)) v = 'overview';
     $('app').dataset.cur = v;
@@ -1533,17 +1545,18 @@ details.plpast>summary:focus-visible{outline:2px solid var(--accent);outline-off
                   e.status===403||e.status===404? 'This GitHub token can’t save to the repo.' : 'Couldn’t save just now. Try again.'; }
     btn.disabled=false;
   });
-  async function loadParlays(pw, P='pl', file='parlays.enc'){   // P: the panel's id prefix (pl NHL, nb NBA, nf NFL)
+  async function loadParlays(pw, P='pl', file='parlays.enc'){   // P: the panel's id prefix (pl NHL, nb NBA, nf NFL, pd Parlay of the Day)
+    const opt= P==='pd'? {per: 1, none: 'no games today, or no 2-4 leg combination paid 3x+ at over 50% by the model'} : {}, per=opt.per||3;   // Parlay of the Day: one a day
     try {
       const r=await fetch(file+'?t='+Date.now(),{cache:'no-store'});
       if(r.status===404){   // a new set before its first file (made at its first parlay, or 7:30 PM ET on a day without one)
         $(P+'Today').innerHTML='<p class="empty">No parlays from this set yet. The first are made from 11 AM ET on its next game day.</p>';
         $(P+'Kpis').innerHTML=''; $(P+'Rows').innerHTML='<tr class="ed-wait"><td colspan="6">The first results show up the day after the first parlay.</td></tr>';
-        $(P+'Panel').hidden=false; PLDATA[P]={days: [], gen: null}; renderParlaySummary(); return;
+        $(P+'Panel').hidden=false; if(P!=='pd'){ PLDATA[P]={days: [], gen: null}; renderParlaySummary(); } return;
       }
       if(!r.ok) return;
       const d=await decrypt(await r.text(), pw), days=(d.days||[]).slice().reverse();
-      PLDATA[P]={days: d.days||[], gen: d.gen}; renderParlaySummary();
+      if(P!=='pd'){ PLDATA[P]={days: d.days||[], gen: d.gen}; renderParlaySummary(); }   // the summary: the three model sets
       const SP={nfl:'NFL', nba:'NBA', nhl:'NHL', mlb:'MLB'}, STAT={g:'goals', a:'assists', pts:'points', sog:'shots on goal', tb:'total bases', h:'hits', k:'strikeouts',
         reb:'rebounds', ast:'assists', tpm:'threes', stl:'steals', blk:'blocks', pra:'pts+reb+ast', pr:'pts+reb', pa:'pts+ast', ra:'reb+ast',
         pass_yds:'passing yards', pass_att:'pass attempts', pass_cmp:'completions', pass_td:'passing TDs', rush_yds:'rushing yards', rec:'receptions', rec_yds:'receiving yards', rec_td:'receiving TDs', rush_rec_yds:'rush+rec yards'};
@@ -1553,10 +1566,10 @@ details.plpast>summary:focus-visible{outline:2px solid var(--accent);outline-off
       const RES={hit:'✅ Hit', miss:'❌ Miss', push:'Push', dnp:'DNP', void:'Void'};
       const today=new Date().toLocaleDateString('en-CA',{timeZone:'America/New_York'}), mine=days.filter(e=>e.date===today).reverse(), made=mine.filter(e=>e.legs);
       const leg=(l,j)=>`<li data-leg="${j}"><span class="pl-sp">${esc(SP[l.sport]||l.sport)}</span><span class="pl-who"><b>${esc(l.player)}</b> ${esc(l.side)} ${esc(l.line)} ${esc(STAT[l.stat]||l.stat)}<small>${esc(l.team)} vs ${esc(l.opp)} · ${when(l.start)} · ${esc(l.venue)}${l.res? ' · '+(RES[l.res]||l.res) : ''}</small><span class="pl-live"></span></span><span class="pl-num">${pc(l.prob)}</span><span class="pl-num">${Math.round(l.price*100)}¢</span></li>`;
-      $(P+'Today').innerHTML = mine.some(e=>e.closed) ? `<p class="empty">No parlay today: no games today, or no combination fit a payout band at 35-55% by the model.</p>` :
+      $(P+'Today').innerHTML = mine.some(e=>e.closed) ? `<p class="empty">No parlay today: ${opt.none||'no games today, or no combination fit a payout band at 35-55% by the model'}.</p>` :
         (made.length? `<p class="hint" id="${P}Live"></p><div class="pl-cards">`+made.map((t,i)=>`<article class="pl-card" data-pl="${i}"><header><b>Parlay #${t.n||1}${t.res? ' · '+RES[t.res] : ''} <span class="pl-livehd"></span></b><span class="pl-chips"><span>Model <b>${pc(t.model)}</b></span><span>Market <b>${pc(t.price)}</b></span><span class="pay">Pays <b>${x(t.price)}</b></span></span></header>`+
           `<ul class="pl-legs"><li class="pl-head"><span class="pl-sp"></span><span>Leg</span><span class="pl-num">Model</span><span class="pl-num">Price</span></li>${t.legs.map(leg).join('')}</ul></article>`).join('')+`</div>` : '')+
-        (made.length<3 ? `<p class="empty" style="margin-top:10px">${made.length? 'The rest are made as more games get prices, until 7:30 PM ET.' : 'Today’s parlays are made from 11 AM ET.'}</p>` : '');
+        (made.length<per ? `<p class="empty" style="margin-top:10px">${made.length? 'The rest are made as more games get prices, until 7:30 PM ET.' : per===1? 'Today’s parlay is made from 11 AM ET, or later once one fits, until 7:30 PM ET.' : 'Today’s parlays are made from 11 AM ET.'}</p>` : '');
       const done=days.filter(e=>e.res==='hit'||e.res==='miss'), units=done.reduce((s,e)=>s+e.units,0), wins=done.filter(e=>e.res==='hit').length;
       const avgModel=done.length? done.reduce((s,e)=>s+e.model,0)/done.length : null;
       $(P+'Kpis').innerHTML=[['Parlays graded', fmt(done.length)], ['Hit', done.length? `${wins} (${pc(wins/done.length)})` : '–'],

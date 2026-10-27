@@ -22,6 +22,7 @@ README.md has the full feature tour; this file is the working rules.
   Private edge-tracker strategies live encrypted in `rules.enc` on `team-data` (the dashboard's Secret methods tab, `team/rules.js`; `team/methodtoday.js` lists today's picks that fit each one, followed live through `parlaylive.js`; the rules and each one's record from the edge tracker on every past pick that fits, with its record since the day it was added shown apart; read by `edge_report.py` load_private and rule_test, which also filter on list, model edge, positions, a price drop since the first price, and a start day); never put them back in the public code.
   `parlay.py` → `team/parlays.enc` (team only, never public): three parlays a day from 11 AM ET (no shared players; legs only from `TEST_PARLAY_SPORTS`, NHL only for now; Polymarket prices only; only prop types Polymarket US lets you parlay, read live by `combos.py`: no NHL assists), each 35-55% by the model, one per payout band (3-3.5x, 3.5-4x, 4-4.5x),
   plus separate NBA and NFL tracks with the same rules, each with its own three a day and record (`team/parlays_nba.enc`, `team/parlays_nfl.enc`) (all three in the dashboard's Parlays tab, with a summary of every set and each payout band; each set also has its own edge-tracker row),
+  plus Parlay of the Day (`team/parlay_potd.enc`, the dashboard's Parlay of the Day tab and its own edge-tracker row): one a day from any sport, same legs, timing and grading, paying 3x+ and over 50% by the model, never an NBA under or an NHL assists under (`POTD_RULES`),
   frozen once made, graded from the legs' picks; the edge tracker's "parlays" row and the dashboard's Model parlays panel read it; `team/parlaylive.js` tracks today's legs live in that panel from ESPN box scores (browser-side, display only).
   `spreads.py` → `team/spreads.enc` (team only, encrypted): a private test of full-game spreads on Polymarket US in every sport. A
   team-strength model per sport (margin ratings for NBA/NFL, scoring rates for NHL/MLB, calibrated on the previous season:
@@ -37,7 +38,7 @@ README.md has the full feature tour; this file is the working rules.
 - `team_stats.py` → `team/stats.enc`: GoatCounter visitor totals (and traffic spikes), encrypted with the
   `TEAM_DASH_PASSWORD` secret, for the password-protected team dashboard `team/index.html`
   (hand-written, noindex, not in the sitemap). Totals only — no IPs or per-visitor data.
-  The dashboard is split into tabs (Overview, Audience, Sign-ups, Picks & edges, Parlays, Spreads, Secret methods, 3 Picks of the Day, Social, Sponsors, Affiliates, Expenses: each panel has
+  The dashboard is split into tabs (Overview, Audience, Sign-ups, Picks & edges, Parlays, Parlay of the Day, Spreads, Secret methods, 3 Picks of the Day, Social, Sponsors, Affiliates, Expenses: each panel has
   `data-view`). `app.js` feeds it anonymous GoatCounter events, `time/<range>`, `click/<what>/<page>`, `view/<n>`, `visitor/new|returning`
   (the visitor's n-th page today: page views and unique visitors) and `ref/<code>/visit|new`; their labels are mirrored in `team_stats.py`
   (TIME_RANGES, CLICK_RE, VIEW_RE, REF_RE) and `team/index.html`. `view/<n>` and `ref/` are disclosed in privacy.html and cookies.html.
@@ -74,7 +75,7 @@ The bot overwrites these on every pass, so hand edits are lost and cause merge c
   `mlb.html` ← `mlb_template.html`. Edit the template (and the builder), never the output page.
 - `data.json`, `slate.json`, `picks.json`, `weekly.json`, `*_picks.json`, `*_stats.json`,
   `nba.json`, `nhl.json`, `mlb.json`, `today.json`, `botd.json`, `health.json`, `top_cache.json`,
-  `sitemap.xml`, `robots.txt`, `players/`, `games/`, `best/`, `p/`, `team/stats.enc`, `team/edges.enc`, `team/parlays.enc`, `team/parlays_nba.enc`, `team/parlays_nfl.enc`, `team/spreads.enc`, `team/tpod.enc`, `spread_scores.json`, `fast_hist.json`, `*_picks_recent.json`, `search.json`,
+  `sitemap.xml`, `robots.txt`, `players/`, `games/`, `best/`, `p/`, `team/stats.enc`, `team/edges.enc`, `team/parlays.enc`, `team/parlays_nba.enc`, `team/parlays_nfl.enc`, `team/parlay_potd.enc`, `team/spreads.enc`, `team/tpod.enc`, `spread_scores.json`, `fast_hist.json`, `*_picks_recent.json`, `search.json`,
   `tiktok/<day>/` and `tiktok/posted.json` (the TikTok workflow; `tiktok/callback.html` is hand-written).
 
 `index.html` (home page), `methodology.html`, `guides/`, and the legal pages are hand-written and safe to edit.

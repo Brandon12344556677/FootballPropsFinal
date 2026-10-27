@@ -128,8 +128,8 @@ class ParlayTest(unittest.TestCase):
         self.assertEqual([{l["sport"] for l in e["legs"]} for e in made], [{"nba"}])
         self.assertTrue(parlay.meets_rules(made[0], {"nba"}))
         self.assertFalse(parlay.meets_rules(made[0]))                  # not an NHL-track parlay
-        self.assertEqual([t[0] for t in parlay.TRACKS], ["nhl", "nba", "nfl"])
-        self.assertEqual(len({t[2] for t in parlay.TRACKS}), 3)        # each track has its own file
+        self.assertEqual([t[0] for t in parlay.TRACKS], ["nhl", "nba", "nfl", "potd"])
+        self.assertEqual(len({t[2] for t in parlay.TRACKS}), 4)        # each track has its own file
 
     def test_nfl_track_takes_kickoffs_from_the_schedule(self):
         rows = [pick("1", "n1", 0.70, 0.55, start=None), pick("2", "n2", 0.70, 0.55, start=None)]   # NFL picks carry no start
@@ -140,6 +140,61 @@ class ParlayTest(unittest.TestCase):
         self.assertEqual([{l["sport"] for l in e["legs"]} for e in made], [{"nfl"}])
         self.assertTrue(all(l["start"] for l in made[0]["legs"]))
         self.assertTrue(parlay.meets_rules(made[0], {"nfl"}))
+
+    def potd(self, docs, now=NOW, state=None):
+        state = state if state is not None else {"days": []}
+        parlay.step(state, docs, now, sports=parlay.ALL_SPORTS, rules=parlay.POTD_RULES)
+        return state, [e for e in state["days"] if e.get("legs")]
+
+    def test_parlay_of_the_day_pays_3x_and_over_half(self):
+        R = parlay.POTD_RULES
+        # 56.25% by the model at 30.25c (3.31x): made
+        self.assertIsNotNone(parlay.choose(parlay.candidates(self.docs(pick("1", "g1", 0.75, 0.55), pick("2", "g2", 0.75, 0.55)), NOW, rules=R), R["bands"][0], R))
+        # exactly 50% is not over 50%
+        self.assertIsNone(parlay.choose(parlay.candidates(self.docs(pick("1", "g1", 0.8, 0.55), pick("2", "g2", 0.625, 0.55)), NOW, rules=R), R["bands"][0], R))
+        # 56.25% but 36c: pays only 2.78x
+        self.assertIsNone(parlay.choose(parlay.candidates(self.docs(pick("1", "g1", 0.75, 0.60), pick("2", "g2", 0.75, 0.60)), NOW, rules=R), R["bands"][0], R))
+        # no top on the payout: 19.8c pays 5.05x, still fine (the model bands stop at 4.5x)
+        got = parlay.choose(parlay.candidates(self.docs(pick("1", "g1", 0.75, 0.45), pick("2", "g2", 0.75, 0.44)), NOW, rules=R), R["bands"][0], R)
+        self.assertGreater(1 / got["price"], 5)
+
+    def test_parlay_of_the_day_skips_nba_unders_and_nhl_assist_unders(self):
+        d = [("nba", doc(pick("u", "b1", 0.8, 0.5), pick("o", "b2", 0.8, 0.5, side="over", stat="pts"))),
+             ("nhl", doc(pick("a", "h1", 0.8, 0.5, stat="a"), pick("ao", "h2", 0.8, 0.5, stat="a", side="over"),
+                         pick("g", "h3", 0.8, 0.5)))]
+        legs = parlay.candidates(d, NOW, sports=parlay.ALL_SPORTS, rules=parlay.POTD_RULES)
+        self.assertEqual(sorted(l["pid"] for l in legs), ["ao", "g", "o"])    # combos.py still drops assists when Polymarket does
+        self.assertEqual(len(parlay.candidates(d, NOW, sports={"nba", "nhl"})), 5)   # the model tracks keep their own rules
+        leg = lambda s, pid, side, stat="g": {"key": [s, "g", pid], "sport": s, "pid": pid, "gid": "g" + pid, "stat": stat, "side": side,
+                                               "start": "2026-10-17T00:00Z", "prob": 0.75, "price": 0.55, "player": "P" + pid, "venue": "Polymarket"}
+        made = dict(model=0.5625, price=0.3025, band=0, date="2026-10-16", n=1, res=None, legs=[leg("nba", "x", "over", "pts"), leg("nhl", "y", "under")])
+        self.assertTrue(parlay.meets_rules(made, parlay.ALL_SPORTS, parlay.POTD_RULES))
+        self.assertFalse(parlay.meets_rules(dict(made, legs=[leg("nba", "x", "under", "pts"), leg("nhl", "y", "under")]), parlay.ALL_SPORTS, parlay.POTD_RULES))
+        self.assertFalse(parlay.meets_rules(dict(made, model=0.5), parlay.ALL_SPORTS, parlay.POTD_RULES))
+
+    def test_parlay_of_the_day_one_a_day_from_any_sport_frozen_and_graded(self):
+        rows = {"nhl": [pick("1", "h1", 0.75, 0.55), pick("3", "h3", 0.80, 0.50)],
+                "nba": [pick("2", "b2", 0.75, 0.55, side="over", stat="pts"), pick("4", "b4", 0.80, 0.50, side="over", stat="reb")]}
+        d = [(s, doc(*r)) for s, r in rows.items()]
+        state, made = self.potd(d, datetime.datetime(2026, 10, 16, 14, 0, tzinfo=UTC))   # 10 AM ET: not yet
+        self.assertEqual(made, [])
+        state, made = self.potd(d)
+        self.assertEqual([(e["n"], e["band"]) for e in made], [(1, 0)])                # one a day
+        self.assertGreater(made[0]["model"], 0.5)
+        self.assertGreaterEqual(1 / made[0]["price"], 3)
+        first = [l["key"] for l in made[0]["legs"]]
+        more = d + [("mlb", doc(pick("9", "m9", 0.9, 0.5), pick("8", "m8", 0.9, 0.5)))]
+        _, made = self.potd(more, NOW + datetime.timedelta(hours=1), state)
+        self.assertEqual([[l["key"] for l in e["legs"]] for e in made], [first])     # frozen: no second, no swap
+        res = {"1": "hit", "2": "hit", "3": "hit", "4": "miss"}
+        graded = [(s, doc(*[r[:13] + [res[r[2]]] + r[14:] for r in rs])) for s, rs in rows.items()]
+        parlay.grade(made[0], graded, "2026-10-17")
+        self.assertIn(made[0]["res"], ("hit", "miss"))
+        self.assertEqual(made[0]["res"], "miss" if any(res[l["pid"]] == "miss" for l in made[0]["legs"]) else "hit")
+
+    def test_parlay_of_the_day_closes_at_730(self):
+        state, _ = self.potd([("nhl", doc())], datetime.datetime(2026, 10, 16, 23, 40, tzinfo=UTC))
+        self.assertTrue(state["days"][0]["closed"])
 
     def test_at_most_two_legs_per_game_and_one_per_player(self):
         d = self.docs(pick("1", "g1", 0.8, 0.6), pick("2", "g1", 0.8, 0.6), pick("3", "g1", 0.8, 0.6))
@@ -218,6 +273,11 @@ class ParlayTest(unittest.TestCase):
         nfl = edge_report.parlay_rows({"days": state["days"][1:2]}, "parlay-nfl")
         out = {s["key"]: s for s in edge_report.build(rows + nba + nfl, "2026-10-16")}
         self.assertEqual((out["parlays"]["n"], out["parlays-nba"]["n"], out["parlays-nfl"]["n"]), (2, 1, 1))
+        potd = edge_report.parlay_rows({"days": state["days"][:2]}, "parlay-potd")   # Parlay of the Day: its own row
+        out = {s["key"]: s for s in edge_report.build(rows + potd, "2026-10-16")}
+        self.assertEqual((out["parlays"]["n"], out["parlay-potd"]["n"], out["parlay-potd"]["units"]), (2, 2, 2.0))
+        self.assertEqual(edge_report.build([], "2026-10-16")[[s["key"] for s in edge_report.build([], "2026-10-16")].index("parlay-potd")]["verdict"],
+                         "Waiting for games")
 
 
 if __name__ == "__main__":
