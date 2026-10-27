@@ -25,7 +25,12 @@ the day, the open legs are dropped too. A win pays 1/price - 1 units, where pric
 of the winning legs' recorded prices (a flat 1-unit parlay at fair prices; a book's parlay price
 for linked legs can be lower). edge_report.py grades it in the edge tracker.
 
-State and output: each track's file (team/parlays.enc, team/parlays_nba.enc, team/parlays_nfl.enc), encrypted with
+Parlay of the Day (POTD_RULES, team/parlay_potd.enc, added Oct 27, 2026): one more track with the same legs,
+timing, freezing and grading, but one parlay a day from every sport, paying 3x or more and over 50% by the
+model, and never an NBA under or an NHL assists under (BANNED_UNDER). Its own record, dashboard tab and
+edge-tracker row.
+
+State and output: each track's file (team/parlays.enc, team/parlays_nba.enc, team/parlays_nfl.enc, team/parlay_potd.enc), encrypted with
 TEAM_DASH_PASSWORD like team/edges.enc, rewritten only on a change. Without the password it does nothing. Standard library only; never fails the deploy.
 """
 import datetime
@@ -48,9 +53,7 @@ FILES = [("nfl", "picks.json"), ("nba", "nba_picks.json"), ("nhl", "nhl_picks.js
 TEST_PARLAY_SPORTS = {"nhl"}
 OUT_NBA = os.path.join("team", "parlays_nba.enc")
 OUT_NFL = os.path.join("team", "parlays_nfl.enc")
-# (name, sports, file): each track makes its own three a day and keeps its own record. NBA added
-# Oct 20, 2026 to see how the same rules do there, and NFL the same day (tracking only); neither changes the NHL track.
-TRACKS = [("nhl", TEST_PARLAY_SPORTS, OUT), ("nba", {"nba"}, OUT_NBA), ("nfl", {"nfl"}, OUT_NFL)]
+OUT_POTD = os.path.join("team", "parlay_potd.enc")
 OPEN_AT = (11, 0)          # ET: first try
 CLOSE_AT = (19, 30)        # ET: still none -> no parlay today
 LEAD_MIN = 45              # every leg's game starts at least this long after the parlay is made
@@ -62,9 +65,28 @@ MIN_NEFF = 6.0
 MIN_EDGE = 0.03
 MIN_DEPTH = 25             # dollars offered on Polymarket near its price (the pick's "pd"), like the thin rule
 MAX_PER_GAME = 2
-PER_DAY = len(BANDS)
 POOL = 40                  # best legs (by model / price) searched for combinations
 VOID_AFTER_DAYS = 5
+# A track's rules: its payout bands (one parlay a day in each) and the model's range for the parlay
+# (lo_open: the chance must be above lo, not just at it).
+RULES = {"bands": BANDS, "lo": MODEL_LO, "hi": MODEL_HI}
+# Parlay of the Day (the owner's rules, Oct 27, 2026): pays 3x or more, over 50% by the model, any sport.
+POTD_RULES = {"bands": [(3.0, math.inf)], "lo": 0.50, "lo_open": True, "hi": 1.0, "no_banned_unders": True}
+ALL_SPORTS = {s for s, _ in FILES}
+# (name, sports, file, rules): each track makes its own parlays a day and keeps its own record. NBA added
+# Oct 20, 2026 to see how the same rules do there, and NFL the same day (tracking only); neither changes the NHL track.
+TRACKS = [("nhl", TEST_PARLAY_SPORTS, OUT, RULES), ("nba", {"nba"}, OUT_NBA, RULES), ("nfl", {"nfl"}, OUT_NFL, RULES),
+          ("potd", ALL_SPORTS, OUT_POTD, POTD_RULES)]
+
+
+def banned_under(sport, stat, side):
+    """Parlay of the Day never takes an NBA under or an NHL assists under."""
+    return side == "under" and (sport == "nba" or (sport == "nhl" and stat == "a"))
+
+
+def model_ok(m, rules=RULES):
+    lo = rules["lo"] < m if rules.get("lo_open") else rules["lo"] <= m
+    return lo and m <= rules["hi"]
 
 
 def load(path):
@@ -99,7 +121,7 @@ def leg_key(sport, p):
     return [sport, p.get("gid"), p.get("pid"), p.get("stat"), p.get("line"), p.get("side")]
 
 
-def candidates(docs, now, nfl_kick=None, sports=None):
+def candidates(docs, now, nfl_kick=None, sports=None, rules=RULES):
     """Legs that may go in today's parlay (see the module docstring). NFL picks carry no start
     time: nfl_kick maps their gid to the kickoff (build_today.nfl_kickoffs)."""
     today = now.astimezone(ET).date()
@@ -119,6 +141,8 @@ def candidates(docs, now, nfl_kick=None, sports=None):
                 continue
             if not combos.allowed(sport, p.get("stat"), today):    # Polymarket won't parlay it (NHL assists)
                 continue
+            if rules.get("no_banned_unders") and banned_under(sport, p.get("stat"), p.get("side")):
+                continue
             if t.astimezone(ET).date() != today or t < now + datetime.timedelta(minutes=LEAD_MIN):
                 continue
             out.append({"key": leg_key(sport, p), "sport": sport, "player": p.get("player"), "team": p.get("team"),
@@ -132,9 +156,9 @@ def in_band(price, band):
     return band[0] - 1e-9 <= 1 / price <= band[1] + 1e-9
 
 
-def choose(legs, band=BANDS[0]):
-    """The 2-4 leg combination the model puts at 35-55%, paying within band (x the stake), with the
-    biggest model / market ratio, or None."""
+def choose(legs, band=BANDS[0], rules=RULES):
+    """The 2-4 leg combination in the model range of rules (35-55% by default), paying within band
+    (x the stake), with the biggest model / market ratio, or None."""
     legs = sorted(legs, key=lambda l: (-l["prob"] / l["price"], l["player"] or ""))[:POOL]
     best = None
     for k in (2, 3, 4):
@@ -147,7 +171,7 @@ def choose(legs, band=BANDS[0]):
             if max(games.values()) > MAX_PER_GAME:
                 continue
             m = math.prod(l["prob"] for l in c)
-            if not MODEL_LO <= m <= MODEL_HI:
+            if not model_ok(m, rules):
                 continue
             q = math.prod(l["price"] for l in c)
             if not in_band(q, band):
@@ -194,17 +218,18 @@ def grade(entry, docs, today):
     return True
 
 
-def meets_rules(e, sports=None):
+def meets_rules(e, sports=None, rules=RULES):
     """A made parlay still fits today's rules (checked on what was recorded, not on new prices)."""
-    b = e.get("band")
+    b, bands = e.get("band"), rules["bands"]
     sports = TEST_PARLAY_SPORTS if sports is None else sports
     return (all(l["sport"] in sports and l.get("venue") == "Polymarket" and combos.allowed(l["sport"], l.get("stat"))
+                and not (rules.get("no_banned_unders") and banned_under(l["sport"], l.get("stat"), l.get("side")))
                 for l in e["legs"])
-            and MODEL_LO <= e.get("model", 0) <= MODEL_HI
-            and isinstance(b, int) and 0 <= b < len(BANDS) and in_band(e.get("price", 1), BANDS[b]))
+            and model_ok(e.get("model", 0), rules)
+            and isinstance(b, int) and 0 <= b < len(bands) and in_band(e.get("price", 1), bands[b]))
 
 
-def step(state, docs, now, nfl_kick=None, sports=None):
+def step(state, docs, now, nfl_kick=None, sports=None, rules=RULES):
     """One pass: grade open parlays, then make (or close) today's. Returns True if anything changed."""
     et = now.astimezone(ET)
     today = et.date().isoformat()
@@ -215,7 +240,7 @@ def step(state, docs, now, nfl_kick=None, sports=None):
     # The rules changed after today's parlays were made (a sport dropped, Polymarket prices only, the
     # payout bands, the model range): remake any of today's that break them while none of its games has
     # started (no result yet, so the record is unaffected).
-    stale = [e for e in days if e["date"] == today and e.get("legs") and not e.get("res") and not meets_rules(e, sports)
+    stale = [e for e in days if e["date"] == today and e.get("legs") and not e.get("res") and not meets_rules(e, sports, rules)
              and all(not l.get("res") and (start_utc(l.get("start")) or now) > now for l in e["legs"])]
     if stale:
         days[:] = [e for e in days if not any(e is s for s in stale)]
@@ -224,14 +249,14 @@ def step(state, docs, now, nfl_kick=None, sports=None):
     if (et.hour, et.minute) < OPEN_AT or any(e.get("closed") for e in mine):
         return changed
     made = [e for e in mine if e.get("legs")]
-    if len(made) < PER_DAY and (et.hour, et.minute) < CLOSE_AT:
+    if len(made) < len(rules["bands"]) and (et.hour, et.minute) < CLOSE_AT:
         used = {(l["sport"], l["pid"]) for e in made for l in e["legs"]}
-        legs = [l for l in candidates(docs, now, nfl_kick, sports) if (l["sport"], l["pid"]) not in used]
+        legs = [l for l in candidates(docs, now, nfl_kick, sports, rules) if (l["sport"], l["pid"]) not in used]
         filled = {e.get("band") for e in made}
-        for b, band in enumerate(BANDS):
+        for b, band in enumerate(rules["bands"]):
             if b in filled:
                 continue
-            pick = choose(legs, band)
+            pick = choose(legs, band, rules)
             if not pick:
                 continue
             e = dict(pick, date=today, n=b + 1, band=b, made=now.strftime("%Y-%m-%dT%H:%MZ"), res=None)
@@ -253,9 +278,9 @@ def read_state(password, path=OUT):
         return {"days": []}
 
 
-def run_track(name, sports, path, docs, now, nfl_kick, password):
+def run_track(name, sports, path, docs, now, nfl_kick, password, rules=RULES):
     state = read_state(password, path)    # an unreadable file raises: never start over and lose the record
-    if not step(state, docs, now, nfl_kick, sports):
+    if not step(state, docs, now, nfl_kick, sports, rules):
         print(f"parlay {name}: no change ({len(state.get('days', []))} day(s) on record)")
         return
     state["gen"] = now.strftime("%Y-%m-%dT%H:%M:%SZ")
@@ -275,9 +300,9 @@ def main():
     docs = [(s, load(p)) for s, p in FILES]
     now = datetime.datetime.now(datetime.timezone.utc)
     nfl_kick = build_today.nfl_kickoffs(load("data.json") or {})
-    for name, sports, path in TRACKS:
+    for name, sports, path, rules in TRACKS:
         try:   # one track failing never stops the other
-            run_track(name, sports, path, docs, now, nfl_kick, password)
+            run_track(name, sports, path, docs, now, nfl_kick, password, rules)
         except Exception as e:  # noqa: BLE001
             print(f"parlay {name} failed ({type(e).__name__}: {e})")
     return 0
