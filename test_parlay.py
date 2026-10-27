@@ -1,4 +1,5 @@
 import datetime
+import json
 import unittest
 
 import combos
@@ -206,6 +207,50 @@ class ParlayTest(unittest.TestCase):
         made = [e for e in state["days"] if e.get("legs")]
         self.assertEqual(len(made), 1)
         self.assertNotIn(taken, [l["pid"] for l in made[0]["legs"]])
+
+    def test_parlay_of_the_day_lock_keeps_it_as_locked(self):
+        rows = [pick("1", "h1", 0.75, 0.55), pick("2", "h2", 0.75, 0.55), pick("3", "h3", 0.75, 0.55)]
+        state, made = self.potd(self.docs(*rows))
+        held = json.loads(json.dumps(made[0]))
+        locks = {"2026-10-16": {"date": "2026-10-16", "at": "2026-10-16T16:00:00Z", "parlay": held}}
+        later = NOW + datetime.timedelta(minutes=10)
+        taken = held["legs"][0]["pid"]
+        parlay.step(state, self.docs(*rows), later, sports=parlay.ALL_SPORTS, rules=parlay.POTD_RULES,
+                    avoid={("nhl", taken)}, locks=locks)                                # would be remade unlocked
+        made = [e for e in state["days"] if e.get("legs")]
+        self.assertEqual([[l["key"] for l in e["legs"]] for e in made], [[l["key"] for l in held["legs"]]])
+        self.assertEqual(made[0]["locked"], "2026-10-16T16:00:00Z")
+        state["days"] = [e for e in state["days"] if e["date"] != "2026-10-16"]          # remade or lost after locking
+        parlay.step(state, self.docs(*rows), later, sports=parlay.ALL_SPORTS, rules=parlay.POTD_RULES, locks=locks)
+        made = [e for e in state["days"] if e.get("legs")]
+        self.assertEqual([[l["key"] for l in e["legs"]] for e in made], [[l["key"] for l in held["legs"]]])   # put back
+        self.assertEqual((made[0]["res"], made[0]["locked"]), (None, "2026-10-16T16:00:00Z"))
+        parlay.step(state, self.docs(*rows), datetime.datetime(2026, 10, 16, 23, 40, tzinfo=UTC), sports=parlay.ALL_SPORTS,
+                    rules=parlay.POTD_RULES, locks=locks)
+        self.assertFalse(any(e.get("closed") for e in state["days"]))                    # never closed
+        parlay.step(state, self.docs(*rows), later, sports=parlay.ALL_SPORTS, rules=parlay.POTD_RULES,
+                    avoid={("nhl", taken)}, locks={})                                   # unlocked: back to the rules
+        made = [e for e in state["days"] if e.get("legs")]
+        self.assertNotIn("locked", made[0])
+        self.assertNotIn(taken, [l["pid"] for l in made[0]["legs"]])
+
+    def test_parlay_of_the_day_lock_never_swaps_a_started_parlay(self):
+        rows = [pick("1", "h1", 0.75, 0.55), pick("2", "h2", 0.75, 0.55), pick("3", "h3", 0.75, 0.55)]
+        state, made = self.potd(self.docs(*rows))
+        other = json.loads(json.dumps(made[0]))
+        other["legs"][0]["key"] = ["nhl", "x", "other"]
+        locks = {"2026-10-16": {"date": "2026-10-16", "at": "2026-10-16T16:00:00Z", "parlay": other}}
+        started = datetime.datetime(2026, 10, 17, 1, 0, tzinfo=UTC)                     # its games are on
+        parlay.step(state, self.docs(*rows), started, sports=parlay.ALL_SPORTS, rules=parlay.POTD_RULES, locks=locks)
+        self.assertEqual([[l["key"] for l in e["legs"]] for e in state["days"] if e.get("legs")], [[l["key"] for l in made[0]["legs"]]])
+
+    def test_unreadable_parlay_locks_never_remake(self):
+        rows = [pick("1", "h1", 0.75, 0.55), pick("2", "h2", 0.75, 0.55), pick("3", "h3", 0.75, 0.55)]
+        state, made = self.potd(self.docs(*rows))
+        first = [l["key"] for l in made[0]["legs"]]
+        parlay.step(state, self.docs(*rows), NOW + datetime.timedelta(minutes=10), sports=parlay.ALL_SPORTS,
+                    rules=parlay.POTD_RULES, avoid={("nhl", made[0]["legs"][0]["pid"])}, locks=None)
+        self.assertEqual([[l["key"] for l in e["legs"]] for e in state["days"] if e.get("legs")], [first])   # might be locked: kept
 
     def test_tpod_players_read_from_its_file(self):
         import os, tempfile, json, team_stats

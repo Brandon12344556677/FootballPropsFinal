@@ -288,25 +288,26 @@ def on_polymarket(cands):
             if c.get("pp") is not None and (c.get("pd") or 0) >= MIN_PM_USD]
 
 
-def load_locks(password):
+def load_locks(password, url=LOCKS_URL, what="3 picks of the day", key="picks"):
     """{date: lock} from tpod_locks.enc on team-data (the dashboard's Lock button: the day's picks as
     filmed), {} if there's no file yet, or None if it can't be read. Read through the GitHub API, not
-    raw.githubusercontent.com, whose 5-minute cache could miss a lock made just before this run."""
+    raw.githubusercontent.com, whose 5-minute cache could miss a lock made just before this run.
+    parlay.py reads Parlay of the Day's locks the same way (url, what, key: the field a lock must have)."""
     import urllib.error
     import urllib.request
     headers = {"Accept": "application/vnd.github.raw", "Cache-Control": "no-cache"}
     if os.environ.get("GITHUB_TOKEN"):
         headers["Authorization"] = "Bearer " + os.environ["GITHUB_TOKEN"]
     try:
-        with urllib.request.urlopen(urllib.request.Request(LOCKS_URL, headers=headers), timeout=20) as r:
+        with urllib.request.urlopen(urllib.request.Request(url, headers=headers), timeout=20) as r:
             doc = json.loads(team_stats.decrypt(r.read().decode("ascii").strip(), password))
-        return {x["date"]: x for x in doc.get("items") or [] if x.get("date") and x.get("picks")}
+        return {x["date"]: x for x in doc.get("items") or [] if x.get("date") and x.get(key)}
     except urllib.error.HTTPError as e:
         if e.code == 404:
             return {}
-        print(f"  3 picks of the day: locks not read (HTTP {e.code})")
+        print(f"  {what}: locks not read (HTTP {e.code})")
     except Exception as e:  # noqa: BLE001 - unreadable locks only hold today's picks as they are
-        print(f"  3 picks of the day: locks not read ({type(e).__name__})")
+        print(f"  {what}: locks not read ({type(e).__name__})")
     return None
 
 

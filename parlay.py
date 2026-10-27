@@ -31,6 +31,9 @@ model, and never an NBA under or an NHL assists under (banned_under). It never s
 the day's 3 Picks of the Day (tpod.py, team/tpod.enc), which come first: its players are left out, and
 today's Parlay of the Day is remade if one of them turns up there before its games start (tpod.py's later
 fills leave Parlay of the Day's players out too). Its own record, dashboard tab and edge-tracker row.
+The tab's Lock button saves the day's parlay to potd_locks.enc on team-data (needs a GitHub token, as in
+Expenses; load_locks reads it through the API each run, like tpod.py's): a locked day is never remade,
+filled or closed, and a parlay changed after locking is put back while none of its games has started.
 
 State and output: each track's file (team/parlays.enc, team/parlays_nba.enc, team/parlays_nfl.enc, team/parlay_potd.enc), encrypted with
 TEAM_DASH_PASSWORD like team/edges.enc, rewritten only on a change. Without the password it does nothing. Standard library only; never fails the deploy.
@@ -74,8 +77,10 @@ VOID_AFTER_DAYS = 5
 RULES = {"bands": BANDS, "lo": MODEL_LO, "hi": MODEL_HI}
 # Parlay of the Day (the owner's rules, Oct 27, 2026): pays 3x or more, over 50% by the model, any sport.
 POTD_RULES = {"bands": [(3.0, math.inf)], "lo": 0.50, "lo_open": True, "hi": 1.0, "no_banned_unders": True,
-              "avoid_tpod": True}   # no player in today's 3 Picks of the Day
+              "avoid_tpod": True,   # no player in today's 3 Picks of the Day
+              "lockable": True}     # the tab's Lock button (potd_locks.enc)
 TPOD = os.path.join("team", "tpod.enc")
+LOCKS_URL = "https://api.github.com/repos/Brandon12344556677/FootballPropsFinal/contents/potd_locks.enc?ref=team-data"
 ALL_SPORTS = {s for s, _ in FILES}
 # (name, sports, file, rules): each track makes its own parlays a day and keeps its own record. NBA added
 # Oct 20, 2026 to see how the same rules do there, and NFL the same day (tracking only); neither changes the NHL track.
@@ -233,19 +238,40 @@ def meets_rules(e, sports=None, rules=RULES):
             and isinstance(b, int) and 0 <= b < len(bands) and in_band(e.get("price", 1), bands[b]))
 
 
-def step(state, docs, now, nfl_kick=None, sports=None, rules=RULES, avoid=frozenset()):
+def step(state, docs, now, nfl_kick=None, sports=None, rules=RULES, avoid=frozenset(), locks={}):   # noqa: B006 - only read
     """One pass: grade open parlays, then make (or close) today's. Returns True if anything changed.
-    avoid: (sport, pid) of players today's parlays may not use (Parlay of the Day: the 3 Picks of the Day)."""
+    avoid: (sport, pid) of players today's parlays may not use (Parlay of the Day: the 3 Picks of the Day).
+    locks: load_locks() (Parlay of the Day's Lock button): a locked today keeps (or puts back) the
+    parlay as locked and is never remade, filled or closed. None (couldn't read them): today's
+    parlays aren't remade, in case they were locked, but a day without one still fills."""
     et = now.astimezone(ET)
     today = et.date().isoformat()
     days = state.setdefault("days", [])
     changed = False
     for e in days:
         changed |= grade(e, docs, today)
+    lock = (locks or {}).get(today)
+    if lock:
+        mine = [e for e in days if e["date"] == today]
+        held = lock["parlay"]
+        if [[l.get("key") for l in e["legs"]] for e in mine if e.get("legs")] != [[l.get("key") for l in held["legs"]]]                 and not any(e.get("res") or any(l.get("res") or (start_utc(l.get("start")) or now) <= now for l in e["legs"])
+                            for e in mine if e.get("legs")):   # changed after locking: put it back
+            days[:] = [e for e in days if e["date"] != today] + [dict(held, date=today, res=None)]
+            changed = True
+        for e in days:
+            if e["date"] == today and e.get("legs") and e.get("locked") != lock.get("at"):
+                e["locked"] = lock.get("at")
+                changed = True
+        days.sort(key=lambda e: (e["date"], e.get("n", 0)))
+        return changed
+    if locks is not None:
+        for e in days:
+            if e["date"] == today and e.pop("locked", None):   # unlocked on the dashboard
+                changed = True
     # The rules changed after today's parlays were made (a sport dropped, Polymarket prices only, the
     # payout bands, the model range): remake any of today's that break them while none of its games has
     # started (no result yet, so the record is unaffected).
-    stale = [e for e in days if e["date"] == today and e.get("legs") and not e.get("res") and (not meets_rules(e, sports, rules) or any((l["sport"], l["pid"]) in avoid for l in e["legs"]))
+    stale = [] if locks is None else [e for e in days if e["date"] == today and e.get("legs") and not e.get("res") and (not meets_rules(e, sports, rules) or any((l["sport"], l["pid"]) in avoid for l in e["legs"]))
              and all(not l.get("res") and (start_utc(l.get("start")) or now) > now for l in e["legs"])]
     if stale:
         days[:] = [e for e in days if not any(e is s for s in stale)]
@@ -289,11 +315,19 @@ def tpod_players(password, today, path=TPOD):
     return {(p.get("sport"), p.get("pid")) for p in day.get("picks") or []}
 
 
+def load_locks(password, url=LOCKS_URL):
+    """{date: lock} from potd_locks.enc on team-data (the Parlay of the Day tab's Lock button: the day's
+    parlay as locked), {} if there's no file yet, or None if it can't be read (tpod.load_locks)."""
+    import tpod
+    return tpod.load_locks(password, url, "parlay of the day", "parlay")
+
+
 def run_track(name, sports, path, docs, now, nfl_kick, password, rules=RULES):
     state = read_state(password, path)    # an unreadable file raises: never start over and lose the record
     # an unreadable 3 Picks file raises too: better no Parlay of the Day this run than one that overlaps it
     avoid = tpod_players(password, now.astimezone(ET).date().isoformat()) if rules.get("avoid_tpod") else frozenset()
-    if not step(state, docs, now, nfl_kick, sports, rules, avoid):
+    locks = load_locks(password) if rules.get("lockable") else {}
+    if not step(state, docs, now, nfl_kick, sports, rules, avoid, locks):
         print(f"parlay {name}: no change ({len(state.get('days', []))} day(s) on record)")
         return
     state["gen"] = now.strftime("%Y-%m-%dT%H:%M:%SZ")
