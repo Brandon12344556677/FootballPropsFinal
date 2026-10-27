@@ -192,6 +192,32 @@ class ParlayTest(unittest.TestCase):
         self.assertIn(made[0]["res"], ("hit", "miss"))
         self.assertEqual(made[0]["res"], "miss" if any(res[l["pid"]] == "miss" for l in made[0]["legs"]) else "hit")
 
+    def test_parlay_of_the_day_never_shares_a_player_with_3_picks(self):
+        rows = [pick("1", "h1", 0.75, 0.55), pick("2", "h2", 0.75, 0.55), pick("3", "h3", 0.75, 0.55)]
+        state = {"days": []}
+        parlay.step(state, self.docs(*rows), NOW, sports=parlay.ALL_SPORTS, rules=parlay.POTD_RULES, avoid={("nhl", "1")})
+        made = [e for e in state["days"] if e.get("legs")]
+        self.assertEqual(len(made), 1)
+        self.assertNotIn("1", [l["pid"] for l in made[0]["legs"]])                      # 3 Picks of the Day has player 1
+        # a 3 Picks pick turns up later with one of its players (say, a locked day put back): remade before its games
+        taken = made[0]["legs"][0]["pid"]
+        parlay.step(state, self.docs(*rows), NOW + datetime.timedelta(minutes=10), sports=parlay.ALL_SPORTS,
+                    rules=parlay.POTD_RULES, avoid={("nhl", taken)})
+        made = [e for e in state["days"] if e.get("legs")]
+        self.assertEqual(len(made), 1)
+        self.assertNotIn(taken, [l["pid"] for l in made[0]["legs"]])
+
+    def test_tpod_players_read_from_its_file(self):
+        import os, tempfile, json, team_stats
+        doc = {"days": [{"date": "2026-10-15", "picks": [{"sport": "nhl", "pid": "old"}]},
+                        {"date": "2026-10-16", "picks": [{"sport": "nba", "pid": "9"}, {"sport": "nhl", "pid": "8"}]}]}
+        with tempfile.TemporaryDirectory() as d:
+            path = os.path.join(d, "tpod.enc")
+            with open(path, "w", encoding="ascii") as f:
+                f.write(team_stats.encrypt(json.dumps(doc), "pw"))
+            self.assertEqual(parlay.tpod_players("pw", "2026-10-16", path), {("nba", "9"), ("nhl", "8")})
+            self.assertEqual(parlay.tpod_players("pw", "2026-10-16", os.path.join(d, "none.enc")), set())
+
     def test_parlay_of_the_day_closes_at_730(self):
         state, _ = self.potd([("nhl", doc())], datetime.datetime(2026, 10, 16, 23, 40, tzinfo=UTC))
         self.assertTrue(state["days"][0]["closed"])

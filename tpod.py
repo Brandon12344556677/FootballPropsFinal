@@ -17,7 +17,9 @@ A pick qualifies when:
     MAX_DROP+ cents since it was first recorded, and its game starts today (ET), LEAD+ from now.
 Ranked by the best method it fits, then by how far the model is over the price; three different
 games and players, at most MAX_PER_KIND of one kind of bet (a proven pick may go past it rather than
-leave the slot to a fill-in). From 11 AM ET each run fills the empty slots; a pick never changes once made.
+leave the slot to a fill-in), and no player in the day's Parlay of the Day (parlay.py, team/parlay_potd.enc; these
+picks come first, so the parlay steers around them and is remade if needed). From 11 AM ET each run fills the empty
+slots; a pick never changes once made.
 Still short at 7:30 PM ET: that day has fewer than three. Once the team films, the dashboard's Lock button
 saves the day's picks to tpod_locks.enc on team-data (load_locks): a locked day is never remade or filled,
 and picks that changed after filming are put back.
@@ -44,6 +46,7 @@ import edge_report
 import team_stats
 
 OUT = os.path.join("team", "tpod.enc")
+POTD = os.path.join("team", "parlay_potd.enc")   # parlay.py's Parlay of the Day: never a player from it
 LOCKS_URL = "https://api.github.com/repos/Brandon12344556677/FootballPropsFinal/contents/tpod_locks.enc?ref=team-data"
 ET = botd.ET
 PICK_FROM, PICK_UNTIL = datetime.time(11, 0), datetime.time(19, 30)
@@ -183,18 +186,18 @@ def fit_of(c, methods):
                 (len(methods), NO_METHOD))
 
 
-def choose(cands, methods, now, taken, used=()):
+def choose(cands, methods, now, taken, used=(), avoid=frozenset()):
     """The next best pick for an empty slot, or None. Proven methods first, then fill-ins (a method not
     proven in that sport, then no method, Value spots first), then on a thin night the relaxed filters.
     taken: (gid, pid) already used today; used: the kinds of bet today's picks are (at most MAX_PER_KIND
     of one kind, unless it's a proven pick and the only other choice is a fill-in; dropped too if that's
-    the only way to fill the day)."""
+    the only way to fill the day). avoid: (sport, pid) of today's Parlay of the Day legs."""
     for relaxed, varied in ((False, True), (True, True), (True, False)):
         full = {k for k in used if list(used).count(k) >= MAX_PER_KIND} if varied else set()
         best = None
         for c in cands:
             if not eligible(c, now, relaxed) or (c.get("gid"), c["pid"]) in taken \
-                    or any(c.get("gid") == g for g, _ in taken):
+                    or any(c.get("gid") == g for g, _ in taken) or (c.get("sport"), c["pid"]) in avoid:
                 continue
             rank, m = fit_of(c, methods)
             proven, over = m[3].get("tier", 0) == 0, kind(c) in full
@@ -307,10 +310,11 @@ def load_locks(password):
     return None
 
 
-def update(state, cands, docs, methods, now, locks={}):   # noqa: B006 - only read
+def update(state, cands, docs, methods, now, locks={}, avoid=frozenset()):   # noqa: B006 - only read
     """Grade, then fill today's slots. Returns True if anything changed. locks: load_locks(); today
     locked keeps (or puts back) the picks as filmed and is never remade or filled. None (couldn't
-    read them): today's picks aren't remade, in case they were locked, but empty slots still fill."""
+    read them): today's picks aren't remade, in case they were locked, but empty slots still fill.
+    avoid: (sport, pid) of today's Parlay of the Day legs, left out of new picks."""
     cands = on_polymarket(cands)
     days = state.setdefault("days", [])
     before = json.dumps(days, sort_keys=True)
@@ -343,7 +347,7 @@ def update(state, cands, docs, methods, now, locks={}):   # noqa: B006 - only re
             days.append(day)
         taken = {(p.get("gid"), p["pid"]) for p in day["picks"]}
         while len(day["picks"]) < PER_DAY:
-            p = choose(cands, methods, now, taken, [kind(q) for q in day["picks"]])
+            p = choose(cands, methods, now, taken, [kind(q) for q in day["picks"]], avoid)
             if not p:
                 break
             day["picks"].append(p)
@@ -353,6 +357,16 @@ def update(state, cands, docs, methods, now, locks={}):   # noqa: B006 - only re
         day_no = 1 + sum(1 for d in past if d.get("picks"))   # the series counts days with picks
         day["script"], day["caption"] = script(day, record(past), today, day_no, last_day(past))
     return json.dumps(days, sort_keys=True) != before
+
+
+def potd_players(password, today, path=POTD):
+    """(sport, pid) of the legs of today's Parlay of the Day, or none if there's no file or it can't be read."""
+    try:
+        with open(path, encoding="ascii") as f:
+            days = json.loads(team_stats.decrypt(f.read().strip(), password)).get("days") or []
+    except Exception:  # noqa: BLE001 - no parlay file: nothing to avoid (the parlay steers around these picks anyway)
+        return set()
+    return {(l.get("sport"), l.get("pid")) for d in days if d.get("date") == today for l in d.get("legs") or []}
 
 
 def run(cands, docs, now, path=OUT):
@@ -367,7 +381,7 @@ def run(cands, docs, now, path=OUT):
         state = {"days": []}
     today = now.astimezone(ET).date().isoformat()
     methods = rank_methods(edge_report.load_private(password), docs, today)
-    if not update(state, cands, docs, methods, now, load_locks(password)):
+    if not update(state, cands, docs, methods, now, load_locks(password), potd_players(password, today)):
         print(f"  3 picks of the day: no change ({len(methods)} method(s) ranked)")
         return
     state["gen"] = now.strftime("%Y-%m-%dT%H:%M:%SZ")

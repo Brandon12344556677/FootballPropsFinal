@@ -27,8 +27,10 @@ for linked legs can be lower). edge_report.py grades it in the edge tracker.
 
 Parlay of the Day (POTD_RULES, team/parlay_potd.enc, added Oct 27, 2026): one more track with the same legs,
 timing, freezing and grading, but one parlay a day from every sport, paying 3x or more and over 50% by the
-model, and never an NBA under or an NHL assists under (BANNED_UNDER). Its own record, dashboard tab and
-edge-tracker row.
+model, and never an NBA under or an NHL assists under (banned_under). It never shares a player with
+the day's 3 Picks of the Day (tpod.py, team/tpod.enc), which come first: its players are left out, and
+today's Parlay of the Day is remade if one of them turns up there before its games start (tpod.py's later
+fills leave Parlay of the Day's players out too). Its own record, dashboard tab and edge-tracker row.
 
 State and output: each track's file (team/parlays.enc, team/parlays_nba.enc, team/parlays_nfl.enc, team/parlay_potd.enc), encrypted with
 TEAM_DASH_PASSWORD like team/edges.enc, rewritten only on a change. Without the password it does nothing. Standard library only; never fails the deploy.
@@ -71,7 +73,9 @@ VOID_AFTER_DAYS = 5
 # (lo_open: the chance must be above lo, not just at it).
 RULES = {"bands": BANDS, "lo": MODEL_LO, "hi": MODEL_HI}
 # Parlay of the Day (the owner's rules, Oct 27, 2026): pays 3x or more, over 50% by the model, any sport.
-POTD_RULES = {"bands": [(3.0, math.inf)], "lo": 0.50, "lo_open": True, "hi": 1.0, "no_banned_unders": True}
+POTD_RULES = {"bands": [(3.0, math.inf)], "lo": 0.50, "lo_open": True, "hi": 1.0, "no_banned_unders": True,
+              "avoid_tpod": True}   # no player in today's 3 Picks of the Day
+TPOD = os.path.join("team", "tpod.enc")
 ALL_SPORTS = {s for s, _ in FILES}
 # (name, sports, file, rules): each track makes its own parlays a day and keeps its own record. NBA added
 # Oct 20, 2026 to see how the same rules do there, and NFL the same day (tracking only); neither changes the NHL track.
@@ -229,8 +233,9 @@ def meets_rules(e, sports=None, rules=RULES):
             and isinstance(b, int) and 0 <= b < len(bands) and in_band(e.get("price", 1), bands[b]))
 
 
-def step(state, docs, now, nfl_kick=None, sports=None, rules=RULES):
-    """One pass: grade open parlays, then make (or close) today's. Returns True if anything changed."""
+def step(state, docs, now, nfl_kick=None, sports=None, rules=RULES, avoid=frozenset()):
+    """One pass: grade open parlays, then make (or close) today's. Returns True if anything changed.
+    avoid: (sport, pid) of players today's parlays may not use (Parlay of the Day: the 3 Picks of the Day)."""
     et = now.astimezone(ET)
     today = et.date().isoformat()
     days = state.setdefault("days", [])
@@ -240,7 +245,7 @@ def step(state, docs, now, nfl_kick=None, sports=None, rules=RULES):
     # The rules changed after today's parlays were made (a sport dropped, Polymarket prices only, the
     # payout bands, the model range): remake any of today's that break them while none of its games has
     # started (no result yet, so the record is unaffected).
-    stale = [e for e in days if e["date"] == today and e.get("legs") and not e.get("res") and not meets_rules(e, sports, rules)
+    stale = [e for e in days if e["date"] == today and e.get("legs") and not e.get("res") and (not meets_rules(e, sports, rules) or any((l["sport"], l["pid"]) in avoid for l in e["legs"]))
              and all(not l.get("res") and (start_utc(l.get("start")) or now) > now for l in e["legs"])]
     if stale:
         days[:] = [e for e in days if not any(e is s for s in stale)]
@@ -250,7 +255,7 @@ def step(state, docs, now, nfl_kick=None, sports=None, rules=RULES):
         return changed
     made = [e for e in mine if e.get("legs")]
     if len(made) < len(rules["bands"]) and (et.hour, et.minute) < CLOSE_AT:
-        used = {(l["sport"], l["pid"]) for e in made for l in e["legs"]}
+        used = {(l["sport"], l["pid"]) for e in made for l in e["legs"]} | set(avoid)
         legs = [l for l in candidates(docs, now, nfl_kick, sports, rules) if (l["sport"], l["pid"]) not in used]
         filled = {e.get("band") for e in made}
         for b, band in enumerate(rules["bands"]):
@@ -278,9 +283,17 @@ def read_state(password, path=OUT):
         return {"days": []}
 
 
+def tpod_players(password, today, path=TPOD):
+    """(sport, pid) of today's 3 Picks of the Day (tpod.py, run earlier in the pass by build_today.py)."""
+    day = next((d for d in read_state(password, path).get("days") or [] if d.get("date") == today), {})
+    return {(p.get("sport"), p.get("pid")) for p in day.get("picks") or []}
+
+
 def run_track(name, sports, path, docs, now, nfl_kick, password, rules=RULES):
     state = read_state(password, path)    # an unreadable file raises: never start over and lose the record
-    if not step(state, docs, now, nfl_kick, sports, rules):
+    # an unreadable 3 Picks file raises too: better no Parlay of the Day this run than one that overlaps it
+    avoid = tpod_players(password, now.astimezone(ET).date().isoformat()) if rules.get("avoid_tpod") else frozenset()
+    if not step(state, docs, now, nfl_kick, sports, rules, avoid):
         print(f"parlay {name}: no change ({len(state.get('days', []))} day(s) on record)")
         return
     state["gen"] = now.strftime("%Y-%m-%dT%H:%M:%SZ")

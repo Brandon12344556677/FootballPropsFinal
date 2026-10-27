@@ -103,6 +103,12 @@ class TpodTest(unittest.TestCase):
         tpod.update(state, [cand("1", "g1", 0.75, 0.55)], [], methods(NHL_A), NOW, None)
         self.assertEqual(state["days"][0]["picks"][0]["pid"], "old")                    # might be locked: kept
 
+    def test_no_player_from_parlay_of_the_day(self):
+        state = {"days": []}
+        cands = [cand("1", "g1", 0.80, 0.55), cand("2", "g2", 0.75, 0.55), cand("3", "g3", 0.70, 0.55), cand("4", "g4", 0.70, 0.56)]
+        tpod.update(state, cands, [], methods(NHL_A), NOW, {}, {("nhl", "1")})          # player 1 is in today's parlay
+        self.assertEqual([p["pid"] for p in state["days"][0]["picks"]], ["2", "3", "4"])
+
     def test_frozen_once_made_and_graded(self):
         state = {"days": []}
         tpod.update(state, [cand("1", "g1", 0.75, 0.55)], [], methods(NHL_A), NOW)
