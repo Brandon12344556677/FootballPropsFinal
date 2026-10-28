@@ -12,6 +12,9 @@ COLS = ["src", "gid", "pid", "player", "team", "opp", "stat", "line", "side", "p
         "pp", "pd"]
 UTC = datetime.timezone.utc
 NOW = datetime.datetime(2026, 10, 16, 16, 0, tzinfo=UTC)          # 12:00 PM ET
+# Parlay of the Day as it runs, with its series started before these tests' dates (Parlay Payday's
+# own day 1 is tested in test_parlay_payday_*)
+POTD = dict(parlay.POTD_RULES, series_start="2026-10-01")
 
 
 def pick(pid, gid, prob, price, start="2026-10-17T00:00Z", **kw):
@@ -144,11 +147,11 @@ class ParlayTest(unittest.TestCase):
 
     def potd(self, docs, now=NOW, state=None):
         state = state if state is not None else {"days": []}
-        parlay.step(state, docs, now, sports=parlay.ALL_SPORTS, rules=parlay.POTD_RULES)
+        parlay.step(state, docs, now, sports=parlay.ALL_SPORTS, rules=POTD)
         return state, [e for e in state["days"] if e.get("legs")]
 
     def test_parlay_of_the_day_pays_3x_and_over_half(self):
-        R = parlay.POTD_RULES
+        R = POTD
         # 56.25% by the model at 30.25c (3.31x): made
         self.assertIsNotNone(parlay.choose(parlay.candidates(self.docs(pick("1", "g1", 0.75, 0.55), pick("2", "g2", 0.75, 0.55)), NOW, rules=R), R["bands"][0], R))
         # exactly 50% is not over 50%
@@ -163,15 +166,15 @@ class ParlayTest(unittest.TestCase):
         d = [("nba", doc(pick("u", "b1", 0.8, 0.5), pick("o", "b2", 0.8, 0.5, side="over", stat="pts"))),
              ("nhl", doc(pick("a", "h1", 0.8, 0.5, stat="a"), pick("ao", "h2", 0.8, 0.5, stat="a", side="over"),
                          pick("g", "h3", 0.8, 0.5)))]
-        legs = parlay.candidates(d, NOW, sports=parlay.ALL_SPORTS, rules=parlay.POTD_RULES)
+        legs = parlay.candidates(d, NOW, sports=parlay.ALL_SPORTS, rules=POTD)
         self.assertEqual(sorted(l["pid"] for l in legs), ["ao", "g", "o"])    # combos.py still drops assists when Polymarket does
         self.assertEqual(len(parlay.candidates(d, NOW, sports={"nba", "nhl"})), 5)   # the model tracks keep their own rules
         leg = lambda s, pid, side, stat="g": {"key": [s, "g", pid], "sport": s, "pid": pid, "gid": "g" + pid, "stat": stat, "side": side,
                                                "start": "2026-10-17T00:00Z", "prob": 0.75, "price": 0.55, "player": "P" + pid, "venue": "Polymarket"}
         made = dict(model=0.5625, price=0.3025, band=0, date="2026-10-16", n=1, res=None, legs=[leg("nba", "x", "over", "pts"), leg("nhl", "y", "under")])
-        self.assertTrue(parlay.meets_rules(made, parlay.ALL_SPORTS, parlay.POTD_RULES))
-        self.assertFalse(parlay.meets_rules(dict(made, legs=[leg("nba", "x", "under", "pts"), leg("nhl", "y", "under")]), parlay.ALL_SPORTS, parlay.POTD_RULES))
-        self.assertFalse(parlay.meets_rules(dict(made, model=0.5), parlay.ALL_SPORTS, parlay.POTD_RULES))
+        self.assertTrue(parlay.meets_rules(made, parlay.ALL_SPORTS, POTD))
+        self.assertFalse(parlay.meets_rules(dict(made, legs=[leg("nba", "x", "under", "pts"), leg("nhl", "y", "under")]), parlay.ALL_SPORTS, POTD))
+        self.assertFalse(parlay.meets_rules(dict(made, model=0.5), parlay.ALL_SPORTS, POTD))
 
     def test_parlay_of_the_day_one_a_day_from_any_sport_frozen_and_graded(self):
         rows = {"nhl": [pick("1", "h1", 0.75, 0.55), pick("3", "h3", 0.80, 0.50)],
@@ -196,14 +199,14 @@ class ParlayTest(unittest.TestCase):
     def test_parlay_of_the_day_never_shares_a_player_with_3_picks(self):
         rows = [pick("1", "h1", 0.75, 0.55), pick("2", "h2", 0.75, 0.55), pick("3", "h3", 0.75, 0.55)]
         state = {"days": []}
-        parlay.step(state, self.docs(*rows), NOW, sports=parlay.ALL_SPORTS, rules=parlay.POTD_RULES, avoid={("nhl", "1")})
+        parlay.step(state, self.docs(*rows), NOW, sports=parlay.ALL_SPORTS, rules=POTD, avoid={("nhl", "1")})
         made = [e for e in state["days"] if e.get("legs")]
         self.assertEqual(len(made), 1)
         self.assertNotIn("1", [l["pid"] for l in made[0]["legs"]])                      # 3 Picks of the Day has player 1
         # a 3 Picks pick turns up later with one of its players (say, a locked day put back): remade before its games
         taken = made[0]["legs"][0]["pid"]
         parlay.step(state, self.docs(*rows), NOW + datetime.timedelta(minutes=10), sports=parlay.ALL_SPORTS,
-                    rules=parlay.POTD_RULES, avoid={("nhl", taken)})
+                    rules=POTD, avoid={("nhl", taken)})
         made = [e for e in state["days"] if e.get("legs")]
         self.assertEqual(len(made), 1)
         self.assertNotIn(taken, [l["pid"] for l in made[0]["legs"]])
@@ -215,20 +218,20 @@ class ParlayTest(unittest.TestCase):
         locks = {"2026-10-16": {"date": "2026-10-16", "at": "2026-10-16T16:00:00Z", "parlay": held}}
         later = NOW + datetime.timedelta(minutes=10)
         taken = held["legs"][0]["pid"]
-        parlay.step(state, self.docs(*rows), later, sports=parlay.ALL_SPORTS, rules=parlay.POTD_RULES,
+        parlay.step(state, self.docs(*rows), later, sports=parlay.ALL_SPORTS, rules=POTD,
                     avoid={("nhl", taken)}, locks=locks)                                # would be remade unlocked
         made = [e for e in state["days"] if e.get("legs")]
         self.assertEqual([[l["key"] for l in e["legs"]] for e in made], [[l["key"] for l in held["legs"]]])
         self.assertEqual(made[0]["locked"], "2026-10-16T16:00:00Z")
         state["days"] = [e for e in state["days"] if e["date"] != "2026-10-16"]          # remade or lost after locking
-        parlay.step(state, self.docs(*rows), later, sports=parlay.ALL_SPORTS, rules=parlay.POTD_RULES, locks=locks)
+        parlay.step(state, self.docs(*rows), later, sports=parlay.ALL_SPORTS, rules=POTD, locks=locks)
         made = [e for e in state["days"] if e.get("legs")]
         self.assertEqual([[l["key"] for l in e["legs"]] for e in made], [[l["key"] for l in held["legs"]]])   # put back
         self.assertEqual((made[0]["res"], made[0]["locked"]), (None, "2026-10-16T16:00:00Z"))
         parlay.step(state, self.docs(*rows), datetime.datetime(2026, 10, 16, 23, 40, tzinfo=UTC), sports=parlay.ALL_SPORTS,
-                    rules=parlay.POTD_RULES, locks=locks)
+                    rules=POTD, locks=locks)
         self.assertFalse(any(e.get("closed") for e in state["days"]))                    # never closed
-        parlay.step(state, self.docs(*rows), later, sports=parlay.ALL_SPORTS, rules=parlay.POTD_RULES,
+        parlay.step(state, self.docs(*rows), later, sports=parlay.ALL_SPORTS, rules=POTD,
                     avoid={("nhl", taken)}, locks={})                                   # unlocked: back to the rules
         made = [e for e in state["days"] if e.get("legs")]
         self.assertNotIn("locked", made[0])
@@ -241,7 +244,7 @@ class ParlayTest(unittest.TestCase):
         other["legs"][0]["key"] = ["nhl", "x", "other"]
         locks = {"2026-10-16": {"date": "2026-10-16", "at": "2026-10-16T16:00:00Z", "parlay": other}}
         started = datetime.datetime(2026, 10, 17, 1, 0, tzinfo=UTC)                     # its games are on
-        parlay.step(state, self.docs(*rows), started, sports=parlay.ALL_SPORTS, rules=parlay.POTD_RULES, locks=locks)
+        parlay.step(state, self.docs(*rows), started, sports=parlay.ALL_SPORTS, rules=POTD, locks=locks)
         self.assertEqual([[l["key"] for l in e["legs"]] for e in state["days"] if e.get("legs")], [[l["key"] for l in made[0]["legs"]]])
 
     def test_unreadable_parlay_locks_never_remake(self):
@@ -249,7 +252,7 @@ class ParlayTest(unittest.TestCase):
         state, made = self.potd(self.docs(*rows))
         first = [l["key"] for l in made[0]["legs"]]
         parlay.step(state, self.docs(*rows), NOW + datetime.timedelta(minutes=10), sports=parlay.ALL_SPORTS,
-                    rules=parlay.POTD_RULES, avoid={("nhl", made[0]["legs"][0]["pid"])}, locks=None)
+                    rules=POTD, avoid={("nhl", made[0]["legs"][0]["pid"])}, locks=None)
         self.assertEqual([[l["key"] for l in e["legs"]] for e in state["days"] if e.get("legs")], [first])   # might be locked: kept
 
     def test_tpod_players_read_from_its_file(self):
@@ -262,6 +265,46 @@ class ParlayTest(unittest.TestCase):
                 f.write(team_stats.encrypt(json.dumps(doc), "pw"))
             self.assertEqual(parlay.tpod_players("pw", "2026-10-16", path), {("nba", "9"), ("nhl", "8")})
             self.assertEqual(parlay.tpod_players("pw", "2026-10-16", os.path.join(d, "none.enc")), set())
+
+    def test_parlay_payday_starts_at_day_1_on_oct_28(self):
+        self.assertEqual(parlay.PAYDAY_START, "2026-10-28")
+        now = datetime.datetime(2026, 10, 28, 16, 0, tzinfo=UTC)                        # 12:00 PM ET, Oct 28
+        old = {"date": "2026-10-27", "n": 1, "band": 0, "model": 0.52, "price": 0.27, "res": "hit", "units": 2.7,
+               "legs": [{"sport": "nhl", "pid": "z", "key": ["nhl"], "player": "Old", "side": "over", "line": 0.5, "stat": "g"}]}
+        state = {"days": [old]}
+        rows = [pick("1", "h1", 0.75, 0.55, start="2026-10-29T00:00Z"), pick("2", "h2", 0.75, 0.55, start="2026-10-29T00:00Z")]
+        self.assertTrue(parlay.step(state, self.docs(*rows), now, sports=parlay.ALL_SPORTS, rules=parlay.POTD_RULES))
+        self.assertEqual([e["date"] for e in state["days"]], ["2026-10-28"])            # Oct 27 dropped: the series starts over
+        e = state["days"][0]
+        self.assertTrue(e["script"].startswith("This is day 1 of Parlay Payday"))
+        self.assertNotIn("Yesterday", e["script"])
+        self.assertIn("Leg one: NHL, P1, no goals.", e["script"])
+        self.assertIn("Eighteen and over only", e["script"])
+        self.assertTrue(e["caption"].startswith("Parlay Payday, day 1 (Oct 28): 2-leg parlay paying 3.31x"))
+        self.assertIn("1) P1 under 0.5 goals", e["caption"])
+        self.assertIn("#ParlayPayday", e["caption"])
+        self.assertFalse(parlay.step(state, self.docs(*rows), now + datetime.timedelta(minutes=10),
+                                     sports=parlay.ALL_SPORTS, rules=parlay.POTD_RULES))  # nothing new: no rewrite
+
+    def test_parlay_payday_script_reads_the_last_result_and_series_total(self):
+        leg = lambda pid, side, line, stat, sport="nba": {"sport": sport, "pid": pid, "player": "P" + pid, "side": side, "line": line, "stat": stat}
+        past = [{"date": "2026-10-28", "legs": [leg("a", "over", 0.5, "g")], "res": "hit", "units": 2.5, "price": 0.286},
+                {"date": "2026-10-29", "legs": [leg("b", "over", 0.5, "g")], "res": "miss", "units": -1.0, "price": 0.3},
+                {"date": "2026-10-30", "closed": True}]
+        today = {"date": "2026-10-31", "model": 0.534, "price": 0.25,
+                 "legs": [leg("1", "over", 24.5, "pts"), leg("2", "under", 8.5, "reb"), leg("3", "over", 0.5, "sog", "nhl")]}
+        script, caption = parlay.payday_script(today, past, "2026-10-31")
+        self.assertTrue(script.startswith("This is day 3 of Parlay Payday"))           # days with a parlay: the 28th, 29th, today
+        self.assertIn("Thursday's parlay missed, that's -1 unit, bringing the series total to +1.5 units.", script)
+        self.assertIn("3 legs and pays about 4.0 times your money", script)
+        self.assertIn("Leg one: NBA, P1, at least 25 points.", script)
+        self.assertIn("Leg two: NBA, P2, 8 or fewer rebounds.", script)
+        self.assertIn("Leg three: NHL, P3, at least one shot on goal.", script)
+        self.assertIn("53 percent", script)
+        self.assertIn("Thursday: missed (-1 unit) | Series: +1.5 units", caption)
+        script, caption = parlay.payday_script({"date": "2026-10-31", "closed": True}, past, "2026-10-31")
+        self.assertTrue(script.startswith("No Parlay Payday today"))
+        self.assertIn("18+", caption)
 
     def test_parlay_of_the_day_closes_at_730(self):
         state, _ = self.potd([("nhl", doc())], datetime.datetime(2026, 10, 16, 23, 40, tzinfo=UTC))
