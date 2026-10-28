@@ -162,18 +162,23 @@ class ParlayTest(unittest.TestCase):
         got = parlay.choose(parlay.candidates(self.docs(pick("1", "g1", 0.75, 0.45), pick("2", "g2", 0.75, 0.44)), NOW, rules=R), R["bands"][0], R)
         self.assertGreater(1 / got["price"], 5)
 
-    def test_parlay_of_the_day_skips_nba_unders_and_nhl_assist_unders(self):
-        d = [("nba", doc(pick("u", "b1", 0.8, 0.5), pick("o", "b2", 0.8, 0.5, side="over", stat="pts"))),
+    def test_parlay_of_the_day_skips_nhl_assist_unders_and_takes_sellable_nba_unders(self):
+        d = [("nba", doc(pick("u", "b1", 0.8, 0.5), pick("o", "b2", 0.8, 0.5, side="over", stat="pts"),
+                         pick("un", "b3", 0.8, 0.5, pp=None),          # no Polymarket price (the side can't be bought)
+                         pick("ut", "b4", 0.8, 0.5, pd=10),            # under $25 offered there
+                         pick("uh", "b5", 0.8, 0.5, th=1))),           # thin
              ("nhl", doc(pick("a", "h1", 0.8, 0.5, stat="a"), pick("ao", "h2", 0.8, 0.5, stat="a", side="over"),
                          pick("g", "h3", 0.8, 0.5)))]
         legs = parlay.candidates(d, NOW, sports=parlay.ALL_SPORTS, rules=POTD)
-        self.assertEqual(sorted(l["pid"] for l in legs), ["ao", "g", "o"])    # combos.py still drops assists when Polymarket does
+        # NBA unders are back (Oct 28) when Polymarket sells them with $25+; combos.py still drops assists when Polymarket does
+        self.assertEqual(sorted(l["pid"] for l in legs), ["ao", "g", "o", "u"])
         self.assertEqual(len(parlay.candidates(d, NOW, sports={"nba", "nhl"})), 5)   # the model tracks keep their own rules
         leg = lambda s, pid, side, stat="g": {"key": [s, "g", pid], "sport": s, "pid": pid, "gid": "g" + pid, "stat": stat, "side": side,
                                                "start": "2026-10-17T00:00Z", "prob": 0.75, "price": 0.55, "player": "P" + pid, "venue": "Polymarket"}
         made = dict(model=0.5625, price=0.3025, band=0, date="2026-10-16", n=1, res=None, legs=[leg("nba", "x", "over", "pts"), leg("nhl", "y", "under")])
         self.assertTrue(parlay.meets_rules(made, parlay.ALL_SPORTS, POTD))
-        self.assertFalse(parlay.meets_rules(dict(made, legs=[leg("nba", "x", "under", "pts"), leg("nhl", "y", "under")]), parlay.ALL_SPORTS, POTD))
+        self.assertTrue(parlay.meets_rules(dict(made, legs=[leg("nba", "x", "under", "pts"), leg("nhl", "y", "under")]), parlay.ALL_SPORTS, POTD))
+        self.assertFalse(parlay.meets_rules(dict(made, legs=[leg("nba", "x", "over", "pts"), leg("nhl", "y", "under", "a")]), parlay.ALL_SPORTS, POTD))
         self.assertFalse(parlay.meets_rules(dict(made, model=0.5), parlay.ALL_SPORTS, POTD))
 
     def test_parlay_of_the_day_one_a_day_from_any_sport_frozen_and_graded(self):

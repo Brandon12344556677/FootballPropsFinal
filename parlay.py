@@ -27,7 +27,8 @@ for linked legs can be lower). edge_report.py grades it in the edge tracker.
 
 Parlay of the Day (POTD_RULES, team/parlay_potd.enc, added Oct 27, 2026): one more track with the same legs,
 timing, freezing and grading, but one parlay a day from every sport, paying 3x or more and over 50% by the
-model, and never an NBA under or an NHL assists under (banned_under). It never shares a player with
+model, and never an NHL assists under (banned_under; NBA unders allowed again Oct 28, 2026, once Polymarket US
+made them tradable: like every leg, only with a Polymarket price for that side and $25+ offered). It never shares a player with
 the day's 3 Picks of the Day (tpod.py, team/tpod.enc), which come first: its players are left out, and
 today's Parlay of the Day is remade if one of them turns up there before its games start (tpod.py's later
 fills leave Parlay of the Day's players out too). Its own record, dashboard tab and edge-tracker row.
@@ -94,8 +95,9 @@ TRACKS = [("nhl", TEST_PARLAY_SPORTS, OUT, RULES), ("nba", {"nba"}, OUT_NBA, RUL
 
 
 def banned_under(sport, stat, side):
-    """Parlay of the Day never takes an NBA under or an NHL assists under."""
-    return side == "under" and (sport == "nba" or (sport == "nhl" and stat == "a"))
+    """Parlay of the Day never takes an NHL assists under. NBA unders were banned until Oct 28, 2026, while
+    Polymarket US couldn't sell them; a side it can't sell has no Polymarket price (depth.side_ok), so no leg."""
+    return side == "under" and sport == "nhl" and stat == "a"
 
 
 def model_ok(m, rules=RULES):
