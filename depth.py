@@ -70,9 +70,9 @@ def pmus_book(md):
             "under": usd_within([(1 - p, q) for p, q in bids if p is not None])}
 
 
-# Polymarket US marks each side of a market tradable or not ("marketSides"). Since at least Oct 22, 2026
-# every NBA player prop's No side (the under) is not tradable: it shows a price and even a book, but
-# nobody can buy it. The builders note each market's sides as they read them (note_sides) and drop the
+# Polymarket US marks each side of a market tradable or not ("marketSides"). From at least Oct 22 to
+# Oct 28, 2026 every NBA player prop's No side (the under) was not tradable: it showed a price and even a
+# book, but nobody could buy it (tradable again by Oct 28). The builders note each market's sides as they read them (note_sides) and drop the
 # Polymarket price of a side that can't be bought (side_ok), so it never counts as a price.
 _SIDES = {}
 

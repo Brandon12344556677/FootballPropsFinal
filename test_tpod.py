@@ -103,6 +103,12 @@ class TpodTest(unittest.TestCase):
         tpod.update(state, [cand("1", "g1", 0.75, 0.55)], [], methods(NHL_A), NOW, None)
         self.assertEqual(state["days"][0]["picks"][0]["pid"], "old")                    # might be locked: kept
 
+    def test_nba_unders_when_polymarket_sells_them(self):
+        under = dict(sport="nba", stat="pts", side="under", line=20.5)
+        cands = [cand("1", "g1", 0.80, 0.55, **under), cand("2", "g2", 0.80, 0.55, **dict(under, pp=None)),   # can't be bought there
+                 cand("3", "g3", 0.80, 0.55, **dict(under, pd=10))]                                            # under $25 offered
+        self.assertEqual([c["pid"] for c in tpod.on_polymarket(cands)], ["1"])
+
     def test_no_player_from_parlay_of_the_day(self):
         state = {"days": []}
         cands = [cand("1", "g1", 0.80, 0.55), cand("2", "g2", 0.75, 0.55), cand("3", "g3", 0.70, 0.55), cand("4", "g4", 0.70, 0.56)]
