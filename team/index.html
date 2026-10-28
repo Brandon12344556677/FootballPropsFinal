@@ -509,9 +509,17 @@ details.plpast>summary:focus-visible{outline:2px solid var(--accent);outline-off
 
   <section data-view="potd" class="panel" id="pdPanel" hidden>
     <div class="panel-h"><h2>Parlay of the Day</h2><span class="label" id="pdUpd">Team only</span></div>
-    <p class="hint">One a day from 11 AM ET, 2-4 legs from any sport at Polymarket prices, paying 3x or more and over 50% by the model. No NBA unders and no NHL assists (Polymarket won’t parlay them), and never a player from today’s 3 Picks of the Day (those come first). Frozen once made (Lock it below and no update can remake it) and graded as a 1-unit bet at the legs’ prices multiplied (a book’s same-game parlay pays less). Some days nothing fits: over 50% at 3x+ means the model rates it at least 1.5 times the market. Team only.</p>
+    <p class="hint">One a day from 11 AM ET, 2-4 legs from any sport at Polymarket prices, paying 3x or more and over 50% by the model. No NBA unders and no NHL assists (Polymarket won’t parlay them), and never a player from today’s 3 Picks of the Day (those come first). Frozen once made (Lock it below and no update can remake it) and graded as a 1-unit bet at the legs’ prices multiplied (a book’s same-game parlay pays less). Some days nothing fits: over 50% at 3x+ means the model rates it at least 1.5 times the market. Posted on Instagram as Parlay Payday (day 1: Oct 28, 2026; the record here starts that day). Team only.</p>
     <div id="pdToday"></div>
     <p class="tp-lock"><button class="btn" type="button" id="pdLockBtn" hidden>Lock today's parlay</button> <span class="hint" id="pdLockMsg"></span></p>
+    <div class="tp-copy" id="pdCopy" hidden>
+      <h3 class="subh">Parlay Payday script (Instagram)</h3>
+      <textarea id="pdScript" rows="7" readonly></textarea>
+      <p><button class="btn" type="button" id="pdScriptBtn">Copy script</button></p>
+      <h3 class="subh">Caption</h3>
+      <textarea id="pdCaption" rows="6" readonly></textarea>
+      <p><button class="btn" type="button" id="pdCaptionBtn">Copy caption</button></p>
+    </div>
     <div class="kpis" id="pdKpis" style="margin-top:12px"></div>
     <details class="plpast"><summary><span>Past parlays</span><span class="label" id="pdPastN"></span></summary>
     <div class="edwrap"><table class="edges"><thead><tr><th>Day</th><th>Legs</th><th class="n">Model</th><th class="n">Pays</th><th>Result</th><th class="n">Units</th></tr></thead><tbody id="pdRows"></tbody></table></div>
@@ -1508,8 +1516,8 @@ details.plpast>summary:focus-visible{outline:2px solid var(--accent);outline-off
       if(d.gen) $('tpUpd').textContent='Team only · for TikTok · updated '+new Date(d.gen).toLocaleString('en-US',{month:'short', day:'numeric', hour:'numeric', minute:'2-digit'});
     } catch(err){}
   }
-  [['tpScriptBtn','tpScript'],['tpCaptionBtn','tpCaption']].forEach(([b,t])=>{ const el=$(b); if(el) el.addEventListener('click', async ()=>{
-    const ok=await copyText($(t).value, $(t)); el.textContent= ok? 'Copied' : 'Press Ctrl+C'; setTimeout(()=>{ el.textContent= b==='tpScriptBtn'? 'Copy script' : 'Copy caption'; }, 2000); }); });
+  [['tpScriptBtn','tpScript'],['tpCaptionBtn','tpCaption'],['pdScriptBtn','pdScript'],['pdCaptionBtn','pdCaption']].forEach(([b,t])=>{ const el=$(b); if(el) el.addEventListener('click', async ()=>{
+    const ok=await copyText($(t).value, $(t)); el.textContent= ok? 'Copied' : 'Press Ctrl+C'; setTimeout(()=>{ el.textContent= b.endsWith('ScriptBtn')? 'Copy script' : 'Copy caption'; }, 2000); }); });
   // Lock: today's picks as filmed, saved to tpod_locks.enc on team-data (expenses.js storage); tpod.py keeps a locked day as it is.
   // Parlay of the Day has the same button (potd_locks.enc, parlay.py). o: the button and note ids, the file, what one lock
   // holds (the day's picks or its parlay), and the words.
@@ -1594,7 +1602,9 @@ details.plpast>summary:focus-visible{outline:2px solid var(--accent);outline-off
         `<td>${e.res? RES[e.res] : 'Pending'}</td><td class="n ${e.units>0?'up':e.units<0?'down':''}">${e.units==null? '–' : (e.units>=0?'+':'−')+Math.abs(e.units).toFixed(2)}</td></tr>`).join('')
         : `<tr class="ed-wait"><td colspan="6">The first results show up the day after the first parlay.</td></tr>`;
       if(window.psaParlayLive) window.psaParlayLive.track(mine.some(e=>e.closed)? [] : made, {root: P+'Today', note: P+'Live'});   // live box scores (parlaylive.js)
-      if(P==='pd') pdLock(made[0]||null, today);   // the Lock button: today's one parlay
+      if(P==='pd'){ pdLock(made[0]||null, today);   // the Lock button: today's one parlay
+        const said=mine.find(e=>e.script);   // Parlay Payday: today's script and caption (parlay.py payday_script)
+        $('pdCopy').hidden=!said; if(said){ $('pdScript').value=said.script; $('pdCaption').value=said.caption||''; } }
       $(P+'Upd').textContent='Team only · updated '+new Date(d.gen).toLocaleString('en-US',{month:'short', day:'numeric', hour:'numeric', minute:'2-digit'});
       $(P+'Panel').hidden=false;
     } catch(err){}

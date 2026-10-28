@@ -31,6 +31,9 @@ model, and never an NBA under or an NHL assists under (banned_under). It never s
 the day's 3 Picks of the Day (tpod.py, team/tpod.enc), which come first: its players are left out, and
 today's Parlay of the Day is remade if one of them turns up there before its games start (tpod.py's later
 fills leave Parlay of the Day's players out too). Its own record, dashboard tab and edge-tracker row.
+It is posted on Instagram as the series "Parlay Payday": today's entry carries a script to read on camera and a
+caption (payday_script), redone each run so the last result and the series total stay current. The series
+started on PAYDAY_START (day 1); earlier days are dropped from the file and its record.
 The tab's Lock button saves the day's parlay to potd_locks.enc on team-data (needs a GitHub token, as in
 Expenses; load_locks reads it through the API each run, like tpod.py's): a locked day is never remade,
 filled or closed, and a parlay changed after locking is put back while none of its games has started.
@@ -78,7 +81,9 @@ RULES = {"bands": BANDS, "lo": MODEL_LO, "hi": MODEL_HI}
 # Parlay of the Day (the owner's rules, Oct 27, 2026): pays 3x or more, over 50% by the model, any sport.
 POTD_RULES = {"bands": [(3.0, math.inf)], "lo": 0.50, "lo_open": True, "hi": 1.0, "no_banned_unders": True,
               "avoid_tpod": True,   # no player in today's 3 Picks of the Day
-              "lockable": True}     # the tab's Lock button (potd_locks.enc)
+              "lockable": True,     # the tab's Lock button (potd_locks.enc)
+              "series_start": "2026-10-28"}   # Parlay Payday's day 1 (Instagram): earlier days are dropped
+PAYDAY_START = POTD_RULES["series_start"]
 TPOD = os.path.join("team", "tpod.enc")
 LOCKS_URL = "https://api.github.com/repos/Brandon12344556677/FootballPropsFinal/contents/potd_locks.enc?ref=team-data"
 ALL_SPORTS = {s for s, _ in FILES}
@@ -238,7 +243,100 @@ def meets_rules(e, sports=None, rules=RULES):
             and isinstance(b, int) and 0 <= b < len(bands) and in_band(e.get("price", 1), bands[b]))
 
 
+# stat key -> (one, many), as read out in the Parlay Payday script
+STAT_WORDS = {"g": ("goal", "goals"), "a": ("assist", "assists"), "pts": ("point", "points"), "sog": ("shot on goal", "shots on goal"),
+              "reb": ("rebound", "rebounds"), "ast": ("assist", "assists"), "tpm": ("three", "threes"), "stl": ("steal", "steals"),
+              "blk": ("block", "blocks"), "pra": ("point, rebound and assist", "points, rebounds and assists"),
+              "pr": ("point and rebound", "points and rebounds"), "pa": ("point and assist", "points and assists"),
+              "ra": ("rebound and assist", "rebounds and assists"), "h": ("hit", "hits"), "hr": ("home run", "home runs"),
+              "rbi": ("RBI", "RBIs"), "r": ("run", "runs"), "bb": ("walk", "walks"), "tb": ("total base", "total bases"),
+              "hrr": ("hit, run or RBI", "hits, runs and RBIs"), "sb": ("stolen base", "stolen bases"), "k": ("strikeout", "strikeouts"),
+              "outs": ("out", "outs"), "pass_yds": ("passing yard", "passing yards"), "pass_td": ("passing touchdown", "passing touchdowns"),
+              "pass_cmp": ("completion", "completions"), "pass_att": ("pass attempt", "pass attempts"),
+              "rush_yds": ("rushing yard", "rushing yards"), "rush_att": ("rushing attempt", "rushing attempts"),
+              "rec_yds": ("receiving yard", "receiving yards"), "rec": ("catch", "catches"),
+              "rush_rec_yds": ("scrimmage yard", "scrimmage yards"), "scrim_td": ("touchdown", "touchdowns")}
+SPORT_NAME = {"nfl": "NFL", "nba": "NBA", "nhl": "NHL", "mlb": "MLB"}
+
+
+def say_leg(l):
+    """'at least 10 points' / 'no goals' / 'under 24 rebounds' in words."""
+    one, many = STAT_WORDS.get(l.get("stat"), (l.get("stat"), l.get("stat")))
+    line = float(l["line"])
+    if line % 1 == 0.5:
+        if l["side"] == "over":
+            n = int(line + 0.5)
+            return f"at least one {one}" if n == 1 else f"at least {n} {many}"
+        n = int(line - 0.5)
+        return f"no {many}" if n == 0 else f"{n} or fewer {many}"
+    return f"{l['side']} {line:g} {many}"
+
+
+def units_said(u):
+    """+2.7 units / -1 unit, as read out."""
+    return f"{u:+.1f}".replace(".0", "") + (" unit" if abs(round(u, 1)) == 1 else " units")
+
+
+def payday_script(entry, past, today):
+    """(script, caption) for today's Parlay of the Day (entry: the parlay, or the closed day) in the
+    Parlay Payday series. past: the series' earlier entries, for the day number, the last result and the
+    series total (1 unit a parlay)."""
+    d = datetime.date.fromisoformat(today)
+    day_no = 1 + len({e["date"] for e in past if e.get("legs")})
+    done = [e for e in past if e.get("res") in ("hit", "miss")]
+    total = sum(e.get("units") or 0 for e in done)
+    last = max(done, key=lambda e: e["date"]) if done else None
+    tail = "Eighteen and over only, this is for entertainment, not betting advice."
+    if not entry.get("legs"):
+        return (f"No Parlay Payday today: nothing fit my rules at a big enough payout, and I'd rather skip a day than force it. "
+                f"Back tomorrow. {tail}",
+                f"Parlay Payday: no parlay today ({d.strftime('%b')} {d.day}). Nothing fit at a big enough payout.\n"
+                "18+ | For entertainment, not betting advice\n#ParlayPayday")
+    legs, pays = entry["legs"], 1 / entry["price"]
+    lines = [f"This is day {day_no} of Parlay Payday, one parlay every day."]
+    cap_last = []
+    if last:
+        yday = (d - datetime.date.fromisoformat(last["date"])).days == 1
+        when = "Yesterday" if yday else datetime.date.fromisoformat(last["date"]).strftime("%A")
+        won = last["res"] == "hit"
+        lines.append(f"{when}'s parlay {'hit' if won else 'missed'}, that's {units_said(last['units'])}, "
+                     f"bringing the series total to {units_said(total)}.")
+        cap_last = [f"{when}: {'hit' if won else 'missed'} ({units_said(last['units'])}) | Series: {units_said(total)}"]
+    lines.append(f"Today's parlay has {len(legs)} legs and pays about {pays:.1f} times your money.")
+    nums = ["Leg one", "Leg two", "Leg three", "Leg four"]
+    for i, l in enumerate(legs):
+        lines.append(f"{nums[i]}: {SPORT_NAME.get(l['sport'], '')}, {l['player']}, {say_leg(l)}.")
+    lines.append(f"Our model gives the whole parlay a {round(entry['model'] * 100)} percent chance to hit.")
+    lines.append(f"Like and follow for a new parlay every day. {tail}")
+    cap = [f"Parlay Payday, day {day_no} ({d.strftime('%b')} {d.day}): {len(legs)}-leg parlay paying {pays:.2f}x"]
+    cap += [f"{i + 1}) {l['player']} {l['side']} {float(l['line']):g} {STAT_WORDS.get(l.get('stat'), (0, l.get('stat')))[1]}"
+            for i, l in enumerate(legs)]
+    cap += cap_last + ["18+ | For entertainment, not betting advice", "#ParlayPayday"]
+    return " ".join(lines), "\n".join(cap)
+
+
 def step(state, docs, now, nfl_kick=None, sports=None, rules=RULES, avoid=frozenset(), locks={}):   # noqa: B006 - only read
+    """One pass (_step), and for Parlay Payday (rules' series_start) the days before its day 1 dropped and
+    today's script and caption kept current. Returns True if anything changed."""
+    days = state.setdefault("days", [])
+    start = rules.get("series_start")
+    changed = False
+    if start and any(e["date"] < start for e in days):
+        days[:] = [e for e in days if e["date"] >= start]   # the series starts over at day 1
+        changed = True
+    changed |= _step(state, docs, now, nfl_kick, sports, rules, avoid, locks)
+    if start:
+        today = now.astimezone(ET).date().isoformat()
+        for e in days:
+            if e["date"] == today and (e.get("legs") or e.get("closed")):
+                said = payday_script(e, [x for x in days if x["date"] < today], today)
+                if (e.get("script"), e.get("caption")) != said:
+                    e["script"], e["caption"] = said
+                    changed = True
+    return changed
+
+
+def _step(state, docs, now, nfl_kick=None, sports=None, rules=RULES, avoid=frozenset(), locks={}):   # noqa: B006 - only read
     """One pass: grade open parlays, then make (or close) today's. Returns True if anything changed.
     avoid: (sport, pid) of players today's parlays may not use (Parlay of the Day: the 3 Picks of the Day).
     locks: load_locks() (Parlay of the Day's Lock button): a locked today keeps (or puts back) the
