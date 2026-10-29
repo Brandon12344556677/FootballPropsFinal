@@ -1,4 +1,11 @@
 {
- "problems": {},
+ "problems": {
+  "build: schedule": {
+   "first": "2026-10-29T16:10:23Z",
+   "runs": 1,
+   "alerted": null,
+   "msg": "build.py: schedule failed (HTTP Error 404: Not Found)"
+  }
+ },
  "alert": []
 }
