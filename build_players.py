@@ -183,7 +183,7 @@ HEAD = """<!doctype html>
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <meta name="theme-color" content="#0a1628">
 <link rel="stylesheet" href="/fonts.css">
-<script src="/thanksgiving.js?v=20261101a"></script>
+<script src="/thanksgiving.js?v=20261101b"></script>
 <style>{css}</style>
 </head>
 <body>
