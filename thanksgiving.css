@@ -1,0 +1,57 @@
+/* Prop Streak Lab — Thanksgiving theme. thanksgiving.js loads this (and adds html.thanksgiving) through
+   November 30, 2026, US Eastern; from December 1 neither is applied.
+   A warm harvest glow on the usual navy, amber trim on the header, and decorations. The brand green
+   stays as it is everywhere: it means a hit, a positive edge or a price that moved our way. */
+
+html.thanksgiving body{
+  background-image:
+    linear-gradient(rgba(232,137,43,.03) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(232,137,43,.03) 1px,transparent 1px),
+    radial-gradient(1100px 700px at 12% -10%,rgba(232,137,43,.16),transparent 60%),
+    radial-gradient(900px 600px at 100% 30%,rgba(168,50,30,.12),transparent 60%),
+    linear-gradient(180deg,#1a1420,#0f1220 45%,#080a12);
+  background-color:#0f1220;
+  background-size:58px 58px,58px 58px,100% 100%,100% 100%,100% 100%;background-attachment:fixed}
+html.thanksgiving .apptop,html.thanksgiving header.top{border-bottom-color:rgba(232,137,43,.28)}
+html.thanksgiving .ticker{border-bottom-color:rgba(232,137,43,.2)}
+
+/* ---------- the thank-you banner (under the header; scrolls away, so it never covers picks) ---------- */
+.tg-banner{position:relative;z-index:49;display:flex;align-items:center;justify-content:center;gap:10px;
+  padding:7px 44px 7px 16px;background:linear-gradient(90deg,#3a1a0c,#5a2a10 50%,#3a1a0c);
+  border-bottom:1px solid rgba(232,137,43,.35);color:#ffe7cc;
+  font:600 13.5px/1.35 "Inter",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;text-align:center}
+.tg-banner p{margin:0}
+.tg-banner b{color:#ffb25c;font-weight:800}
+.tg-banner p span{color:#e9cdb0;font-weight:500}
+.tg-banner .tg-leaf{flex:none;width:20px;animation:tg-sway 3.2s ease-in-out infinite alternate}
+.tg-banner svg,.tg-deco svg,.tg-harvest svg{display:block;width:100%!important;min-width:0!important;max-width:100%!important;height:auto!important}
+.tg-x{position:absolute;right:8px;top:50%;transform:translateY(-50%);width:28px;height:28px;border:0;border-radius:50%;
+  background:transparent;color:#e9cdb0;font:400 20px/1 system-ui,sans-serif;cursor:pointer}
+.tg-x:hover,.tg-x:focus-visible{background:rgba(255,255,255,.1);color:#fff}
+@keyframes tg-sway{from{transform:rotate(-12deg)}to{transform:rotate(12deg)}}
+
+/* ---------- falling leaves (behind everything) ---------- */
+.tg-deco{position:fixed;inset:0;z-index:-1;pointer-events:none;overflow:hidden}
+.tg-fall{position:absolute;top:0;left:var(--x);width:calc(30px*var(--s));opacity:.45;
+  animation:tg-fall var(--d) linear var(--delay) infinite}
+.tg-fall svg{animation:tg-spin calc(var(--d)/3) ease-in-out infinite alternate}
+.tg-fall.rev svg{animation-direction:alternate-reverse}
+@keyframes tg-fall{0%{transform:translate(0,-10vh)}25%{transform:translate(4vw,22vh)}50%{transform:translate(-3vw,50vh)}
+  75%{transform:translate(5vw,78vh)}100%{transform:translate(0,112vh)}}
+@keyframes tg-spin{from{transform:rotate(-40deg)}to{transform:rotate(50deg)}}
+
+/* ---------- the harvest row above the footer ---------- */
+.tg-harvest{display:flex;justify-content:center;align-items:flex-end;gap:clamp(8px,2.4vw,24px);max-width:1160px;margin:34px auto 6px;
+  padding:0 16px 8px;border-bottom:2px dashed rgba(232,137,43,.3)}
+.tg-harvest span{display:block;width:var(--w);filter:drop-shadow(0 4px 10px rgba(232,137,43,.3))}
+
+@media (max-width:760px){
+  .tg-m{display:none}
+  .tg-fall{opacity:.22}   /* no side margins on a phone: they drift behind text */
+  .tg-banner{font-size:12.5px;padding:6px 40px 6px 12px}
+  .tg-banner p span{display:none}
+}
+@media (prefers-reduced-motion:reduce){
+  .tg-fall,.tg-fall svg,.tg-banner .tg-leaf{animation:none}
+  .tg-fall{transform:translateY(calc(var(--x)*0.8vh))}
+}
