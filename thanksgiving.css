@@ -1,19 +1,42 @@
 /* Prop Streak Lab — Thanksgiving theme. thanksgiving.js loads this (and adds html.thanksgiving) through
    November 30, 2026, US Eastern; from December 1 neither is applied.
-   A warm harvest glow on the usual navy, amber trim on the header, and decorations. The brand green
-   stays as it is everywhere: it means a hit, a positive edge or a price that moved our way. */
+   thanksgiving.js turns the brand green harvest amber and the navy warm brown on every page.
+   Green that MEANS something stays green (a pick that hit, a positive edge or record, a price that
+   moved our way), and the Pick of the Day's Last 10 dots become check and x marks.
+   Colors here are written so thanksgiving.js's swap leaves them alone (#2ed18a, not the brand #22d07f). */
 
+html.thanksgiving{--tg-hit:#2ed18a;--tg-hit-ink:#05200f}
 html.thanksgiving body{
   background-image:
-    linear-gradient(rgba(232,137,43,.03) 1px,transparent 1px),
-    linear-gradient(90deg,rgba(232,137,43,.03) 1px,transparent 1px),
-    radial-gradient(1100px 700px at 12% -10%,rgba(232,137,43,.16),transparent 60%),
+    linear-gradient(rgba(240,163,58,.03) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(240,163,58,.03) 1px,transparent 1px),
+    radial-gradient(1100px 700px at 12% -10%,rgba(240,163,58,.14),transparent 60%),
     radial-gradient(900px 600px at 100% 30%,rgba(168,50,30,.12),transparent 60%),
-    linear-gradient(180deg,#1a1420,#0f1220 45%,#080a12);
-  background-color:#0f1220;
+    linear-gradient(180deg,#24180f,#1c130d 45%,#120b07);
+  background-color:#1c130d;
   background-size:58px 58px,58px 58px,100% 100%,100% 100%,100% 100%;background-attachment:fixed}
-html.thanksgiving .apptop,html.thanksgiving header.top{border-bottom-color:rgba(232,137,43,.28)}
-html.thanksgiving .ticker{border-bottom-color:rgba(232,137,43,.2)}
+html.thanksgiving .apptop,html.thanksgiving header.top{background:rgba(30,20,13,.86);border-bottom-color:rgba(240,163,58,.28)}
+html.thanksgiving .ticker{border-bottom-color:rgba(240,163,58,.2)}
+
+/* ---------- green that means something stays green ---------- */
+html.thanksgiving .app .edgeval.pos,html.thanksgiving .app .vd-stats b.pos,html.thanksgiving .pxmove.up b,
+html.thanksgiving .app .betsum b.pos,html.thanksgiving .app .r-hit .br-res,
+html.thanksgiving .dstats .pos b,html.thanksgiving .bs-rec .up,html.thanksgiving .crow .ok{color:var(--tg-hit)}
+html.thanksgiving .pssheet .ps-bars .hit i,html.thanksgiving .bars i:not(.u),html.thanksgiving .sp-bars i.hit{background:var(--tg-hit)}
+html.thanksgiving .bs-st.hit{background:var(--tg-hit);border-color:var(--tg-hit);color:var(--tg-hit-ink)}
+html.thanksgiving .app .betrow.r-hit{border-left-color:var(--tg-hit)}
+html.thanksgiving .app .vwbar:not(.down) .big{color:var(--tg-hit)}   /* the Value record, when it's up */
+
+/* ---------- Pick of the Day: Last 10 as check and x marks, not green and red dots ---------- */
+html.thanksgiving .bs-dots{gap:4px}
+html.thanksgiving .bs-dots i{width:19px;height:19px;display:inline-grid;place-items:center;border-radius:50%;
+  background:transparent;box-shadow:inset 0 0 0 1.5px #6b5442;color:#c8b6a2;
+  font:800 12px/1 "Inter",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;font-style:normal}
+html.thanksgiving .bs-dots i::before{content:"\2013"}
+html.thanksgiving .bs-dots i.hit{background:#f0a33a;box-shadow:none;color:#2a1606}
+html.thanksgiving .bs-dots i.hit::before{content:"\2713"}
+html.thanksgiving .bs-dots i.miss{color:#efe4d6}
+html.thanksgiving .bs-dots i.miss::before{content:"\2717"}
 
 /* ---------- the thank-you banner (under the header; scrolls away, so it never covers picks) ---------- */
 .tg-banner{position:relative;z-index:49;display:flex;align-items:center;justify-content:center;gap:10px;

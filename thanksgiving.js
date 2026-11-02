@@ -4,8 +4,11 @@
    Loaded in each page's <head>: it adds class "thanksgiving" to <html> and thanksgiving.css
    (a warm harvest background), then once the page is parsed: a thank-you banner under the
    header (one line, with an x that hides it for that browser), autumn leaves drifting down
-   behind the content, and a row of pumpkins, pie and corn above the footer. The brand green
-   is left alone: on this site green means a hit, an edge or a price that moved our way.
+   behind the content, and a row of pumpkins, pie and corn above the footer.
+   Every page is recolored: the brand green turns harvest amber and the navy turns warm brown
+   (style sheets, then attributes, then anything drawn later; the pages hard-code both in
+   ~200 places). Green that MEANS something stays green (thanksgiving.css), and the Pick of the
+   Day's Last 10 dots become check and x marks, so a hit never depends on telling colors apart.
    ?thanksgiving=1 or ?thanksgiving=0 on any page forces it on or off, for checking. */
 (function () {
   var END = Date.UTC(2026, 11, 1, 5);        // December 1, 2026, midnight EST
@@ -16,8 +19,71 @@
   root.classList.add('thanksgiving');
   var css = document.createElement('link');
   css.rel = 'stylesheet';
-  css.href = '/thanksgiving.css?v=20261101a';
+  css.href = '/thanksgiving.css?v=20261101b';
   document.head.appendChild(css);
+
+  // ---- the site's colors -> harvest colors: style sheets, then attributes, then anything drawn later
+  // the brand green, its mint highlight and the dark text on green buttons, by name
+  var SWAP = { '34,208,127': [240, 163, 58], '134,230,182': [247, 207, 142], '6,33,11': [42, 22, 6], '7,19,13': [31, 16, 7] };
+  // every navy and blue-gray (backgrounds, cards, borders, gray text; dozens of shades): red and blue
+  // trade places, so navy turns brown and blue-gray turns cream. Purples, real blues, the pink-red
+  // misses and the green hits don't pass the test.
+  function harvest(r, g, b) {
+    var k = SWAP[r + ',' + g + ',' + b];
+    if (k) return k;
+    if (b - r > 12 && b - r < 110 && b >= g && g >= r && b <= 245) return [b, g, r];
+  }
+  var HEX = /#([0-9a-f]{6})\b/gi, RGBA = /(rgba?\(\s*)(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/g;
+  function swap(v) {
+    return v.replace(HEX, function (m, h) {
+      var n = harvest(parseInt(h.substr(0, 2), 16), parseInt(h.substr(2, 2), 16), parseInt(h.substr(4, 2), 16));
+      return n ? '#' + n.map(function (c) { return (c < 16 ? '0' : '') + c.toString(16); }).join('') : m;
+    }).replace(RGBA, function (m, a, r, g, b) { var n = harvest(+r, +g, +b); return n ? a + n.join(', ') : m; });
+  }
+  // a style attribute: everything but the team colors (--tc1 and friends on the pick cards)
+  function swapStyle(v) {
+    return v.split(';').map(function (d) { return /^\s*--tc/.test(d) ? d : swap(d); }).join(';');
+  }
+  var SHORT = ['background', 'border', 'border-top', 'border-right', 'border-bottom', 'border-left', 'outline'];
+  function recolorRules(rules) {
+    for (var i = 0; i < rules.length; i++) {
+      var r = rules[i];
+      if (r.style) {
+        for (var j = 0; j < r.style.length; j++) {
+          var p = r.style[j], v = r.style.getPropertyValue(p), n = swap(v);
+          if (n !== v) r.style.setProperty(p, n, r.style.getPropertyPriority(p));
+        }
+        // a shorthand with a var() in it (the pick cards' team-color backgrounds) isn't split into
+        // longhands, so it only shows up under its own name
+        SHORT.forEach(function (p) {
+          var v = r.style.getPropertyValue(p), n = v && swap(v);
+          if (n && n !== v) r.style.setProperty(p, n, r.style.getPropertyPriority(p));
+        });
+      }
+      if (r.cssRules) recolorRules(r.cssRules);
+    }
+  }
+  var done = [];
+  function recolorSheets() {         // sheets not seen yet (thanksgiving.css and late ones arrive after the rest)
+    for (var i = 0; i < document.styleSheets.length; i++) {
+      var s = document.styleSheets[i];
+      if (done.indexOf(s) >= 0) continue;
+      try { if (s.cssRules.length) { recolorRules(s.cssRules); done.push(s); } } catch (e) { /* another site's sheet, or still loading */ }
+    }
+  }
+  var ATTRS = ['style', 'fill', 'stroke', 'stop-color', 'content'];   // content: <meta name="theme-color">
+  function recolorNode(el) {
+    if (!el.getAttribute) return;
+    ATTRS.forEach(function (a) {
+      var v = el.getAttribute(a);
+      if (v) { var n = a === 'style' ? swapStyle(v) : swap(v); if (n !== v) el.setAttribute(a, n); }
+    });
+  }
+  function recolorTree(el) {
+    if (el.nodeType !== 1) return;
+    recolorNode(el);
+    el.querySelectorAll('[style],[fill],[stroke],[stop-color]').forEach(recolorNode);
+  }
 
   var HIDE = 'ps-tg-banner-hidden';
   function hidden() { try { return localStorage.getItem(HIDE) === '1'; } catch (e) { return false; } }
@@ -72,6 +138,18 @@
   }
 
   function decorate() {
+    recolorSheets();
+    document.querySelectorAll('meta[name="theme-color"]').forEach(recolorNode);
+    recolorTree(document.body);
+    new MutationObserver(function (ms) {
+      ms.forEach(function (m) {
+        if (m.type === 'attributes') recolorNode(m.target);
+        else m.addedNodes.forEach(function (n) { if (n.nodeName === 'STYLE' || n.nodeName === 'LINK') setTimeout(recolorSheets, 0); else recolorTree(n); });
+      });
+    }).observe(document.documentElement, { subtree: true, childList: true, attributes: true, attributeFilter: ATTRS });
+    window.addEventListener('load', recolorSheets);
+    css.addEventListener('load', recolorSheets);
+
     banner();
 
     // leaves drifting down behind the content: left edge, seconds per fall, start offset, size, shape
