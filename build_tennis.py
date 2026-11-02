@@ -755,7 +755,7 @@ def kalshi_for(km, name_a, name_b):
 # ---------------------------------------------------------------- picks
 PICK_COLS = ["src", "gid", "mid", "date", "tour", "event", "round", "surface", "bo", "pid", "player", "oid", "opp",
              "stat", "line", "side", "prob", "price", "lists", "actual", "score", "res", "start", "px0", "pxc",
-             "mv", "lk", "pp", "kp", "pd", "kd", "vn", "th", "pj", "elo", "oelo"]
+             "mv", "lk", "pp", "kp", "pd", "kd", "vn", "th", "pj", "elo", "oelo", "n", "on"]
 PICKS_FILE = "tennis_picks.json"
 DATA_FILE = "tennis.json"
 TEMPLATE = "tennis_template.html"
@@ -773,6 +773,12 @@ VALUE_MIN_EDGE, VALUE_MAX_EDGE = 0.08, 0.20
 # 0.67-0.69 at the middle line), so total games, spreads, set winners and exact scores are recorded and
 # graded (the edge tracker shows how they'd have done) but never listed as Value.
 VALUE_STATS = {"ml"}
+# ATP only, both players with VALUE_MIN_MATCHES+ matches (since Nov 2, 2026). On Kalshi's pre-match prices
+# from Aug 26 to Nov 2, 2026, WTA Value spots lost money in both halves (-39.7% and -4.7% ROI, 118 bets)
+# and ATP ones made money in both; ATP with both players at 30+ matches was +14.2% on 117 bets (+40.1%,
+# then +3.2%). Not proven either way: the edge tracker's tennis rows keep score.
+VALUE_TOURS = {"atp"}
+VALUE_MIN_MATCHES = 30
 # Top 25 Surest, the NHL and MLB rule: up to TOP_N sides the model gives T_MIN_PROB+ with a live price
 # ($25+ offered), ranked by the model's chance, one per match market. Any market can make it.
 TOP_N = 25
@@ -898,7 +904,8 @@ def pick_key(p):
 def value_ok(p):
     pr = p.get("price")
     return (pr is not None and not p.get("th") and p.get("stat") in VALUE_STATS and VALUE_MIN_PRICE <= pr <= VALUE_MAX_PRICE
-            and VALUE_MIN_EDGE <= p["prob"] - pr <= VALUE_MAX_EDGE)
+            and VALUE_MIN_EDGE <= p["prob"] - pr <= VALUE_MAX_EDGE and p.get("tour") in VALUE_TOURS
+            and min(p.get("n") or 0, p.get("on") or 0) >= VALUE_MIN_MATCHES)
 
 
 def top_ok(p):
@@ -1033,6 +1040,7 @@ def update_picks(picks, upcoming, R, km, pm_list, books, by_mid, now, gone=()):
                 continue
             prev = (p.get("price"), p.get("vn"), p.get("th"))
             p.update(prob=s["prob"], start=m["start"], elo=round(m["elo"][s["pid"]]), oelo=round(m["elo"][s["oid"]]),
+                     n=m["n"][s["pid"]], on=m["n"][s["oid"]],
                      pp=s.get("pp"), pd=s.get("pd"), kp=s.get("kp"), kd=s.get("kd"))
             p["price"], p["vn"], p["th"] = prev
             depth.choose(p)
@@ -1125,6 +1133,7 @@ def main():
         if min(R["n"].get(u["p1"], 0), R["n"].get(u["p2"], 0)) < MIN_MATCHES:
             continue
         u["names"] = {u["p1"]: names.get(u["p1"], ""), u["p2"]: names.get(u["p2"], "")}
+        u["n"] = {p: R["n"].get(p, 0) for p in (u["p1"], u["p2"])}       # matches played (Value needs 30+ each)
         u["elo"] = {p: (1 - ELO["surfW"]) * R["o"].get(p, ELO["start"]) + ELO["surfW"] * R["s"][u["surface"]].get(p, ELO["start"])
                     for p in (u["p1"], u["p2"])}
         u["_price"] = price_match(win_chance(R, u["p1"], u["p2"], u["surface"], u["tour"]), u["tour"], u["surface"], u["bo"])

@@ -165,7 +165,7 @@ class ListTest(unittest.TestCase):
 
     def p(self, **kw):
         base = {"mid": "1", "pid": "a", "stat": "ml", "line": 0.0, "side": "over", "res": None, "start": "2026-03-02T18:00Z",
-                "prob": 0.6, "price": 0.5, "th": None, "lists": ""}
+                "prob": 0.6, "price": 0.5, "th": None, "lists": "", "tour": "atp", "n": 40, "on": 40}
         base.update(kw)
         return base
 
@@ -176,7 +176,9 @@ class ListTest(unittest.TestCase):
                  self.p(price=0.5, prob=0.55),         # edge under 8
                  self.p(price=0.4, prob=0.65),         # edge over 20
                  self.p(stat="games", line=20.5),      # not a match winner
-                 self.p(th=1)]                         # thin
+                 self.p(th=1),                         # thin
+                 self.p(tour="wta"),                   # WTA: lost money against Kalshi prices
+                 self.p(on=29)]                        # a player with under 30 matches
         T.assign_lists([ok] + rules, self.NOW)
         self.assertEqual(ok["lists"], "V")
         self.assertTrue(all("V" not in r["lists"] for r in rules))
@@ -202,7 +204,7 @@ class UpdateTest(unittest.TestCase):
 
     def match(self, with_pm=True):
         m = {"mid": "7", "tour": "atp", "event": "Open", "round": "R1", "surface": "hard", "bo": 3, "p1": "a", "p2": "b",
-             "names": {"a": "Al A", "b": "Bo B"}, "elo": {"a": 1700.0, "b": 1600.0}, "start": "2026-03-02T18:00Z",
+             "names": {"a": "Al A", "b": "Bo B"}, "elo": {"a": 1700.0, "b": 1600.0}, "n": {"a": 50, "b": 50}, "start": "2026-03-02T18:00Z",
              "locked": False, "_price": T.price_match(0.64, "atp", "hard", 3), "_kx": None}
         if with_pm:
             m["_pm"] = {"slug": "s", "long": "Al A", "short": "Bo B",

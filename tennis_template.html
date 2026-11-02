@@ -663,13 +663,14 @@ details.valrules>summary{cursor:pointer}
 
 <div id="page-week">
   <div class="panel" id="valuepanel" hidden>
-    <div class="mkthead"><h2>⚡ Value spots<button type="button" class="qhelp hq" data-help="value" aria-expanded="false" aria-label="What are Value spots?"><span class="qi" aria-hidden="true">?</span></button></h2><span class="mktmuted">match winners: market gives it 30-80%, model is 8-20 points better</span><span class="mktmuted" id="recV"></span></div>
+    <div class="mkthead"><h2>⚡ Value spots<button type="button" class="qhelp hq" data-help="value" aria-expanded="false" aria-label="What are Value spots?"><span class="qi" aria-hidden="true">?</span></button></h2><span class="mktmuted">ATP match winners: market gives it 30-80%, model is 8-20 points better</span><span class="mktmuted" id="recV"></span></div>
     <details class="valrules">
-      <summary class="vrhead">What counts as a tennis value spot: all three rules have to be true</summary>
+      <summary class="vrhead">What counts as a tennis value spot: all four rules have to be true</summary>
       <ol class="vrlist">
         <li><span class="vrnum">1</span><span class="vrtxt"><b>The market gives it 30% to 80%.</b> The price you'd pay has to be <b>30¢ to 80¢</b>. <span class="vrwhy">No longshots, and no heavy favorites that pay almost nothing.</span></span></li>
         <li><span class="vrnum">2</span><span class="vrtxt"><b>Our model puts it 8 to 20 points higher.</b> <span class="vreg">40¢ ask → needs 48-60%</span> · <span class="vreg">60¢ → 68-80%</span>. <span class="vrwhy">A bigger gap against a busy tennis market is almost always news the ratings can't see: an injury, a withdrawal, a player carrying a knock. The gap is the <b>edge</b> on each card.</span></span></li>
         <li><span class="vrnum">3</span><span class="vrtxt"><b>It's a match winner.</b> <span class="vrwhy">Set winners, exact scores, game spreads and total games are priced on every match and graded in Past picks, but they don't make this list until they've shown a record: on the backtest the totals were barely better than a coin flip.</span></span></li>
+        <li><span class="vrnum">4</span><span class="vrtxt"><b>It's an ATP match and both players have 30+ matches behind them.</b> <span class="vrwhy">On Kalshi's real pre-match prices from August 26 to November 2, 2026, WTA value spots lost money in both halves of that stretch (−22% overall, 118 picks), while ATP ones with both players at 30+ matches made money in both (+14%, 117 picks, though only +3% in October). Two months isn't proof either way: every WTA side is still priced, recorded and graded in Past picks.</span></span></li>
       </ol>
       <div class="vrfoot">The rules are tested against the <b>cheaper of the Polymarket and Kalshi prices for that side with at least $25 offered</b> at it (or within 2¢), the price you'd actually pay. Never both players in one match. Both players need <b>8+ matches</b> in the data. Tennis starts are often later than listed (a match "follows" the one before it on that court), so a pick can lock well before the first ball. <b>New sport:</b> the tennis model has a backtest behind it but no record against prices yet, so treat it as a test until Past picks has a few hundred graded.</div>
     </details>
@@ -746,7 +747,7 @@ details.valrules>summary{cursor:pointer}
     <div class="mktmuted" style="margin:-4px 0 12px;display:flex;gap:8px 18px;align-items:center;flex-wrap:wrap;font-size:13px;line-height:1.5">
       <span style="text-transform:uppercase;letter-spacing:.6px;font-weight:700;font-family:var(--dispers)">Lists key:</span>
       <span><span class="listchip T">T</span> = Top 25 Surest — up to 25 sides with a 90%+ model chance and a live Polymarket or Kalshi price</span>
-      <span><span class="listchip V">V</span> = Value — a match winner the cheaper of Polymarket and Kalshi priced at 30-80¢, with the model 8-20 points higher</span>
+      <span><span class="listchip V">V</span> = Value — an ATP match winner (both players 30+ matches) the cheaper of Polymarket and Kalshi priced at 30-80¢, with the model 8-20 points higher</span>
     </div>
     <div class="chartwrap"><table class="edgetbl" id="pktbl"></table></div>
     <div style="margin-top:10px;display:flex;gap:10px;align-items:center;flex-wrap:wrap"><button id="pkmore" class="btn ghost" hidden>Show more</button><button id="pkall" class="btn ghost" hidden>Show all</button><span class="mktmuted" id="pkcountb"></span></div>
@@ -882,7 +883,7 @@ let PICKS=null, PICKS_FULL=false, fullPicksLoading=false;
 // exchanges, so it was never recommended and Past picks leaves it out (as PS.thinOut on the other pages).
 function thinOut(p){ if(!p || !p.th || p.lists || p.price==null || p.prob==null) return false;
   const e = p.prob - p.price;
-  return (p.stat === 'ml' && p.price >= 0.30 && p.price <= 0.80 && e >= 0.08 && e <= 0.20) || p.prob >= 0.90; }
+  return (p.stat === 'ml' && p.tour === 'atp' && Math.min(p.n||0, p.on||0) >= 30 && p.price >= 0.30 && p.price <= 0.80 && e >= 0.08 && e <= 0.20) || p.prob >= 0.90; }
 function setPicks(d, full){
   if(!full && PICKS_FULL) return;      // the full history came in first (Past opened): a late recent file doesn't replace it
   if(!d||!d.picks){ PICKS=PICKS||[]; } else { const cols=d.cols; PICKS=d.picks.map(row=>PS.capPick(Object.fromEntries(cols.map((c,i)=>[c,row[i]])))).filter(p=>!thinOut(p)); }
@@ -988,10 +989,10 @@ function renderValue(){ const panel=$('valuepanel'), body=$('valuebody'); if(!pa
   panel.hidden=false;
   const all=listRows('V');
   if(!all.length){ body.innerHTML = upcomingPicks().length
-      ? `<p class="mktnote">No value spots right now. All three rules above are tested against a live price, and no match winner on the upcoming slate clears them. It refills as prices move (every 10 minutes).</p>`
+      ? `<p class="mktnote">No value spots right now. All four rules above are tested against a live price, and no ATP match winner on the upcoming slate clears them. It refills as prices move (every 10 minutes).</p>`
       : scheduleNote('Value spots'); return; }
   const rows=sortRows(all, valueSort.key, valueSort.dir).slice(0,50);
-  body.innerHTML=pickTable(rows, valueSort)+`<p class="mktnote" style="margin-top:8px"><b>${rows.length}</b> match winner${rows.length===1?'':'s'} clear all three rules at the recorded price. Picks are recorded before ${TIPOFF} and graded in <b>Past picks</b>. Backward-looking; not advice.</p>`;
+  body.innerHTML=pickTable(rows, valueSort)+`<p class="mktnote" style="margin-top:8px"><b>${rows.length}</b> ATP match winner${rows.length===1?'':'s'} clear all four rules at the recorded price. Picks are recorded before ${TIPOFF} and graded in <b>Past picks</b>. Backward-looking; not advice.</p>`;
   wireTable(body, rows, valueSort, renderValue);
 }
 

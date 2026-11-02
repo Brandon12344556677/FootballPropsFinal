@@ -60,7 +60,9 @@ STRATEGIES = [   # (key, label, sport or None, test)
     ("all-mlb", "Every MLB pick", "mlb", lambda p: True),
     ("all-nfl", "Every NFL pick", "nfl", lambda p: True),
     ("all-nba", "Every NBA pick", "nba", lambda p: True),
-    ("tennis-value", "Tennis Value spots (match winners)", "tennis", lambda p: "V" in p["lists"]),
+    ("tennis-value", "Tennis Value spots (ATP match winners, both players 30+ matches)", "tennis", lambda p: "V" in p["lists"]),
+    ("tennis-ml-wta-edge", "Tennis WTA match winners the old Value rule took (30-80c, model 8-20 over)", "tennis",
+     lambda p: p["stat"] == "ml" and p.get("tour") == "wta" and 0.30 <= p["pr"] <= 0.80 and 0.08 <= (p["prob"] or 0) - p["pr"] <= 0.20),
     ("tennis-top", "Tennis Top 25 Surest", "tennis", lambda p: "T" in p["lists"]),
     ("tennis-ml", "Tennis match winners, every priced side", "tennis", lambda p: p["stat"] == "ml"),
     ("tennis-ml-fav", "Tennis match winners, model favorite (50%+)", "tennis", lambda p: p["stat"] == "ml" and (p["prob"] or 0) >= 0.5),
@@ -132,7 +134,7 @@ def graded(sport, doc):
             continue
         out.append({"sport": sport, "day": day, "pr": pr, "win": p["res"] == "hit", "side": p.get("side") or "over",
                     "stat": p.get("stat"), "line": p.get("line"), "lists": p.get("lists") or "",
-                    "p0": p0, "prob": p.get("prob"), "pos": p.get("pos")})   # for the private rules' filters
+                    "p0": p0, "prob": p.get("prob"), "pos": p.get("pos"), "tour": p.get("tour")})   # for the private rules' filters
     return out
 
 

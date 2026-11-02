@@ -13,7 +13,7 @@ README.md has the full feature tour; this file is the working rules.
   markets: match winner (Polymarket US + Kalshi), set winner, exact score, game spread, total games (Kalshi). Elo per player
   (overall + per surface) over ESPN results cached in `tennis_results.json`, played out game by game for every scoreline
   (`HOLD`/`TAU`/`OVER_SHIFT` fit on 2026: `python build_tennis.py backtest`). Its `MODEL` block is Python only: the page shows the
-  recorded chances and never recomputes them. Value = match winners only, 30-80c, model 8-20 points over; Top 25 = up to 25 at 90%+ with a $25+ price (the NHL/MLB rule),
+  recorded chances and never recomputes them. Value = ATP match winners only, both players 30+ matches (WTA lost in a Kalshi price backtest, Nov 2, 2026), 30-80c, model 8-20 points over; Top 25 = up to 25 at 90%+ with a $25+ price (the NHL/MLB rule),
   any market. A retirement grades the match winner and voids the rest. `build_today.NOT_FEATURED` keeps tennis off every featured
   feed (home picks, Pick of the Day, 3 Picks, posts, parlays, pooled calibration) and `build_players.py`/`build_games.py` skip it,
   until it has a track record.
