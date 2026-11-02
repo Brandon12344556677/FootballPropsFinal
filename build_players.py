@@ -319,7 +319,7 @@ def main():
     built = now.astimezone(ET).strftime("%b %-d, %-I:%M %p ET")
     global FAIR_W
     try:
-        FAIR_W = T.fair_weight([(sp, T.load(pf)) for sp, _, pf, _ in T.SPORTS if os.path.exists(pf)])["w"]
+        FAIR_W = T.fair_weight([(sp, T.load(pf)) for sp, _, pf, _ in T.SPORTS if os.path.exists(pf) and sp not in T.NOT_FEATURED])["w"]
     except Exception as e:   # keep the default
         print(f"  fair weight: default ({e})")
     entries, urls, written, keep = {}, [f"{SITE}/{OUT}/"], 0, set()
@@ -330,6 +330,8 @@ def main():
             if os.path.isdir(d):
                 urls += [f"{SITE}/{OUT}/{sport}/{fn}" for fn in sorted(os.listdir(d)) if fn.endswith(".html")]
     for sport, data_file, picks_file, template in T.SPORTS:
+        if sport in T.NOT_FEATURED:
+            continue      # tennis: its own page only (no prop pages, no team games)
         if not all(os.path.exists(f) for f in (data_file, picks_file, template)):
             continue
         try:

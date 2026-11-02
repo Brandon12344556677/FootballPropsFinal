@@ -294,7 +294,7 @@ def main():
     now = datetime.datetime.now(datetime.timezone.utc)
     built = now.astimezone(ET).strftime("%b ") + str(now.astimezone(ET).day) + now.astimezone(ET).strftime(", %I:%M %p ET").replace(" 0", " ")
     try:
-        P.FAIR_W = T.fair_weight([(sp, T.load(pf)) for sp, _, pf, _ in T.SPORTS if os.path.exists(pf)])["w"]
+        P.FAIR_W = T.fair_weight([(sp, T.load(pf)) for sp, _, pf, _ in T.SPORTS if os.path.exists(pf) and sp not in T.NOT_FEATURED])["w"]
     except Exception as e:
         print(f"  fair weight: default ({e})")
     listing, keep, best_counts = {}, set(), {}
@@ -307,6 +307,8 @@ def main():
     kept = {sp: {k: d for k, d in keys.items() if isinstance(d, str) and d >= today} for sp, keys in kept.items() if isinstance(keys, dict)}
     urls = [f"{SITE}/{OUT}/", f"{SITE}/{BEST}/"] + [f"{SITE}/{g}" for g in GUIDES]
     for sport, data_file, picks_file, template in T.SPORTS:
+        if sport in T.NOT_FEATURED:
+            continue      # tennis: its own page only (no prop pages, no team games)
         if not all(os.path.exists(f) for f in (data_file, picks_file, template)):
             continue
         try:

@@ -40,8 +40,8 @@ REF_RE = re.compile(r"(?:^|/)ref/([a-z0-9-]{2,24})/(new|visit)$")   # app.js: re
 STAY_MARKS = ["0s", "10s", "20s", "1m", "3m", "10m", "30m"]   # same labels as app.js: ref/<code>/stay/<mark>
 STAY_SECS = [5, 15, 40, 120, 390, 1200, 1800]   # a visit that left between two marks counts as the middle; 30m+ as 30m
 STAY_RE = re.compile(r"(?:^|/)ref/([a-z0-9-]{2,24})/stay/([a-z0-9]+)$")
-SPORT_RE = re.compile(r"^/(?:(nfl|nba|nhl|mlb)\.html|(?:games|players)/(nfl|nba|nhl|mlb)/|best/(nfl|nba|nhl|mlb)\.html)")
-SPORTS = ("nfl", "nba", "nhl", "mlb")
+SPORT_RE = re.compile(r"^/(?:(nfl|nba|nhl|mlb|tennis)\.html|(?:games|players)/(nfl|nba|nhl|mlb)/|best/(nfl|nba|nhl|mlb)\.html)")
+SPORTS = ("nfl", "nba", "nhl", "mlb", "tennis")
 HIT_PAGES = 4      # /stats/hits returns at most 100 paths a call; page through up to 400
 SIZE_NAMES = {"phone": "Phone", "largephone": "Large phone", "tablet": "Tablet",
               "desktop": "Computer", "desktophd": "Large computer screen", "unknown": "(unknown)"}

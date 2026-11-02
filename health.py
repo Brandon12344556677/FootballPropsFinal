@@ -42,6 +42,7 @@ DATA = [  # sport, data file, picks file
     ("NBA", "nba.json", "nba_picks.json"),
     ("NHL", "nhl.json", "nhl_picks.json"),
     ("MLB", "mlb.json", "mlb_picks.json"),
+    ("Tennis", "tennis.json", "tennis_picks.json"),
 ]
 
 SKIP_RE = re.compile(r"^(\s*)(.+?): (?:\S+ )?skipped \((.*?)\)")

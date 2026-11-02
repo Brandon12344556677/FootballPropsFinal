@@ -301,13 +301,17 @@ window.PS = (function(){
 
   // ---- the Player tab's verdict card: the model's chance against the price, in one call ----
   // VALUE uses the site's own two rules (price 30¢+, model 15+ points better); SKIP means
-  // the price is above the model's chance; FAIR is everything between.
-  function verdictOf(prob, price){
+  // the price is above the model's chance; FAIR is everything between. o.listed: the pick is a Value
+  // spot under its own page's rules (tennis: 30-80¢, 8-20 points), which then decides VALUE.
+  function verdictOf(prob, price, listed){
     const pv=Math.round(prob*100);
     if(price==null) return {k:'none', label:'No price', say:"No Polymarket or Kalshi price for this exact line right now — the model's chance stands on its own. Check the price before you bet."};
     const c=Math.round(price*100), e=Math.round((prob-price)*100), sg=v=>(v>=0?'+':'−')+Math.abs(v);
     const fv=Math.round(100*fairOf(prob, price)), fe=fv-c;
-    if(price>=0.30 && prob-price>=0.15) return {k:'value', label:'Value', say:`Clears the value rules: the model says ${pv}% against a ${c}¢ price. The market usually knows more, though — blended, the fair chance is ${fv}%, an expected edge of ${sg(fe)}. A lead to check, not a lock.`};
+    if(listed!=null && !listed && prob-price>-0.03) return {k:'fair', label:'Fair', say: prob-price>=0.08
+      ? `The model is ${sg(e)} over a ${c}¢ price, but this side is outside this page's value rules. Fair chance ${fv}%.`
+      : `Fair chance ${fv}% against a ${c}¢ price. The model alone says ${pv}%.`};
+    if(listed || (listed==null && price>=0.30 && prob-price>=0.15)) return {k:'value', label:'Value', say:`Clears the value rules: the model says ${pv}% against a ${c}¢ price. The market usually knows more, though — blended, the fair chance is ${fv}%, an expected edge of ${sg(fe)}. A lead to check, not a lock.`};
     const an=/^(8|11|18)/.test(String(c))? 'an' : 'a';   // "an 80% chance", "a 60% chance"
     if(prob-price<=-0.03) return {k:'skip', label:'Skip', say:`At ${c}¢ you'd be paying for ${an} ${c}% chance; the model says ${pv}% and the fair chance is ${fv}%. Overpriced.`};
     if(price<0.30 && prob-price>=0.15) return {k:'fair', label:'Fair', say:`A big gap on paper (${sg(e)}), but at ${c}¢ it's a longshot — the value rules skip anything under 30¢. Fair chance ${fv}%.`};
@@ -320,7 +324,7 @@ window.PS = (function(){
     if(!el) return;
     if(!o || o.prob==null){ el.hidden=true; return; }       // keep the markup, so re-showing it doesn't replay the ring
     el._o=o;                                                  // repainted when the fitted fair weight arrives
-    const pv=Math.round(o.prob*100), v=verdictOf(o.prob, o.price);
+    const pv=Math.round(o.prob*100), v=verdictOf(o.prob, o.price, o.listed);
     const c=o.price!=null? Math.round(o.price*100) : null, e=c!=null? Math.round((o.prob-o.price)*100) : null;
     const tier=o.prob>=0.9?'hi':o.prob>=0.7?'mid':'lo';
     const fv=c!=null? Math.round(100*fairOf(o.prob, o.price)) : null;
@@ -442,7 +446,7 @@ window.PS = (function(){
     document.querySelectorAll('.psview button').forEach(b=>b.setAttribute('aria-pressed', String(b.dataset.v===v)));
     const gc=window.goatcounter;
     if(how && gc && typeof gc.count==='function'){
-      const page=(location.pathname.match(/\/(nfl|nba|nhl|mlb)\.html$/) || [])[1] || 'home', k='view-'+v+(how==='switch'? '-switch' : '');
+      const page=(location.pathname.match(/\/(nfl|nba|nhl|mlb|tennis)\.html$/) || [])[1] || 'home', k='view-'+v+(how==='switch'? '-switch' : '');
       gc.count({path:'click/'+k+'/'+page, title:(how==='switch'? 'Switched to ' : 'Chose ')+v+' on '+page, event:true});
     }
   }
@@ -537,8 +541,8 @@ window.PS = (function(){
   }
 
   // which sport board this is (null on the home page and the other pages)
-  const PAGE_SPORT=(location.pathname.match(/\/(nfl|nba|nhl|mlb)\.html$/)||[])[1]||null;
-  const SPORT_LBL={nfl:'NFL', nba:'NBA', nhl:'NHL', mlb:'MLB'};
+  const PAGE_SPORT=(location.pathname.match(/\/(nfl|nba|nhl|mlb|tennis)\.html$/)||[])[1]||null;
+  const SPORT_LBL={nfl:'NFL', nba:'NBA', nhl:'NHL', mlb:'MLB', tennis:'Tennis'};
 
   // share pages that exist for this board's picks (p/keys.json, build_games.py): {sport: {key: expiry}}
   let SHARE_KEYS=null;
@@ -552,6 +556,8 @@ window.PS = (function(){
   // Plain-English reasons for a pick, from its own numbers: the last games against the line, the
   // streak, the average against the line, and the model against the market price.
   function reasonHtml(o){
+    // o.why: the page's own reasons (trusted markup, data escaped), for markets a game log doesn't fit (tennis)
+    if(o.why) return o.why.length? `<div class="ps-why"><b>Why</b><ul>${o.why.map(x=>`<li>${x}</li>`).join('')}</ul></div>` : '';
     const v=(o.vals||[]).filter(x=>x!=null && isFinite(x)).slice(-10), line=+o.line, under=o.side==='under';
     if(v.length<3 || !isFinite(line)) return '';
     const clears=x=> under? x<line : x>line, hits=v.filter(clears).length;
@@ -1075,7 +1081,7 @@ window.PSLive=(function(){
 // e.g. "click/polymarket-site/nfl" (what was clicked, then which page). No ID or cookie.
 // team_stats.py reads these for the team dashboard and keeps them out of the visit counts.
 (function(){
-  const PAGE = (location.pathname.match(/\/(nfl|nba|nhl|mlb)\.html$/) || [])[1] || 'home';
+  const PAGE = (location.pathname.match(/\/(nfl|nba|nhl|mlb|tennis)\.html$/) || [])[1] || 'home';
   function kind(u){
     const h = u.hostname.replace(/^www\./,''), p = u.pathname;
     if (/(^|\.)polymarket\.(us|com)$/.test(h)) return /^\/(join|squad)\b/.test(p) ? 'polymarket-signup' : p === '/' ? 'polymarket-site' : 'polymarket-market';

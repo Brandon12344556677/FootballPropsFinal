@@ -36,7 +36,7 @@
 <script data-goatcounter="https://propstreaklive.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
 <link rel="stylesheet" href="fonts.css">
 <link rel="stylesheet" href="app.css?v=20261015b">
-<script src="app.js?v=20261022a"></script>
+<script src="app.js?v=20261102a"></script>
 <script src="/thanksgiving.js?v=20261101b"></script>
 <style>
 :root{
@@ -315,11 +315,12 @@ h2 i{color:var(--green)}
 /* wide screens: sport tiles and the player search share one row, so both picks fit on the first screen */
 @media (min-width:1000px){.pickbar .wrap{grid-template-columns:minmax(0,1.75fr) minmax(0,1fr)}.pickbar .wrap>*{grid-column:1/-1}
   .pickbar .wrap>.sports{grid-column:1}.pickbar .wrap>.psearch{grid-column:2;display:flex}.psearch input{height:100%}
-  .pickbar .sport{padding-top:10px;padding-bottom:10px;gap:10px}.pickbar .sport .ico{width:36px;height:36px;flex:none}.pickbar .sport small{white-space:nowrap;font-size:12px}}
+  .pickbar .sport{padding-top:10px;padding-bottom:10px;gap:10px}.pickbar .sport .ico{width:36px;height:36px;flex:none}.pickbar .sport small{font-size:12px;overflow-wrap:anywhere}}
 .pickbar-h{margin:0;font-family:var(--cond);font-size:14px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--green)}
-.pickbar .sports{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:0}
+.pickbar .sports{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px;margin:0}
 .pickbar .sport{min-width:0}
-@media (max-width:620px){.pickbar{padding-top:12px}.pickbar .sports{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.pickbar .sport{padding:12px}}
+@media (max-width:620px){.pickbar{padding-top:12px}.pickbar .sports{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.pickbar .sport{padding:12px}
+  .pickbar .sport:last-child:nth-child(odd){grid-column:1/-1}}
 .pickbar h1{margin:6px 0 0;font-size:clamp(30px,3.6vw,44px);text-wrap:balance}
 .pickbar .lede{margin:0 0 4px;font-size:16px;max-width:none}
 .pickbar-more{margin:0;font-size:14px;color:var(--muted);white-space:nowrap}
@@ -554,6 +555,7 @@ footer .fine a{color:#8394ab}
         <a class="sport" href="./nba.html"><span class="ico" aria-hidden="true">🏀</span><span><b>NBA</b><small data-rec="nba">Basketball props</small></span></a>
         <a class="sport" href="./nhl.html"><span class="ico" aria-hidden="true">🏒</span><span><b>NHL</b><small data-rec="nhl">Hockey props</small></span></a>
         <a class="sport" href="./mlb.html"><span class="ico" aria-hidden="true">⚾</span><span><b>MLB</b><small data-rec="mlb">Baseball props</small></span></a>
+        <a class="sport" href="./tennis.html"><span class="ico" aria-hidden="true">🎾</span><span><b>Tennis</b><small data-rec="tennis">ATP &amp; WTA matches</small></span></a>
       </div>
       <!-- Player search across all four sports (search.json, from build_today.py), loaded on first focus -->
       <div class="psearch">
@@ -677,7 +679,7 @@ footer .fine a{color:#8394ab}
     <div class="row">
       <a class="brand" href="./"><svg width="28" height="28" viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" rx="14" fill="#0f2038"/><path d="M32,6 Q32,32 54,32 Q32,32 32,58 Q32,32 10,32 Q32,32 32,6 Z" fill="#22d07f"/></svg><b>Prop <i>Streak</i> Lab</b></a>
       <nav aria-label="Footer">
-        <a href="./nfl.html">NFL</a><a href="./nba.html">NBA</a><a href="./nhl.html">NHL</a><a href="./mlb.html">MLB</a>
+        <a href="./nfl.html">NFL</a><a href="./nba.html">NBA</a><a href="./nhl.html">NHL</a><a href="./mlb.html">MLB</a><a href="./tennis.html">Tennis</a>
         <a href="players/">Players</a><a href="methodology.html">How the model works</a><a href="privacy.html">Privacy Policy</a><a href="terms.html">Terms &amp; Conditions</a><a href="cookies.html">Cookies Policy</a><a href="games/">Games</a><a href="best/">Best props</a><a href="#email">Free daily email</a><a href="guides/">Guides</a><a href="team/">Team</a>
         <a href="mailto:info@propstreaklab.com">Contact</a>
       </nav>
@@ -734,7 +736,7 @@ const reduce = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)
 
 // The Today feed and the sections below it, from today.json (rebuilt every 10 minutes).
 (function(){ if(!window.PS) return;
-  const esc=PS.esc, SPORT={nfl:'🏈 NFL', nba:'🏀 NBA', nhl:'🏒 NHL', mlb:'⚾ MLB'};
+  const esc=PS.esc, SPORT={nfl:'🏈 NFL', nba:'🏀 NBA', nhl:'🏒 NHL', mlb:'⚾ MLB', tennis:'🎾 Tennis'};
   const get=u=>fetch(u,{cache:'no-store'}).then(r=>r.ok?r.json():null).catch(()=>null);
   const ahead=p=>Date.parse(p.start)>Date.now();
   let FAIRW=0.1;   // the model's weight in the fair chance (today.json refits it hourly)
@@ -838,7 +840,7 @@ const reduce = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)
   // opens that player on their board (#player/<id>). Accents and punctuation are ignored.
   (function(){
     const inp=document.getElementById('psq'), list=document.getElementById('psres'); if(!inp||!list) return;
-    const LBL={nfl:'NFL', nba:'NBA', nhl:'NHL', mlb:'MLB'};
+    const LBL={nfl:'NFL', nba:'NBA', nhl:'NHL', mlb:'MLB', tennis:'Tennis'};
     const norm=s=>String(s||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase().replace(/[^a-z0-9 ]+/g,'');
     let rows=null, loading=null, hits=[], active=-1;
     const load=()=> loading || (loading=fetch('search.json',{cache:'no-store'}).then(r=>r.ok? r.json() : null)

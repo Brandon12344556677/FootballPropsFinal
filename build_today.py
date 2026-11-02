@@ -41,7 +41,13 @@ SPORTS = [
     ("nba", "nba.json", "nba_picks.json", "nba_template.html"),
     ("nhl", "nhl.json", "nhl_picks.json", "nhl_template.html"),
     ("mlb", "mlb.json", "mlb_picks.json", "mlb_template.html"),
+    ("tennis", "tennis.json", "tennis_picks.json", "tennis_template.html"),
 ]
+# New sports: on their own page, with their record, last results and recent-picks file, but kept off
+# everything the site features (Today's picks, Pick of the Day, 3 Picks of the Day, posts, streaks, the
+# home live tracker, the pooled calibration and fair-chance fits) until they've built a track record.
+# Tennis (added Nov 2, 2026) prices match markets, not player props, so the prop-shaped feeds don't fit it yet.
+NOT_FEATURED = {"tennis"}
 OUT = "today.json"
 SEARCH_OUT = "search.json"   # the home page player search: [sport, id, name, team, pos] per player
 MAX_PICKS = 12          # the page shows up to 6; spares cover games that start before the next build
@@ -418,7 +424,10 @@ def calibration(docs):
 
 def search_rows(sport, db):
     """[sport, id, name, team, pos] for each player with a game this season or last, for the
-    home page's player search (search.json). Game rows start with the season."""
+    home page's player search (search.json). Game rows start with the season. Tennis lists each
+    rated player with a match in the last year (its game rows start with the date), the tour as team."""
+    if sport == "tennis":
+        return [[sport, str(p["id"]), p["n"], (p.get("t") or "").upper(), ""] for p in db.get("players") or [] if p.get("n")]
     season = db.get("season") or 0
     out = []
     for p in db.get("players") or []:
@@ -516,9 +525,11 @@ def main():
             db = load(data_file)
             rec[sport] = record(db)
             picks_doc = load(picks_file)
-            docs.append((sport, picks_doc))
-            got = upcoming(sport, db, picks_doc, stat_labels(template), stat_getters(template), now)
-            live += todays_listed(sport, db, picks_doc, stat_labels(template), today_et)
+            if sport not in NOT_FEATURED:
+                docs.append((sport, picks_doc))
+            got = upcoming(sport, db, picks_doc, stat_labels(template), stat_getters(template), now) if sport not in NOT_FEATURED else []
+            if sport not in NOT_FEATURED:
+                live += todays_listed(sport, db, picks_doc, stat_labels(template), today_et)
             g, first = graded(picks_doc)
             n_graded += g
             if first and (since is None or first < since):

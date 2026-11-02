@@ -1,6 +1,6 @@
 # Prop Streak Lab
 
-Player-prop research site (NFL, NBA, NHL, MLB) on GitHub Pages. A GitHub Action
+Player-prop research site (NFL, NBA, NHL, MLB, plus tennis match markets) on GitHub Pages. A GitHub Action
 rebuilds the data and pages every ~10 minutes and pushes straight to `main`.
 README.md has the full feature tour; this file is the working rules.
 
@@ -9,6 +9,14 @@ README.md has the full feature tour; this file is the working rules.
 - `build.py` (NFL, the only fatal step), `build_nba.py`, `build_nhl.py`, `build_mlb.py`:
   download data, grade picks, price props off Polymarket/Kalshi, write the sport's
   JSON files and bake them into its page. Standard library only — don't add packages.
+- `build_tennis.py` (since Nov 2, 2026): tennis, ATP and WTA singles. Neither exchange lists tennis player props, so it prices match
+  markets: match winner (Polymarket US + Kalshi), set winner, exact score, game spread, total games (Kalshi). Elo per player
+  (overall + per surface) over ESPN results cached in `tennis_results.json`, played out game by game for every scoreline
+  (`HOLD`/`TAU`/`OVER_SHIFT` fit on 2026: `python build_tennis.py backtest`). Its `MODEL` block is Python only: the page shows the
+  recorded chances and never recomputes them. Value = match winners only, 30-80c, model 8-20 points over; Top 25 = up to 25 at 90%+ with a $25+ price (the NHL/MLB rule),
+  any market. A retirement grades the match winner and voids the rest. `build_today.NOT_FEATURED` keeps tennis off every featured
+  feed (home picks, Pick of the Day, 3 Picks, posts, parlays, pooled calibration) and `build_players.py`/`build_games.py` skip it,
+  until it has a track record.
 - `build_today.py` → `today.json` (home feed), runs `botd.py` → `botd.json` (Pick of the Day; called Bet of the Day before Oct 12, 2026).
 - `build_players.py` → `players/`, `build_games.py` → `games/` (one page per upcoming game), `best/` (today's best props
   per sport) and `p/` (link-preview pages for shared picks, kept 14 days after the game), `health.py` → `health.json`,
@@ -72,9 +80,9 @@ README.md has the full feature tour; this file is the working rules.
 The bot overwrites these on every pass, so hand edits are lost and cause merge conflicts:
 
 - `nfl.html` ← `template.html`; `nba.html` ← `nba_template.html`; `nhl.html` ← `nhl_template.html`;
-  `mlb.html` ← `mlb_template.html`. Edit the template (and the builder), never the output page.
+  `mlb.html` ← `mlb_template.html`; `tennis.html` ← `tennis_template.html`. Edit the template (and the builder), never the output page.
 - `data.json`, `slate.json`, `picks.json`, `weekly.json`, `*_picks.json`, `*_stats.json`,
-  `nba.json`, `nhl.json`, `mlb.json`, `today.json`, `botd.json`, `health.json`, `top_cache.json`,
+  `nba.json`, `nhl.json`, `mlb.json`, `tennis.json`, `tennis_results.json`, `today.json`, `botd.json`, `health.json`, `top_cache.json`,
   `sitemap.xml`, `robots.txt`, `players/`, `games/`, `best/`, `p/`, `team/stats.enc`, `team/edges.enc`, `team/parlays.enc`, `team/parlays_nba.enc`, `team/parlays_nfl.enc`, `team/parlay_potd.enc`, `team/spreads.enc`, `team/tpod.enc`, `spread_scores.json`, `fast_hist.json`, `*_picks_recent.json`, `search.json`,
   `tiktok/<day>/` and `tiktok/posted.json` (the TikTok workflow; `tiktok/callback.html` is hand-written).
 
