@@ -14,6 +14,7 @@ timeout 8m python build.py 2>&1 | tee "$LOGDIR/build.log" || exit 1
 timeout 6m python build_nba.py 2>&1 | tee "$LOGDIR/build_nba.log" || echo "NBA build failed — skipping NBA files this run"
 timeout 6m python build_nhl.py 2>&1 | tee "$LOGDIR/build_nhl.log" || echo "NHL build failed — skipping NHL files this run"
 timeout 7m python build_mlb.py 2>&1 | tee "$LOGDIR/build_mlb.log" || echo "MLB build failed — skipping MLB files this run"
+timeout 6m python build_tennis.py 2>&1 | tee "$LOGDIR/build_tennis.log" || echo "Tennis build failed — skipping tennis files this run"
 
 # The home page's Today feed and Bet of the Day.
 timeout 3m python build_today.py 2>&1 | tee "$LOGDIR/build_today.log" || echo "today.json not rebuilt this run"
@@ -53,7 +54,7 @@ git add -A players 2>/dev/null || true
 git add -A games best p 2>/dev/null || true
 for f in nba.html nba.json nba_stats.json nba_picks.json \
          nhl.html nhl.json nhl_stats.json nhl_picks.json \
-         mlb.html mlb.json mlb_stats.json mlb_picks.json today.json botd.json posted.json top_cache.json health.json fast_hist.json \
+         mlb.html mlb.json mlb_stats.json mlb_picks.json          tennis.html tennis.json tennis_picks.json tennis_picks_recent.json tennis_results.json today.json botd.json posted.json top_cache.json health.json fast_hist.json \
          team/stats.enc team/edges.enc team/parlays.enc team/parlays_nba.enc team/parlays_nfl.enc team/parlay_potd.enc team/spreads.enc spread_scores.json team/tpod.enc nba_picks_recent.json nhl_picks_recent.json mlb_picks_recent.json search.json; do
   git add "$f" 2>/dev/null || true
 done

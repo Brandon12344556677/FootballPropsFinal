@@ -931,7 +931,7 @@ details.plpast>summary:focus-visible{outline:2px solid var(--accent);outline-off
     'polymarket-site':'Opened Polymarket','kalshi-site':'Opened Kalshi',
     'polymarket-site-sheet':'Opened Polymarket, from a pick','kalshi-site-sheet':'Opened Kalshi, from a pick',
     'view-simple':'Chose Simple (first visit)','view-pro':'Chose Pro (first visit)','view-simple-switch':'Switched to Simple','view-pro-switch':'Switched to Pro'};
-  const CLICK_PAGE = {home:'Home', nfl:'NFL', nba:'NBA', nhl:'NHL', mlb:'MLB'};
+  const CLICK_PAGE = {home:'Home', nfl:'NFL', nba:'NBA', nhl:'NHL', mlb:'MLB', tennis:'Tennis'};
   const isSignup = w => /-signup(-|$)/.test(w);   // includes the in-pick buttons (…-signup-sheet)
   function clickRows(rows){
     const m = new Map();
@@ -1099,7 +1099,7 @@ details.plpast>summary:focus-visible{outline:2px solid var(--accent);outline-off
     const searchN = refs.filter(r=>r.kind==='Search').reduce((a,b)=>a+b.n,0);
     if (total) acts.push(['Search', searchN ? `Search engines sent ${fmt(searchN)} visits (${pct(searchN, total)}% of all visits). The player pages and sport boards are what can rank, so keep their titles and descriptions specific.` : 'No search traffic in this range yet. Player pages and the sitemap are what search engines will index first.']);
     if (sysTotal && pct(mobile, sysTotal) >= 60) acts.push(['Mobile', `${pct(mobile, sysTotal)}% of visitors are on a phone, mostly iPhone. Check new features on a phone first and keep tables usable at narrow widths.`]);
-    const pages = mergePages(R.pages); const home = pages.find(p=>p.path==='/'); const boards = pages.filter(p=>/^\/(nfl|nba|nhl|mlb)\.html$/.test(p.path)).reduce((a,b)=>a+b.n,0);
+    const pages = mergePages(R.pages); const home = pages.find(p=>p.path==='/'); const boards = pages.filter(p=>/^\/(nfl|nba|nhl|mlb|tennis)\.html$/.test(p.path)).reduce((a,b)=>a+b.n,0);
     if (home && home.n > 0) acts.push(['Funnel', `For every 100 home page visits there were ${Math.round(boards/home.n*100)} visits to a sport board. A low number means people aren't clicking through from the home page.`]);
     if (total >= 50 && clicks.length && !signups) acts.push(['Sign-ups', 'Nobody clicked a Polymarket or Kalshi sign-up button in this range. Try putting the Polymarket and Kalshi links closer to the picks people open most.']);
     else if (signups) acts.push(['Sign-ups', `${fmt(signups)} clicks on sign-up buttons, ${(signups/Math.max(1,total)*100).toFixed(1)}% of visits. ${clicks.find(c=>isSignup(c.what)).name} gets the most.`]);
@@ -1180,7 +1180,7 @@ details.plpast>summary:focus-visible{outline:2px solid var(--accent);outline-off
     const total = R.total || 0;
     const locs = clean(R.locations), locN = locs.reduce((a,b)=>a+b.n,0), loc = locs[0];   // a share: see list()
     const sys = clean(R.systems), sysN = sys.reduce((a,b)=>a+b.n,0), mob = sys.filter(s=>/ios|android|ipados/i.test(s.name)).reduce((a,b)=>a+b.n,0);
-    const board = mergePages(R.pages).filter(p => /^\/(nfl|nba|nhl|mlb)\.html$/.test(p.path))[0];
+    const board = mergePages(R.pages).filter(p => /^\/(nfl|nba|nhl|mlb|tennis)\.html$/.test(p.path))[0];
     const signups = (R.clicks||[]).filter(c => isSignup(c.what)).reduce((a,b)=>a+b.n,0);
     const chans = mergeRefs(R.toprefs).filter(r => r.name !== 'No referrer').slice(0,3).map(r => r.name);
     const typ = typicalTime(R.time);

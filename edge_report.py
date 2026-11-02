@@ -36,10 +36,11 @@ PARLAY_POTD = os.path.join("team", "parlay_potd.enc")   # and Parlay of the Day
 SPREADS = os.path.join("team", "spreads.enc")           # spreads.py: the private game-spread test
 BOTD = "botd.json"
 ET = ZoneInfo("America/New_York")
-FILES = [("nfl", "picks.json"), ("nhl", "nhl_picks.json"), ("mlb", "mlb_picks.json"), ("nba", "nba_picks.json")]
+FILES = [("nfl", "picks.json"), ("nhl", "nhl_picks.json"), ("mlb", "mlb_picks.json"), ("nba", "nba_picks.json"),
+         ("tennis", "tennis_picks.json")]
 NHL_REGULAR = "2026-09-29"     # NHL 2026-27 regular season opener: anything earlier is left out (current season only)
 BOOT = 400
-WAITING = {"nba"}       # rows shown even before their first graded pick (the NBA season starts Oct 2026)
+WAITING = {"nba", "tennis"}   # rows shown even before their first graded pick (NBA season Oct 2026; tennis added Nov 2, 2026)
 WAITING_KEYS = {"parlays", "parlays-nba", "parlays-nfl", "parlay-potd", "spreads-all", "spreads-nba", "spreads-nfl", "spreads-nhl", "spreads-mlb", "botd-value", "botd-lock"}     # and rows for lists that start posting later
 OWN_ROWS = {"parlay", "parlay-nba", "parlay-nfl", "parlay-potd", "spread", "botd"}  # rows that repeat picks already counted: only their own strategies grade them
 
@@ -59,6 +60,16 @@ STRATEGIES = [   # (key, label, sport or None, test)
     ("all-mlb", "Every MLB pick", "mlb", lambda p: True),
     ("all-nfl", "Every NFL pick", "nfl", lambda p: True),
     ("all-nba", "Every NBA pick", "nba", lambda p: True),
+    ("tennis-value", "Tennis Value spots (match winners)", "tennis", lambda p: "V" in p["lists"]),
+    ("tennis-top", "Tennis Top 25 Surest", "tennis", lambda p: "T" in p["lists"]),
+    ("tennis-ml", "Tennis match winners, every priced side", "tennis", lambda p: p["stat"] == "ml"),
+    ("tennis-ml-fav", "Tennis match winners, model favorite (50%+)", "tennis", lambda p: p["stat"] == "ml" and (p["prob"] or 0) >= 0.5),
+    ("tennis-sets", "Tennis set winners", "tennis", lambda p: p["stat"] == "set"),
+    ("tennis-exact", "Tennis exact scores", "tennis", lambda p: p["stat"] == "exact"),
+    ("tennis-spread", "Tennis game spreads", "tennis", lambda p: p["stat"] == "spread"),
+    ("tennis-games-over", "Tennis total games, overs", "tennis", lambda p: p["stat"] == "games" and p["side"] == "over"),
+    ("tennis-games-under", "Tennis total games, unders", "tennis", lambda p: p["stat"] == "games" and p["side"] == "under"),
+    ("all-tennis", "Every tennis pick", "tennis", lambda p: True),
     ("botd-value", "Value Shot (Pick of the Day, pays 2x+)", "botd", lambda p: p["lists"] == "value"),
     ("botd-lock", "Safe Pick of the Day", "botd", lambda p: p["lists"] == "lock"),
     ("parlays", "Model parlays, NHL (three a day, 3-4.5x, 35-55% by the model)", "parlay", lambda p: True),
@@ -244,6 +255,11 @@ def current_season(rows):
     return [p for p in rows if not (p["sport"] == "nhl" and p["day"] < NHL_REGULAR)]
 
 
+# Private rules with no sport skip these: tennis prices match markets, not props, and is kept off the
+# private methods (and so off 3 Picks of the Day) as build_today.NOT_FEATURED keeps it off the feeds.
+PRIVATE_SKIP = {"tennis"}
+
+
 def rule_test(r):
     """A private rule as a pick test. Fields (any may be empty): sport, side, stat, line, pmin/pmax (the
     price), list ("V" Value spots, "T" Top 25), emin/emax (the model's chance minus the price, in points),
@@ -262,6 +278,8 @@ def rule_test(r):
     since = r.get("since") or None
 
     def test(p):
+        if sport is None and p["sport"] in PRIVATE_SKIP:
+            return False
         if not ((sport is None or p["sport"] == sport) and (side is None or p["side"] == side)
                 and (stat is None or p["stat"] == stat) and (line is None or p.get("line") == line)
                 and (lo is None or p["pr"] >= lo) and (hi is None or p["pr"] < hi)):
