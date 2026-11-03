@@ -1,11 +1,4 @@
 {
- "problems": {
-  "build_tennis: polymarket US atp": {
-   "first": "2026-11-03T13:08:29Z",
-   "runs": 1,
-   "alerted": null,
-   "msg": "build_tennis.py: polymarket US atp failed (The read operation timed out)"
-  }
- },
+ "problems": {},
  "alert": []
 }
