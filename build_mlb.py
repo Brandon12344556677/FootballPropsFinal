@@ -29,6 +29,7 @@ from concurrent.futures import ThreadPoolExecutor
 import news   # pre-game news feeds, test mode
 import kalshi  # Kalshi prices, side by side with Polymarket's
 import depth   # enough money at the price? (thin-market filter)
+import arbs    # Polymarket US / Kalshi arbitrage finder (team only)
 import holds   # props that wait for injury news
 
 TODAY = datetime.date.today()
@@ -1384,6 +1385,7 @@ def main():
     except Exception as e:  # noqa: BLE001
         print(f"  kalshi: skipped ({e})")
         kalshi_mkts = None
+    arbs.note("mlb", arbs.from_games(poly_games), kalshi_mkts, pkey)   # team-only arb finder (arbs.py)
 
     picks = load_picks()
     graded, dnp = grade_picks(picks, by_pid, box_games(store["rows"]), set(store["done"]))

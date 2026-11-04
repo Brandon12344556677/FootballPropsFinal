@@ -23,6 +23,7 @@ from zoneinfo import ZoneInfo
 import news   # pre-game news feeds, test mode
 import kalshi  # Kalshi prices, side by side with Polymarket's
 import depth   # enough money at the price? (thin-market filter)
+import arbs    # Polymarket US / Kalshi arbitrage finder (team only)
 import holds   # props that wait for injury news
 
 TODAY = datetime.date.today()
@@ -1427,7 +1428,8 @@ def fetch_pmus_prices(slate_games, sched=None):
             out[(pkey(who), sk, round(n - 0.5, 1))] = {
                 "over": int(round(over * 100)) if over is not None else None,
                 "under": int(round(under * 100)) if under is not None else None,
-                "slug": m.get("slug")}      # for its order book (depth.verify)
+                "slug": m.get("slug"),      # for its order book (depth.verify)
+                "who": who, "dates": dates}  # for arbs.note
     return out, games
 
 
@@ -2280,6 +2282,7 @@ def main():
             print(f"  kalshi: skipped ({e})")
             kal_mkts = None
         kal = kalshi.index(kal_mkts, pkey) if kal_mkts else None
+        arbs.note("nfl", arbs.from_pmus(pmus), kal_mkts, pkey)   # team-only arb finder (arbs.py)
         total, added, updated = build_live_picks(picks, slate_games, sched, by_key, snapshot(SEASON), pmus, kal)
         print(f"  slate: {len(slate_games)} games, {total} props modeled ({added} new, {updated} refreshed)")
         locked = lock_picks(picks, sched)

@@ -25,6 +25,7 @@ import json, math, os, re, sys, time, datetime, unicodedata, urllib.request
 import news   # ESPN's injury report (holds)
 import kalshi  # Kalshi prices, side by side with Polymarket's
 import depth   # enough money at the price? (thin-market filter)
+import arbs    # Polymarket US / Kalshi arbitrage finder (team only)
 import holds   # props that wait for injury news
 
 TODAY = datetime.date.today()
@@ -1673,6 +1674,7 @@ def main():
         print(f"  kalshi: skipped ({e})")
         kalshi_mkts = None
     nk = kalshi.apply(picks, kalshi_mkts, pkey, lambda p: not pick_locked(p))
+    arbs.note("nhl", arbs.from_games(poly_games, mkt_stat_key), kalshi_mkts, pkey)   # team-only arb finder (arbs.py)
     print(f"  kalshi: {nk} pending pick(s) priced on Kalshi too")
     nb = depth.verify(picks, lambda p: could_list(p))
     thin = sum(1 for p in picks if p.get("res") is None and not pick_locked(p) and p.get("th"))
