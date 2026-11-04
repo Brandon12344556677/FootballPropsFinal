@@ -1,17 +1,4 @@
 {
- "problems": {
-  "build_nhl: polymarket US": {
-   "first": "2026-11-04T05:48:49Z",
-   "runs": 1,
-   "alerted": null,
-   "msg": "build_nhl.py: polymarket US failed (<urlopen error [Errno 101] Network is unreachable>)"
-  },
-  "team_stats: GoatCounter team stats": {
-   "first": "2026-11-04T05:48:49Z",
-   "runs": 1,
-   "alerted": null,
-   "msg": "team_stats.py: GoatCounter team stats failed (URLError: <urlopen error [Errno 101] Network is unreachable>)"
-  }
- },
+ "problems": {},
  "alert": []
 }
