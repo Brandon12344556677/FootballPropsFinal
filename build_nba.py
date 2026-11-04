@@ -26,6 +26,7 @@ from concurrent.futures import ThreadPoolExecutor
 import news   # pre-game news feeds, test mode
 import kalshi  # Kalshi prices, side by side with Polymarket's
 import depth   # enough money at the price? (thin-market filter)
+import arbs    # Polymarket US / Kalshi arbitrage finder (team only)
 import holds   # props that wait for injury news
 
 TODAY = datetime.date.today()
@@ -1672,6 +1673,7 @@ def main():
         print(f"  kalshi: skipped ({e})")
         kalshi_mkts = None
     nk = kalshi.apply(picks, kalshi_mkts, pkey, lambda p: not pick_locked(p))
+    arbs.note("nba", arbs.from_games(poly_games, mkt_stat_key), kalshi_mkts, pkey)   # team-only arb finder (arbs.py)
     print(f"  kalshi: {nk} pending pick(s) priced on Kalshi too")
     surest = sorted((p["prob"] for p in picks if p.get("res") is None and not pick_locked(p)
                      and p.get("price") is not None and not p.get("hd")), reverse=True)[:TOP_VERIFY]

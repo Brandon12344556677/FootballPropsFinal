@@ -111,13 +111,14 @@ footer p{margin:0;max-width:80ch}
 #app[data-cur="parlays"] [data-view]:not([data-view="parlays"]){display:none!important}
 #app[data-cur="potd"] [data-view]:not([data-view="potd"]){display:none!important}
 #app[data-cur="spreads"] [data-view]:not([data-view="spreads"]){display:none!important}
+#app[data-cur="arbs"] [data-view]:not([data-view="arbs"]){display:none!important}
 #app[data-cur="secret"] [data-view]:not([data-view="secret"]){display:none!important}
 #app[data-cur="tpod"] [data-view]:not([data-view="tpod"]){display:none!important}
 #app[data-cur="social"] [data-view]:not([data-view="social"]){display:none!important}
 #app[data-cur="sponsors"] [data-view]:not([data-view="sponsors"]){display:none!important}
 #app[data-cur="expenses"] [data-view]:not([data-view="expenses"]){display:none!important}
 #app[data-cur="affiliates"] [data-view]:not([data-view="affiliates"]){display:none!important}
-#app[data-cur="picks"] #tabs, #app[data-cur="parlays"] #tabs, #app[data-cur="potd"] #tabs, #app[data-cur="spreads"] #tabs, #app[data-cur="secret"] #tabs, #app[data-cur="tpod"] #tabs, #app[data-cur="social"] #tabs, #app[data-cur="expenses"] #tabs, #app[data-cur="affiliates"] #tabs{display:none}
+#app[data-cur="picks"] #tabs, #app[data-cur="parlays"] #tabs, #app[data-cur="potd"] #tabs, #app[data-cur="spreads"] #tabs, #app[data-cur="arbs"] #tabs, #app[data-cur="secret"] #tabs, #app[data-cur="tpod"] #tabs, #app[data-cur="social"] #tabs, #app[data-cur="expenses"] #tabs, #app[data-cur="affiliates"] #tabs{display:none}
 /* expenses (expenses.js) */
 .exform{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:10px;align-items:end}
 .exform label{display:grid;gap:4px;font-size:13px;color:var(--muted);min-width:0}
@@ -350,6 +351,7 @@ details.plpast>summary:focus-visible{outline:2px solid var(--accent);outline-off
     <button role="tab" data-v="parlays">Parlays</button>
     <button role="tab" data-v="potd">Parlay of the Day</button>
     <button role="tab" data-v="spreads">Spreads</button>
+    <button role="tab" data-v="arbs">Arbitrage</button>
     <button role="tab" data-v="secret">Secret methods</button>
     <button role="tab" data-v="tpod">3 Picks of the Day</button>
     <button role="tab" data-v="social">Social</button>
@@ -535,6 +537,20 @@ details.plpast>summary:focus-visible{outline:2px solid var(--accent);outline-off
     <p class="hint" id="sdLive"></p>
     <details class="plpast"><summary><span>Past picks</span><span class="label" id="sdPastN"></span></summary>
     <div class="edwrap"><table class="edges pst"><thead><tr><th>Day</th><th>Game</th><th>Pick</th><th class="n">Price</th><th class="n">Model</th><th>Final</th><th>Result</th><th class="n">Units</th></tr></thead><tbody id="sdRows"></tbody></table></div>
+    </details>
+  </section>
+
+  <section data-view="arbs" class="panel" id="abPanel">
+    <div class="panel-h"><h2>Polymarket / Kalshi arbitrage</h2><span class="label" id="abUpd">Team only</span></div>
+    <p class="hint">The same player prop (same player, stat, line and game) where buying the over on one exchange and the under on the other costs less than $1.00 a pair, so one of the two pays $1.00 whatever happens (arbs.py). Listed when it returns 1%+ on the money staked after both exchanges' taker fees (Polymarket US 0.05 and Kalshi 0.07 × price × (1 − price) a contract) and $25+ can be put on each side at prices that keep it there, read from the live order books every update. Prices move fast: check both books before you buy, and buy the thinner side first. A voided prop (player doesn't play) settles differently on each exchange.</p>
+    <h3 class="subh">Right now</h3>
+    <div class="edwrap"><table class="edges pst"><thead><tr><th>Prop</th><th>Game day</th><th>Over</th><th>Under</th><th class="n">Pairs</th><th class="n">Stake</th><th class="n">Fees</th><th class="n">Profit</th><th class="n">Return</th></tr></thead><tbody id="abNow"></tbody></table></div>
+    <p class="hint" id="abScan"></p>
+    <details class="plpast"><summary><span>Closest misses</span><span class="label" id="abNearN"></span></summary>
+    <div class="edwrap"><table class="edges pst"><thead><tr><th>Prop</th><th>Over</th><th>Under</th><th class="n">Cost a pair</th><th>Why not</th></tr></thead><tbody id="abNear"></tbody></table></div>
+    </details>
+    <details class="plpast"><summary><span>Last 30 days</span><span class="label" id="abLogN"></span></summary>
+    <div class="edwrap"><table class="edges pst"><thead><tr><th>First seen</th><th>Prop</th><th>Over / under</th><th class="n">Updates seen</th><th class="n">Best return</th><th class="n">Best profit</th><th>Last seen</th></tr></thead><tbody id="abLog"></tbody></table></div>
     </details>
   </section>
 
@@ -852,7 +868,7 @@ details.plpast>summary:focus-visible{outline:2px solid var(--accent);outline-off
       snap = await load(pw);
       password = pw; store.set('psa-pw', pw);
       $('lock').hidden = true; $('app').hidden = false;
-      setRange(range); freshness(); loadHealth(); renderSpikes(); loadAgents(); loadEdges(pw); loadParlays(pw); loadParlays(pw, 'nb', 'parlays_nba.enc'); loadParlays(pw, 'nf', 'parlays_nfl.enc'); loadParlays(pw, 'pd', 'parlay_potd.enc'); loadSpreads(pw); loadTpod(pw);
+      setRange(range); freshness(); loadHealth(); renderSpikes(); loadAgents(); loadEdges(pw); loadParlays(pw); loadParlays(pw, 'nb', 'parlays_nba.enc'); loadParlays(pw, 'nf', 'parlays_nfl.enc'); loadParlays(pw, 'pd', 'parlay_potd.enc'); loadSpreads(pw); loadArbs(pw); loadTpod(pw);
       window.dispatchEvent(new CustomEvent('psa-unlock', {detail: {pw}}));   // expenses.js
       clearInterval(timer);
       timer = setInterval(refresh, 5*60*1000);
@@ -867,7 +883,7 @@ details.plpast>summary:focus-visible{outline:2px solid var(--accent);outline-off
   }
   async function refresh(){
     if (!password) return;
-    try { snap = await load(password); freshness(); render(); loadHealth(); renderSpikes(); loadAgents(); loadEdges(password); loadParlays(password); loadParlays(password, 'nb', 'parlays_nba.enc'); loadParlays(password, 'nf', 'parlays_nfl.enc'); loadParlays(password, 'pd', 'parlay_potd.enc'); loadSpreads(password); loadTpod(password); window.dispatchEvent(new Event('psa-refresh')); } catch(e){ if (e.code === 'wrong') lock(); }
+    try { snap = await load(password); freshness(); render(); loadHealth(); renderSpikes(); loadAgents(); loadEdges(password); loadParlays(password); loadParlays(password, 'nb', 'parlays_nba.enc'); loadParlays(password, 'nf', 'parlays_nfl.enc'); loadParlays(password, 'pd', 'parlay_potd.enc'); loadSpreads(password); loadArbs(password); loadTpod(password); window.dispatchEvent(new Event('psa-refresh')); } catch(e){ if (e.code === 'wrong') lock(); }
   }
   function lock(){
     password = null; snap = null; store.del('psa-pw'); clearInterval(timer);
@@ -1228,8 +1244,8 @@ details.plpast>summary:focus-visible{outline:2px solid var(--accent);outline-off
   });
 
 
-  // ---------- section menu: Overview / Audience / Sign-ups / Picks / Parlays / Spreads / Secret methods / 3 Picks / Social / Sponsors ----------
-  const VIEWS = ['overview','audience','signups','picks','parlays','potd','spreads','secret','tpod','social','sponsors','affiliates','expenses'];
+  // ---------- section menu: Overview / Audience / Sign-ups / Picks / Parlays / Spreads / Arbitrage / Secret methods / 3 Picks / Social / Sponsors ----------
+  const VIEWS = ['overview','audience','signups','picks','parlays','potd','spreads','arbs','secret','tpod','social','sponsors','affiliates','expenses'];
   function setView(v, push){
     if (!VIEWS.includes(v)) v = 'overview';
     $('app').dataset.cur = v;
@@ -1474,6 +1490,34 @@ details.plpast>summary:focus-visible{outline:2px solid var(--accent);outline-off
         `<td>${esc(p.final||'')}</td><td>${p.res? RES[p.res] : 'Pending'}</td><td class="n ${cls(p.units)}">${p.units==null? '–' : (p.units>=0?'+':'−')+Math.abs(p.units).toFixed(2)}</td></tr>`).join('')
         : `<tr class="ed-wait"><td colspan="8">The first results show up the day after the first pick.</td></tr>`;
       if(d.gen) $('sdUpd').textContent='Team only · 1 unit a pick · updated '+new Date(d.gen).toLocaleString('en-US',{month:'short', day:'numeric', hour:'numeric', minute:'2-digit'});
+    } catch(err){}
+  }
+  // ---------- Polymarket / Kalshi arbitrage: team/arbs.enc (arbs.py), same password ----------
+  async function loadArbs(pw){
+    try {
+      const r=await fetch('arbs.enc?t='+Date.now(),{cache:'no-store'});
+      if(!r.ok && r.status!==404) return;
+      const d= r.ok? await decrypt(await r.text(), pw) : {}, now=d.now||[], near=d.near||[], log=d.log||[], scan=d.scan||{};
+      const SPN={nba:'NBA', nfl:'NFL', nhl:'NHL', mlb:'MLB'}, EX={P:'Polymarket', K:'Kalshi'};
+      const WHY={gone:'Gone at the live price', thin:'Under $25 a side', unread:"A book couldn't be read", quote:'Quoted over $1.00'};
+      const c=v=>(v*100).toFixed(v*100%1? 1 : 0)+'¢', usd=v=>'$'+(+v).toFixed(2), pc=v=>(v*100).toFixed(1)+'%';
+      const when=s=>{ const t=Date.parse(s); return isFinite(t)? new Date(t).toLocaleString('en-US',{month:'short', day:'numeric', hour:'numeric', minute:'2-digit'}) : ''; };
+      const prop=a=>`${esc(SPN[a.sport]||a.sport)} · <b>${esc(a.player)}</b> ${esc(a.sk)} ${esc(a.line)}`;
+      const leg=(ex,px,where)=>`${EX[ex]} ${c(px)}<br><small>${esc(where||'')}</small>`;
+      $('abNow').innerHTML= now.length? now.map(a=>`<tr><td>${prop(a)}</td><td>${esc(a.date)}</td>`+
+        `<td>${leg(a.over, a.po, a.over==='P'? a.slug : a.ticker)}</td><td>${leg(a.under, a.pu, a.under==='P'? a.slug : a.ticker)}</td>`+
+        `<td class="n">${Math.floor(a.n)}</td><td class="n">${usd(a.cost)}</td><td class="n">${usd(a.fees)}</td><td class="n up">+${usd(a.profit)}</td><td class="n up">${pc(a.ret)}</td></tr>`).join('')
+        : `<tr class="ed-wait"><td colspan="9">No arbitrage right now. They're rare and usually last minutes: this checks again every update.</td></tr>`;
+      const sc=Object.entries(scan);
+      $('abScan').textContent= sc.length? 'Last check: '+sc.map(([s,v])=>`${SPN[s]||s} ${v.n} prop${v.n===1?'':'s'} on both exchanges`).join(' · ')+'.' : 'No sport had props on both exchanges at the last check.';
+      $('abNearN').textContent= near.length? String(near.length) : '';
+      $('abNear').innerHTML= near.length? near.map(a=>`<tr><td>${prop(a)}</td><td>${EX[a.over]} ${c(a.po)}</td><td>${EX[a.under]} ${c(a.pu)}</td><td class="n">${c(a.cost)}</td><td>${esc(WHY[a.why]||a.why)}</td></tr>`).join('')
+        : `<tr class="ed-wait"><td colspan="5">Nothing priced on both exchanges at the last check.</td></tr>`;
+      $('abLogN').textContent= log.length? `${log.length} arb${log.length===1?'':'s'}` : '';
+      $('abLog').innerHTML= log.length? log.slice(0,200).map(e=>`<tr><td>${when(e.first)}</td><td>${prop(e)} <small>${esc(e.date)}</small></td><td>${EX[e.over]} / ${EX[e.under]}</td>`+
+        `<td class="n">${e.runs}</td><td class="n up">${pc(e.best)}</td><td class="n up">+${usd(e.profit)}</td><td>${when(e.last)}</td></tr>`).join('')
+        : `<tr class="ed-wait"><td colspan="7">None found yet.</td></tr>`;
+      if(d.gen) $('abUpd').textContent='Team only · updated '+when(d.gen);
     } catch(err){}
   }
   // ---------- 3 Picks of the Day: team/tpod.enc (tpod.py, run by build_today.py), same password ----------

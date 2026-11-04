@@ -39,6 +39,9 @@ timeout 2m python parlay.py 2>&1 | tee "$LOGDIR/parlay.log" || echo "model parla
 # Team only: the private game-spread test (team/spreads.enc, encrypted; spread_scores.json holds the public final scores it fits on).
 timeout 3m python spreads.py 2>&1 | tee "$LOGDIR/spreads.log" || echo "spread test not refreshed this run"
 
+# Team only: Polymarket US / Kalshi arbitrage (team/arbs.enc, encrypted): the builders' paired prices (.arbs/), checked on the live books.
+timeout 2m python arbs.py 2>&1 | tee "$LOGDIR/arbs.log" || echo "arbitrage not refreshed this run"
+
 # Every pass: which strategies are making money (team/edges.enc, encrypted like the stats; rewritten only on a change).
 timeout 2m python edge_report.py 2>&1 | tee "$LOGDIR/edge_report.log" || echo "edge report not refreshed this run"
 
@@ -55,7 +58,7 @@ git add -A games best p 2>/dev/null || true
 for f in nba.html nba.json nba_stats.json nba_picks.json \
          nhl.html nhl.json nhl_stats.json nhl_picks.json \
          mlb.html mlb.json mlb_stats.json mlb_picks.json          tennis.html tennis.json tennis_picks.json tennis_picks_recent.json tennis_results.json today.json botd.json posted.json top_cache.json health.json fast_hist.json \
-         team/stats.enc team/edges.enc team/parlays.enc team/parlays_nba.enc team/parlays_nfl.enc team/parlay_potd.enc team/spreads.enc spread_scores.json team/tpod.enc nba_picks_recent.json nhl_picks_recent.json mlb_picks_recent.json search.json; do
+         team/stats.enc team/edges.enc team/parlays.enc team/parlays_nba.enc team/parlays_nfl.enc team/parlay_potd.enc team/spreads.enc team/arbs.enc spread_scores.json team/tpod.enc nba_picks_recent.json nhl_picks_recent.json mlb_picks_recent.json search.json; do
   git add "$f" 2>/dev/null || true
 done
 if git diff --cached --quiet; then
