@@ -1,48 +1,38 @@
 {
- "date": "2026-11-04",
+ "date": "2026-11-05",
  "drafts": {
   "c": {
    "caption": {
     "title": "Pick of the Day + today's best props",
-    "description": "Pick of the Day: Tim Stutzle under 1.5 Goals (97% model chance). Swipe for today's best NBA, NHL props → Free research, link in bio. Model chance, not a guarantee. 18+. #NBA #NBAProps #NHL #NHLProps #PlayerProps"
+    "description": "Pick of the Day: Jack Eichel under 1.5 Goals (99% model chance). Swipe for today's best NFL, NBA, NHL props → Free research, link in bio. Model chance, not a guarantee. 18+. #NFL #NFLProps #NBA #NBAProps #NHL #NHLProps #PlayerProps"
    },
    "ok": true,
-   "id": "p_inbox_url~v2.7704432085775599629"
+   "id": "p_inbox_url~v2.7704804339030034446"
   },
   "v1": {
-   "sport": "nba",
-   "angle": "streak",
-   "caption": "3 NBA hit streaks on the line today 🔥 Longest: Noah Clowney, 10 straight games over 1.5 rebounds. Will it keep going? Free research, link in bio. Model chance, not a guarantee. 18+. #NBA #NBAProps #PlayerProps #SportsAnalytics",
+   "sport": "nfl",
+   "angle": "record",
+   "caption": "Do our NFL picks actually hit? Top 25: 469 of 514 this season (91%), every pick recorded before the game and graded after ✅ Free research, link in bio. Model chance, not a guarantee. 18+. #NFL #NFLProps #PlayerProps #SportsAnalytics",
    "ok": true,
-   "id": "v_inbox_file~v2.7704432108684593166"
+   "id": "v_inbox_file~v2.7704804276018890765"
   },
   "v2": {
    "sport": "nhl",
-   "angle": "record",
-   "caption": "Do our NHL picks actually hit? Top 25: 1,283 of 1,383 this season (93%), every pick recorded before the game and graded after ✅ Free research, link in bio. Model chance, not a guarantee. 18+. #NHL #NHLProps #PlayerProps #SportsAnalytics",
+   "angle": "gap",
+   "caption": "3 NHL player props where our model and the market disagree today 👀 Biggest gap: Neal Pionk under 0.5 Points, model 71% vs. market 46%. Free research, link in bio. Model chance, not a guarantee. 18+. #NHL #NHLProps #PlayerProps #SportsAnalytics",
    "ok": true,
-   "id": "v_inbox_file~v2.7704432119157803022"
+   "id": "v_inbox_file~v2.7704804251679377422"
   },
   "v3": {
    "sport": "nba",
-   "angle": "gap",
-   "caption": "3 NBA player props where our model and the market disagree today 👀 Biggest gap: Cameron Boozer under 0.5 Steals, model 75% vs. market 46%. Free research, link in bio. Model chance, not a guarantee. 18+. #NBA #NBAProps #PlayerProps #SportsAnalytics",
+   "angle": "streak",
+   "caption": "3 NBA hit streaks on the line today 🔥 Longest: Oso Ighodaro, 10 straight games over 9.5 pts+reb+ast. Will it keep going? Free research, link in bio. Model chance, not a guarantee. 18+. #NBA #NBAProps #PlayerProps #SportsAnalytics",
    "ok": true,
-   "id": "v_inbox_file~v2.7704432245599127565"
+   "id": "v_inbox_file~v2.7704804380083587085"
   }
  },
  "history": [
   {
-   "date": "2026-10-21",
-   "sport": "nhl",
-   "angle": "gap"
-  },
-  {
-   "date": "2026-10-21",
-   "sport": "nba",
-   "angle": "streak"
-  },
-  {
    "date": "2026-10-22",
    "sport": "nfl",
    "angle": "record"
@@ -231,8 +221,23 @@
    "date": "2026-11-04",
    "sport": "nba",
    "angle": "gap"
+  },
+  {
+   "date": "2026-11-05",
+   "sport": "nfl",
+   "angle": "record"
+  },
+  {
+   "date": "2026-11-05",
+   "sport": "nhl",
+   "angle": "gap"
+  },
+  {
+   "date": "2026-11-05",
+   "sport": "nba",
+   "angle": "streak"
   }
  ],
  "reconnect": false,
- "at": "2026-11-04T21:32:20Z"
+ "at": "2026-11-05T21:36:30Z"
 }
