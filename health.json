@@ -1,4 +1,17 @@
 {
- "problems": {},
+ "problems": {
+  "build: injuries 2026": {
+   "first": "2026-11-05T09:09:31Z",
+   "runs": 1,
+   "alerted": null,
+   "msg": "build.py: injuries 2026 failed (HTTP Error 504: Gateway Time-out)"
+  },
+  "build: players crosswalk": {
+   "first": "2026-11-05T09:09:31Z",
+   "runs": 1,
+   "alerted": null,
+   "msg": "build.py: players crosswalk failed (HTTP Error 504: Gateway Time-out)"
+  }
+ },
  "alert": []
 }
