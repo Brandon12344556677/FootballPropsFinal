@@ -1,10 +1,10 @@
 {
  "problems": {
-  "build: schedule": {
-   "first": "2026-11-06T18:51:09Z",
+  "team_stats: GoatCounter team stats": {
+   "first": "2026-11-06T19:01:26Z",
    "runs": 1,
    "alerted": null,
-   "msg": "build.py: schedule failed (HTTP Error 404: Not Found)"
+   "msg": "team_stats.py: GoatCounter team stats failed (URLError: <urlopen error [Errno 101] Network is unreachable>)"
   }
  },
  "alert": []
