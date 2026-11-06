@@ -5,7 +5,10 @@ name: Site watchdog
 # each board opens in headless Chrome without script errors. A problem opens one GitHub
 # issue (updated as it changes, closed when it's fixed); the run itself goes red only when
 # it opens a new issue, so GitHub's failure email fires once per problem, not every check.
-# Off the update job's :05/:25/:45 slots, so the two don't compete for a runner.
+# Started by every update run when it ends (update.yml, "Start a watchdog check"), so it runs about
+# every 20 minutes. The schedule below is a backup: GitHub has gone hours without starting it
+# (Nov 6, 2026: nothing between 03:25 and 11:30 UTC, then nothing after). Off the update job's
+# :05/:25/:45 slots, so the two don't compete for a runner.
 on:
   schedule:
     - cron: "17,47 * * * *"
@@ -18,7 +21,7 @@ permissions:
 
 concurrency:
   group: watchdog
-  cancel-in-progress: true
+  cancel-in-progress: false   # a new check waits for the one running (at most one waiting), never cuts it off mid-check
 
 jobs:
   check:

@@ -21,12 +21,12 @@ README.md has the full feature tour; this file is the working rules.
 - `build_players.py` → `players/`, `build_games.py` → `games/` (one page per upcoming game), `best/` (today's best props
   per sport) and `p/` (link-preview pages for shared picks, kept 14 days after the game), `health.py` → `health.json`,
   `post_daily.py` (Discord/Telegram, and the daily picks email via Buttondown: `BUTTONDOWN_API_KEY`, sign-up form on the
-  home page shown once `NEWSLETTER` is set in index.html), `watchdog.py` (own workflow, every 30 min: checks the live site and keeps one
+  home page shown once `NEWSLETTER` is set in index.html), `watchdog.py` (own workflow, started by every update run, so about every 20 min, with a 30-min schedule as backup: checks the live site and keeps one
   "Site watchdog" GitHub issue open while something is broken; the team dashboard reads it). `build_today.py` also writes `search.json` (home page player search).
 - `edge_report.py` → `team/edges.enc` (every pass: which strategies make money, encrypted like the stats);
   `site_checks.py` (own daily workflow: search basics, keeps a "Site checks" GitHub issue).
   Polymarket and Kalshi links are plain links (no referral codes) since Oct 13, 2026.
-  `dashboard_check.py` (in watchdog.yml, every 30 min: the team dashboard's page, encrypted numbers, edge tracker; "Team dashboard" issue).
+  `dashboard_check.py` (in watchdog.yml, with each watchdog check: the team dashboard's page, encrypted numbers, edge tracker; "Team dashboard" issue).
   Private edge-tracker strategies live encrypted in `rules.enc` on `team-data` (the dashboard's Secret methods tab, `team/rules.js`; `team/methodtoday.js` lists today's picks that fit each one, followed live through `parlaylive.js`; the rules and each one's record from the edge tracker on every past pick that fits, with its record since the day it was added shown apart; read by `edge_report.py` load_private and rule_test, which also filter on list, model edge, positions, a price drop since the first price, and a start day); never put them back in the public code.
   `parlay.py` → `team/parlays.enc` (team only, never public): three parlays a day from 11 AM ET (no shared players; legs only from `TEST_PARLAY_SPORTS`, NHL only for now; Polymarket prices only; only prop types Polymarket US lets you parlay, read live by `combos.py`: no NHL assists), each 35-55% by the model, one per payout band (3-3.5x, 3.5-4x, 4-4.5x),
   plus separate NBA and NFL tracks with the same rules, each with its own three a day and record (`team/parlays_nba.enc`, `team/parlays_nfl.enc`) (all three in the dashboard's Parlays tab, with a summary of every set and each payout band; each set also has its own edge-tracker row),
