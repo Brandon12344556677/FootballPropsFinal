@@ -107,15 +107,26 @@ jobs:
 
       # Start the next run, even after a failed pass (only a cancelled run ends the chain: a newer
       # one replaced it). A run started by GITHUB_TOKEN through workflow_dispatch does run.
+      # Retried for ~4 minutes: on 2026-11-06 one HTTP 500 from GitHub at 09:38 UTC ended the
+      # chain, and the backup schedule didn't start a run until 14:57. A retry after a 500 that
+      # did go through only queues a second run, which the concurrency group merges. If every
+      # try fails the run turns red, so GitHub emails you that the chain is down.
       - name: Start the next run
         if: ${{ !cancelled() }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          curl -sS -o /dev/null -w "next run requested: HTTP %{http_code}\n" -X POST \
-            -H "Authorization: Bearer $GH_TOKEN" -H "Accept: application/vnd.github+json" \
-            "https://api.github.com/repos/${{ github.repository }}/actions/workflows/update.yml/dispatches" \
-            -d '{"ref":"main","inputs":{"chain":"1"}}' || true
+          for wait in 0 10 20 30 40 60 80; do
+            sleep $wait
+            code=$(curl -sS -o /dev/null -w "%{http_code}" --max-time 30 -X POST \
+              -H "Authorization: Bearer $GH_TOKEN" -H "Accept: application/vnd.github+json" \
+              "https://api.github.com/repos/${{ github.repository }}/actions/workflows/update.yml/dispatches" \
+              -d '{"ref":"main","inputs":{"chain":"1"}}' || echo 000)
+            echo "next run requested: HTTP $code"
+            [ "$code" = 204 ] && exit 0
+          done
+          echo "::error::Couldn't start the next run; the site updates only on the 20-minute schedule until a run starts the chain again"
+          exit 1
 
       # Last, after the site is pushed: turns the run red (so GitHub emails you) when a
       # problem has lasted ~3 hours (18 passes in a row), then at most once a day while it lasts.
