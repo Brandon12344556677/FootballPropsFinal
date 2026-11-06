@@ -81,6 +81,10 @@ jobs:
           GOATCOUNTER_TOKEN: ${{ secrets.GOATCOUNTER_TOKEN }}
           TEAM_DASH_PASSWORD: ${{ secrets.TEAM_DASH_PASSWORD }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}   # tpod.py reads the Lock button's file through the API
+          # arbs.py: new-arbitrage emails through Gmail (an app password), to ARB_ALERT_TO (comma-separated; the sender when unset)
+          ARB_SMTP_USER: ${{ secrets.ARB_SMTP_USER }}
+          ARB_SMTP_PASSWORD: ${{ secrets.ARB_SMTP_PASSWORD }}
+          ARB_ALERT_TO: ${{ secrets.ARB_ALERT_TO }}
         run: |
           start=$(date +%s)
           bash update_pass.sh

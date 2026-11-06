@@ -16,6 +16,10 @@ Two steps:
   2. `python arbs.py` (update_pass.sh, after the builders) reads both live books of each of those
      pairs, keeps the real arbs and writes team/arbs.enc, encrypted with TEAM_DASH_PASSWORD like
      team/spreads.enc, rewritten only on a change. The dashboard's Arbitrage tab reads it.
+  3. Each new arb is emailed to the team (alert()): one email a pass listing them, through Gmail
+     SMTP with the ARB_SMTP_USER / ARB_SMTP_PASSWORD (an app password) secrets, to ARB_ALERT_TO
+     (comma-separated; the sender's own inbox when unset). An arb is emailed again only after
+     ALERT_GAP_MIN without one. No secrets, no email.
 
 Fees (taker, per contract at price p): FEE["P"] x p x (1 - p) on Polymarket US (sports, 0.05) and
 FEE["K"] x p x (1 - p) on Kalshi (0.07), each order's fee rounded up to the cent. Kalshi lists a
@@ -42,6 +46,10 @@ NEAR = 8                         # closest misses kept for the dashboard
 KEEP_DAYS = 30                   # arbs kept in the log
 OUT = os.path.join("team", "arbs.enc")
 VENUE = {"P": "Polymarket", "K": "Kalshi"}
+SITE = {"P": "https://polymarket.us", "K": "https://kalshi.com"}
+DASHBOARD = "https://propstreaklab.com/team/#arbs"
+SMTP_HOST, SMTP_PORT = "smtp.gmail.com", 465
+ALERT_GAP_MIN = 60               # the same arb is emailed again only after this long without an email
 
 
 def _now():
@@ -299,6 +307,81 @@ def step(state, notes, arbs, misses, now):
     return before != after or not state.get("gen")
 
 
+# ---------------------------------------------------------------- step 3: email the team
+def due(state, arbs, now):
+    """The arbs in this pass that haven't been emailed in the last ALERT_GAP_MIN (state["log"],
+    after step(), has an entry for each)."""
+    log = {e["id"]: e for e in state.get("log") or []}
+    out = []
+    for a in arbs:
+        sent = (log.get(key(a)) or {}).get("alerted")
+        if sent is None or now - datetime.datetime.strptime(sent, "%Y-%m-%dT%H:%M:%SZ").replace(
+                tzinfo=datetime.timezone.utc) >= datetime.timedelta(minutes=ALERT_GAP_MIN):
+            out.append(a)
+    return out
+
+
+def message(arbs, now):
+    """(subject, body) of the alert email for these arbs (best first)."""
+    a = arbs[0]
+    more = f" (+{len(arbs) - 1} more)" if len(arbs) > 1 else ""
+    subject = (f"Arb {a['ret']:.1%}: {a['sport'].upper()} {a['player']} {a['sk']} {a['line']}, "
+               f"+${a['profit']:.2f} on ${a['cost']:.0f}{more}")
+    try:
+        from zoneinfo import ZoneInfo
+        at = now.astimezone(ZoneInfo("America/New_York")).strftime("%I:%M %p ET").lstrip("0")
+    except Exception:  # noqa: BLE001
+        at = now.strftime("%H:%M UTC")
+    lines = [f"Found at {at}. Prices move fast: check both books before you buy, thinner side first.", ""]
+    for a in arbs:
+        where = lambda ex: a["slug"] if ex == "P" else a["ticker"]
+        lines += [f"{a['sport'].upper()} {a['player']} {a['sk']} {a['line']} (game day {a['date']})",
+                  f"  Over:  {VENUE[a['over']]} at {a['po'] * 100:.0f}c ({where(a['over'])}): ${a['usd_o']:.2f}",
+                  f"  Under: {VENUE[a['under']]} at {a['pu'] * 100:.0f}c ({where(a['under'])}): ${a['usd_u']:.2f}",
+                  f"  {a['n']:.0f} pairs, ${a['cost']:.2f} with ${a['fees']:.2f} fees, pays ${a['n']:.2f}: "
+                  f"+${a['profit']:.2f} ({a['ret']:.1%})",
+                  f"  {SITE[a['over']]}  {SITE[a['under']]}", ""]
+    lines += [f"All arbs: {DASHBOARD}", "",
+              "Team only (arbs.py). A voided prop (player doesn't play) settles differently on each exchange."]
+    return subject, "\n".join(lines)
+
+
+def send_email(user, password, to, subject, body):
+    import smtplib
+    from email.message import EmailMessage
+    msg = EmailMessage()
+    msg["From"], msg["To"], msg["Subject"] = user, ", ".join(to), subject
+    msg.set_content(body)
+    with smtplib.SMTP_SSL(SMTP_HOST, SMTP_PORT, timeout=30) as s:
+        s.login(user, password)
+        s.send_message(msg)
+
+
+def alert(state, arbs, now, env=None, sender=send_email):
+    """Email the arbs that are due (due()) and mark them emailed in state. Never raises; returns how
+    many were emailed."""
+    env = os.environ if env is None else env
+    user, pw = env.get("ARB_SMTP_USER", "").strip(), env.get("ARB_SMTP_PASSWORD", "").replace(" ", "")
+    todo = due(state, arbs, now)
+    if not todo:
+        return 0
+    if not user or not pw:
+        print("arbs: ARB_SMTP_USER / ARB_SMTP_PASSWORD not set, no email")
+        return 0
+    to = [t.strip() for t in (env.get("ARB_ALERT_TO") or user).split(",") if t.strip()]
+    try:
+        sender(user, pw, to, *message(todo, now))
+    except Exception as e:  # noqa: BLE001 — tried again next pass
+        print(f"arbs: email failed ({type(e).__name__}: {e})")
+        return 0
+    log = {e["id"]: e for e in state.get("log") or []}
+    for a in todo:
+        if key(a) in log:
+            log[key(a)]["alerted"] = _iso(now)
+    print(f"arbs: emailed {len(todo)} arb(s) to {len(to)} address(es)")
+    return len(todo)
+
+
 def read_state(password):
     import team_stats
     try:
@@ -324,7 +407,10 @@ def main():
         print("arbs: TEAM_DASH_PASSWORD not set, not saved")
         return 0
     state = read_state(password)    # an unreadable file raises: never start over and lose the log
-    if not step(state, notes, arbs, misses, now):
+    changed = step(state, notes, arbs, misses, now)
+    if alert(state, arbs, now):
+        changed = True
+    if not changed:
         print("arbs: no change")
         return 0
     state["gen"] = _iso(now)

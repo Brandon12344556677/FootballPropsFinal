@@ -202,5 +202,58 @@ class State(unittest.TestCase):
         self.assertEqual(json.loads(json.dumps(st))["now"][0]["player"], "Jalen Brunson")
 
 
+class Alert(unittest.TestCase):
+    ENV = {"ARB_SMTP_USER": "team@example.com", "ARB_SMTP_PASSWORD": "abcd efgh ijkl mnop", "ARB_ALERT_TO": "a@example.com, b@example.com"}
+
+    def arb(self, player="Jalen Brunson"):
+        return {"sport": "nba", "player": player, "sk": "pts", "line": 24.5, "date": "2026-11-04", "over": "P", "under": "K",
+                "slug": "pm-slug", "ticker": "KX", "n": 100, "usd_o": 45.0, "usd_u": 50.0, "fees": 3.0, "cost": 98.0,
+                "profit": 2.0, "ret": 0.0204, "po": 0.45, "pu": 0.50}
+
+    def run_pass(self, st, arbs_now, at, env=None, sender=None):
+        sent = []
+        arbs.step(st, {}, arbs_now, [], at)
+        n = arbs.alert(st, arbs_now, at, env=self.ENV if env is None else env,
+                       sender=sender or (lambda *a: sent.append(a)))
+        return n, sent
+
+    def test_emails_a_new_arb_once_then_after_the_gap(self):
+        st = {}
+        n, sent = self.run_pass(st, [self.arb()], NOW)
+        self.assertEqual(n, 1)
+        user, pw, to, subject, body = sent[0]
+        self.assertEqual((user, pw, to), ("team@example.com", "abcdefghijklmnop", ["a@example.com", "b@example.com"]))
+        self.assertIn("2.0%", subject)
+        self.assertIn("Jalen Brunson", subject)
+        self.assertIn("Over:  Polymarket at 45c (pm-slug)", body)
+        self.assertIn("Under: Kalshi at 50c (KX)", body)
+        self.assertEqual(self.run_pass(st, [self.arb()], NOW + datetime.timedelta(minutes=10))[0], 0)   # still open: no repeat
+        later = NOW + datetime.timedelta(minutes=arbs.ALERT_GAP_MIN)
+        self.assertEqual(self.run_pass(st, [self.arb()], later)[0], 1)
+
+    def test_one_email_lists_every_new_arb(self):
+        n, sent = self.run_pass({}, [self.arb(), self.arb("Josh Hart")], NOW)
+        self.assertEqual((n, len(sent)), (2, 1))
+        self.assertIn("(+1 more)", sent[0][3])
+        self.assertIn("Josh Hart", sent[0][4])
+
+    def test_no_secrets_or_a_failed_send_sends_again_next_pass(self):
+        st = {}
+        self.assertEqual(self.run_pass(st, [self.arb()], NOW, env={})[0], 0)
+
+        def boom(*a):
+            raise OSError("smtp down")
+        self.assertEqual(self.run_pass(st, [self.arb()], NOW, sender=boom)[0], 0)
+        self.assertIsNone(st["log"][0].get("alerted"))
+        self.assertEqual(self.run_pass(st, [self.arb()], NOW + datetime.timedelta(minutes=10))[0], 1)
+
+    def test_sender_defaults_to_its_own_inbox(self):
+        sent = []
+        arbs.step(st := {}, {}, [self.arb()], [], NOW)
+        arbs.alert(st, [self.arb()], NOW, env={"ARB_SMTP_USER": "me@example.com", "ARB_SMTP_PASSWORD": "x"},
+                   sender=lambda *a: sent.append(a))
+        self.assertEqual(sent[0][2], ["me@example.com"])
+
+
 if __name__ == "__main__":
     unittest.main()
