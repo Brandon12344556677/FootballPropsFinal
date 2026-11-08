@@ -1,4 +1,23 @@
 {
- "problems": {},
+ "problems": {
+  "build: players crosswalk": {
+   "first": "2026-11-08T09:09:32Z",
+   "runs": 1,
+   "alerted": null,
+   "msg": "build.py: players crosswalk failed (HTTP Error 504: Gateway Time-out)"
+  },
+  "build: roster 2026": {
+   "first": "2026-11-08T09:09:32Z",
+   "runs": 1,
+   "alerted": null,
+   "msg": "build.py: roster 2026 failed (HTTP Error 504: Gateway Time-out)"
+  },
+  "build: stats 2026": {
+   "first": "2026-11-08T09:09:32Z",
+   "runs": 1,
+   "alerted": null,
+   "msg": "build.py: stats 2026 failed (HTTP Error 504: Gateway Time-out)"
+  }
+ },
  "alert": []
 }
