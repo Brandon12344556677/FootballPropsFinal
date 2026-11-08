@@ -1,17 +1,4 @@
 {
- "problems": {
-  "build: injuries 2026": {
-   "first": "2026-11-08T09:19:38Z",
-   "runs": 5,
-   "alerted": null,
-   "msg": "build.py: injuries 2026 failed (HTTP Error 502: Bad Gateway or Proxy Error)"
-  },
-  "build: stats 2026": {
-   "first": "2026-11-08T10:33:51Z",
-   "runs": 2,
-   "alerted": null,
-   "msg": "build.py: stats 2026 failed (HTTP Error 502: Bad Gateway or Proxy Error)"
-  }
- },
+ "problems": {},
  "alert": []
 }
