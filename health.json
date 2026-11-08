@@ -2,27 +2,15 @@
  "problems": {
   "build: injuries 2026": {
    "first": "2026-11-08T09:19:38Z",
-   "runs": 4,
+   "runs": 5,
    "alerted": null,
-   "msg": "build.py: injuries 2026 failed (HTTP Error 504: Gateway Time-out)"
-  },
-  "build: players crosswalk": {
-   "first": "2026-11-08T09:53:13Z",
-   "runs": 2,
-   "alerted": null,
-   "msg": "build.py: players crosswalk failed (HTTP Error 504: Gateway Time-out)"
-  },
-  "build: schedule": {
-   "first": "2026-11-08T09:27:36Z",
-   "runs": 3,
-   "alerted": null,
-   "msg": "build.py: schedule failed (HTTP Error 504: Gateway Time-out)"
+   "msg": "build.py: injuries 2026 failed (HTTP Error 502: Bad Gateway or Proxy Error)"
   },
   "build: stats 2026": {
    "first": "2026-11-08T10:33:51Z",
-   "runs": 1,
+   "runs": 2,
    "alerted": null,
-   "msg": "build.py: stats 2026 failed (HTTP Error 504: Gateway Time-out)"
+   "msg": "build.py: stats 2026 failed (HTTP Error 502: Bad Gateway or Proxy Error)"
   }
  },
  "alert": []
