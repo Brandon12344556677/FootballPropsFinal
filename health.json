@@ -1,10 +1,28 @@
 {
  "problems": {
-  "build: stats 2026": {
-   "first": "2026-11-09T07:45:03Z",
-   "runs": 2,
+  "build: players crosswalk": {
+   "first": "2026-11-09T08:09:39Z",
+   "runs": 1,
    "alerted": null,
-   "msg": "build.py: stats 2026 failed (HTTP Error 504: Gateway Time-out)"
+   "msg": "build.py: players crosswalk failed (HTTP Error 504: Gateway Time-out)"
+  },
+  "build: roster 2026": {
+   "first": "2026-11-09T08:09:39Z",
+   "runs": 1,
+   "alerted": null,
+   "msg": "build.py: roster 2026 failed (HTTP Error 504: Gateway Time-out)"
+  },
+  "build: schedule": {
+   "first": "2026-11-09T08:09:39Z",
+   "runs": 1,
+   "alerted": null,
+   "msg": "build.py: schedule failed (HTTP Error 504: Gateway Time-out)"
+  },
+  "build: stats 2024": {
+   "first": "2026-11-09T08:09:39Z",
+   "runs": 1,
+   "alerted": null,
+   "msg": "build.py: stats 2024 failed (HTTP Error 504: Gateway Time-out)"
   }
  },
  "alert": []
