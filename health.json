@@ -1,4 +1,17 @@
 {
- "problems": {},
+ "problems": {
+  "build: snaps 2025": {
+   "first": "2026-11-09T05:26:12Z",
+   "runs": 1,
+   "alerted": null,
+   "msg": "build.py: snaps 2025 failed (HTTP Error 504: Gateway Time-out)"
+  },
+  "build: stats 2026": {
+   "first": "2026-11-09T05:26:12Z",
+   "runs": 1,
+   "alerted": null,
+   "msg": "build.py: stats 2026 failed (HTTP Error 504: Gateway Time-out)"
+  }
+ },
  "alert": []
 }
