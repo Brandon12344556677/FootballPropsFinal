@@ -1,11 +1,4 @@
 {
- "problems": {
-  "team_stats: GoatCounter team stats": {
-   "first": "2026-11-10T11:01:11Z",
-   "runs": 1,
-   "alerted": null,
-   "msg": "team_stats.py: GoatCounter team stats failed (IncompleteRead: IncompleteRead(32768 bytes read)"
-  }
- },
+ "problems": {},
  "alert": []
 }
