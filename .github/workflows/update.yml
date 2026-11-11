@@ -50,7 +50,7 @@ jobs:
     # The image every run so far has used. On 2026-10-05 two runs on ubuntu-latest were never
     # given a runner and were cancelled after 15 minutes; pinning skips that label's queue.
     runs-on: ubuntu-24.04
-    timeout-minutes: 45   # a backstop; the update step below has its own, shorter limit
+    timeout-minutes: 60   # a backstop above the steps' own limits (32 + 12 + 12 minutes), so a slow run still starts the next one
     steps:
       # Pushes with the DEPLOY_KEY deploy key (write access), which the main-branch ruleset
       # lets bypass its pull-request rule. The default token would be refused.
@@ -107,47 +107,31 @@ jobs:
 
       # Start the next run, even after a failed pass (only a cancelled run ends the chain: a newer
       # one replaced it). A run started by GITHUB_TOKEN through workflow_dispatch does run.
-      # Retried for ~4 minutes: on 2026-11-06 one HTTP 500 from GitHub at 09:38 UTC ended the
-      # chain, and the backup schedule didn't start a run until 14:57. A retry after a 500 that
-      # did go through only queues a second run, which the concurrency group merges. If every
-      # try fails the run turns red, so GitHub emails you that the chain is down.
+      # start_run.py asks for the run, then checks it really started, and asks again if not:
+      # on 2026-11-06 one HTTP 500 from GitHub at 09:38 UTC ended the chain (the backup schedule
+      # didn't start a run until 14:57), and on 2026-11-11 at 20:18 a request GitHub accepted
+      # (HTTP 204) gave a run that never started ("startup_failure", in a GitHub Actions incident).
+      # Asking twice only queues a second run, which the concurrency group merges. If every try
+      # fails the run turns red, so GitHub emails you that the chain is down.
       - name: Start the next run
         if: ${{ !cancelled() }}
+        timeout-minutes: 12
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          for wait in 0 10 20 30 40 60 80; do
-            sleep $wait
-            code=$(curl -sS -o /dev/null -w "%{http_code}" --max-time 30 -X POST \
-              -H "Authorization: Bearer $GH_TOKEN" -H "Accept: application/vnd.github+json" \
-              "https://api.github.com/repos/${{ github.repository }}/actions/workflows/update.yml/dispatches" \
-              -d '{"ref":"main","inputs":{"chain":"1"}}' || echo 000)
-            echo "next run requested: HTTP $code"
-            [ "$code" = 204 ] && exit 0
-          done
-          echo "::error::Couldn't start the next run; the site updates only on the 20-minute schedule until a run starts the chain again"
-          exit 1
+        run: python start_run.py update.yml '{"chain":"1"}'
 
       # Start a watchdog check (watchdog.yml) after every run, so the live site is checked about every
       # 20 minutes. Its own 30-minute schedule is only a backup: on 2026-11-06 GitHub started it at
       # 03:25 and 11:30 UTC and then not for hours, so the watchdog issue and the dashboard kept showing
-      # an outage that had ended. Never fails the run: a missed check is caught by the next one.
+      # an outage that had ended. Confirmed like the next run (start_run.py). Never fails the run: a
+      # missed check is caught by the next one.
       - name: Start a watchdog check
         if: ${{ !cancelled() }}
         continue-on-error: true
+        timeout-minutes: 12
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          for wait in 0 15 30; do
-            sleep $wait
-            code=$(curl -sS -o /dev/null -w "%{http_code}" --max-time 30 -X POST \
-              -H "Authorization: Bearer $GH_TOKEN" -H "Accept: application/vnd.github+json" \
-              "https://api.github.com/repos/${{ github.repository }}/actions/workflows/watchdog.yml/dispatches" \
-              -d '{"ref":"main"}' || echo 000)
-            echo "watchdog check requested: HTTP $code"
-            [ "$code" = 204 ] && exit 0
-          done
-          echo "::warning::Couldn't start a watchdog check; its own schedule is the backup"
+        run: python start_run.py watchdog.yml || echo "::warning::Couldn't start a watchdog check; its own schedule is the backup"
 
       # Last, after the site is pushed: turns the run red (so GitHub emails you) when a
       # problem has lasted ~3 hours (18 passes in a row), then at most once a day while it lasts.
