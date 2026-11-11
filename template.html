@@ -620,8 +620,8 @@ details.valrules>summary{cursor:pointer}
 .datanote[open] summary{margin-bottom:8px}
 </style>
 
-<link rel="stylesheet" href="app.css?v=20261015b">
-<script src="app.js?v=20261102a"></script>
+<link rel="stylesheet" href="app.css?v=20261111a">
+<script src="app.js?v=20261111a"></script>
 <script src="/thanksgiving.js?v=20261101b"></script>
 
 <header class="apptop">
@@ -820,6 +820,8 @@ details.valrules>summary{cursor:pointer}
     <p class="mktnote">Star players with <b>⚖ Compare</b> on their card in the <b>Player</b> tab, then set a stat, line and side there — every player is scored for that exact prop so you can see who's the better bet. Saved on this device.</p>
     <div id="comparebody"></div>
   </div>
+
+  <div class="panel" id="pfpanel2"><div class="mkthead"><h2>🎯 Parlay by payout</h2><span class="mktmuted">pick the payout and the chance you want — we search every priced pick</span></div><div id="pfbody"></div></div>
 
   <div class="panel" id="autoparlaypanel">
     <div class="mkthead"><h2>🎲 Build me a parlay</h2><span class="mktmuted">pick teams &amp; risk — we assemble the legs</span></div>
@@ -2435,6 +2437,33 @@ function initAutoParlay(){
   wrap.querySelectorAll('.chip').forEach(b=>b.onclick=()=>b.setAttribute('aria-pressed', b.getAttribute('aria-pressed')!=='true'));
   const btn=$('apBuild'); if(btn) btn.onclick=buildAutoParlay;
 }
+/* Parlay by payout (PS.parlayFinder): every side of every tradeable prop the board scanned (valueCands:
+   both sides, 6+ effective games, none waiting on injury news), priced as Value prices it (valuePrice: the
+   cheaper of Polymarket US and Kalshi with $25+ offered, a fraction). Thin, kicked-off, locked and
+   ruled-out legs are left out; locked games never reach valueCands (scanBoard shows them as published). */
+async function pfLegs(){
+  if(!edgeRows.length && !valueCands.length){ try{ await scanBoard(false); }catch(e){} }
+  // fillDepth only reads the Polymarket US books Value needs; read every buyable side's so thin ones are known
+  try{ await fillDepth(valueCands, (c, us)=>us>=0.05 && us<=0.97); }catch(e){}
+  const out=[], seen=new Set(), now=Date.now();
+  // slate.json's kickoff (UTC): started, or inside build.py's 30-minute lock window since the board was scanned
+  const soon=g=>{ const t=Date.parse((g&&g.start)||''); return isFinite(t) && t-now<30*60*1000; };
+  valueCands.forEach(c=>{
+    if(!c.pl || c.prob==null || isRuledOut(c.pl) || (c.sg && gameHappened(c.sg)) || soon(c.game)) return;
+    const key=[c.pl.id, c.sk, c.line, c.side].join('|'); if(seen.has(key)) return;
+    const e=valuePrice(c); if(!e || e.thin) return;
+    seen.add(key);
+    const g=c.game||{};
+    out.push({key, gid:(c.sg&&c.sg.id)||(g.away+'@'+g.home), pid:c.pl.id, name:c.name, team:c.team, opp:c.opp, side:c.side,
+      line:c.line, statText:c.statText, prob:c.prob, price:e.px, vn:e.vn, row:c});
+  });
+  return out;
+}
+function initParlayFinder(){
+  if(typeof PS.parlayFinder!=='function') return;     // an older cached app.js
+  PS.parlayFinder($('pfbody'), {sport:'nfl', gameWord:'game', emptyNote:'NFL props usually post a day or two before kickoff.',
+    getLegs:pfLegs, open:l=>openPickSheet(Object.assign({}, l.row, {vprice:l.price, vvn:l.vn}))});
+}
 
 function setPlayer(p, opts={}){
   state.player=p; oppTouched=false;
@@ -3087,6 +3116,7 @@ function renderPickTable(rows){
 restore();
 renderParlay();
 initAutoParlay();
+initParlayFinder();
 renderWatch();
 renderMyBets();
 renderLeaderboard();

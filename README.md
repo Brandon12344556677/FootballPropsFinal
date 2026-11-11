@@ -71,6 +71,13 @@ exchange chip) in Simple.
   expected value and a quarter-Kelly stake.
 - **Parlay builder** — combined model chance, real payout at your prices, and a
   warning when legs come from the same game (they're correlated).
+- **Parlay by payout** (Tools tab, every sport page, tennis included) — set a payout range (say
+  1.4x–1.6x), a lowest model chance (say 90%) and the most legs, and `PS.parlayFinder` (app.js)
+  finds the parlay with the highest model chance whose real payout lands in the range: each leg at
+  the cheaper of Polymarket and Kalshi with $25+ offered, no locked or started picks, one leg per
+  game unless you allow same-game legs. A beam search, checked against brute force. It shows the
+  market's own chance (1 / the payout) beside the model's, and when nothing reaches the chance you
+  asked for it says so, with the likeliest parlay at that payout and the most it can pay at that chance.
 - **Distribution, matchup & splits, game log** — histogram of the last 20 with
   your line, home/away splits, history vs the opponent (auto-selected for this
   week) and the opponent's defense-vs-position rank, blended across this season

@@ -627,8 +627,8 @@ details.valrules>summary{cursor:pointer}
 .panel.collapsed{padding-bottom:14px}
 </style>
 
-<link rel="stylesheet" href="app.css?v=20261015b">
-<script src="app.js?v=20261102a"></script>
+<link rel="stylesheet" href="app.css?v=20261111a">
+<script src="app.js?v=20261111a"></script>
 <script src="/thanksgiving.js?v=20261101b"></script>
 
 <header class="apptop">
@@ -776,6 +776,7 @@ details.valrules>summary{cursor:pointer}
     <p class="mktnote">Add players with <b>⚖ Compare</b> on the <b>Player</b> tab, then set a stat, line and side there — everyone is scored for that exact prop so you can see who's the better bet.</p>
     <div id="cmpbody"></div>
   </div>
+  <div class="panel" id="pfpanel2"><div class="mkthead"><h2>🎯 Parlay by payout</h2><span class="mktmuted">pick the payout and the chance you want — we search every priced pick</span></div><div id="pfbody"></div></div>
   <div class="panel">
     <div class="mkthead"><h2>🎲 Build me a parlay</h2><span class="mktmuted">pick risk &amp; legs — we assemble it from the model board</span></div>
     <div style="margin:6px 0 10px">
@@ -1747,6 +1748,18 @@ function buildParlay(){ const body=$('apbody');
 }
 function shuffle(a){ a=a.slice(); for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; }
 $('apBuild').onclick=buildParlay;
+// Parlay by payout (PS.parlayFinder): every upcoming, unlocked pick side with a model chance and a price you can get
+// ($25+ offered, the same rule as priceCell), each side as recorded. Read on each search, so live prices count.
+function pfLegs(){ const seen=new Set(), legs=[];
+  upcomingPicks().filter(p=>p.prob!=null && !p.lk && !p.th).map(normPick).forEach(r=>{   // th: neither exchange has $25 offered
+    if(r.price==null || r.lk || (r.vn==='K'? (r.kd!=null && r.kd<25) : (r.pd!=null && r.pd<25))) return;   // no market, locked, or too thin on the exchange priced
+    const key=[r.pid, r.sk, r.line, r.side].join('|'); if(seen.has(key)) return; seen.add(key);
+    const g=r.game||{}, opp=r.team===g.home? g.away : r.team===g.away? g.home : '';
+    legs.push({key, gid:r.gid, pid:r.pid, name:r.name, team:r.team, opp, side:r.side, line:r.line, statText:r.statText,
+      prob:r.prob, price:r.price, vn:r.vn, n:r.n, r}); });
+  return legs; }
+PS.parlayFinder($('pfbody'), {sport:SPORT_KEY, gameWord:'game', getLegs:async()=>{ for(let i=0; PICKS===null && i<40; i++) await new Promise(ok=>setTimeout(ok, 250));   // picks still loading
+    return pfLegs(); }, open:l=>openPickSheet(l.r)});
 $('cmpclear').onclick=()=>{ CMP=[]; saveTools(); updatePlayerBtns(); renderCompare(); };
 
 // ---- Suggest a feature ----

@@ -816,7 +816,106 @@ window.PS = (function(){
     return `<span class="lockbadge" title="${esc(`Locked${at}: the game starts within 30 minutes, so this pick is final \u2014 its Top 25 / Value status, its chance and its price won\u2019t change again.`)}">\ud83d\udd12 Locked</span>`;
   }
 
-  return {teamVars, ticker, until, skeleton, esc, hashFor, pickHash, parsePickHash, syncHash, sharePick, toast, helpBtn, spark, verdict, icon, sheet, closeSheet, pickSheet, relatedPicks,
+  // ---- parlay finder (every sport page's Tools tab): a payout range and a chance floor in, the parlay with
+  // the highest model chance whose real payout lands in the range out. ----
+  // legs: [{key, gid, pid, name, team, opp, side, line, statText, prob, price, vn}], price a fraction you'd
+  // actually pay (the page leaves out thin and locked ones). The payout is 1 / the product of the prices and
+  // the chance the product of the model's chances: legs are treated as independent, which is why legs from
+  // one game are left out unless asked for (they move together). A beam search over the legs, likeliest
+  // first, keeps the BEAM best partial parlays at each size; it's exact for small boards and close otherwise.
+  // PF_MIN_GAMES: the history a leg needs (n: effective games, when the page has it), the Value lists' rule, so a
+  // rookie's 95% on three games can't anchor a parlay. A parlay is 2+ legs.
+  const PF_BEAM=400, PF_MIN_PX=0.05, PF_MAX_PX=0.97, PF_MIN_GAMES=6;
+  function parlaySearch(legs, o){
+    const lo=Math.log(Math.max(1.01, o.min)), hi=Math.log(Math.max(o.min, o.max)), floor=Math.log(Math.max(1e-6, o.chance||1e-6));
+    const pool=[], seenK=new Set();
+    legs.filter(l=>l && l.prob>0 && l.prob<1 && l.price>=PF_MIN_PX && l.price<=PF_MAX_PX && (l.n==null || l.n>=PF_MIN_GAMES))
+      .sort((a,b)=>b.prob-a.prob).forEach(l=>{ if(!seenK.has(l.key)){ seenK.add(l.key); pool.push(l); } });
+    let beam=[{idx:-1, legs:[], lp:0, lpay:0}];
+    const found=[];
+    for(let size=1; size<=o.maxLegs && beam.length; size++){
+      const next=[];
+      beam.forEach(s=>{
+        const pids=new Set(s.legs.map(l=>String(l.pid))), gids=new Set(s.legs.map(l=>String(l.gid)));
+        for(let i=s.idx+1;i<pool.length;i++){
+          const l=pool[i];
+          if(pids.has(String(l.pid)) || (!o.sameGame && gids.has(String(l.gid)))) continue;
+          const lp=s.lp+Math.log(l.prob), lpay=s.lpay-Math.log(l.price);
+          if(lp<floor || lpay>hi+1e-9) continue;          // below the chance floor, or past the top of the payout range
+          const st={idx:i, legs:s.legs.concat(l), lp, lpay};
+          next.push(st);
+          if(lpay>=lo-1e-9 && size>=2) found.push(st);
+        }
+      });
+      next.sort((a,b)=>b.lp-a.lp || b.lpay-a.lpay);
+      beam=next.slice(0, PF_BEAM);
+    }
+    const sig=s=>s.legs.map(l=>l.key).sort().join('|'), out=[], seen=new Set();
+    found.sort((a,b)=>b.lp-a.lp || (b.lp+b.lpay)-(a.lp+a.lpay)).forEach(s=>{ const k=sig(s); if(!seen.has(k) && out.length<12){ seen.add(k); out.push(s); } });
+    return {results:out.map(s=>({legs:s.legs, prob:Math.exp(s.lp), payout:Math.exp(s.lpay)})), pool:pool.length};
+  }
+  function parlayFinder(el, cfg){
+    if(!el) return;
+    const KEY='psl_pf_'+cfg.sport, saved=(()=>{ try{ return JSON.parse(localStorage.getItem(KEY)||'{}'); }catch(e){ return {}; } })();
+    const v={min:saved.min||1.4, max:saved.max||1.6, chance:saved.chance!=null? saved.chance : 75, maxLegs:saved.maxLegs||4, sameGame:!!saved.sameGame};
+    el.innerHTML=
+      `<div class="pfform">`+
+        `<div class="pfrow"><span class="pflab">Pays</span><input id="pfmin" type="number" min="1.05" step="0.05" value="${v.min}" aria-label="Lowest payout (times your stake)"><span>x to</span>`+
+          `<input id="pfmax" type="number" min="1.05" step="0.05" value="${v.max}" aria-label="Highest payout (times your stake)"><span>x</span></div>`+
+        `<div class="pfchips">${[1.5,2,3,5].map(x=>`<button type="button" class="chip" data-x="${x}">${x}x</button>`).join('')}</div>`+
+        `<div class="pfrow"><span class="pflab">Model chance at least</span><input id="pfchance" type="number" min="1" max="99" step="1" value="${v.chance}" aria-label="Lowest combined chance, percent"><span>%</span></div>`+
+        `<div class="pfrow"><span class="pflab">Up to</span><select id="pflegs" aria-label="Most legs">${[2,3,4,5,6,8].map(n=>`<option${n===v.maxLegs?' selected':''}>${n}</option>`).join('')}</select><span>legs</span>`+
+          `<label class="pfsg"><input id="pfsg" type="checkbox"${v.sameGame?' checked':''}> allow legs from the same ${esc(cfg.gameWord||'game')}</label></div>`+
+        `<button id="pfgo" class="btn" type="button">Find my parlay</button>`+
+      `</div><div id="pfout" aria-live="polite"></div>`;
+    const $=id=>el.querySelector('#'+id), out=$('pfout');
+    let results=[], at=0;
+    el.querySelectorAll('.pfchips .chip').forEach(b=>b.onclick=()=>{ const x=+b.dataset.x; $('pfmin').value=(x*0.93).toFixed(2); $('pfmax').value=(x*1.07).toFixed(2); });
+    const legRow=l=>`<li><button type="button" class="pfleg" data-k="${esc(l.key)}"><span class="pfwho"><b>${esc(l.name)}</b>${l.team? ` <span class="tbadge">${esc(l.team)}</span>` : ''}${l.opp? ` <span class="mktmuted">vs ${esc(l.opp)}</span>` : ''}</span>`+
+      `<span class="pfbet"><span class="leantag ${esc(l.side)}">${esc(l.side)}</span> ${esc(l.line)} ${esc(l.statText)}</span>`+
+      `<span class="pfnum">${Math.round(l.prob*100)}% <span class="mktmuted">\u00b7 ${Math.round(l.price*100)}\u00a2 ${esc(venueName(l.vn))}</span></span></button></li>`;
+    function show(){
+      const r=results[at]; if(!r) return;
+      const mkt=1/r.payout, ev=r.prob*r.payout-1;
+      out.innerHTML=`<div class="pfres"><div class="parlaysum">`+
+          `<div><div class="lab">Pays</div><div class="big">${r.payout.toFixed(2)}x</div><div class="sub">$10 returns $${(10*r.payout).toFixed(2)}</div></div>`+
+          `<div><div class="lab">Model chance</div><div class="big ${r.prob>=0.5?'hit':''}">${Math.round(r.prob*100)}%</div><div class="sub">all ${r.legs.length} legs hit</div></div>`+
+          `<div><div class="lab">Market's chance</div><div class="big">${Math.round(mkt*100)}%</div><div class="sub">what the prices imply</div></div>`+
+          `<div><div class="lab">Model edge</div><div class="big">${ev>=0?'+':'\u2212'}${Math.abs(Math.round(ev*100))}%</div><div class="sub">expected return per $1</div></div>`+
+        `</div><ol class="pflegs">${r.legs.map(legRow).join('')}</ol>`+
+        `<p class="mktnote">Parlay ${at+1} of ${results.length} that fit${results.length>1? ' \u00b7 <button type="button" class="linkbtn" id="pfnext">show another</button>' : ''}. `+
+        `The payout is each leg's current price multiplied together (the cheaper of Polymarket and Kalshi with $25+ offered); prices move, so check them before you bet. `+
+        `The chance treats the legs as independent. When the model's chance is well above the market's, the market is usually seeing something the model can't (injuries, lineups, news), so read a big gap as a reason to check, not a sure thing. Research, not betting advice.</p></div>`;
+      const nx=out.querySelector('#pfnext'); if(nx) nx.onclick=()=>{ at=(at+1)%results.length; show(); };
+      out.querySelectorAll('.pfleg').forEach(b=>b.onclick=()=>{ const l=r.legs.find(x=>x.key===b.dataset.k); if(l && cfg.open) cfg.open(l); });
+    }
+    $('pfgo').onclick=async()=>{
+      let min=parseFloat($('pfmin').value), max=parseFloat($('pfmax').value);
+      const chance=Math.min(99, Math.max(1, parseFloat($('pfchance').value)||1))/100, maxLegs=parseInt($('pflegs').value,10)||4, sameGame=$('pfsg').checked;
+      if(!(min>1)){ out.innerHTML='<p class="mktnote">Set a payout above 1x.</p>'; return; }
+      if(!(max>=min)) max=min;
+      try{ localStorage.setItem(KEY, JSON.stringify({min, max, chance:Math.round(chance*100), maxLegs, sameGame})); }catch(e){}
+      out.innerHTML='<p class="mktnote">Searching every priced pick\u2026</p>';
+      let legs=[];
+      try{ legs=(await cfg.getLegs())||[]; }catch(e){ legs=[]; }
+      const res=parlaySearch(legs, {min, max, chance, maxLegs, sameGame});
+      results=res.results; at=0;
+      if(results.length){ show(); return; }
+      if(!res.pool){ out.innerHTML=`<p class="mktnote">No priced picks to build from right now: a leg needs a live Polymarket or Kalshi price with $25+ offered, on a ${esc(cfg.gameWord||'game')} that hasn't started. ${esc(cfg.emptyNote||'')}</p>`; return; }
+      // Nothing clears the chance floor: say what the board can do at that payout, and at that chance.
+      const best=parlaySearch(legs, {min, max, chance:0, maxLegs, sameGame}).results[0];
+      const maxPay=parlaySearch(legs, {min:1.01, max:100, chance, maxLegs, sameGame}).results.sort((a,b)=>b.payout-a.payout)[0];
+      out.innerHTML=`<p class="mktnote"><b>No parlay paying ${min.toFixed(2)}\u2013${max.toFixed(2)}x reaches a ${Math.round(chance*100)}% model chance</b> from the ${res.pool} priced picks on the board.`+
+        (best? ` The likeliest one in that payout range is <b>${Math.round(best.prob*100)}%</b> (the market says ${Math.round(100/best.payout)}%).` : ` Nothing on the board lands in that payout range with up to ${maxLegs} legs.`)+
+        (maxPay? ` At ${Math.round(chance*100)}% or better, the most it can pay is about <b>${maxPay.payout.toFixed(2)}x</b>.` : '')+
+        ` A payout and a chance trade off: at fair prices, 1.5x is about a 67% chance and 2x about 50%, so asking for both a big payout and a high chance means asking for picks the market has badly wrong.</p>`+
+        (best? `<p class="mktnote"><button type="button" class="linkbtn" id="pfshowbest">Show the likeliest ${min.toFixed(2)}\u2013${max.toFixed(2)}x parlay anyway</button></p>` : '');
+      const sb=out.querySelector('#pfshowbest');
+      if(sb) sb.onclick=()=>{ results=parlaySearch(legs, {min, max, chance:0, maxLegs, sameGame}).results; at=0; show(); };
+    };
+  }
+
+  return {teamVars, parlaySearch, parlayFinder, ticker, until, skeleton, esc, hashFor, pickHash, parsePickHash, syncHash, sharePick, toast, helpBtn, spark, verdict, icon, sheet, closeSheet, pickSheet, relatedPicks,
           isTracked, toggleBet, renderBets, loadBets, fairOf, setFair, pxMove, lockBadge, lockRibbon, lockNote, startLabel, gameTime, liveUS, venues, venueName, thinPrice, cap, capPick, thinOut, getView, setView};
 })();
 
