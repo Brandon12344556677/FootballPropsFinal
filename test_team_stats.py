@@ -57,6 +57,24 @@ class TimeOnPage(unittest.TestCase):
         self.assertEqual({t["name"]: t["n"] for t in r["time"]}["1-3m"], 4)
 
 
+class AllTime(unittest.TestCase):
+    def test_every_visit_since_the_start_without_events(self):
+        seen = {}
+
+        def fake(token, path, **q):
+            seen.update(path=path, **q)
+            return {"total": 25000, "total_events": 9000,
+                    "stats": [{"day": "2026-01-01", "daily": 0}, {"day": "2026-09-10", "daily": 40}, {"day": "2026-11-11", "daily": 900}]}
+        old = team_stats.get
+        team_stats.get = fake
+        try:
+            r = team_stats.all_time("t", team_stats.dt.datetime(2026, 11, 11, 21, 30))
+        finally:
+            team_stats.get = old
+        self.assertEqual(r, {"total": 16000, "since": "2026-09-10"})       # events out; the first day with a visit
+        self.assertEqual((seen["path"], seen["start"], seen["end"]), ("/stats/total", "2026-01-01T00:00:00Z", "2026-11-11T22:00:00Z"))
+
+
 class Clicks(unittest.TestCase):
     def test_click_events_parsed_and_sorted(self):
         events = [{"path": "click/kalshi-signup/nba", "count": 2, "event": True},
