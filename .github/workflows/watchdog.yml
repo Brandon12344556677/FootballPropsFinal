@@ -16,7 +16,7 @@ on:
 
 permissions:
   contents: read
-  actions: read     # the update job's recent runs
+  actions: write    # the update job's recent runs, and starting one when the chain has stopped (watchdog.restart_chain)
   issues: write     # open, update and close the watchdog issue
 
 concurrency:

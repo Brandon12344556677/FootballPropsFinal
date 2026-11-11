@@ -44,6 +44,8 @@ TITLE = "Site watchdog: something on the site needs a look"
 MARK = "<!-- watchdog -->"         # identifies the watchdog's issue
 STALE_MIN = 75                     # the site updates about every 10 min; GitHub sometimes delays a run ~20 min
 NO_RUN_MIN = 90                    # no update run created for this long: the schedule has stalled
+RESTART_MIN = 30                   # no update run queued or running and none started for this long: the chain
+                                   # (each run starting the next, ~20 minutes apart) has stopped, so start one
 FAILS_IN_A_ROW = 2                 # completed update runs failing in a row before it's a problem
 HEALTH_ALERT_AFTER = 18            # health.py's ALERT_AFTER: only problems it has already alerted on
 TRIES, WAIT = 3, 20                # network retries, seconds apart
@@ -110,6 +112,20 @@ def parse_time(s):
     return t if t.tzinfo else t.replace(tzinfo=datetime.timezone.utc)
 
 
+def restart_chain(now, runs, newest, token):
+    """The update chain stopped (no run queued, waiting or running, and none started in RESTART_MIN): start one,
+    confirmed by start_run.py. On 2026-11-11 a run that failed to start ("startup_failure") ended the chain, and
+    GitHub's 20-minute backup schedule fired only every few hours. Returns a note for the run's log, or None."""
+    alive = any(r.get("status") in ("queued", "in_progress", "waiting", "pending", "requested") for r in runs)
+    if alive or not token or (newest is not None and now - newest < datetime.timedelta(minutes=RESTART_MIN)):
+        return None
+    import start_run
+    ok = start_run.start("update.yml", {"chain": "1"}, REPO, token)
+    ago = "ever" if newest is None else f"{int((now - newest).total_seconds() // 60)} minutes"
+    return (f"The update chain had stopped (no run in {ago}): the watchdog started a new run." if ok else
+            f"The update chain has stopped (no run in {ago}) and the watchdog couldn't start a run; start one from Actions -> Update NFL data -> Run workflow.")
+
+
 def check_update(now, token):
     """The update workflow's recent runs: still scheduled, and not failing over and over."""
     st, text = fetch(f"{API}/repos/{REPO}/actions/workflows/update.yml/runs?per_page=10&branch=main", token=token)
@@ -118,6 +134,9 @@ def check_update(now, token):
     runs = json.loads(text).get("workflow_runs") or []
     out = {}
     newest = max((parse_time(r["created_at"]) for r in runs), default=None)
+    restarted = restart_chain(now, runs, newest, token)
+    if restarted:
+        out["update: restarted"] = restarted
     if newest is None or now - newest > datetime.timedelta(minutes=NO_RUN_MIN):
         ago = "ever" if newest is None else f"{int((now - newest).total_seconds() // 60)} minutes"
         out["update: stalled"] = f"No \"Update NFL data\" run has started in {ago} (normally one every 20 minutes)."
