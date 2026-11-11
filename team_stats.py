@@ -367,6 +367,19 @@ def unchanged(snap, password):
     return strip(old) == strip(snap)
 
 
+# The all-time counter starts here: before the site's first visit, so every visit since is counted.
+ALL_TIME_START = dt.datetime(2026, 1, 1)
+
+
+def all_time(token, now):
+    """{"total": every page visit since the site began (events taken out, as range_stats does),
+    "since": the first day with a visit}: one /stats/total call over the whole history."""
+    total = get(token, "/stats/total", start=hour(ALL_TIME_START), end=hour(now + dt.timedelta(hours=1)))
+    days = [d["day"] for d in total.get("stats") or [] if int(d.get("daily") or 0) > 0]
+    return {"total": max(0, int(total.get("total") or 0) - int(total.get("total_events") or 0)),
+            "since": days[0] if days else None}
+
+
 def main():
     token = os.environ.get("GOATCOUNTER_TOKEN", "").strip()
     password = os.environ.get("TEAM_DASH_PASSWORD", "")
@@ -380,6 +393,10 @@ def main():
     for key, days in RANGES.items():
         snap[key] = range_stats(token, now, days, tz)
     snap["y1"] = range_stats(token, now, 1, tz, ago=1)   # yesterday, midnight to midnight
+    try:
+        snap["all"] = all_time(token, now)                # the Overview's All time tile
+    except Exception as e:  # noqa: BLE001 — the tile just keeps its last number until the next pass
+        print(f"team stats: all-time total skipped ({type(e).__name__})")
     snap["spikes"] = spikes(snap)
     snap["email"] = email_stats(os.environ.get("BUTTONDOWN_API_KEY", "").strip())
     if unchanged(snap, password):

@@ -69,6 +69,9 @@ header{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-be
 .kpi .s{font-size:13px;color:var(--muted)}
 .up{color:var(--accent)} .down{color:var(--down)}
 @media (max-width:760px){ .kpis{grid-template-columns:repeat(2,minmax(0,1fr))} .kpi:nth-child(3){border-left:0} .kpi:nth-child(n+3){border-top:1px solid var(--line)} }
+/* the Overview's five tiles: All time joins the four range tiles (a full-width row on phones) */
+.kpis5{grid-template-columns:repeat(5,minmax(0,1fr))}
+@media (max-width:760px){ .kpis5{grid-template-columns:repeat(2,minmax(0,1fr))} .kpis5 .kpi-all{grid-column:1/-1;border-left:0} .kpis5 .kpi:nth-child(5){border-left:0} }
 
 .panel{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:18px;min-width:0}
 .panel-h{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-bottom:12px}
@@ -378,11 +381,12 @@ details.plpast>summary:focus-visible{outline:2px solid var(--accent);outline-off
     <button role="tab" id="tab-d90" data-r="d90" aria-selected="false">90 days</button>
   </div>
 
-  <section data-view="overview" class="kpis" aria-label="Headline numbers">
+  <section data-view="overview" class="kpis kpis5" aria-label="Headline numbers">
     <div class="kpi"><span class="label">Visits</span><span class="v" id="kVisits">–</span><span class="s" id="kVisitsS"></span></div>
     <div class="kpi"><span class="label">Per day</span><span class="v" id="kAvg">–</span><span class="s" id="kAvgS"></span></div>
     <div class="kpi"><span class="label">On a phone</span><span class="v" id="kMobile">–</span><span class="s" id="kMobileS"></span></div>
     <div class="kpi"><span class="label">Top source</span><span class="v sm" id="kSrc">–</span><span class="s" id="kSrcS"></span></div>
+    <div class="kpi kpi-all"><span class="label">All time</span><span class="v" id="kAll">–</span><span class="s" id="kAllS"></span></div>
   </section>
 
   <section data-view="overview" class="panel">
@@ -1078,6 +1082,10 @@ details.plpast>summary:focus-visible{outline:2px solid var(--accent);outline-off
     const named = refs.filter(r=>r.name!=='No referrer');
 
     $('kVisits').textContent = fmt(total);
+    // All time: every visit since the site began, the same whichever range is picked (team_stats.py all_time)
+    const A = snap.all;
+    $('kAll').textContent = A ? fmt(A.total||0) : '–';
+    $('kAllS').textContent = A ? (A.since ? 'since ' + new Date(A.since+'T12:00:00Z').toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) : 'every visit so far') : 'Shows after the next stats update';
     const ch = prevChange(); const kv = $('kVisitsS'); kv.textContent=''; kv.className='s';
     if (ch === null) kv.textContent = range==='d90' ? 'Last 90 days' : 'No earlier period to compare';
     else { kv.textContent = (ch>=0?'▲ ':'▼ ') + Math.abs(ch) + '% vs previous ' + (days===1?'day':days+' days'); kv.classList.add(ch>=0?'up':'down'); }
