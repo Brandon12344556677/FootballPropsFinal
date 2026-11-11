@@ -627,8 +627,8 @@ details.valrules>summary{cursor:pointer}
 .panel.collapsed{padding-bottom:14px}
 </style>
 
-<link rel="stylesheet" href="app.css?v=20261015b">
-<script src="app.js?v=20261102a"></script>
+<link rel="stylesheet" href="app.css?v=20261111a">
+<script src="app.js?v=20261111a"></script>
 <script src="/thanksgiving.js?v=20261101b"></script>
 
 <header class="apptop">
@@ -658,6 +658,7 @@ details.valrules>summary{cursor:pointer}
   <div class="tabs" role="tablist">
     <button class="tab" role="tab" data-tab="week" aria-selected="true">📅 Today</button>
     <button class="tab" role="tab" data-tab="player" aria-selected="false">🔬 Player</button>
+    <button class="tab" role="tab" data-tab="tools" aria-selected="false">🧰 Tools</button>
     <button class="tab" role="tab" data-tab="past" aria-selected="false">📒 Past picks</button>
   </div>
 
@@ -703,6 +704,10 @@ details.valrules>summary{cursor:pointer}
     <div class="tnsearch"><input id="psearch" type="search" placeholder="Search a player, e.g. Sinner, Swiatek" autocomplete="off" aria-label="Search a player"><div id="psugg" class="tnsugg" hidden></div></div>
     <div id="playerbody"><p class="mktmuted">Pick a player to see their rating and recent matches, or tap a name on a match card.</p></div>
   </div>
+</div>
+
+<div id="page-tools" hidden>
+  <div class="panel" id="pfpanel2"><div class="mkthead"><h2>🎯 Parlay by payout</h2><span class="mktmuted">pick the payout and the chance you want — we search every priced pick</span></div><div id="pfbody"></div></div>
 </div>
 
 <div id="tab-picks" hidden>
@@ -1260,7 +1265,7 @@ function tickerItems(){
 }
 
 // ---- tabs ----
-const PAGE_IDS = {week: 'page-week', player: 'page-player', past: 'tab-picks'};
+const PAGE_IDS = {week: 'page-week', player: 'page-player', tools: 'page-tools', past: 'tab-picks'};
 function showTab(t){
   if(!PAGE_IDS[t]) t='week';
   document.querySelectorAll('.tab').forEach(b => b.setAttribute('aria-selected', String(b.dataset.tab === t)));
@@ -1282,6 +1287,20 @@ $('psearch').addEventListener('input', e => searchPlayers(e.target.value));
     el.innerHTML=`· <b>live record ${r.hit}/${r.n} (${Math.round(100*r.hit/r.n)}%)</b>${r.priced? `, ${r.units>=0?'+':'−'}${Math.abs(r.units).toFixed(1)}u` : ''} — <a href="#past" data-tab-go="past">details</a>`; }); })();
 (function(){ const b=$('edgescan'); if(!b) return;
   b.onclick=()=>{ const st=$('edgestatus'); if(st) st.textContent='Scanning the board…'; loadPicks(); }; })();
+
+// ---- Tools: parlay by payout (PS.parlayFinder). Legs are the upcoming, unlocked sides with a model chance and a
+// price with $25+ offered (priceCell's thin rule, or the pick's th flag), each side as recorded.
+function finderLegs(){
+  return upcomingPicks().filter(p=>p.prob!=null && p.price!=null && !p.lk && !p.th).map(normPick)
+    .filter(r=>!(r.vn!=='K' && r.pd!=null && r.pd<25))
+    .map(r=>({key:[r.pid, r.sk, r.raw.line, r.raw.side||''].join('|'), gid:r.mid, pid:r.pid, name:r.name, team:r.team, opp:r.opp,
+      side:r.bet.side, line:r.bet.line, statText:r.bet.text, prob:r.prob, price:r.price, vn:r.vn, r}));   // the bet in words, as on the cards }
+PS.parlayFinder($('pfbody'), {sport:SPORT_KEY, gameWord:'match', emptyNote:'Tennis markets post a day or so before each match.',
+  getLegs:async()=>{ for(let i=0; PICKS===null && i<40; i++) await new Promise(ok=>setTimeout(ok, 250));   // picks still loading
+    return finderLegs(); }, open:l=>openPickSheet(l.r)});
+// One leg per match: every tennis market of a match is about both players (one wins, the other loses), so two legs
+// from one match are contradictory or tied together, never independent. The same-match option stays off here.
+(function(){ const sg=$('pfbody').querySelector('#pfsg'); if(sg){ sg.checked=false; const lb=sg.closest('label'); if(lb) lb.hidden=true; } })();
 
 renderEdges(); renderValue(); renderMatches();
 loadPicks();

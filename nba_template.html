@@ -627,8 +627,8 @@ details.valrules>summary{cursor:pointer}
 .panel.collapsed{padding-bottom:14px}
 </style>
 
-<link rel="stylesheet" href="app.css?v=20261015b">
-<script src="app.js?v=20261102a"></script>
+<link rel="stylesheet" href="app.css?v=20261111a">
+<script src="app.js?v=20261111a"></script>
 <script src="/thanksgiving.js?v=20261101b"></script>
 
 <header class="apptop">
@@ -776,6 +776,7 @@ details.valrules>summary{cursor:pointer}
     <p class="mktnote">Add players with <b>⚖ Compare</b> on the <b>Player</b> tab, then set a stat, line and side there — everyone is scored for that exact prop so you can see who's the better bet.</p>
     <div id="cmpbody"></div>
   </div>
+  <div class="panel" id="pfpanel2"><div class="mkthead"><h2>🎯 Parlay by payout</h2><span class="mktmuted">pick the payout and the chance you want — we search every priced pick</span></div><div id="pfbody"></div></div>
   <div class="panel">
     <div class="mkthead"><h2>🎲 Build me a parlay</h2><span class="mktmuted">pick risk &amp; legs — we assemble it from the model board</span></div>
     <div style="margin:6px 0 10px">
@@ -1737,6 +1738,21 @@ function buildParlay(){ const body=$('apbody');
 }
 function shuffle(a){ a=a.slice(); for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; }
 $('apBuild').onclick=buildParlay;
+// Parlay by payout (PS.parlayFinder): every upcoming, unlocked pick with a model chance and a price you can get
+// for that exact side ($25+ offered on the cheaper exchange, the same test priceCell uses), one leg per prop side.
+PS.parlayFinder($('pfbody'), {sport:SPORT_KEY, gameWord:'game',
+  getLegs:async()=>{ const seen=new Set(), legs=[];
+    for(let i=0; i<40 && PICKS===null; i++) await new Promise(res=>setTimeout(res, 250));   // picks still loading: wait up to 10s
+    upcomingPicks().filter(p=>p.prob!=null && !p.lk && !p.th).map(normPick).forEach(r=>{
+      if(r.price==null || r.lk) return;
+      if(r.vn!=='K' && r.pd!=null && r.pd<25) return;   // thin Polymarket side: no price you can get
+      if(r.vn==='K' && r.kd!=null && r.kd<25) return;   // thin Kalshi side
+      const key=[r.pid, r.sk, r.line, r.side].join('|'); if(seen.has(key)) return; seen.add(key);
+      const g=r.game||{}, opp=r.team===g.home? g.away : r.team===g.away? g.home : '';
+      legs.push({key, gid:r.gid, pid:r.pid, name:r.name, team:r.team, opp, side:r.side, line:r.line, statText:r.statText,
+        prob:r.prob, price:r.price, vn:r.vn, n:r.n, row:r}); });
+    return legs; },
+  open:l=>openPickSheet(l.row)});
 $('cmpclear').onclick=()=>{ CMP=[]; saveTools(); updatePlayerBtns(); renderCompare(); };
 
 // ---- Suggest a feature ----

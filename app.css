@@ -688,3 +688,22 @@ html[data-view="simple"] .app .pickcard .board{display:none}
 /* game start on pick cards (PS.gameTime): local time plus a countdown */
 .app .pc-who .pc-when{color:var(--ps-soft);font-weight:600;margin-top:2px}
 .app .pc-who .pc-when i{font-style:normal;font-weight:500;color:var(--ps-muted)}
+
+/* parlay finder (PS.parlayFinder, every sport page's Tools tab) */
+.app .pfform{display:grid;gap:10px;margin:4px 0 6px}
+.app .pfrow{display:flex;flex-wrap:wrap;align-items:center;gap:8px;font-size:14px;color:var(--ps-soft)}
+.app .pflab{font-weight:600;color:#fff;min-width:150px}
+.app .pfrow input[type=number],.app .pfrow select{width:80px;height:34px;border:1px solid rgba(255,255,255,.18);border-radius:8px;background:rgba(255,255,255,.04);color:#fff;padding:0 8px;font:inherit}
+.app .pfsg{display:flex;align-items:center;gap:6px;margin-left:8px;color:var(--ps-muted);font-size:13px}
+.app .pfchips{display:flex;flex-wrap:wrap;gap:6px}
+.app .pfchips .chip{padding:5px 12px;font-size:13px}
+.app #pfgo{justify-self:start}
+.app .pflegs{list-style:none;margin:14px 0 6px;padding:0;display:grid;gap:6px}
+.app .pfleg{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr) auto;gap:4px 12px;align-items:center;width:100%;text-align:left;
+  background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.09);border-radius:10px;padding:9px 12px;color:#fff;font:inherit;cursor:pointer}
+.app .pfleg:hover{border-color:var(--ps-green)}
+.app .pfwho{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.app .pfbet{color:var(--ps-soft);font-size:13.5px}
+.app .pfnum{font-variant-numeric:tabular-nums;font-weight:700;white-space:nowrap}
+.app .linkbtn{background:none;border:0;padding:0;color:var(--ps-green);font:inherit;text-decoration:underline;cursor:pointer}
+@media(max-width:620px){.app .pfleg{grid-template-columns:1fr auto}.app .pfbet{grid-column:1/-1;grid-row:2}.app .pflab{min-width:0;width:100%}}
