@@ -38,6 +38,30 @@ class Update(unittest.TestCase):
             self.assertEqual(watchdog.check_update(NOW, None), {})
 
 
+class RestartChain(unittest.TestCase):
+    def restart(self, runs, ok=True, token="t"):
+        import start_run
+        newest = max((watchdog.parse_time(r["created_at"]) for r in runs), default=None)
+        with mock.patch.object(start_run, "start", return_value=ok) as st:
+            note = watchdog.restart_chain(NOW, runs, newest, token)
+        return note, st.call_count
+
+    def test_stopped_chain_is_restarted(self):     # Nov 11, 2026: a startup_failure, then nothing
+        note, calls = self.restart([run(85, "startup_failure"), run(105)])
+        self.assertEqual(calls, 1)
+        self.assertIn("started a new run", note)
+
+    def test_running_queued_or_recent_is_left_alone(self):
+        self.assertEqual(self.restart([run(40, None, "in_progress"), run(60)]), (None, 0))
+        self.assertEqual(self.restart([run(40, None, "queued")]), (None, 0))
+        self.assertEqual(self.restart([run(20), run(40)]), (None, 0))
+        self.assertEqual(self.restart([run(85)], token=None), (None, 0))
+
+    def test_failed_restart_says_what_to_do(self):
+        note, calls = self.restart([run(85)], ok=False)
+        self.assertIn("Run workflow", note)
+
+
 class Site(unittest.TestCase):
     PAGE = "<!doctype html><html><head>" + "x" * 2000 + '<script src="app.js?v=1a"></script></head></html>'
 

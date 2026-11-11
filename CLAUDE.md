@@ -22,7 +22,7 @@ README.md has the full feature tour; this file is the working rules.
   per sport) and `p/` (link-preview pages for shared picks, kept 14 days after the game), `health.py` → `health.json`,
   `post_daily.py` (Discord/Telegram, and the daily picks email via Buttondown: `BUTTONDOWN_API_KEY`, sign-up form on the
   home page shown once `NEWSLETTER` is set in index.html), `watchdog.py` (own workflow, started by every update run, so about every 20 min, with a 30-min schedule as backup: checks the live site and keeps one
-  "Site watchdog" GitHub issue open while something is broken; the team dashboard reads it). `build_today.py` also writes `search.json` (home page player search).
+  "Site watchdog" GitHub issue open while something is broken, and restarts the update chain when no update run has started in 30+ minutes (`restart_chain`, via `start_run.py`); the team dashboard reads it). `build_today.py` also writes `search.json` (home page player search).
 - `edge_report.py` → `team/edges.enc` (every pass: which strategies make money, encrypted like the stats);
   `site_checks.py` (own daily workflow: search basics, keeps a "Site checks" GitHub issue).
   Polymarket and Kalshi links are plain links (no referral codes) since Oct 13, 2026.
