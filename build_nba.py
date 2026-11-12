@@ -20,6 +20,7 @@ The probability model here mirrors the block marked "MODEL" in nba_template.html
 Change both or neither. Everything that touches the network is wrapped so a bad
 ESPN response degrades to "no new data" instead of failing the build.
 """
+import gzip
 import json, math, os, re, sys, time, datetime, unicodedata, urllib.request
 from concurrent.futures import ThreadPoolExecutor
 
@@ -255,9 +256,12 @@ def http_get(url, timeout=20, tries=2):
     err = None
     for i in range(tries):
         try:
-            req = urllib.request.Request(url, headers=UA)
+            # gzip: since Nov 12, 2026 Polymarket's /events pages over 50 events are served compressed only
+            # (HTTP 406 "gzip_required" otherwise); an uncompressed reply passes through unchanged.
+            req = urllib.request.Request(url, headers=dict(UA, **{"Accept-Encoding": "gzip"}))
             with urllib.request.urlopen(req, timeout=timeout) as resp:
-                return resp.read()
+                body = resp.read()
+                return gzip.decompress(body) if resp.headers.get("Content-Encoding") == "gzip" else body
         except Exception as e:  # noqa: BLE001
             err = e
             code = getattr(e, "code", None)
