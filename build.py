@@ -17,6 +17,7 @@ Outputs
 The probability model here is mirrored line-for-line in template.html (the block
 marked "MODEL"). tests/test_model.py checks the two agree. Change both or neither.
 """
+import gzip
 import csv, io, json, math, os, re, sys, time, datetime, unicodedata, urllib.parse, urllib.request
 from zoneinfo import ZoneInfo
 
@@ -374,9 +375,12 @@ def http_get(url, timeout=120, tries=3):
     err = None
     for i in range(tries):
         try:
-            req = urllib.request.Request(url, headers=UA)
+            # gzip: since Nov 12, 2026 Polymarket's /events pages over 50 events are served compressed only
+            # (HTTP 406 "gzip_required" otherwise); an uncompressed reply passes through unchanged.
+            req = urllib.request.Request(url, headers=dict(UA, **{"Accept-Encoding": "gzip"}))
             with urllib.request.urlopen(req, timeout=timeout) as resp:
-                return resp.read()
+                body = resp.read()
+                return gzip.decompress(body) if resp.headers.get("Content-Encoding") == "gzip" else body
         except Exception as e:  # noqa: BLE001
             err = e
             if getattr(e, "code", None) == 404:
