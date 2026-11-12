@@ -2,13 +2,13 @@
  "problems": {
   "build_nba: polymarket": {
    "first": "2026-11-12T12:48:44Z",
-   "runs": 6,
+   "runs": 7,
    "alerted": null,
    "msg": "build_nba.py: polymarket failed (HTTP Error 406: Not Acceptable)"
   },
   "build_nhl: polymarket": {
    "first": "2026-11-12T12:48:44Z",
-   "runs": 6,
+   "runs": 7,
    "alerted": null,
    "msg": "build_nhl.py: polymarket failed (HTTP Error 406: Not Acceptable)"
   }
