@@ -1,48 +1,38 @@
 {
- "date": "2026-11-13",
+ "date": "2026-11-14",
  "drafts": {
   "c": {
    "caption": {
     "title": "Pick of the Day + today's best props",
-    "description": "Pick of the Day: Matas Buzelis under 5.5 Assists (97% model chance). Swipe for today's best NBA, NHL props → Free research, link in bio. Model chance, not a guarantee. 18+. #NBA #NBAProps #NHL #NHLProps #PlayerProps"
+    "description": "Pick of the Day: Cole Perfetti under 1.5 Goals (98% model chance). Swipe for today's best NBA, NHL props → Free research, link in bio. Model chance, not a guarantee. 18+. #NBA #NBAProps #NHL #NHLProps #PlayerProps"
    },
    "ok": true,
-   "id": "p_inbox_url~v2.7707773577818572814"
+   "id": "p_inbox_url~v2.7708121114945325070"
   },
   "v1": {
-   "sport": "nba",
+   "sport": "nhl",
    "angle": "record",
-   "caption": "Do our NBA picks actually hit? Top 25: 1,091 of 1,222 this season (89%), every pick recorded before the game and graded after ✅ Free research, link in bio. Model chance, not a guarantee. 18+. #NBA #NBAProps #PlayerProps #SportsAnalytics",
+   "caption": "Do our NHL picks actually hit? Top 25: 1,659 of 1,784 this season (93%), every pick recorded before the game and graded after ✅ Free research, link in bio. Model chance, not a guarantee. 18+. #NHL #NHLProps #PlayerProps #SportsAnalytics",
    "ok": true,
-   "id": "v_inbox_file~v2.7707773749004683277"
+   "id": "v_inbox_file~v2.7708121114945521678"
   },
   "v2": {
-   "sport": "nhl",
+   "sport": "nba",
    "angle": "gap",
-   "caption": "1 NHL player prop where our model and the market disagree today 👀 Biggest gap: Gabe Perreault under 0.5 Points, model 63% vs. market 48%. Free research, link in bio. Model chance, not a guarantee. 18+. #NHL #NHLProps #PlayerProps #SportsAnalytics",
+   "caption": "3 NBA player props where our model and the market disagree today 👀 Biggest gap: DeMar DeRozan over 3.5 Assists, model 55% vs. market 30%. Free research, link in bio. Model chance, not a guarantee. 18+. #NBA #NBAProps #PlayerProps #SportsAnalytics",
    "ok": true,
-   "id": "v_inbox_file~v2.7707773683301140494"
+   "id": "v_inbox_file~v2.7708121202820139022"
   },
   "v3": {
    "sport": "nba",
    "angle": "streak",
-   "caption": "3 NBA hit streaks on the line today 🔥 Longest: Darius Acuff Jr., 10 straight games over 1.5 rebounds. Will it keep going? Free research, link in bio. Model chance, not a guarantee. 18+. #NBA #NBAProps #PlayerProps #SportsAnalytics",
-   "ok": true,
-   "id": "v_inbox_file~v2.7707773784022927390"
+   "caption": "3 NBA hit streaks on the line today 🔥 Longest: Jaden McDaniels, 10 straight games over 1.5 assists. Will it keep going? Free research, link in bio. Model chance, not a guarantee. 18+. #NBA #NBAProps #PlayerProps #SportsAnalytics",
+   "ok": false,
+   "error": "spam_risk_too_many_pending_share: spam_risk_too_many_pending_share"
   }
  },
  "history": [
   {
-   "date": "2026-10-30",
-   "sport": "nba",
-   "angle": "gap"
-  },
-  {
-   "date": "2026-10-30",
-   "sport": "nhl",
-   "angle": "record"
-  },
-  {
    "date": "2026-10-31",
    "sport": "nba",
    "angle": "record"
@@ -231,8 +221,18 @@
    "date": "2026-11-13",
    "sport": "nba",
    "angle": "streak"
+  },
+  {
+   "date": "2026-11-14",
+   "sport": "nhl",
+   "angle": "record"
+  },
+  {
+   "date": "2026-11-14",
+   "sport": "nba",
+   "angle": "gap"
   }
  ],
  "reconnect": false,
- "at": "2026-11-13T21:39:33Z"
+ "at": "2026-11-14T20:07:27Z"
 }
