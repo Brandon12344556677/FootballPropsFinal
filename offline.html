@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Offline — Prop Streak Lab</title>
+<!-- Shown by sw.js when a page was never saved on this device and the network is down. Not in the sitemap. -->
+<meta name="robots" content="noindex">
+<link rel="icon" href="/favicon.ico" sizes="48x48">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="manifest" href="/site.webmanifest">
+<link rel="stylesheet" href="/fonts.css">
+<style>
+:root{color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;background:#0a1628;color:#dfe6ef;
+  font-family:"Inter",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;line-height:1.6;font-size:16px}
+.box{max-width:440px;margin:0 16px;padding:28px 24px;background:#0f2038;border:1px solid #22354f;border-radius:20px;text-align:center}
+.box img{width:56px;height:56px;border-radius:14px}
+h1{font-family:"Archivo","Inter",system-ui,sans-serif;font-weight:800;letter-spacing:-.02em;font-size:28px;color:#fff;margin:14px 0 6px}
+p{margin:0 0 16px;color:#b8c5d6}
+button{background:#22d07f;color:#06210b;border:0;border-radius:999px;padding:11px 22px;font:700 15px/1 "Inter",system-ui,sans-serif;cursor:pointer}
+ul{list-style:none;padding:0;margin:18px 0 0;display:flex;flex-wrap:wrap;gap:8px;justify-content:center}
+ul a{display:inline-block;padding:6px 12px;border:1px solid #22354f;border-radius:999px;color:#dfe6ef;text-decoration:none;font-size:14px}
+ul a:hover{border-color:#22d07f}
+</style>
+</head>
+<body>
+<div class="box">
+  <img src="/icon-192.png" alt="">
+  <h1>You're offline</h1>
+  <p>This page isn't saved on this device yet. Check your connection and try again: prices and picks always load fresh when you're online.</p>
+  <button type="button" onclick="location.reload()">Try again</button>
+  <ul id="saved" hidden></ul>
+</div>
+<script>
+// Links to the pages this device has saved (sw.js's psl-pages-* cache), so there's still something to open.
+(async function(){
+  if(!window.caches) return;
+  const names={'/':'Home','/index.html':'Home','/nfl.html':'NFL','/nba.html':'NBA','/nhl.html':'NHL','/mlb.html':'MLB','/tennis.html':'Tennis','/record.html':'Record'};
+  const seen=new Set(), ul=document.getElementById('saved');
+  for(const k of await caches.keys()){
+    if(!k.startsWith('psl-')) continue;
+    for(const r of await (await caches.open(k)).keys()){
+      const p=new URL(r.url).pathname, n=names[p];
+      if(!n || seen.has(n)) continue; seen.add(n);
+      const a=document.createElement('a'); a.href=p; a.textContent=n;
+      const li=document.createElement('li'); li.appendChild(a); ul.appendChild(li);
+    }
+  }
+  if(seen.size){ ul.insertAdjacentHTML('beforebegin','<p style="margin:18px 0 0">Last saved versions on this device:</p>'); ul.hidden=false; }
+})();
+</script>
+</body>
+</html>

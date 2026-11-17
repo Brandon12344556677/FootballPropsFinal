@@ -36,7 +36,7 @@
 <script data-goatcounter="https://propstreaklive.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
 <link rel="stylesheet" href="fonts.css">
 <link rel="stylesheet" href="app.css?v=20261117b">
-<script src="app.js?v=20261117b"></script>
+<script src="app.js?v=20261117c"></script>
 <script src="/thanksgiving.js?v=20261101b"></script>
 <style>
 :root{
@@ -572,7 +572,7 @@ footer .fine a{color:#8394ab}
 // The Today feed and the sections below it, from today.json (rebuilt every 10 minutes).
 (function(){ if(!window.PS) return;
   const esc=PS.esc, SPORT={nfl:'🏈 NFL', nba:'🏀 NBA', nhl:'🏒 NHL', mlb:'⚾ MLB', tennis:'🎾 Tennis'};
-  const get=u=>fetch(u,{cache:'no-store'}).then(r=>r.ok?r.json():null).catch(()=>null);
+  const get=u=>fetch(u,{cache:'no-cache'}).then(r=>r.ok?r.json():null).catch(()=>null);
   const ahead=p=>Date.parse(p.start)>Date.now();
   let FAIRW=0.1;   // the model's weight in the fair chance (today.json refits it hourly)
   const initials=n=>{ const w=String(n||'').replace(/\s+(Jr|Sr|II|III|IV)\.?$/i,'').trim().split(/\s+/); return ((w[0]||'')[0]||'')+(w.length>1? (w[w.length-1][0]||'') : ''); };
@@ -685,7 +685,7 @@ footer .fine a{color:#8394ab}
     const LBL={nfl:'NFL', nba:'NBA', nhl:'NHL', mlb:'MLB', tennis:'Tennis'};
     const norm=s=>String(s||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase().replace(/[^a-z0-9 ]+/g,'');
     let rows=null, loading=null, hits=[], active=-1;
-    const load=()=> loading || (loading=fetch('search.json',{cache:'no-store'}).then(r=>r.ok? r.json() : null)
+    const load=()=> loading || (loading=fetch('search.json',{cache:'no-cache'}).then(r=>r.ok? r.json() : null)
       .then(d=>{ rows=(d&&d.players||[]).map(p=>({sport:p[0], id:p[1], name:p[2], team:p[3], pos:p[4], key:norm(p[2])})); })
       .catch(()=>{ rows=[]; }));
     function find(q){

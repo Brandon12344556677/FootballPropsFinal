@@ -628,7 +628,7 @@ details.valrules>summary{cursor:pointer}
 </style>
 
 <link rel="stylesheet" href="app.css?v=20261117b">
-<script src="app.js?v=20261117b"></script>
+<script src="app.js?v=20261117c"></script>
 <script src="/thanksgiving.js?v=20261101b"></script>
 
 <header class="apptop">
@@ -918,11 +918,11 @@ function setPicks(d, full){
 }
 function loadPicks(){
   if(PICKS_FULL){ PICKS_FULL=false; loadFullPicks(); return; }
-  fetch('./tennis_picks_recent.json',{cache:'no-store'}).then(r=>r.ok? r.json() : Promise.reject()).then(d=>setPicks(d, false))
+  fetch('./tennis_picks_recent.json',{cache:'no-cache'}).then(r=>r.ok? r.json() : Promise.reject()).then(d=>setPicks(d, false))
     .catch(()=>loadFullPicks());
 }
 function loadFullPicks(){ if(PICKS_FULL||fullPicksLoading) return; fullPicksLoading=true;
-  fetch('./tennis_picks.json',{cache:'no-store'}).then(r=>r.ok? r.json() : null).then(d=>setPicks(d, true))
+  fetch('./tennis_picks.json',{cache:'no-cache'}).then(r=>r.ok? r.json() : null).then(d=>setPicks(d, true))
     .catch(()=>{ PICKS=PICKS||[]; PICKS_FULL=true; renderPickViews(); }).finally(()=>{ fullPicksLoading=false; });
 }
 function pickStarted(p){ const t=p.start? Date.parse(p.start) : NaN; return isFinite(t)? t<=Date.now() : false; }

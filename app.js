@@ -560,11 +560,11 @@ window.PS = (function(){
   // share pages that exist for this board's picks (p/keys.json, build_games.py): {sport: {key: expiry}}
   let SHARE_KEYS=null;
   const shareKey=st=> `${st.player.id}-${st.stat}-${String(Number(st.line))}-${st.ou}`;   // = build_games.share_key
-  if(PAGE_SPORT) fetch('p/keys.json',{cache:'no-store'}).then(r=>r.ok? r.json() : null)
+  if(PAGE_SPORT) fetch('p/keys.json',{cache:'no-cache'}).then(r=>r.ok? r.json() : null)
     .then(d=>{ SHARE_KEYS=new Set(Object.keys((d&&d[PAGE_SPORT])||{})); }).catch(()=>{});
   // props whose price moved 10c+ in the last hour (today.json "fast", build_today.fast_moves): a warning in the pick sheet
   let FAST=[];
-  if(PAGE_SPORT) fetch('today.json',{cache:'no-store'}).then(r=>r.ok? r.json() : null)
+  if(PAGE_SPORT) fetch('today.json',{cache:'no-cache'}).then(r=>r.ok? r.json() : null)
     .then(d=>{ FAST=((d&&d.fast)||[]).filter(f=>f.sport===PAGE_SPORT); }).catch(()=>{});
   // Plain-English reasons for a pick, from its own numbers: the last games against the line, the
   // streak, the average against the line, and the model against the market price.
@@ -709,7 +709,7 @@ window.PS = (function(){
       if(go) go.onclick=e=>{ const tab=document.querySelector(`.tab[data-tab="${go.dataset.tabGo}"]`); if(tab){ e.preventDefault(); tab.click(); } };
     };
     paint(null);
-    fetch('today.json',{cache:'no-store'}).then(r=>r.ok? r.json() : null).then(t=>{ if(t){ paint(t); if(t.fair) setFair(t.fair.w); } }).catch(()=>{});
+    fetch('today.json',{cache:'no-cache'}).then(r=>r.ok? r.json() : null).then(t=>{ if(t){ paint(t); if(t.fair) setFair(t.fair.w); } }).catch(()=>{});
     setInterval(()=>el.querySelectorAll('[data-ago]').forEach(b=>{ b.textContent=ago(+b.dataset.ago); }), 60000);
   }
   if(document.readyState!=='loading') trust(); else document.addEventListener('DOMContentLoaded', trust);
@@ -1570,4 +1570,43 @@ window.PSLive=(function(){
   }
   document.addEventListener('click', onClick, true);
   document.addEventListener('auxclick', e => { if (e.button === 1) onClick(e); }, true);   // middle-click: new tab
+})();
+
+// ---- offline app: sw.js keeps the last good copy of each page and data file for when the network is down ----
+// Pages and data always come from the network when it answers; a saved copy is only used when it doesn't,
+// and then this bar says so ("Offline: showing data from ..."). Not on the team dashboard.
+// ?nosw on any page removes the worker and its caches from this browser (sw.js has a site-wide KILL switch).
+(function(){
+  const sw = navigator.serviceWorker;
+  if (!sw || location.pathname.startsWith('/team/')) return;
+  if (!(location.protocol === 'https:' || /^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname))) return;
+  if (/[?&]nosw\b/.test(location.search)) {
+    if (sw.controller) sw.controller.postMessage({type: 'nosw'});   // stops it answering this page's requests too
+    sw.getRegistrations().then(rs => rs.forEach(r => r.unregister())).catch(() => {});
+    if (window.caches) caches.keys().then(ks => ks.forEach(k => k.startsWith('psl-') && caches.delete(k))).catch(() => {});
+    return;
+  }
+  function bar(when){
+    if (document.getElementById('psoffline')) return;
+    const d = when ? new Date(when) : null, ok = d && !isNaN(d);
+    const sameDay = ok && d.toDateString() === new Date().toDateString();
+    const t = ok ? d.toLocaleString([], sameDay ? {hour:'numeric', minute:'2-digit'} : {month:'short', day:'numeric', hour:'numeric', minute:'2-digit'}) : '';
+    const b = document.createElement('div');
+    b.id = 'psoffline'; b.setAttribute('role', 'status');
+    b.style.cssText = 'position:fixed;left:50%;bottom:12px;transform:translateX(-50%);z-index:9999;max-width:calc(100% - 32px);display:flex;align-items:center;gap:10px;' +
+      'padding:8px 10px 8px 14px;border-radius:999px;background:#241a0e;border:1px solid #6a5326;color:#f6ecd9;font:500 13.5px/1.3 var(--ps-body,system-ui,sans-serif);box-shadow:0 6px 20px rgba(0,0,0,.35)';
+    b.innerHTML = `<span>${navigator.onLine ? 'No connection to the site' : 'Offline'}: showing data from ${t || 'your last visit'}. Prices may have moved.</span>` +
+      '<button type="button" style="flex:none;border:0;border-radius:999px;padding:6px 12px;background:#e8b54a;color:#241a0e;font-family:inherit;font-weight:700;font-size:13px;line-height:1;cursor:pointer">Retry</button>';
+    b.querySelector('button').onclick = () => location.reload();
+    (document.body || document.documentElement).appendChild(b);
+  }
+  sw.addEventListener('message', e => { if (e.data && e.data.type === 'psl-offline') bar(e.data.when); });
+  sw.startMessages && sw.startMessages();
+  addEventListener('load', () => {
+    sw.register('/sw.js').catch(() => {});
+    // was this page itself the saved copy? (the worker can't message a page before it exists, so ask)
+    const url = location.href.split('#')[0];
+    if (sw.controller) sw.controller.postMessage({type: 'status', url});
+    else sw.ready.then(r => r.active && r.active.postMessage({type: 'status', url, save: true}));   // first visit: loaded before the worker
+  });
 })();
