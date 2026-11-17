@@ -1,0 +1,330 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Record — Every List, Every Sport, Losses Included | Prop Streak Lab</title>
+<meta name="description" content="Prop Streak Lab's full public record: every list in every sport, all-time and the last 30 days. Hit rate, units, return, calibration and model vs. market, with the lists that are down named plainly.">
+<link rel="canonical" href="https://propstreaklab.com/record.html">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://propstreaklab.com/record.html">
+<meta property="og:title" content="The Record: every list, losses included | Prop Streak Lab">
+<meta property="og:description" content="Every list in every sport, all-time and the last 30 days: hit rate, units, return, calibration and model vs. market. The lists that are down are named plainly.">
+<meta property="og:image" content="https://propstreaklab.com/og/record.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Prop Streak Lab record: every list in every sport, losses included">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="/favicon.ico" sizes="48x48">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="/icon-192.png" sizes="192x192" type="image/png">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="manifest" href="/site.webmanifest">
+<meta name="theme-color" content="#0a1628">
+<script data-goatcounter="https://propstreaklive.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
+<link rel="stylesheet" href="fonts.css">
+<style>
+/* The page's own styles; app.css (loaded after) brings the shared header, panels, hero and footer. */
+:root{
+  color-scheme:dark;
+  --ink:var(--ps-line); --bg:var(--ps-bg); --surface:var(--ps-surface); --surface-2:var(--ps-surface-2); --line:var(--ps-line);
+  --text:var(--ps-text); --muted:var(--ps-muted);
+  --accent:var(--ps-green); --gold:var(--ps-gold);
+  --hit:#4fb583; --miss:var(--ps-red);
+  --s1:#5aa9ff; --s2:var(--ps-gold); --s3:#c58af9;   /* chart series: Value, Top 25, a third row */
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--text);margin:0;line-height:1.5;font-size:15px;overflow-x:hidden;-webkit-font-smoothing:antialiased}
+.wrap{max-width:1120px;margin:0 auto;padding:20px 16px 70px}
+a{color:var(--accent)}
+h2{margin:0}
+.apptop .psview{display:none!important}   /* nothing here differs between Simple and Pro */
+.panel{padding:20px;margin:0 0 18px}
+.rc-sub{color:var(--muted);font-size:14px;margin:6px 0 14px;max-width:62em}
+.rc-jump{display:flex;flex-wrap:wrap;gap:8px;margin:14px 0 18px}
+.rc-jump a{padding:7px 14px;border-radius:999px;border:1px solid var(--line);color:var(--ps-soft);text-decoration:none;font-size:13.5px}
+.rc-jump a:hover{border-color:rgba(var(--ps-green-rgb),.5);color:#fff}
+.rc-badge{display:inline-block;margin-left:8px;padding:2px 9px;border-radius:999px;border:1px solid rgba(var(--ps-gold-rgb),.55);color:var(--gold);
+  font-size:12px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;vertical-align:middle}
+.rc-grid{display:grid;grid-template-columns:minmax(0,1fr);gap:18px}
+@media(min-width:880px){.rc-grid{grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);align-items:start}}
+.rc-list{margin:0 0 14px}
+.rc-list h3{font-size:15px;margin:0 0 4px;color:#fff;display:flex;align-items:center;gap:8px}
+.rc-sw{width:14px;height:3px;border-radius:2px;flex:none;display:inline-block}
+.rc-t{width:100%;border-collapse:collapse;font-size:13px;font-variant-numeric:tabular-nums}
+.rc-t th,.rc-t td{padding:6px 3px;border-bottom:1px solid rgba(255,255,255,.07);text-align:right;white-space:nowrap}
+.rc-t th:first-child,.rc-t td:first-child{text-align:left;padding-left:0}
+.rc-t thead th{color:var(--muted);font-weight:500;font-size:12px;text-transform:uppercase;letter-spacing:.04em}
+.rc-t tbody th{font-weight:500;color:var(--ps-soft)}
+.rc-t .rc-none{text-align:left;color:var(--muted)}
+.rc-up{color:var(--hit);font-weight:600}
+.rc-dn{color:var(--miss);font-weight:600}
+.rc-note{color:var(--muted);font-size:12.5px;margin:5px 0 0;line-height:1.5}
+.rc-chart{position:relative;max-width:560px}
+.rc-chart svg{display:block;width:100%;height:auto;touch-action:pan-y}
+.rc-chart h3{font-size:13px;font-weight:500;color:var(--muted);margin:0 0 6px}
+.rc-legend{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:12.5px;color:var(--ps-soft);margin:0 0 4px}
+.rc-legend span{display:inline-flex;align-items:center;gap:6px}
+.rc-tip{position:absolute;top:0;pointer-events:none;background:var(--ps-bg-2);border:1px solid var(--line);border-radius:10px;padding:7px 10px;
+  font-size:12px;line-height:1.5;color:var(--ps-soft);white-space:nowrap;z-index:2;font-variant-numeric:tabular-nums}
+.rc-tip b{color:#fff}
+.rc-tip span{display:flex;align-items:center;gap:6px}
+.rc-more{display:inline-block;margin-top:10px;font-size:13.5px}
+.rc-lose{margin:0;padding:0;list-style:none}
+.rc-lose li{padding:9px 0;border-bottom:1px solid rgba(255,255,255,.07);font-size:14.5px}
+.rc-lose li:last-child{border-bottom:0}
+.rc-lose b{color:#fff}
+.rc-h3{font-size:13px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin:16px 0 2px}
+.rc-scroll{overflow-x:auto}
+@media(max-width:400px){.rc-t{font-size:12px}.rc-t th,.rc-t td{padding:6px 2px}.rc-t thead th{font-size:12px;letter-spacing:0}}
+</style>
+
+<link rel="stylesheet" href="app.css?v=20261117e">
+<script src="app.js?v=20261117e"></script>
+<script src="/thanksgiving.js?v=20261117a"></script>
+
+<header class="apptop">
+  <div class="apptop-in">
+    <a class="brand" href="./" aria-label="Prop Streak Lab home"><svg width="30" height="30" viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" rx="14" fill="#0f2038"/><path d="M32,6 Q32,32 54,32 Q32,32 32,58 Q32,32 10,32 Q32,32 32,6 Z" fill="#22d07f"/></svg><b>Prop <i>Streak</i> Lab</b></a>
+    <nav class="sportnav" aria-label="Sports">
+      <a href="./nfl.html">🏈 NFL</a>
+      <a href="./nba.html">🏀 NBA</a>
+      <a href="./nhl.html">🏒 NHL</a>
+      <a href="./mlb.html">⚾ MLB</a>
+      <a href="./tennis.html">🎾 Tennis</a>
+    </nav>
+  </div>
+</header>
+
+<div class="wrap app">
+  <section class="apphero">
+    <h1>The full record. <i>Losses</i> included.</h1>
+    <p class="lede">Every list the site publishes, in every sport: how often it hit, what the model said, and what 1 unit on each pick returned at the price recorded before the game. Nothing is left out for how it turned out.</p>
+    <p class="rc-note" id="rc-asof" style="margin:-8px 0 14px"></p>
+    <div class="herostats">
+      <div><b id="rc-graded">—</b><span>Live picks graded</span></div>
+      <div><b id="rc-gen">—</b><span>Updated</span></div>
+      <div><b id="rc-since">—</b><span>Tracking since</span></div>
+    </div>
+  </section>
+
+  <nav class="rc-jump" id="rc-jump" aria-label="On this page"></nav>
+
+  <section class="panel" id="losing">
+    <h2>What's losing</h2>
+    <p class="rc-sub">The lists that are down units, worst first. A list that is up overall but down over the last 30 days is named too.</p>
+    <div id="rc-losing"></div>
+  </section>
+
+  <div id="rc-sports"></div>
+
+  <section class="panel" id="potd">
+    <h2>Pick of the Day</h2>
+    <p class="rc-sub">Two picks a day on the home page, chosen once and never swapped: the Value Shot and the Safe Pick. Each counts as 1 unit at the price it was frozen at. Voids and pushes don't count.</p>
+    <div id="rc-botd"></div>
+  </section>
+
+  <section class="panel" id="calibration">
+    <h2>Calibration: did 70% mean 70%?</h2>
+    <p class="rc-sub">Every graded live pick in the NFL, NBA, NHL and MLB (not only the listed ones), grouped by the chance the model gave it. A dot on the dashed line means the model was right about how sure to be; below it, the model was too confident.</p>
+    <div class="rc-grid">
+      <div class="rc-chart" id="rc-calchart"></div>
+      <div class="rc-scroll" id="rc-caltable"></div>
+    </div>
+  </section>
+
+  <section class="panel" id="market">
+    <h2>Model vs. market</h2>
+    <p class="rc-sub" id="rc-fairline"></p>
+    <div class="rc-scroll" id="rc-fairtable"></div>
+    <p class="rc-note">Brier score: the average squared gap between a stated chance and what happened (1 for a hit, 0 for a miss). Lower is better; always saying 50% scores 0.250. Picks are the graded ones that had a price. Weight is the share of the model that scored best on that row's picks, refit on every update, never under 10% or over 90%. The cards in every sport use the top row's weight; the rows under it show what each sport would get on its own. <a href="methodology.html#vsmarket">How it's worked out</a>.</p>
+  </section>
+
+  <div id="rc-test"></div>
+
+  <section class="panel" id="how">
+    <h2>How this page counts</h2>
+    <p class="rc-sub" style="margin-bottom:0">Only picks recorded before their game count: no backtests. "Model" is the average chance the model gave those picks, to set beside how often they hit. A pick is a hit or a miss; pushes, voids and players who didn't play are left out. Units are 1 unit on each pick at its recorded Polymarket or Kalshi price: a hit at 40¢ returns +1.50, a miss returns −1. A pick with no price, or a price that can't have been real (under 10¢, or 35¢ away from its first price), counts in the hit rate but not in the units. Return is units divided by priced picks. Price move is how the price of the side taken changed from its first recording to its last before the game. The MLB Value list has been unders only since its overs lost; those overs keep their own row here. Past results don't predict future ones. Research and entertainment, not advice. 18+. <a href="methodology.html">How the model works</a>.</p>
+    <p class="rc-note" id="rc-stamp"></p>
+  </section>
+
+  <footer style="text-align:center;color:var(--muted);font-size:13px;margin-top:40px">
+    Prop Streak Lab · model estimates for entertainment, not betting advice · <a href="./">Home</a> · <a href="./nfl.html">NFL</a> · <a href="./nba.html">NBA</a> · <a href="./nhl.html">NHL</a> · <a href="./mlb.html">MLB</a> · <a href="./tennis.html">Tennis</a><br>
+    <span style="display:inline-block;margin-top:10px"><a href="./#email">Free daily email</a> · Record · <a href="players/">Players</a> · <a href="methodology.html">How the model works</a> · <a href="privacy.html">Privacy Policy</a> · <a href="terms.html">Terms &amp; Conditions</a> · <a href="cookies.html">Cookies Policy</a> · <a href="mailto:info@propstreaklab.com">Contact</a> · <a href="games/">Games</a> · <a href="best/">Best props</a> · <a href="guides/">Guides</a> · <a href="team/">Team</a></span><br>
+    <span style="display:inline-block;margin-top:6px">Informational and entertainment use only. Not affiliated with or endorsed by the NFL, NBA, NHL, MLB, ATP, WTA, any team, Polymarket or Kalshi. © 2026 Prop Streak Lab.</span><br>
+    <span style="display:inline-block;margin-top:6px;font-size:11px;opacity:.8">Data accuracy: stats, lines, injury reports and prices come from third-party sources (ESPN, Polymarket, Kalshi) and may be delayed, incomplete, or occasionally wrong. Model outputs are estimates, not guarantees — verify independently before relying on anything here.</span><br>
+    <span style="display:inline-block;margin-top:6px;font-size:11px;opacity:.8">For adults, 18+. If gambling stops being fun, stop — call 1-800-522-4700 (US, National Problem Gambling Helpline) or visit <a href="https://www.ncpgambling.org" rel="noopener" target="_blank">ncpgambling.org</a>. Prop Streak Lab does not accept bets or facilitate wagering.</span>
+  </footer>
+</div>
+
+<script>
+// record.json, baked in by build_record.py. The page only draws it: no number here is recomputed.
+const R={"gen":"2026-11-17T16:50:19Z","day":"2026-11-17","window":30,"graded":148129,"since":"2026-09-10","sports":[{"sport":"nfl","name":"NFL","page":"nfl.html","test":false,"graded":21806,"since":"2026-09-10","lists":[{"tag":"V","name":"Value","all":{"n":335,"hit":167,"said":0.6605,"priced":316,"units":19.58,"roi":0.0619,"clvN":262,"clvUp":30,"clvDn":192,"clv":-9.1},"d30":{"n":157,"hit":80,"said":0.645,"priced":140,"units":10.41,"roi":0.0744,"clvN":157,"clvUp":11,"clvDn":130,"clv":-13.3},"weeks":[["2026-09-14",0.32,54],["2026-09-21",-2.04,18],["2026-09-28",1.64,16],["2026-10-05",0.29,49],["2026-10-12",9.16,39],["2026-10-19",20.59,36],["2026-10-26",21.59,30],["2026-11-02",17.78,32],["2026-11-09",24.58,37],["2026-11-16",19.58,5]]},{"tag":"T","name":"Top 25 Surest","all":{"n":637,"hit":577,"said":0.9452,"priced":405,"units":4.18,"roi":0.0103,"clvN":418,"clvUp":40,"clvDn":321,"clv":-4.5},"d30":{"n":280,"hit":252,"said":0.9282,"priced":279,"units":-1.19,"roi":-0.0042,"clvN":280,"clvUp":19,"clvDn":238,"clv":-5.6},"weeks":[["2026-09-14",0.83,12],["2026-09-21",-0.17,1],["2026-09-28",0.92,4],["2026-10-05",0.67,47],["2026-10-12",5.36,62],["2026-10-19",5.09,71],["2026-10-26",7.09,65],["2026-11-02",6.74,63],["2026-11-09",7.88,62],["2026-11-16",4.18,18]]}],"calib":[{"lo":50,"hi":60,"n":5482,"said":0.55,"hit":0.543},{"lo":60,"hi":70,"n":5361,"said":0.65,"hit":0.6376},{"lo":70,"hi":80,"n":5034,"said":0.7485,"hit":0.7328},{"lo":80,"hi":90,"n":3868,"said":0.8464,"hit":0.7901},{"lo":90,"hi":100,"n":2009,"said":0.9417,"hit":0.8626}],"fair":{"w":0.1,"n":14415,"brierModel":0.2095,"brierMarket":0.196}},{"sport":"nba","name":"NBA","page":"nba.html","test":false,"graded":55391,"since":"2026-10-20","lists":[{"tag":"V","name":"Value","all":{"n":1474,"hit":669,"said":0.6763,"priced":1442,"units":-54.81,"roi":-0.038,"clvN":1474,"clvUp":217,"clvDn":1142,"clv":-5.4},"d30":{"n":1474,"hit":669,"said":0.6763,"priced":1442,"units":-54.81,"roi":-0.038,"clvN":1474,"clvUp":217,"clvDn":1142,"clv":-5.4},"weeks":[["2026-10-19",-6.62,382],["2026-10-26",-8.74,296],["2026-11-02",-31.95,409],["2026-11-09",-54.25,319],["2026-11-16",-54.81,36]]},{"tag":"T","name":"Top 25 Surest","all":{"n":1474,"hit":1322,"said":0.9141,"priced":1464,"units":-11.9,"roi":-0.0081,"clvN":1474,"clvUp":282,"clvDn":927,"clv":-0.6},"d30":{"n":1474,"hit":1322,"said":0.9141,"priced":1464,"units":-11.9,"roi":-0.0081,"clvN":1474,"clvUp":282,"clvDn":927,"clv":-0.6},"weeks":[["2026-10-19",-0.95,286],["2026-10-26",-4.11,400],["2026-11-02",-14.23,317],["2026-11-09",-11.25,400],["2026-11-16",-11.9,61]]}],"calib":[{"lo":50,"hi":60,"n":15549,"said":0.5496,"hit":0.5472},{"lo":60,"hi":70,"n":14895,"said":0.6488,"hit":0.6524},{"lo":70,"hi":80,"n":12772,"said":0.747,"hit":0.7479},{"lo":80,"hi":90,"n":8580,"said":0.8457,"hit":0.8378},{"lo":90,"hi":100,"n":3595,"said":0.9385,"hit":0.9138}],"fair":{"w":0.15,"n":37392,"brierModel":0.1981,"brierMarket":0.1902}},{"sport":"nhl","name":"NHL","page":"nhl.html","test":false,"graded":60611,"since":"2026-09-29","lists":[{"tag":"V","name":"Value","all":{"n":303,"hit":189,"said":0.7708,"priced":301,"units":22.07,"roi":0.0733,"clvN":291,"clvUp":19,"clvDn":195,"clv":-3.1},"d30":{"n":134,"hit":72,"said":0.7387,"priced":133,"units":-7.62,"roi":-0.0573,"clvN":134,"clvUp":9,"clvDn":115,"clv":-3.6},"weeks":[["2026-09-28",13.49,68],["2026-10-05",27.71,59],["2026-10-12",29.68,41],["2026-10-19",36.42,40],["2026-10-26",34.94,45],["2026-11-02",32.97,24],["2026-11-09",23.07,23],["2026-11-16",22.07,1]]},{"tag":"T","name":"Top 25 Surest","all":{"n":1905,"hit":1766,"said":0.9523,"priced":1876,"units":-25.2,"roi":-0.0134,"clvN":1852,"clvUp":368,"clvDn":905,"clv":-1.0},"d30":{"n":1254,"hit":1154,"said":0.9486,"priced":1254,"units":-28.51,"roi":-0.0227,"clvN":1254,"clvUp":301,"clvDn":627,"clv":-0.8},"weeks":[["2026-09-28",5.34,174],["2026-10-05",7.89,270],["2026-10-12",3.31,178],["2026-10-19",-5.51,312],["2026-10-26",-15.83,336],["2026-11-02",-26.39,287],["2026-11-09",-23.58,298],["2026-11-16",-25.2,21]]}],"calib":[{"lo":50,"hi":60,"n":6657,"said":0.5507,"hit":0.5632},{"lo":60,"hi":70,"n":8561,"said":0.6524,"hit":0.6485},{"lo":70,"hi":80,"n":11705,"said":0.7519,"hit":0.7435},{"lo":80,"hi":90,"n":13387,"said":0.8506,"hit":0.8444},{"lo":90,"hi":100,"n":20301,"said":0.9529,"hit":0.9497}],"fair":{"w":0.1,"n":33186,"brierModel":0.1544,"brierMarket":0.1515}},{"sport":"mlb","name":"MLB","page":"mlb.html","test":false,"graded":10321,"since":"2026-09-30","lists":[{"tag":"V","name":"Value (unders only)","all":{"n":45,"hit":26,"said":0.6582,"priced":45,"units":14.83,"roi":0.3296,"clvN":39,"clvUp":4,"clvDn":30,"clv":-3.3},"d30":{"n":9,"hit":7,"said":0.6673,"priced":9,"units":6.65,"roi":0.7392,"clvN":9,"clvUp":0,"clvDn":8,"clv":-2.8},"weeks":[["2026-09-28",6.27,20],["2026-10-05",9.83,10],["2026-10-12",8.18,6],["2026-10-19",10.95,4],["2026-10-26",14.83,5]]},{"tag":"Vpre","name":"Value overs (ended)","all":{"n":77,"hit":30,"said":0.6476,"priced":72,"units":-6.76,"roi":-0.0939,"clvN":33,"clvUp":7,"clvDn":26,"clv":-9.3},"d30":{"n":0,"hit":0,"said":null,"priced":0,"units":0,"roi":null,"clvN":0,"clvUp":0,"clvDn":0,"clv":null},"weeks":[["2026-09-28",-6.85,55],["2026-10-05",-6.76,17]]},{"tag":"T","name":"Top 25 Surest","all":{"n":533,"hit":502,"said":0.9371,"priced":533,"units":3.68,"roi":0.0069,"clvN":474,"clvUp":24,"clvDn":276,"clv":-1.5},"d30":{"n":150,"hit":141,"said":0.9382,"priced":150,"units":-0.35,"roi":-0.0023,"clvN":150,"clvUp":10,"clvDn":87,"clv":-1.4},"weeks":[["2026-09-28",2.34,140],["2026-10-05",4.65,140],["2026-10-12",4.03,103],["2026-10-19",4.35,75],["2026-10-26",3.68,75]]}],"calib":[{"lo":50,"hi":60,"n":1773,"said":0.5498,"hit":0.5685},{"lo":60,"hi":70,"n":2013,"said":0.6507,"hit":0.688},{"lo":70,"hi":80,"n":2145,"said":0.7497,"hit":0.7939},{"lo":80,"hi":90,"n":2641,"said":0.8526,"hit":0.8978},{"lo":90,"hi":100,"n":1749,"said":0.9355,"hit":0.96}],"fair":{"w":0.1,"n":8537,"brierModel":0.1565,"brierMarket":0.15}},{"sport":"tennis","name":"Tennis","page":"tennis.html","test":true,"graded":2139,"since":"2026-11-02","lists":[{"tag":"V","name":"Value","all":{"n":17,"hit":5,"said":0.5596,"priced":7,"units":-2.61,"roi":-0.3728,"clvN":0,"clvUp":0,"clvDn":0,"clv":null},"d30":{"n":17,"hit":5,"said":0.5596,"priced":7,"units":-2.61,"roi":-0.3728,"clvN":0,"clvUp":0,"clvDn":0,"clv":null},"weeks":[["2026-11-02",-1.61,6],["2026-11-09",-2.61,1]]},{"tag":"T","name":"Top 25 Surest","all":{"n":7,"hit":7,"said":0.9371,"priced":7,"units":0.4,"roi":0.0574,"clvN":0,"clvUp":0,"clvDn":0,"clv":null},"d30":{"n":7,"hit":7,"said":0.9371,"priced":7,"units":0.4,"roi":0.0574,"clvN":0,"clvUp":0,"clvDn":0,"clv":null},"weeks":[["2026-11-02",0.35,6],["2026-11-09",0.4,1]]},{"tag":"A","name":"Every priced side","all":{"n":2139,"hit":1000,"said":0.4697,"priced":1889,"units":0.18,"roi":0.0001,"clvN":0,"clvUp":0,"clvDn":0,"clv":null},"d30":{"n":2139,"hit":1000,"said":0.4697,"priced":1889,"units":0.18,"roi":0.0001,"clvN":0,"clvUp":0,"clvDn":0,"clv":null},"weeks":[["2026-11-02",-0.58,1247],["2026-11-09",4.72,596],["2026-11-16",0.18,46]]}],"calib":[{"lo":50,"hi":60,"n":362,"said":0.5444,"hit":0.5387},{"lo":60,"hi":70,"n":256,"said":0.6486,"hit":0.5664},{"lo":70,"hi":80,"n":188,"said":0.741,"hit":0.6809},{"lo":80,"hi":90,"n":128,"said":0.8489,"hit":0.7656},{"lo":90,"hi":100,"n":29,"said":0.9319,"hit":1.0}],"fair":{"w":0.1,"n":2075,"brierModel":0.2183,"brierMarket":0.2099}}],"calib":[{"lo":50,"hi":60,"n":29461,"said":0.5499,"hit":0.5513},{"lo":60,"hi":70,"n":30830,"said":0.6501,"hit":0.6511},{"lo":70,"hi":80,"n":31656,"said":0.7492,"hit":0.747},{"lo":80,"hi":90,"n":28476,"said":0.8487,"hit":0.84},{"lo":90,"hi":100,"n":27654,"said":0.9491,"hit":0.9393}],"fair":{"w":0.1,"n":93530,"brierModel":0.1805,"brierMarket":0.1737},"botd":[{"tag":"value","name":"Value Shot","all":{"n":36,"hit":18,"said":0.7456,"priced":36,"units":3.8,"roi":0.1054,"clvN":0,"clvUp":0,"clvDn":0,"clv":null},"d30":{"n":26,"hit":11,"said":0.748,"priced":26,"units":-2.87,"roi":-0.1103,"clvN":0,"clvUp":0,"clvDn":0,"clv":null},"weeks":[["2026-09-28",2.42,3],["2026-10-05",5.15,4],["2026-10-12",6.66,3],["2026-10-19",9.33,6],["2026-10-26",8.45,7],["2026-11-02",6.63,6],["2026-11-09",4.8,6],["2026-11-16",3.8,1]],"push":0,"void":3},{"tag":"lock","name":"Safe Pick","all":{"n":45,"hit":43,"said":0.9683,"priced":45,"units":-0.18,"roi":-0.0039,"clvN":0,"clvUp":0,"clvDn":0,"clv":null},"d30":{"n":28,"hit":28,"said":0.9731,"priced":28,"units":1.18,"roi":0.0421,"clvN":0,"clvUp":0,"clvDn":0,"clv":null},"weeks":[["2026-09-28",0.13,3],["2026-10-05",0.43,7],["2026-10-12",-1.35,7],["2026-10-19",-1.05,7],["2026-10-26",-0.76,7],["2026-11-02",-0.47,7],["2026-11-09",-0.22,6],["2026-11-16",-0.18,1]],"push":0,"void":2}],"losing":[{"sport":"nba","name":"NBA","list":"Value","units":-54.81,"priced":1442,"roi":-0.038,"d30":-54.81},{"sport":"nhl","name":"NHL","list":"Top 25 Surest","units":-25.2,"priced":1876,"roi":-0.0134,"d30":-28.51},{"sport":"nba","name":"NBA","list":"Top 25 Surest","units":-11.9,"priced":1464,"roi":-0.0081,"d30":-11.9},{"sport":"mlb","name":"MLB","list":"Value overs (ended)","units":-6.76,"priced":72,"roi":-0.0939,"d30":null},{"sport":"tennis","name":"Tennis","list":"Value","units":-2.61,"priced":7,"roi":-0.3728,"d30":-2.61},{"sport":"botd","name":"Pick of the Day","list":"Safe Pick","units":-0.18,"priced":45,"roi":-0.0039,"d30":1.18},{"sport":"nhl","name":"NHL","list":"Value","units":22.07,"priced":301,"roi":0.0733,"d30":-7.62},{"sport":"botd","name":"Pick of the Day","list":"Value Shot","units":3.8,"priced":36,"roi":0.1054,"d30":-2.87},{"sport":"nfl","name":"NFL","list":"Top 25 Surest","units":4.18,"priced":405,"roi":0.0103,"d30":-1.19},{"sport":"mlb","name":"MLB","list":"Top 25 Surest","units":3.68,"priced":533,"roi":0.0069,"d30":-0.35}]};
+const $=id=>document.getElementById(id);
+const MONTHS=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const COLORS={V:'var(--s1)', value:'var(--s1)', T:'var(--s2)', lock:'var(--s2)', Vpre:'var(--s3)', A:'var(--s3)'};
+const num=n=>Number(n).toLocaleString('en-US');
+const pct=(x,d=1)=>(100*x).toFixed(d)+'%';
+const sign=x=>x>0? '+' : x<0? '−' : '';
+const units=x=>sign(x)+Math.abs(x).toFixed(2);
+const cls=x=>x>0? 'rc-up' : x<0? 'rc-dn' : '';
+const day=(iso,year)=>{ const p=String(iso).slice(0,10).split('-'); return MONTHS[+p[1]-1]+' '+(+p[2])+(year? ', '+(+p[0]) : ''); };   // numbers only: these go into innerHTML
+const dayMs=iso=>{ const p=iso.split('-'); return Date.UTC(+p[0], +p[1]-1, +p[2]); };
+
+// ---- one list: its name, an all-time and a last-30-days row, and the notes under them ----
+function statRow(label, s){
+  if(!s.n) return `<tr><th scope="row">${label}</th><td class="rc-none" colspan="5">No graded picks</td></tr>`;
+  return `<tr><th scope="row">${label}</th><td>${num(s.n)}</td><td>${pct(s.hit/s.n)}</td><td>${s.said!=null? pct(s.said) : '—'}</td>`+
+    `<td class="${s.priced? cls(s.units) : ''}">${s.priced? units(s.units) : '—'}</td><td>${s.roi!=null? sign(s.roi)+pct(Math.abs(s.roi)) : '—'}</td></tr>`;
+}
+function listBlock(b){
+  const a=b.all, notes=[];
+  if(a.n && a.priced<a.n) notes.push(`Units count the ${num(a.priced)} of ${num(a.n)} picks that had a real price.`);
+  if(a.clvN) notes.push(`Price moved its way on ${num(a.clvUp)} of ${num(a.clvN)}, against it on ${num(a.clvDn)} (average ${sign(a.clv)}${Math.abs(a.clv).toFixed(1)}¢, first price to last).`);
+  if(b.void || b.push) notes.push(`Not counted: ${b.void||0} voided, ${b.push||0} pushed.`);
+  return `<div class="rc-list"><h3><i class="rc-sw" style="background:${COLORS[b.tag]||'var(--s3)'}"></i>${b.name}</h3>`+
+    `<table class="rc-t"><thead><tr><th></th><th>Picks</th><th>Hit</th><th>Model</th><th>Units</th><th>Return</th></tr></thead><tbody>`+
+    statRow('All-time', a)+statRow(`${R.window} days`, b.d30)+`</tbody></table>`+
+    (notes.length? `<p class="rc-note">${notes.join(' ')}</p>` : '')+`</div>`;
+}
+
+// ---- charts: inline SVG, a crosshair and a small tooltip; the tables beside them hold the same numbers ----
+function hover(wrap, xs, at, tip){
+  // xs: each point's x in viewBox units (width W); at(i) moves the crosshair; tip(i) is the tooltip's HTML
+  const svg=wrap.querySelector('svg'), box=document.createElement('div');
+  box.className='rc-tip'; box.hidden=true; wrap.appendChild(box);
+  const W=svg.viewBox.baseVal.width;
+  function move(e){
+    const r=svg.getBoundingClientRect(), x=(e.clientX-r.left)/r.width*W;
+    let i=0; xs.forEach((v,k)=>{ if(Math.abs(v-x)<Math.abs(xs[i]-x)) i=k; });
+    at(i); box.innerHTML=tip(i); box.hidden=false;
+    const left=xs[i]/W*r.width, w=box.offsetWidth;
+    box.style.left=Math.max(0, Math.min(r.width-w, left+(left>r.width/2? -w-10 : 10)))+'px';
+    box.style.top=(svg.offsetTop+6)+'px';
+  }
+  svg.addEventListener('pointermove', move); svg.addEventListener('pointerdown', move);
+  svg.addEventListener('pointerleave', ()=>{ box.hidden=true; at(-1); });
+}
+function unitsChart(el, lists, label){
+  const series=lists.filter(b=>b.weeks.length);
+  if(!series.length){ el.innerHTML='<p class="rc-note">No priced, graded picks yet, so there is no line to draw.</p>'; return; }
+  const W=340, H=180, L=38, Rt=12, T=10, B=24;
+  const weeks=[...new Set(series.flatMap(b=>b.weeks.map(w=>w[0])))].sort();
+  const t0=dayMs(weeks[0]), t1=dayMs(weeks[weeks.length-1]);
+  const vals=series.flatMap(b=>b.weeks.map(w=>w[1])), lo=Math.min(0, ...vals), hi=Math.max(0, ...vals), span=(hi-lo)||1;
+  const x=iso=> t1===t0? (L+W-Rt)/2 : L+(dayMs(iso)-t0)/(t1-t0)*(W-L-Rt);
+  const y=v=> T+(hi-v)/span*(H-T-B);
+  const ticks=[...new Set([lo, 0, hi])];
+  let s=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${label}: units won or lost over time, by week">`;
+  ticks.forEach(v=>{ s+=`<line x1="${L}" x2="${W-Rt}" y1="${y(v)}" y2="${y(v)}" stroke="${v===0? 'rgba(255,255,255,.38)' : 'rgba(255,255,255,.09)'}" stroke-width="1"/>`+
+    `<text x="${L-6}" y="${y(v)+3.5}" text-anchor="end" font-size="10.5" fill="#b8c5d6">${v===0? '0' : sign(v)+Math.abs(v).toFixed(Math.abs(v)<10? 1 : 0)}</text>`; });
+  s+=`<text x="${L}" y="${H-7}" font-size="10.5" fill="#b8c5d6">${day(weeks[0])}</text>`;
+  if(weeks.length>1) s+=`<text x="${W-Rt}" y="${H-7}" text-anchor="end" font-size="10.5" fill="#b8c5d6">${day(weeks[weeks.length-1])}</text>`;
+  s+=`<line class="rc-cross" x1="0" x2="0" y1="${T}" y2="${H-B}" stroke="rgba(255,255,255,.4)" stroke-width="1" visibility="hidden"/>`;
+  series.forEach(b=>{
+    const c=COLORS[b.tag]||'var(--s3)', pts=b.weeks.map(w=>[x(w[0]), y(w[1])]), end=pts[pts.length-1];
+    if(pts.length>1) s+=`<polyline points="${pts.map(p=>p[0].toFixed(1)+','+p[1].toFixed(1)).join(' ')}" fill="none" stroke="${c}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>`;
+    s+=`<circle cx="${end[0].toFixed(1)}" cy="${end[1].toFixed(1)}" r="4" fill="${c}" stroke="#0f2038" stroke-width="2"/>`;
+  });
+  s+='</svg>';
+  el.innerHTML=`<h3>Units won or lost so far, week by week (1 unit a pick)</h3><div class="rc-legend">`+
+    series.map(b=>`<span><i class="rc-sw" style="background:${COLORS[b.tag]||'var(--s3)'}"></i>${b.name} ${units(b.weeks[b.weeks.length-1][1])}</span>`).join('')+`</div>`+s;
+  const cross=el.querySelector('.rc-cross');
+  // a list's running total at a week: its last point on or before it
+  const upTo=(b,wk)=>{ let v=null; for(const w of b.weeks){ if(w[0]<=wk) v=w[1]; else break; } return v; };
+  hover(el, weeks.map(x), i=>{ if(i<0) cross.setAttribute('visibility','hidden'); else { cross.setAttribute('x1', x(weeks[i])); cross.setAttribute('x2', x(weeks[i])); cross.setAttribute('visibility','visible'); } },
+    i=>`<b>Week of ${day(weeks[i])}</b>`+series.map(b=>{ const v=upTo(b, weeks[i]);
+      return `<span><i class="rc-sw" style="background:${COLORS[b.tag]||'var(--s3)'}"></i>${b.name}: ${v==null? 'not started' : units(v)}</span>`; }).join(''));
+}
+function calibChart(el, calib, label){
+  if(!calib.length){ el.innerHTML='<p class="rc-note">No graded picks yet.</p>'; return; }
+  const W=340, H=250, L=38, Rt=12, T=10, B=36;
+  const lo=Math.min(50, Math.floor(Math.min(...calib.map(c=>c.hit*100))/10)*10), hi=100;
+  const x=v=> L+(v-50)/50*(W-L-Rt), y=v=> T+(hi-v)/(hi-lo)*(H-T-B);
+  let s=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${label}: how often picks hit against the chance the model gave them">`;
+  for(let v=lo; v<=hi; v+=10) s+=`<line x1="${L}" x2="${W-Rt}" y1="${y(v)}" y2="${y(v)}" stroke="rgba(255,255,255,.09)" stroke-width="1"/>`+
+    `<text x="${L-6}" y="${y(v)+3.5}" text-anchor="end" font-size="10.5" fill="#b8c5d6">${v}%</text>`;
+  for(let v=50; v<=100; v+=10) s+=`<text x="${x(v)}" y="${H-B+14}" text-anchor="middle" font-size="10.5" fill="#b8c5d6">${v}%</text>`;
+  s+=`<text x="${(L+W-Rt)/2}" y="${H-5}" text-anchor="middle" font-size="10.5" fill="#b8c5d6">Chance the model gave</text>`;
+  s+=`<line x1="${x(50)}" y1="${y(50)}" x2="${x(100)}" y2="${y(100)}" stroke="rgba(255,255,255,.45)" stroke-width="1" stroke-dasharray="4 4"/>`;
+  s+=`<text x="${x(97)}" y="${y(100)+14}" text-anchor="end" font-size="10.5" fill="#b8c5d6">said = happened</text>`;
+  s+=`<line class="rc-cross" x1="0" x2="0" y1="${T}" y2="${H-B}" stroke="rgba(255,255,255,.4)" stroke-width="1" visibility="hidden"/>`;
+  const pts=calib.map(c=>[x(c.said*100), y(c.hit*100)]);
+  if(pts.length>1) s+=`<polyline points="${pts.map(p=>p[0].toFixed(1)+','+p[1].toFixed(1)).join(' ')}" fill="none" stroke="var(--s1)" stroke-width="2" stroke-linejoin="round"/>`;
+  pts.forEach(p=>{ s+=`<circle cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="4.5" fill="var(--s1)" stroke="#0f2038" stroke-width="2"/>`; });
+  s+='</svg>';
+  el.innerHTML=`<h3>How often it hit (up the side) against the chance the model gave (along the bottom)</h3>`+s;
+  const cross=el.querySelector('.rc-cross');
+  hover(el, pts.map(p=>p[0]), i=>{ if(i<0) cross.setAttribute('visibility','hidden'); else { cross.setAttribute('x1', pts[i][0]); cross.setAttribute('x2', pts[i][0]); cross.setAttribute('visibility','visible'); } },
+    i=>{ const c=calib[i]; return `<b>${c.lo}–${c.hi}% picks</b><span>Model said ${pct(c.said)}</span><span>Hit ${pct(c.hit)}</span><span>${num(c.n)} picks</span>`; });
+}
+function calibTable(cols){
+  // cols: [[label, calib], ...]; one row per 10-point band, "said → hit" in each cell
+  const bands=[...new Set(cols.flatMap(c=>c[1].map(b=>b.lo)))].sort((a,b)=>a-b);
+  if(!bands.length) return '';
+  const cell=(calib,lo)=>{ const b=calib.find(k=>k.lo===lo); return b? pct(b.hit)+`<br><span style="color:var(--muted);font-size:11px">${num(b.n)}</span>` : '—'; };
+  return `<table class="rc-t"><thead><tr><th>Model said</th>${cols.map(c=>`<th>${c[0]}</th>`).join('')}</tr></thead><tbody>`+
+    bands.map(lo=>`<tr><th scope="row">${lo}–${lo+10}%</th>${cols.map(c=>`<td>${cell(c[1], lo)}</td>`).join('')}</tr>`).join('')+
+    `</tbody></table><p class="rc-note">Each cell: how often those picks hit, and how many there were.</p>`;
+}
+function fairRow(label, f){
+  if(!f || f.brierModel==null) return `<tr><th scope="row">${label}</th><td>${f? num(f.n) : 0}</td><td class="rc-none" colspan="3">Too few priced picks to compare (needs 200)</td></tr>`;
+  return `<tr><th scope="row">${label}</th><td>${num(f.n)}</td><td>${f.brierModel.toFixed(4)}</td><td>${f.brierMarket.toFixed(4)}</td><td>${Math.round(f.w*100)}%</td></tr>`;
+}
+const fairHead='<thead><tr><th></th><th>Picks</th><th>Model</th><th>Market</th><th>Weight</th></tr></thead>';
+
+function sportPanel(s){
+  const sec=document.createElement('section');
+  sec.className='panel'; sec.id=s.sport;
+  sec.innerHTML=`<h2>${s.name}${s.test? '<span class="rc-badge">New · under test</span>' : ''}</h2>`+
+    `<p class="rc-sub">${s.test? 'New on the site and still building a record, so it is kept apart from the other sports and off the home page. Match markets, not player props. ' : ''}`+
+    `${s.graded? `${num(s.graded)} live picks graded since ${day(s.since, true)}. Every list the ${s.name} page publishes is below.` : 'No graded live picks yet.'}</p>`+
+    `<div class="rc-grid"><div>${s.lists.map(listBlock).join('')}</div><div><div class="rc-chart"></div>`+
+    `<a class="rc-more" href="${s.page}#past">See every graded ${s.name} pick in Past picks →</a></div></div>`+
+    (s.test? `<h3 class="rc-h3">Calibration and model vs. market</h3><div class="rc-grid"><div class="rc-scroll">${calibTable([[s.name, s.calib]])}</div>`+
+      `<div class="rc-scroll"><table class="rc-t">${fairHead}<tbody>${fairRow(s.name, s.fair)}</tbody></table></div></div>` : '');
+  unitsChart(sec.querySelector('.rc-chart'), s.lists, s.name);
+  return sec;
+}
+
+(function(){
+  const main=R.sports.filter(s=>!s.test), test=R.sports.filter(s=>s.test);
+  $('rc-graded').textContent=num(R.graded);
+  $('rc-since').textContent=R.since? day(R.since, true) : '—';
+  $('rc-gen').textContent=day(R.day, true);
+  $('rc-asof').textContent=`Numbers last changed ${day(R.gen, true)}, ${R.gen.slice(11,16)} UTC. Checked with every site update.`;
+  $('rc-stamp').textContent=`Worked out from the same pick files the sport pages read, with every site update. The numbers last changed ${day(R.gen, true)} at ${R.gen.slice(11,16)} UTC.`;
+  $('rc-jump').innerHTML='<a href="#losing">What\'s losing</a>'+R.sports.map(s=>`<a href="#${s.sport}">${s.name}</a>`).join('')+
+    '<a href="#potd">Pick of the Day</a><a href="#calibration">Calibration</a><a href="#market">Model vs. market</a>';
+
+  // what's losing
+  const down=R.losing.filter(l=>l.priced && l.units<0), dip=R.losing.filter(l=>!(l.priced && l.units<0));
+  const line=l=>`<li><b>${l.name} · ${l.list}</b>: <span class="rc-dn">${units(l.units)} units</span> over ${num(l.priced)} priced picks`+
+    `${l.roi!=null? ` (${sign(l.roi)}${pct(Math.abs(l.roi))} return)` : ''}.${l.d30!=null? ` Last ${R.window} days: <span class="${cls(l.d30)}">${units(l.d30)}</span>.` : ` No picks in the last ${R.window} days.`}</li>`;
+  const line2=l=>`<li><b>${l.name} · ${l.list}</b>: <span class="rc-dn">${units(l.d30)} units</span> over the last ${R.window} days (${units(l.units)} all-time).</li>`;
+  $('rc-losing').innerHTML=(down.length? `<h3 class="rc-h3">Down all-time</h3><ul class="rc-lose">${down.map(line).join('')}</ul>` :
+      '<p class="rc-sub">No list is down units all-time right now. When one is, it is named here.</p>')+
+    (dip.length? `<h3 class="rc-h3">Up all-time, down over the last ${R.window} days</h3><ul class="rc-lose">${dip.map(line2).join('')}</ul>` : '');
+
+  main.forEach(s=>$('rc-sports').appendChild(sportPanel(s)));
+  test.forEach(s=>$('rc-test').appendChild(sportPanel(s)));
+
+  // Pick of the Day
+  $('rc-botd').innerHTML=`<div class="rc-grid"><div>${R.botd.map(listBlock).join('')}</div><div><div class="rc-chart"></div>`+
+    `<a class="rc-more" href="./">See today's two picks on the home page →</a></div></div>`;
+  unitsChart($('rc-botd').querySelector('.rc-chart'), R.botd, 'Pick of the Day');
+
+  // calibration, pooled and by sport
+  calibChart($('rc-calchart'), R.calib, 'All four sports');
+  $('rc-caltable').innerHTML=calibTable([['All', R.calib]].concat(main.map(s=>[s.name, s.calib])))+
+    `<p class="rc-note">Check any of it pick by pick: ${main.map(s=>`<a href="${s.page}#past">${s.name} Past picks</a>`).join(' · ')}</p>`;
+
+  // model vs. market
+  const f=R.fair;
+  $('rc-fairline').textContent= f && f.brierModel!=null ?
+    `On ${num(f.n)} graded picks that had a price, the market's price scored ${f.brierMarket.toFixed(4)} and the model ${f.brierModel.toFixed(4)}. `+
+    (f.brierMarket<f.brierModel? 'The market has predicted better than the model.' : f.brierMarket>f.brierModel? 'The model has predicted better than the market.' : 'They have predicted equally well.')+
+    ` So the fair chance on every priced card is ${Math.round(f.w*100)}% model and ${100-Math.round(f.w*100)}% market.` :
+    'Not enough priced, graded picks yet to compare the model with the market.';
+  $('rc-fairtable').innerHTML=`<table class="rc-t">${fairHead}<tbody>${fairRow('All four sports', f)}${main.map(s=>fairRow(s.name, s.fair)).join('')}</tbody></table>`;
+})();
+</script>
