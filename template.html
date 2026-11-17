@@ -7,8 +7,11 @@
 <meta property="og:url" content="https://propstreaklab.com/nfl.html">
 <meta property="og:title" content="NFL Player Props | Prop Streak Lab">
 <meta property="og:description" content="Free NFL player prop research: the model's chance on every Polymarket and Kalshi prop, each player's last 10 games, and every pick graded in public.">
-<meta property="og:image" content="https://propstreaklab.com/icon-512.png">
-<meta name="twitter:card" content="summary">
+<meta property="og:image" content="https://propstreaklab.com/og/nfl.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Prop Streak Lab NFL: the model's chance next to the market price, and the record">
+<meta name="twitter:card" content="summary_large_image">
 <link rel="icon" href="/favicon.ico" sizes="48x48">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="icon" href="/icon-192.png" sizes="192x192" type="image/png">
@@ -19,10 +22,10 @@
 <style>
 :root{
   color-scheme:dark;
-  --ink:#22354f; --bg:#0a1628; --surface:#0f2038; --surface-2:#142743; --line:#22354f;
-  --text:#ffffff; --muted:#e6eaf0;
-  --accent:#22d07f; --blaze:#d98a3e; --gold:#22d07f;
-  --hit:#4fb583; --hit-soft:#12352a; --miss:#eb6f7d; --miss-soft:#3a1c22; --push:#8393a8;
+  --ink:var(--ps-line); --bg:var(--ps-bg); --surface:var(--ps-surface); --surface-2:var(--ps-surface-2); --line:var(--ps-line);
+  --text:var(--ps-text); --muted:#e6eaf0;
+  --accent:var(--ps-green); --blaze:#d98a3e; --gold:var(--ps-green);
+  --hit:#4fb583; --hit-soft:#12352a; --miss:var(--ps-red); --miss-soft:#3a1c22; --push:#8393a8;
   --shadow:0 20px 50px rgba(0,0,0,.45);
   --hard:0 18px 44px rgba(0,0,0,.45); --hard-sm:0 10px 26px rgba(0,0,0,.4);
   --display:"Cormorant Garamond",Georgia,"Times New Roman",serif;
@@ -33,10 +36,10 @@
 body{background:var(--bg);color:var(--text);font-family:var(--body);line-height:1.5;margin:0;
   -webkit-font-smoothing:antialiased;font-size:15px;overflow-x:hidden;
   background-image:
-    linear-gradient(rgba(34,208,127,.035) 1px,transparent 1px),
-    linear-gradient(90deg,rgba(34,208,127,.035) 1px,transparent 1px),
-    radial-gradient(1000px 640px at 15% -8%,rgba(34,208,127,.06),transparent 60%),
-    linear-gradient(180deg,#0b1a32,#0a1628 55%,#081120);
+    linear-gradient(rgba(var(--ps-green-rgb),.035) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(var(--ps-green-rgb),.035) 1px,transparent 1px),
+    radial-gradient(1000px 640px at 15% -8%,rgba(var(--ps-green-rgb),.06),transparent 60%),
+    linear-gradient(180deg,#0b1a32,var(--ps-bg) 55%,var(--ps-bg-2));
   background-size:58px 58px,58px 58px,100% 100%,100% 100%;
   background-attachment:fixed}
 .wrap{max-width:1120px;margin:0 auto;padding:20px 16px 70px}
@@ -143,7 +146,7 @@ input:focus,select:focus{outline:3px solid var(--accent);outline-offset:1px}
 /* stat chips */
 .chips{display:flex;flex-wrap:wrap;gap:7px}
 .chipgrp{display:flex;flex-wrap:wrap;gap:7px;align-items:center}
-.grplab{font-size:11px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);font-weight:700;margin-right:2px;align-self:center}
+.grplab{font-size:12px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);font-weight:700;margin-right:2px;align-self:center}
 .chip{border:2px solid var(--ink);background:var(--surface);color:var(--ink);border-radius:999px;padding:6px 13px;
   font-family:var(--dispers);font-size:15px;font-weight:600;letter-spacing:.3px;cursor:pointer;text-transform:uppercase;transition:.1s}
 .chip:hover{background:var(--surface-2)}
@@ -259,7 +262,7 @@ td.val b{font-weight:700}
 .parlaysum .lab{font-family:var(--dispers);font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--muted)}
 .parlaysum .big{font-family:var(--display);font-size:clamp(26px,4.5vw,36px);line-height:1;margin-top:3px}
 .parlaysum .big.hit{color:var(--hit)}
-.parlaysum .sub{font-size:11px;color:var(--muted);margin-top:3px}
+.parlaysum .sub{font-size:12px;color:var(--muted);margin-top:3px}
 .legrm{background:var(--surface);border:2px solid var(--ink);border-radius:7px;padding:1px 9px;cursor:pointer;color:var(--miss);font-weight:700;font-size:14px}
 .legrm:hover{background:var(--miss);color:#fff}
 .legodds{width:66px!important;background:var(--surface-2);color:var(--text);border:2px solid var(--ink);border-radius:7px;padding:4px 6px;font-family:var(--display);text-align:center;font-size:16px}
@@ -277,9 +280,9 @@ td.val b{font-weight:700}
 .twocol>*{min-width:0}
 .tiles>.tile,.trend>div,.parlaysum>div,.splitgrid>div,.howto>.step{min-width:0}
 .distsum{display:flex;flex-wrap:wrap;gap:16px;margin:10px 4px 0;color:var(--muted)}
-.distsum>span{font-family:var(--dispers);text-transform:uppercase;font-weight:600;letter-spacing:.4px;font-size:11px}
+.distsum>span{font-family:var(--dispers);text-transform:uppercase;font-weight:600;letter-spacing:.4px;font-size:12px}
 .distsum b{color:var(--text);font-family:var(--display);font-size:20px;display:block;line-height:1.1}
-.distsum .u{font-weight:400;font-size:11px}
+.distsum .u{font-weight:400;font-size:12px}
 .oppwrap{display:flex;align-items:center;gap:10px;margin:8px 4px 14px;flex-wrap:wrap}
 .oppwrap label{font-family:var(--dispers);font-size:13px;text-transform:uppercase;letter-spacing:.6px;color:var(--ink);font-weight:700}
 select{background:var(--surface-2);color:var(--text);border:2px solid var(--ink);border-radius:9px;padding:8px 11px;font-family:var(--dispers);font-weight:600;font-size:15px;text-transform:uppercase}
@@ -303,17 +306,17 @@ select{background:var(--surface-2);color:var(--text);border:2px solid var(--ink)
 .edgetbl tr:hover td{background:var(--surface-2)}
 .edgeval{font-family:var(--display);font-size:17px}
 .edgeval.pos{color:var(--hit)} .edgeval.neg{color:var(--miss)}
-.leantag{font-family:var(--dispers);font-weight:700;font-size:11px;padding:2px 8px;border-radius:5px;text-transform:uppercase;border:1.5px solid var(--ink)}
+.leantag{font-family:var(--dispers);font-weight:700;font-size:12px;padding:2px 8px;border-radius:5px;text-transform:uppercase;border:1.5px solid var(--ink)}
 .leantag.over{background:var(--hit);color:#fff} .leantag.under{background:var(--miss);color:#fff}
-.listchip{display:inline-block;font-family:var(--dispers);font-weight:700;font-size:10.5px;padding:1px 6px;border-radius:4px;border:1.5px solid var(--ink);margin-right:3px;text-transform:uppercase}
+.listchip{display:inline-block;font-family:var(--dispers);font-weight:700;font-size:12px;padding:1px 6px;border-radius:4px;border:1.5px solid var(--ink);margin-right:3px;text-transform:uppercase}
 .listchip.T{background:var(--ink);color:#fff} .listchip.V{background:var(--accent);color:#fff} .listchip.B{background:var(--gold);color:var(--ink)}
 .edgeload,.mktuse{background:var(--surface);border:2px solid var(--ink);border-radius:8px;padding:3px 11px;font-family:var(--dispers);font-weight:700;font-size:13px;cursor:pointer;text-transform:uppercase;color:var(--ink)}
 .edgeload:hover,.mktuse:hover{background:var(--accent);color:#fff}
-.rng{color:var(--muted);font-size:11px}
+.rng{color:var(--muted);font-size:12px}
 
 /* past picks filters */
 .pkfilters{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px;margin:12px 0 14px}
-.pkfilters label{display:block;font-family:var(--dispers);font-size:11px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);font-weight:700;margin-bottom:3px}
+.pkfilters label{display:block;font-family:var(--dispers);font-size:12px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);font-weight:700;margin-bottom:3px}
 .pkfilters select,.pkfilters input{width:100%;background:var(--surface-2);border:2px solid var(--ink);border-radius:8px;padding:7px 9px;font-family:var(--body);font-weight:600;font-size:14px;color:var(--text);text-transform:none}
 .caltbl td,.caltbl th{padding:5px 8px}
 
@@ -339,7 +342,7 @@ footer b{color:var(--ink)}
 .fbrow{display:flex;align-items:center;gap:12px;margin-top:10px;flex-wrap:wrap}
 .cardbtns{display:flex;gap:8px;flex-wrap:wrap}
 .cmpbtn.on{background:var(--accent);color:#fff}
-.cmptag{display:inline-block;font-family:var(--dispers);font-weight:700;font-size:10px;text-transform:uppercase;letter-spacing:.4px;padding:1px 6px;border-radius:4px;background:var(--hit);color:#fff;margin-left:6px}
+.cmptag{display:inline-block;font-family:var(--dispers);font-weight:700;font-size:12px;text-transform:uppercase;letter-spacing:.4px;padding:1px 6px;border-radius:4px;background:var(--hit);color:#fff;margin-left:6px}
 #comparebody .wload,#lbbody .wload{background:none;border:none;color:var(--accent);font-weight:700;cursor:pointer;font-family:inherit;font-size:inherit;padding:0}
 #comparebody .wload:hover,#lbbody .wload:hover{text-decoration:underline}
 #lbbody .lbcard{cursor:pointer}
@@ -357,7 +360,7 @@ footer b{color:var(--ink)}
 .slipdrop{border:2.5px dashed var(--line);border-radius:14px;padding:18px;text-align:center;background:var(--surface-2);transition:border-color .12s,background .12s}
 .slipdrop.drag{border-color:var(--accent)}
 .sliplink{color:var(--accent);font-weight:700;cursor:pointer;text-decoration:underline}
-.beta{font-family:var(--dispers);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;background:var(--blaze);color:#fff;padding:1px 6px;border-radius:5px;vertical-align:3px}
+.beta{font-family:var(--dispers);font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;background:var(--blaze);color:#fff;padding:1px 6px;border-radius:5px;vertical-align:3px}
 .corrwarn{background:var(--surface-2);border-left:4px solid var(--gold);padding:9px 13px;border-radius:0 8px 8px 0;font-size:14px;margin-bottom:10px}
 .sliptext{white-space:pre-wrap;font-size:12px;background:var(--surface-2);padding:10px;border-radius:8px;max-height:220px;overflow:auto}
 .panel.collapsible > .mkthead, .panel.collapsible > h2:first-child{cursor:pointer;user-select:none}
@@ -375,11 +378,11 @@ a{color:var(--gold)}
 @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 
 /* hero */
-.hero{position:relative;overflow:hidden;border:1px solid rgba(34,208,127,.22);border-radius:14px;padding:40px 34px;margin-bottom:22px;
-  background:radial-gradient(1100px 540px at 12% -12%,rgba(34,208,127,.10),transparent 55%),linear-gradient(160deg,#112846,#0c1c34 55%,#0a1628);
+.hero{position:relative;overflow:hidden;border:1px solid rgba(var(--ps-green-rgb),.22);border-radius:14px;padding:40px 34px;margin-bottom:22px;
+  background:radial-gradient(1100px 540px at 12% -12%,rgba(var(--ps-green-rgb),.10),transparent 55%),linear-gradient(160deg,#112846,#0c1c34 55%,var(--ps-bg));
   box-shadow:0 26px 64px rgba(0,0,0,.5)}
 .hero::before{content:"";position:absolute;inset:0;pointer-events:none;z-index:0;
-  background-image:linear-gradient(rgba(34,208,127,.055) 1px,transparent 1px),linear-gradient(90deg,rgba(34,208,127,.055) 1px,transparent 1px);
+  background-image:linear-gradient(rgba(var(--ps-green-rgb),.055) 1px,transparent 1px),linear-gradient(90deg,rgba(var(--ps-green-rgb),.055) 1px,transparent 1px);
   background-size:54px 54px;opacity:.55;-webkit-mask-image:linear-gradient(180deg,#000,transparent 85%);mask-image:linear-gradient(180deg,#000,transparent 85%)}
 .hero::after{display:none}
 .hero-in{position:relative;z-index:1}
@@ -393,28 +396,28 @@ a{color:var(--gold)}
 .hero-meta .wk{color:#e7ecf3}
 
 /* tabs — refined nav */
-.tab{background:transparent;border:1px solid rgba(34,208,127,.30);color:var(--muted);border-radius:8px;box-shadow:none;
+.tab{background:transparent;border:1px solid rgba(var(--ps-green-rgb),.30);color:var(--muted);border-radius:8px;box-shadow:none;
   letter-spacing:1.6px;font-size:19px;padding:13px 32px}
-.tab:hover{color:var(--text);border-color:rgba(34,208,127,.6);transform:none}
-.tab[aria-selected=true]{background:var(--gold);color:#0a1628;border-color:var(--gold)}
+.tab:hover{color:var(--text);border-color:rgba(var(--ps-green-rgb),.6);transform:none}
+.tab[aria-selected=true]{background:var(--gold);color:var(--ps-bg);border-color:var(--gold)}
 
 /* exchange banners */
-.refbanner{border-radius:8px;border:1px solid var(--gold);color:#0a1628;background:var(--gold);
-  box-shadow:0 10px 24px rgba(34,208,127,0.1);letter-spacing:1px;text-shadow:none}
-.refbanner:hover{transform:translateY(-2px);box-shadow:0 12px 30px rgba(34,208,127,0.16)}
+.refbanner{border-radius:8px;border:1px solid var(--gold);color:var(--ps-bg);background:var(--gold);
+  box-shadow:0 10px 24px rgba(var(--ps-green-rgb),0.1);letter-spacing:1px;text-shadow:none}
+.refbanner:hover{transform:translateY(-2px);box-shadow:0 12px 30px rgba(var(--ps-green-rgb),0.16)}
 .refbanner:active{transform:translateY(0)}
-.refbanner.group{background:transparent;color:var(--gold);border:1px solid rgba(34,208,127,.6);box-shadow:none}
-.refbanner.group:hover{background:rgba(34,208,127,.08)}
+.refbanner.group{background:transparent;color:var(--gold);border:1px solid rgba(var(--ps-green-rgb),.6);box-shadow:none}
+.refbanner.group:hover{background:rgba(var(--ps-green-rgb),.08)}
 .socialbar{display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:16px;margin:26px auto 6px;max-width:860px;
-  padding:22px 18px;border:1px solid rgba(34,208,127,.35);border-radius:16px;background:rgba(34,208,127,.06)}
+  padding:22px 18px;border:1px solid rgba(var(--ps-green-rgb),.35);border-radius:16px;background:rgba(var(--ps-green-rgb),.06)}
 .socialtag{width:100%;text-align:center;font-family:var(--display);font-size:26px;letter-spacing:.5px;color:var(--gold);margin-bottom:4px}
 .sociallink{display:inline-flex;align-items:center;gap:10px;padding:15px 34px;border-radius:999px;border:2px solid var(--gold);
-  color:#0a1628;background:var(--gold);text-decoration:none;font-family:var(--dispers);text-transform:uppercase;letter-spacing:1.5px;font-size:20px;font-weight:700;
-  box-shadow:0 7px 19px rgba(34,208,127,0.14);transition:transform .15s,box-shadow .15s}
-.sociallink:hover{transform:translateY(-3px);box-shadow:0 11px 26px rgba(34,208,127,0.23)}
+  color:var(--ps-bg);background:var(--gold);text-decoration:none;font-family:var(--dispers);text-transform:uppercase;letter-spacing:1.5px;font-size:20px;font-weight:700;
+  box-shadow:0 7px 19px rgba(var(--ps-green-rgb),0.14);transition:transform .15s,box-shadow .15s}
+.sociallink:hover{transform:translateY(-3px);box-shadow:0 11px 26px rgba(var(--ps-green-rgb),0.23)}
 .hero-title .tm{font-size:.30em;vertical-align:super;font-style:normal;font-weight:600;opacity:.72;font-family:var(--body);margin-left:2px}
 .brandmark{color:var(--gold);margin:0 0 10px;line-height:0}
-.brandlogo{display:block;width:130px;min-width:0;height:auto;filter:drop-shadow(0 6px 18px rgba(34,208,127,.22))}
+.brandlogo{display:block;width:130px;min-width:0;height:auto;filter:drop-shadow(0 6px 18px rgba(var(--ps-green-rgb),.22))}
 @media(max-width:640px){.brandlogo{width:104px}}
 
 /* how-it-works steps */
@@ -430,7 +433,7 @@ a{color:var(--gold)}
 .panel .hint{color:var(--muted)}
 
 /* controls */
-.controls{background:var(--surface);border:1px solid rgba(34,208,127,.16);border-radius:12px;box-shadow:0 20px 50px rgba(0,0,0,.4)}
+.controls{background:var(--surface);border:1px solid rgba(var(--ps-green-rgb),.16);border-radius:12px;box-shadow:0 20px 50px rgba(0,0,0,.4)}
 .controls::before{color:var(--gold);letter-spacing:2px}
 .field label,.calcrow label,.oppwrap label{color:var(--muted)}
 
@@ -438,37 +441,37 @@ a{color:var(--gold)}
 input[type=text],input[type=number],input[type=search],select,.stepper input,.calcrow input,.legodds,.fbtext,
 .pkfilters select,.pkfilters input{background:var(--surface-2);color:var(--text);border:1px solid rgba(255,255,255,.10)}
 input::placeholder{color:#6f7f93}
-input:focus,select:focus,textarea:focus,.stepper input:focus{outline:0;border-color:var(--gold);box-shadow:0 0 0 3px rgba(34,208,127,.22)}
+input:focus,select:focus,textarea:focus,.stepper input:focus{outline:0;border-color:var(--gold);box-shadow:0 0 0 3px rgba(var(--ps-green-rgb),.22)}
 .acbox{background:var(--surface-2);border:1px solid rgba(255,255,255,.12);box-shadow:0 22px 50px rgba(0,0,0,.55)}
 .acitem+.acitem{border-top:1px solid rgba(255,255,255,.06)}
-.acitem:hover,.acitem.on{background:rgba(34,208,127,.14);color:var(--text)}
+.acitem:hover,.acitem.on{background:rgba(var(--ps-green-rgb),.14);color:var(--text)}
 .acitem:hover .acpos,.acitem.on .acpos{color:var(--gold)}
 .pmeta{color:var(--muted)} .pmeta b{color:var(--text)}
 
 /* badges */
 .badge{border:1px solid rgba(255,255,255,.14);background:var(--surface-2);color:var(--text)}
 .badge.bad{background:var(--miss);color:#1c0d10;border-color:transparent}
-.badge.warn{background:var(--gold);color:#0a1628;border-color:transparent}
-.badge.good{background:var(--hit);color:#07130d;border-color:transparent}
-.badge.info{background:transparent;color:var(--gold);border-color:rgba(34,208,127,.5)}
+.badge.warn{background:var(--gold);color:var(--ps-bg);border-color:transparent}
+.badge.good{background:var(--hit);color:var(--ps-ink);border-color:transparent}
+.badge.info{background:transparent;color:var(--gold);border-color:rgba(var(--ps-green-rgb),.5)}
 
 /* this-week strip */
-.weekstrip{background:var(--surface-2);border:1px solid rgba(34,208,127,.16);color:#cdd7e2}
+.weekstrip{background:var(--surface-2);border:1px solid rgba(var(--ps-green-rgb),.16);color:#cdd7e2}
 .weekstrip b{color:var(--gold)} .weekstrip .lab{color:var(--muted)}
 
 /* stat chips */
 .chip{border:1px solid rgba(255,255,255,.12);background:transparent;color:var(--muted)}
-.chip:hover{color:var(--text);border-color:rgba(34,208,127,.5);background:transparent}
-.chip[aria-pressed=true]{background:var(--gold);color:#0a1628;border-color:var(--gold)}
+.chip:hover{color:var(--text);border-color:rgba(var(--ps-green-rgb),.5);background:transparent}
+.chip[aria-pressed=true]{background:var(--gold);color:var(--ps-bg);border-color:var(--gold)}
 .grplab{color:var(--muted)}
 
 /* line stepper + over/under */
 .stepper button{background:var(--surface-2);border:1px solid rgba(255,255,255,.12);color:var(--text)}
-.stepper button:hover{background:var(--gold);color:#0a1628;border-color:var(--gold)}
+.stepper button:hover{background:var(--gold);color:var(--ps-bg);border-color:var(--gold)}
 .ou{border:1px solid rgba(255,255,255,.12)}
 .ou button{background:var(--surface-2);color:var(--muted)}
 .ou button+button{border-left:1px solid rgba(255,255,255,.12)}
-.ou #over[aria-pressed=true]{background:var(--hit);color:#07130d}
+.ou #over[aria-pressed=true]{background:var(--hit);color:var(--ps-ink)}
 .ou #under[aria-pressed=true]{background:var(--miss);color:#fff}
 .opts{color:var(--muted)}
 
@@ -476,7 +479,7 @@ input:focus,select:focus,textarea:focus,.stepper input:focus{outline:0;border-co
 .headline .who{font-family:var(--display);font-weight:600;text-transform:none;letter-spacing:0;color:#fff}
 .headline .q{color:var(--muted)} .headline .q b{color:var(--text)}
 .pill{border:1px solid transparent}
-.pill.over{background:var(--hit);color:#07130d} .pill.under{background:var(--miss);color:#fff}
+.pill.over{background:var(--hit);color:var(--ps-ink)} .pill.under{background:var(--miss);color:#fff}
 
 /* tiles */
 .tile{background:var(--surface);border:1px solid rgba(255,255,255,.06);border-radius:10px;box-shadow:0 14px 34px rgba(0,0,0,.34)}
@@ -485,8 +488,8 @@ input:focus,select:focus,textarea:focus,.stepper input:focus{outline:0;border-co
 .tile .cap,.tile .frac,.tile .avg{color:var(--muted)} .tile .frac b{color:var(--text)}
 .tile .pct{font-weight:600}
 .tile.hi .pct{color:var(--hit)} .tile.mid .pct{color:var(--gold)} .tile.lo .pct{color:var(--miss)}
-.tile.model{background:linear-gradient(180deg,#12294a,#0d1d34);border:1px solid rgba(34,208,127,.40);
-  box-shadow:0 0 0 1px rgba(34,208,127,.12) inset,0 18px 44px rgba(0,0,0,.45)}
+.tile.model{background:linear-gradient(180deg,#12294a,#0d1d34);border:1px solid rgba(var(--ps-green-rgb),.40);
+  box-shadow:0 0 0 1px rgba(var(--ps-green-rgb),.12) inset,0 18px 44px rgba(0,0,0,.45)}
 .tile.model .cap,.tile.model .frac,.tile.model .avg{color:#9fb0c4} .tile.model .frac b{color:#fff}
 .tile.model .pct{color:var(--gold)}
 .tile.model.hi .pct{color:var(--hit)} .tile.model.lo .pct{color:var(--miss)} .tile.model.mid .pct{color:var(--gold)}
@@ -501,38 +504,38 @@ input:focus,select:focus,textarea:focus,.stepper input:focus{outline:0;border-co
 .legend{color:var(--muted)}
 
 /* tables */
-thead th,.edgetbl th{color:var(--muted);border-bottom:1px solid rgba(34,208,127,.22)}
+thead th,.edgetbl th{color:var(--muted);border-bottom:1px solid rgba(var(--ps-green-rgb),.22)}
 tbody td,.edgetbl td{border-bottom:1px solid rgba(255,255,255,.06)}
-tbody tr:hover,.edgetbl tr:hover td{background:rgba(34,208,127,.07)}
+tbody tr:hover,.edgetbl tr:hover td{background:rgba(var(--ps-green-rgb),.07)}
 .edgeval{font-family:var(--display);font-weight:600}
 .edgeval.pos{color:var(--hit)} .edgeval.neg{color:var(--miss)} .rng{color:var(--muted)}
 .res{border:1px solid rgba(255,255,255,.12)}
-.res.h{background:var(--hit);color:#07130d;border-color:transparent} .res.m{background:var(--miss);color:#fff;border-color:transparent}
+.res.h{background:var(--hit);color:var(--ps-ink);border-color:transparent} .res.m{background:var(--miss);color:#fff;border-color:transparent}
 .res.p,.res.d,.res.w{background:var(--surface-2);color:var(--muted);border-color:rgba(255,255,255,.1)}
 .leantag{border:1px solid rgba(255,255,255,.12)}
-.leantag.over{background:var(--hit);color:#07130d;border-color:transparent} .leantag.under{background:var(--miss);color:#fff;border-color:transparent}
+.leantag.over{background:var(--hit);color:var(--ps-ink);border-color:transparent} .leantag.under{background:var(--miss);color:#fff;border-color:transparent}
 .listchip{border:1px solid rgba(255,255,255,.14)}
-.listchip.T{background:var(--gold);color:#0a1628;border-color:transparent}
-.listchip.V{background:transparent;color:var(--gold);border-color:rgba(34,208,127,.6)}
+.listchip.T{background:var(--gold);color:var(--ps-bg);border-color:transparent}
+.listchip.V{background:transparent;color:var(--gold);border-color:rgba(var(--ps-green-rgb),.6)}
 
 /* action buttons */
-.btn{background:var(--gold);color:#0a1628;border:1px solid var(--gold);border-radius:6px;box-shadow:0 7px 18px rgba(34,208,127,0.11);letter-spacing:1px}
-.btn:hover{transform:translateY(-2px);box-shadow:0 10px 23px rgba(34,208,127,0.17)}
+.btn{background:var(--gold);color:var(--ps-bg);border:1px solid var(--gold);border-radius:6px;box-shadow:0 7px 18px rgba(var(--ps-green-rgb),0.11);letter-spacing:1px}
+.btn:hover{transform:translateY(-2px);box-shadow:0 10px 23px rgba(var(--ps-green-rgb),0.17)}
 .btn:active{transform:translateY(0)}
-.btn.ghost{background:transparent;color:var(--gold);border:1px solid rgba(34,208,127,.55);box-shadow:none}
-.btn.ghost:hover{background:rgba(34,208,127,.08)}
-.edgeload,.mktuse{background:transparent;border:1px solid rgba(34,208,127,.45);color:var(--gold)}
-.edgeload:hover,.mktuse:hover{background:var(--gold);color:#0a1628;border-color:var(--gold)}
+.btn.ghost{background:transparent;color:var(--gold);border:1px solid rgba(var(--ps-green-rgb),.55);box-shadow:none}
+.btn.ghost:hover{background:rgba(var(--ps-green-rgb),.08)}
+.edgeload,.mktuse{background:transparent;border:1px solid rgba(var(--ps-green-rgb),.45);color:var(--gold)}
+.edgeload:hover,.mktuse:hover{background:var(--gold);color:var(--ps-bg);border-color:var(--gold)}
 #edgestatus,#pkstatus{color:var(--muted)}
 
 /* watch / compare */
-.watchstar{background:transparent;border:1px solid rgba(34,208,127,.45);color:var(--gold)}
-.watchstar:hover{background:rgba(34,208,127,.10);transform:none;box-shadow:none}
-.watchstar.on{background:var(--gold);color:#0a1628;border-color:var(--gold);box-shadow:none}
-.cmpbtn.on{background:var(--gold)!important;color:#0a1628!important}
+.watchstar{background:transparent;border:1px solid rgba(var(--ps-green-rgb),.45);color:var(--gold)}
+.watchstar:hover{background:rgba(var(--ps-green-rgb),.10);transform:none;box-shadow:none}
+.watchstar.on{background:var(--gold);color:var(--ps-bg);border-color:var(--gold);box-shadow:none}
+.cmpbtn.on{background:var(--gold)!important;color:var(--ps-bg)!important}
 .watchchip{background:var(--surface-2);border:1px solid rgba(255,255,255,.10)} .watchchip .wpos{color:var(--muted)}
 .watchchip .wload,#comparebody .wload,#lbbody .wload,#digestbody .wload{color:var(--gold)}
-.cmptag{background:var(--hit);color:#07130d}
+.cmptag{background:var(--hit);color:var(--ps-ink)}
 
 /* parlay + calc + splits + matchup */
 .parlaysum>div,.splitcard{background:var(--surface-2);border:1px solid rgba(255,255,255,.07)}
@@ -541,10 +544,10 @@ tbody tr:hover,.edgetbl tr:hover td{background:rgba(34,208,127,.07)}
 .legrm{background:var(--surface-2);border:1px solid rgba(255,255,255,.12);color:var(--miss)}
 .legrm:hover{background:var(--miss);color:#fff;border-color:transparent}
 .calcrow input{box-shadow:none;font-family:var(--display)}
-.warnbox{background:rgba(34,208,127,.10);border:1px solid rgba(34,208,127,.4);color:var(--text)}
+.warnbox{background:rgba(var(--ps-green-rgb),.10);border:1px solid rgba(var(--ps-green-rgb),.4);color:var(--text)}
 .matchrow{background:var(--surface-2);border:1px solid rgba(255,255,255,.07)}
 .matchrow .tag{border:1px solid rgba(255,255,255,.12)}
-.tag.soft{background:var(--hit);color:#07130d;border-color:transparent} .tag.tough{background:var(--miss);color:#fff;border-color:transparent}
+.tag.soft{background:var(--hit);color:var(--ps-ink);border-color:transparent} .tag.tough{background:var(--miss);color:#fff;border-color:transparent}
 .tag.mid{background:var(--surface-2);color:var(--muted);border-color:rgba(255,255,255,.1)}
 .distsum b{color:var(--text);font-family:var(--display);font-weight:600} .distsum{color:var(--muted)}
 
@@ -552,13 +555,13 @@ tbody tr:hover,.edgetbl tr:hover td{background:rgba(34,208,127,.07)}
 #trapalert{background:var(--surface-2);border:1px solid rgba(217,138,62,.5);box-shadow:none}
 .traphead{color:var(--blaze);font-family:var(--dispers);text-shadow:none}
 .digesttrap,.corrwarn{background:var(--surface-2);border-left:3px solid var(--gold)}
-.slipdrop{background:var(--surface-2);border:1.5px dashed rgba(34,208,127,.35)}
+.slipdrop{background:var(--surface-2);border:1.5px dashed rgba(var(--ps-green-rgb),.35)}
 .slipdrop.drag{border-color:var(--gold)}
 .sliplink{color:var(--gold)} .sliptext{background:var(--surface-2);color:var(--text)}
 .beta{background:var(--blaze);color:#1a0e04}
 .chev{color:var(--gold)}
 #digestbody p{color:#c3cddb} .mktnote,.mktmuted{color:var(--muted)}
-footer{color:var(--muted);border-top:1px solid rgba(34,208,127,.2)} footer b{color:var(--text)}
+footer{color:var(--muted);border-top:1px solid rgba(var(--ps-green-rgb),.2)} footer b{color:var(--text)}
 /* brighter text for readability */
 .hero-tag,.hero-meta,.hero-meta .wk,.weekstrip,#digestbody p,.step p,.mktnote,.mktmuted,.pmeta,.rng{color:#ffffff}
 .tile.model .cap,.tile.model .frac,.tile.model .avg{color:#dbe2ea}
@@ -572,7 +575,7 @@ input::placeholder{color:#b7c0cc}
 table td,table th,thead th,tbody td,.edgetbl td,.edgetbl th,.caltbl td,.caltbl th,.edgeload,.mktuse{color:#fff}
 
 /* ---- "Why this number" — the model's reasoning on the player page ---- */
-.whybox{background:linear-gradient(180deg,#12294a,#0d1d34);border:1px solid rgba(34,208,127,.30);border-radius:14px;
+.whybox{background:linear-gradient(180deg,#12294a,#0d1d34);border:1px solid rgba(var(--ps-green-rgb),.30);border-radius:14px;
   padding:15px 19px;margin:-6px 0 20px;box-shadow:0 14px 34px rgba(0,0,0,.34)}
 .whybox .whyhead{font-family:var(--dispers);text-transform:uppercase;letter-spacing:1px;font-weight:700;font-size:16px;
   color:var(--gold);display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 10px}
@@ -601,13 +604,13 @@ table td,table th,thead th,tbody td,.edgetbl td,.edgetbl th,.caltbl td,.caltbl t
 
 /* ---- what counts as a value spot: the rules, stated on the panel ---- */
 details.valrules>summary{cursor:pointer}
-.valrules{background:rgba(34,208,127,.05);border:1px solid rgba(34,208,127,.28);border-radius:12px;
+.valrules{background:rgba(var(--ps-green-rgb),.05);border:1px solid rgba(var(--ps-green-rgb),.28);border-radius:12px;
   padding:13px 16px;margin:2px 0 14px}
 .valrules .vrhead{font-family:var(--dispers);text-transform:uppercase;letter-spacing:.9px;font-weight:700;
   font-size:13.5px;color:var(--gold);margin-bottom:9px}
 .valrules .vrlist{list-style:none;margin:0;padding:0;display:grid;gap:8px}
 .valrules .vrlist li{display:flex;gap:10px;align-items:flex-start;font-size:14px;color:#fff;line-height:1.5}
-.valrules .vrnum{flex:0 0 auto;width:21px;height:21px;border-radius:50%;background:var(--accent);color:#07130d;
+.valrules .vrnum{flex:0 0 auto;width:21px;height:21px;border-radius:50%;background:var(--accent);color:var(--ps-ink);
   font-family:var(--dispers);font-weight:700;font-size:13px;display:flex;align-items:center;justify-content:center;margin-top:1px}
 .valrules .vrtxt{flex:1;min-width:0}
 .valrules .vrtxt b{color:#fff}
@@ -618,11 +621,13 @@ details.valrules>summary{cursor:pointer}
 .valrules .vrfoot b{color:#fff}
 .datanote summary{cursor:pointer;font-weight:600}
 .datanote[open] summary{margin-bottom:8px}
+.app .pc-foot .psstar{margin-left:auto;margin-right:-8px}   /* a pick card's star sits beside Details */
+.nflfcount{margin:0 0 10px}
 </style>
 
-<link rel="stylesheet" href="app.css?v=20261111a">
-<script src="app.js?v=20261111a"></script>
-<script src="/thanksgiving.js?v=20261101b"></script>
+<link rel="stylesheet" href="app.css?v=20261117e">
+<script src="app.js?v=20261117e"></script>
+<script src="/thanksgiving.js?v=20261117a"></script>
 
 <header class="apptop">
   <div class="apptop-in">
@@ -667,6 +672,8 @@ details.valrules>summary{cursor:pointer}
   </div>
 
 <div id="page-week">
+
+  <div id="nflfilter" class="nflfilter"></div>
 
   <div class="panel" id="valuepanel">
     <div class="mkthead"><h2>⚡ Value spots<button type="button" class="qhelp hq" data-help="value" aria-expanded="false" aria-label="What are Value spots?"><span class="qi" aria-hidden="true">?</span></button></h2><span class="mktmuted">market gives it 30%+, model is 15+ points better — overs and unders both</span><span class="mktmuted" id="recV"></span></div>
@@ -750,6 +757,11 @@ details.valrules>summary{cursor:pointer}
 
   <div id="verdict" class="verdict" hidden></div>
 
+  <div class="panel" id="ladderbox" hidden>
+    <div class="mkthead"><h2>📶 Every listed line</h2><span class="mktmuted" id="laddercap"></span></div>
+    <div id="ladderbody"></div>
+  </div>
+
   <div class="tiles" id="tiles"></div>
 
   <div id="whybox" class="whybox" hidden></div>
@@ -812,7 +824,7 @@ details.valrules>summary{cursor:pointer}
   </div>
   <div class="panel watchpanel" id="watchpanel" hidden>
     <div class="mkthead"><h2>⭐ Watchlist</h2><span class="mktmuted">Players you've starred — saved on this device</span></div>
-    <div class="watchlist" id="watchlist"></div>
+    <div id="watchlist"></div>
   </div>
 
   <div class="panel" id="comparepanel" hidden>
@@ -941,11 +953,11 @@ details.valrules>summary{cursor:pointer}
 </div>
 
 <style>
-.pslcookie{position:fixed;left:12px;right:12px;bottom:12px;z-index:9999;background:#0f2038;border:1px solid #2a3f5f;border-radius:12px;box-shadow:0 18px 44px rgba(0,0,0,.5);max-width:720px;margin:0 auto}
+.pslcookie{position:fixed;left:12px;right:12px;bottom:12px;z-index:9999;background:var(--ps-surface);border:1px solid #2a3f5f;border-radius:12px;box-shadow:0 18px 44px rgba(0,0,0,.5);max-width:720px;margin:0 auto}
 .pslcookie-in{display:flex;gap:14px;align-items:center;justify-content:space-between;flex-wrap:wrap;padding:12px 16px}
-.pslcookie p{margin:0;font-size:13px;color:#dfe6ef;line-height:1.5;flex:1;min-width:230px}
-.pslcookie a{color:#22d07f}
-.pslcookie button{background:#22d07f;color:#06210b;border:0;border-radius:8px;font-weight:700;padding:9px 18px;cursor:pointer;font-family:inherit;font-size:14px}
+.pslcookie p{margin:0;font-size:13px;color:var(--ps-soft);line-height:1.5;flex:1;min-width:230px}
+.pslcookie a{color:var(--ps-green)}
+.pslcookie button{background:var(--ps-green);color:var(--ps-green-ink);border:0;border-radius:8px;font-weight:700;padding:9px 18px;cursor:pointer;font-family:inherit;font-size:14px}
 .pslcookie button:hover{filter:brightness(1.08)}
 </style>
 <div id="pslcookie" class="pslcookie" role="region" aria-label="Privacy notice" hidden>
@@ -1278,7 +1290,7 @@ function paintVerdict(){
 }
 function render(){
   PS.syncHash(state);
-  VERDICT=null; paintVerdict();
+  VERDICT=null; paintVerdict(); renderLadder();
   if(!state.player){ renderEmpty(); return; }
   const st=STATMAP[state.stat], p=state.player, g=games();
   renderMeta();
@@ -1689,7 +1701,7 @@ const MKT_STAT = [
 function mktStatKey(txt){ for(const [re,k] of MKT_STAT){ if(re.test(txt)) return k; } return null; }
 let SLATE=null; const mktCache={}; const CACHE_MS=5*60*1000;
 async function getSlate(){ if(SLATE) return SLATE;
-  const r=await fetch('slate.json',{cache:'no-store'}); if(!r.ok) throw new Error('no slate'); SLATE=await r.json(); return SLATE; }
+  const r=await fetch('slate.json',{cache:'no-cache'}); if(!r.ok) throw new Error('no slate'); SLATE=await r.json(); return SLATE; }
 // A game's player props, from Polymarket US (the global event list is gone since Oct 21, 2026), each
 // shaped like a global market so parseMarket() reads it. Mirrors fetch_slate_us() in build.py.
 async function getEvent(slug, force){
@@ -2027,7 +2039,7 @@ function liveTick(){
   const gone=r=>r.sg? gameHappened(r.sg) : !!(r.game && r.game.date && r.game.date<new Date().toISOString().slice(0,10));
   if(edgeRows.some(gone) || valueCands.some(gone) || lockedRows.some(gone)){
     edgeRows=edgeRows.filter(r=>!gone(r)); valueCands=valueCands.filter(r=>!gone(r)); lockedRows=lockedRows.filter(r=>!gone(r));
-    valueRows=computeValueRows();
+    valueRows=computeValueRows(); setFilterOptions();
     if(edgeRows.length || lockedRows.length){ renderEdges(); renderValue(); }
     else { $('edgebody').innerHTML=KICKED_MSG; $('valuebody').innerHTML=KICKED_MSG; liveWant.delete('T'); liveWant.delete('V'); }
   }
@@ -2074,6 +2086,28 @@ function valueQualifies(prob, price){
   return price>=VALUE_MIN_PRICE && e>=VALUE_MIN_EDGE && e<=VALUE_MAX_EDGE+1e-9;
 }
 let edgeRows=[], valueRows=[], valueCands=[], lockedRows=[], edgeSort={key:'prob',dir:-1};
+/* One filter bar (PS.filterBar) over Top 25 Surest and Value spots: game, prop, side, price band, starred.
+   It only hides rows of each list; it never refills them (the lists are what gets recorded). */
+// (until the scan lands, this week's games still to play, so a saved game choice survives the reload)
+const FLT=PS.filterBar($('nflfilter'), {key:'nfl', options:{games:(WEEK.games||[]).filter(g=>g && g.id && !g.final).map(g=>[g.id, g.away+' @ '+g.home]), stats:[]}, onChange:()=>{
+  if(edgeRows.length || lockedRows.length){ renderEdges(); renderValue(); } }});
+// the price a row is filtered on: the live best price, else the one it was listed at (fractions)
+function fltPrice(r){ if(r.locked) return r.price; const lv=livePriceFor(r); return lv!=null? lv : (r.vprice!=null? r.vprice : r.price); }
+function fltPass(r){ return FLT.test({gid:(r.game||{}).gid, sk:r.sk, side:r.side, price:fltPrice(r), pid:r.pl? r.pl.id : '', sport:'nfl'}); }
+// the filter's choices: this week's games still to kick off, and the props on the board
+function setFilterOptions(){
+  const all=lockedRows.concat(edgeRows), gm=new Map();
+  all.forEach(r=>{ const g=r.game; if(g && g.gid && !gm.has(g.gid)) gm.set(g.gid, g); });
+  const gs=[...gm.values()].sort((a,b)=>String(a.start||a.date||'').localeCompare(String(b.start||b.date||'')) || String(a.gid).localeCompare(String(b.gid)))
+    .map(g=>[g.gid, g.away+' @ '+g.home]);
+  const sks=[...new Set(all.map(r=>r.sk))].filter(Boolean).sort((a,b)=>statLabel(a).localeCompare(statLabel(b)));
+  FLT.setOptions({games:gs, stats:sks.map(k=>[k, statLabel(k)])});
+}
+// a list the filter emptied: say so, with a one-tap Clear
+function filteredOut(el, what){
+  el.innerHTML=`<p class="mktnote">None of ${what} match your filters. <button type="button" class="chip psf-c nflfclear">✕ Clear filters</button></p>`;
+  const b=el.querySelector('.nflfclear'); if(b) b.onclick=()=>FLT.clear();
+}
 const KICKED_MSG=`<p class="mktnote">🔒 Every game on the board has kicked off. Those picks are locked in as recorded before kickoff and get graded into <b>Past picks</b> once the final box score is in — the board fills back in when the next games' props post.</p>`;
 
 /* The price a Value row is judged on: the live Polymarket US ask when there is one,
@@ -2206,6 +2240,7 @@ async function scanBoard(force){
     const nohist=rows.filter(r=>r.nohist).length;
     const vU=valueRows.filter(r=>r.side==='under').length;
     status.textContent=`${modeled.length} props modeled · ${valueRows.length} value (${valueRows.length-vU} over / ${vU} under) · ${gamesL.length} games${nohist?` · ${nohist} skipped (no game log)`:''}`;
+    setFilterOptions();
     if(!modeled.length && !lockedRows.length){
       const msg = gamesL.length && kicked===gamesL.length ? KICKED_MSG
         : gamesL.length
@@ -2245,7 +2280,7 @@ function pickTable(rows, opts){
         `<div class="pc-who"><b>${esc(r.name)}</b><span><span class="tbadge">${esc(r.team)}</span>${vs}</span>${kickoffISO(teamGame(r.team))? PS.gameTime(kickoffISO(teamGame(r.team))) : ''}</div>`+
         `<div class="pc-prob"><div class="ring" style="--p:${pv}"><b>${pv}<small>%</small></b></div><span title="80% range ${Math.round(r.lo*100)}–${Math.round(r.hi*100)}%, from ${r.n} games">chance</span></div></div>`+
       `<div class="pc-bet"><span class="leantag ${r.side}">${r.side}</span><b>${r.line}</b><span>${esc(r.statText)}</span>${r.pl? PS.spark(valuesOf(r.pl, r.sk), r.line, r.side) : ''}</div>`+
-      `<div class="pc-foot">${r.locked? lockedPrice(r)+PS.lockBadge(r.lk) : liveSpan(r)}<button class="edgeload" type="button" data-i="${idx}">Details</button></div>`+
+      `<div class="pc-foot">${r.locked? lockedPrice(r)+PS.lockBadge(r.lk) : liveSpan(r)}${r.pl? PS.starBtn('nfl', {pid:r.pl.id, name:r.name, team:r.team}) : ''}<button class="edgeload" type="button" data-i="${idx}">Details</button></div>`+
     `</article>`;
   });
   return h+`</div>`+PS.lockNote(rows.some(r=>r.locked));
@@ -2262,6 +2297,8 @@ function openPickSheet(r){ if(!r.pl){ loadEdge(r); return; }
   const live=r.locked? null : livePriceFor(r), px= live!=null? live : (r.vprice!=null? r.vprice : null);
   PS.pickSheet({name:r.name, team:r.team, sport:'nfl', vs, prob:r.prob, lo:r.lo, hi:r.hi, neff:r.n, side:r.side, line:r.line, statText:r.statText,
     price:px, vn: r.locked? r.vn : (live!=null? liveVenueFor(r) : (r.vvn||null)), live:live!=null, vals:valuesOf(r.pl, r.sk), onOpen:()=>loadEdge(r),
+    watch:{on:PS.watch.has('nfl', r.pl.id), toggle:()=>PS.watch.toggle({sport:'nfl', pid:r.pl.id, name:r.name, team:r.team})},
+    links:PS.exchangeUrls(DB.links, g.gid, r.sk),
     track:trackFor(betFor(r.pl, r.sk, r.line, r.side, r.prob, px)),
     more:PS.relatedPicks(r, lockedRows.concat(edgeRows), {key:x=>[x.pl? x.pl.id : x.pid, x.sk, x.line, x.side].join("|"), game:x=>{ const g=x.game||{}; return g.away+"@"+g.home; }, pid:x=>x.pl? x.pl.id : x.pid, open:openPickSheet}),
     onShare:()=>PS.sharePick({player:r.pl, stat:r.sk, line:r.line, ou:r.side}, r.statText)}); }
@@ -2280,13 +2317,20 @@ function topRows(){
   // the rows scanBoard marked T: surest first, betable ($25+ near a live price), not waiting on injury news
   return held.concat(edgeRows.filter(r=>r.lists.includes('T')).sort((a,b)=>(b.prob-a.prob)||(b.neff-a.neff)).slice(0, Math.max(0, 25-held.length)));
 }
+// "Showing 4 of 25 · filtered" above a list the filter bar trimmed (nothing when it shows everything)
+function fltCount(shown, all){
+  return shown<all? `<p class="mktnote nflfcount">Showing <b>${shown}</b> of ${all} · filtered <button type="button" class="linkbtn nflfclear">Clear filters</button></p>` : '';
+}
+function wireFltClear(el){ el.querySelectorAll('.nflfclear').forEach(b=>b.onclick=()=>FLT.clear()); }
 function renderEdges(){
-  const rows=sortRows(topRows(), edgeSort.key, edgeSort.dir);
-  $('edgebody').innerHTML=pickTable(rows,{sort:edgeSort})+
+  const all=topRows(), rows=sortRows(all.filter(fltPass), edgeSort.key, edgeSort.dir);
+  renderWatch(); renderLadder();
+  if(all.length && !rows.length){ filteredOut($('edgebody'), 'the Top 25 Surest'); trackLive('T', []); return; }
+  $('edgebody').innerHTML=fltCount(rows.length, all.length)+pickTable(rows,{sort:edgeSort})+
     `<p class="mktnote" style="margin-top:8px">The 25 props with the highest <b>model chance</b> on this week's board that you can actually bet — a live Polymarket US or Kalshi price with at least <b>$25</b> offered near it — regardless of payout, one line per player-prop. Left off: props waiting on injury news, and any prop where the model is more than 20 points off the market on some line (it's likely missing a role change the market already knows). Best if you're holding <b>credits you can't withdraw without trading</b>, since these are the props most likely to win and let you cash out. <b>Model</b> = the chance the Bet side hits, with its 80% range and the games it's based on. <b>Best price</b> is the cheaper of Polymarket US (live, refreshed about once a minute) and Kalshi for that exact side — what you'd pay right now, the model's edge over it, and the payout multiplier — with both exchanges' prices underneath. Use the pills to sort. These picks are recorded before kickoff and graded in <b>Past picks</b>.</p>`;
   $('edgebody').querySelectorAll('.sortpill').forEach(t=>t.onclick=()=>{ const k=t.dataset.k; if(!k) return;
     if(edgeSort.key===k) edgeSort.dir*=-1; else { edgeSort.key=k; edgeSort.dir=['name','statText','side','matchup'].includes(k)?1:-1; } renderEdges(); });
-  wireLoad($('edgebody'), rows);
+  wireLoad($('edgebody'), rows); wireFltClear($('edgebody'));
   trackLive('T', rows.filter(r=>!r.locked));
 }
 function renderValue(){
@@ -2294,11 +2338,13 @@ function renderValue(){
   const body=$('valuebody');
   const lockedV=lockedRows.filter(r=>r.lists.includes('V'));
   if(!valueRows.length && !lockedV.length){ body.innerHTML=`<p class="mktnote">No value spots right now — nothing on the board, over <i>or</i> under, clears <b>both</b> rules above. That's normal when markets are thin or efficient; the list fills back in as prices move.</p>`; liveWant.delete('V'); return; }
-  const rows=sortRows(lockedV.concat(valueRows),'vedge',-1);
+  const allV=lockedV.concat(valueRows), rows=sortRows(allV.filter(fltPass),'vedge',-1);
+  renderWatch(); renderLadder();
+  if(!rows.length){ filteredOut(body, `the ${allV.length} value spot${allV.length===1?'':'s'}`); trackLive('V', []); return; }
   const unders=rows.filter(r=>r.side==='under').length, overs=rows.length-unders;
   const stale=rows.filter(r=>!r.vlive && !r.locked).length;
-  body.innerHTML=pickTable(rows,{})+`<p class="mktnote" style="margin-top:8px"><b>${rows.length}</b> prop${rows.length===1?'':'s'} clear both rules at the price you'd pay right now — ${overs} over${overs===1?'':'s'} and ${unders} under${unders===1?'':'s'}${stale?`, ${stale} judged on the price from the last scan`:''}. Rechecked about once a minute, so a row leaves as soon as its price moves against it. Picks are recorded before kickoff and graded in <b>Past picks</b> — that record is priced at record time, so it can differ slightly from this list. Backward-looking; not advice.</p>`;
-  wireLoad(body, rows);
+  body.innerHTML=fltCount(rows.length, allV.length)+pickTable(rows,{})+`<p class="mktnote" style="margin-top:8px"><b>${rows.length}</b> prop${rows.length===1?'':'s'}${rows.length<allV.length? ` (of ${allV.length}, filtered)` : ''} clear both rules at the price you'd pay right now — ${overs} over${overs===1?'':'s'} and ${unders} under${unders===1?'':'s'}${stale?`, ${stale} judged on the price from the last scan`:''}. Rechecked about once a minute, so a row leaves as soon as its price moves against it. Picks are recorded before kickoff and graded in <b>Past picks</b> — that record is priced at record time, so it can differ slightly from this list. Backward-looking; not advice.</p>`;
+  wireLoad(body, rows); wireFltClear(body);
   trackLive('V', rows.filter(r=>!r.locked));
 }
 function loadEdge(r){
@@ -2536,23 +2582,74 @@ function restore(){
   state.player=null; $('player').value=''; syncChips(); render();
 }
 
-let WATCH=[]; try{ WATCH=JSON.parse(localStorage.getItem('psl_watch')||'[]'); if(!Array.isArray(WATCH)) WATCH=[]; }catch(e){ WATCH=[]; }
-function saveWatch(){ try{ localStorage.setItem('psl_watch', JSON.stringify(WATCH)); }catch(e){} }
-function isWatched(id){ return WATCH.includes(id); }
-function toggleWatch(id){ if(!id) return; const i=WATCH.indexOf(id); if(i>=0) WATCH.splice(i,1); else WATCH.push(id); saveWatch(); renderWatch(); updateWatchStar(); }
+// Watchlist: the site-wide one (PS.watch, every sport, saved on this device; it took over the old psl_watch list).
+function isWatched(id){ return PS.watch.has('nfl', id); }
+function toggleWatch(id){ if(!id) return; const p=byId[id];
+  const on=PS.watch.toggle({sport:'nfl', pid:id, name:p? p.n : '', team:p? p.t : ''});
+  PS.toast(on? '★ Added to your watchlist' : 'Removed from your watchlist'); }
 function updateWatchStar(){ const b=$('watchstar'); if(!b) return; const p=state.player;
   const sh=$('sharepick'); if(sh) sh.hidden=!p;
   if(!p){ b.hidden=true; return; }
-  b.hidden=false; const on=isWatched(p.id); b.classList.toggle('on',on); b.textContent = on? '⭐ Watching' : '☆ Watch'; }
-function renderWatch(){ const wrap=$('watchlist'), panel=$('watchpanel'); if(!wrap) return;
-  const items=WATCH.map(id=>byId[id]).filter(Boolean);
-  panel.hidden=false;
-  if(!items.length){ wrap.innerHTML=`<p class="mktnote" style="margin:0">No players yet — tap <b>☆ Watch</b> on any player's card to keep an eye on them here.</p>`; return; }
-  wrap.innerHTML=items.map(p=>`<span class="watchchip"><button class="wload" type="button" data-id="${esc(p.id)}">${esc(p.n)}</button><span class="wpos">${esc(p.p)} · ${esc(p.t)}</span><button class="wx" type="button" data-rm="${esc(p.id)}" title="Remove from watchlist" aria-label="Remove ${esc(p.n)} from watchlist">×</button></span>`).join('');
-  wrap.querySelectorAll('.wload').forEach(b=>b.onclick=()=>{ const p=byId[b.dataset.id]; if(p){ setPlayer(p); } });
-  wrap.querySelectorAll('.wx').forEach(b=>b.onclick=()=>toggleWatch(b.dataset.rm));
+  b.hidden=false; const on=isWatched(p.id); b.classList.toggle('on',on); b.setAttribute('aria-pressed', String(on)); b.textContent = on? '⭐ Watching' : '☆ Watch'; }
+// A starred player's upcoming props on this week's board (Top 25 / Value tags, the best price you can get).
+function watchLegs(pid){
+  const out=new Map(), vk=new Set(valueRows.map(r=>mkOf(r)+'|'+r.side));
+  lockedRows.concat(edgeRows, valueRows).forEach(r=>{
+    if(!r || !r.pl || String(r.pl.id)!==String(pid) || r.prob==null || !r.side) return;
+    const k=r.sk+'|'+r.line+'|'+r.side;
+    let lists=String(r.lists||''); if(!r.locked && vk.has(mkOf(r)+'|'+r.side) && !lists.includes('V')) lists+='V';
+    const prev=out.get(k);
+    if(prev){ lists.split('').forEach(c=>{ if(!prev.lists.includes(c)) prev.lists+=c; }); return; }
+    let price=null, vn=null, thin=false;
+    if(r.locked){ price=r.price; vn=r.vn||null; }
+    else { const e=valuePrice(r); if(e){ price=e.px; vn=e.vn; thin=!!e.thin; } }
+    out.set(k, {statText:r.statText||statLabel(r.sk), side:r.side, line:r.line, prob:r.prob, price, vn, thin, lists});
+  });
+  return [...out.values()];
 }
+function renderWatch(){ const wrap=$('watchlist'), panel=$('watchpanel'); if(!wrap) return;
+  panel.hidden=false;
+  PS.renderWatchlist(wrap, {sport:'nfl', legsForPlayer:watchLegs,
+    open:pid=>{ const p=byId[pid]; if(p) setPlayer(p); },
+    player:pid=>{ const p=byId[pid]; return p? {name:p.n, team:p.t} : null; }});
+}
+PS.watch.onChange(updateWatchStar);
 $('watchstar').onclick=()=>{ if(state.player) toggleWatch(state.player.id); };
+
+/* Line ladder (Player tab): every line of this player's prop on this week's board, with both exchanges'
+   prices and the model's chance for the side it would be recorded on; tap a row to load that line. */
+function ladderRows(pid, sk){
+  const out=new Map(), vk=new Set(valueRows.map(r=>mkOf(r)+'|'+r.side));
+  const add=(r, side, prob, lists)=>{
+    const k=r.line+'|'+side; if(out.has(k)){ const x=out.get(k); String(lists||'').split('').forEach(c=>{ if(!x.listed.includes(c)) x.listed+=c; }); return; }
+    if(r.locked){ out.set(k, {line:r.line, side, prob, pp:r.pp, kp:r.kp, vn:r.vn, listed:String(lists||''), r}); return; }
+    const L=livePx.get(mkOf(r)), kk=kalKey(r), us=(L && L.open && L.exact)? (side==='over'? L.over : L.under) : null;
+    out.set(k, {line:r.line, side, prob, pp:us, kp:kalOf(kk, side), vn:liveVenueFor(Object.assign({}, r, {side})),
+      pd:us!=null? pmUsd(L.slug, side) : null, kd:kalUsd(kk, side), listed:String(lists||''), r});
+  };
+  lockedRows.concat(edgeRows).forEach(r=>{
+    if(!r.pl || String(r.pl.id)!==String(pid) || r.sk!==sk || r.prob==null || !r.side) return;
+    add(r, r.side, r.prob, String(r.lists||'')+(!r.locked && vk.has(mkOf(r)+'|'+r.side)? 'V' : ''));
+  });
+  // a value spot on the side the model doesn't lean (the under of a line it calls over, say)
+  valueRows.forEach(r=>{ if(r.pl && String(r.pl.id)===String(pid) && r.sk===sk) add(r, r.side, r.prob, 'V'); });
+  return [...out.values()];
+}
+function renderLadder(){
+  const box=$('ladderbox'); if(!box) return;
+  let rows=[];
+  try{ if(state.player && STATMAP[state.stat]) rows=ladderRows(state.player.id, state.stat); }catch(e){ rows=[]; }
+  box.hidden=!rows.length;
+  if(!rows.length){ $('ladderbody').innerHTML=''; $('laddercap').textContent=''; return; }
+  $('laddercap').textContent=`${state.player.n} · ${statLabel(state.stat)} · tap a line to load it`;
+  PS.lineLadder($('ladderbody'), rows, {statText:statLabel(state.stat), open:x=>{
+    state.line=+x.line; state.ou=x.side==='under'? 'under' : 'over'; $('line').value=x.line;
+    $('over').setAttribute('aria-pressed', String(state.ou==='over')); $('under').setAttribute('aria-pressed', String(state.ou==='under'));
+    render(); save();
+    const px=x.r && x.r.locked? x.r.price : livePriceFor(Object.assign({}, x.r, {side:state.ou}));
+    if(px!=null){ const yo=$('yourodds'); if(yo){ yo.value=Math.round(px*100); updateCalc(); } }
+    $('headline').scrollIntoView({behavior:'smooth', block:'start'}); }});
+}
 
 (function(){ const b=$('fbsend'), t=$('fbtext'), note=$('fbnote'); if(!b) return;
   b.onclick=()=>{ const msg=(t.value||'').trim();
@@ -2920,7 +3017,7 @@ async function initPicks(){
   if(PICKS||pkLoading) return; pkLoading=true;
   const st=$('pkstatus'); st.textContent='Loading picks…';
   try{
-    const r=await fetch('picks.json',{cache:'no-store'}); if(!r.ok) throw new Error('no picks.json');
+    const r=await fetch('picks.json',{cache:'no-cache'}); if(!r.ok) throw new Error('no picks.json');
     const d=await r.json(); PICKMETA=d;
     PICKS=d.picks.map(row=>{ const o={}; d.cols.forEach((c,i)=>o[c]=row[i]); return PS.capPick(o); })
       .filter(p=>!PS.thinOut(p, {cents:100}));      // ruled out only for a thin market: never recommended

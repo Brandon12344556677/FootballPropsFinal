@@ -19,11 +19,18 @@ timeout 6m python build_tennis.py 2>&1 | tee "$LOGDIR/build_tennis.log" || echo 
 # The home page's Today feed and Bet of the Day.
 timeout 3m python build_today.py 2>&1 | tee "$LOGDIR/build_today.log" || echo "today.json not rebuilt this run"
 
+# The public Record page (record.html, record.json): every list in every sport, losers included.
+timeout 2m python build_record.py 2>&1 | tee "$LOGDIR/build_record.log" || echo "record page not rebuilt this run"
+
 # One page per most-bet player, for search engines: rebuilt once a day, sitemap every run.
 timeout 3m python build_players.py 2>&1 | tee "$LOGDIR/build_players.log" || echo "player pages not rebuilt this run"
 
 # One page per upcoming game (games/), every run; adds them to the sitemap.
 timeout 2m python build_games.py 2>&1 | tee "$LOGDIR/build_games.log" || echo "game pages not rebuilt this run"
+
+# Link-preview cards (og/*.png, and p/<sport>/<key>.png for Value picks' share pages), drawn in headless Chrome
+# by og/draw.html; only new or changed cards, the daily ones at most once a day. Without Chrome it does nothing.
+timeout 3m python cards.py 2>&1 | tee "$LOGDIR/cards.log" || echo "preview cards not drawn this run"
 
 # Once a day (first run after 11 AM ET): yesterday's Value results + today's best value,
 # to whichever Discord/Telegram secrets are set. With none set, it does nothing.
@@ -54,11 +61,11 @@ git config user.name "github-actions[bot]"
 git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 git add nfl.html data.json slate.json picks.json weekly.json sitemap.xml robots.txt
 git add -A players 2>/dev/null || true
-git add -A games best p 2>/dev/null || true
+git add -A games best p og 2>/dev/null || true
 for f in nba.html nba.json nba_stats.json nba_picks.json \
          nhl.html nhl.json nhl_stats.json nhl_picks.json \
          mlb.html mlb.json mlb_stats.json mlb_picks.json          tennis.html tennis.json tennis_picks.json tennis_picks_recent.json tennis_results.json today.json botd.json posted.json top_cache.json health.json fast_hist.json \
-         team/stats.enc team/edges.enc team/parlays.enc team/parlays_nba.enc team/parlays_nfl.enc team/parlay_potd.enc team/spreads.enc team/arbs.enc spread_scores.json team/tpod.enc nba_picks_recent.json nhl_picks_recent.json mlb_picks_recent.json search.json; do
+         team/stats.enc team/edges.enc team/parlays.enc team/parlays_nba.enc team/parlays_nfl.enc team/parlay_potd.enc team/spreads.enc team/arbs.enc spread_scores.json team/tpod.enc nba_picks_recent.json nhl_picks_recent.json mlb_picks_recent.json search.json record.html record.json; do
   git add "$f" 2>/dev/null || true
 done
 if git diff --cached --quiet; then

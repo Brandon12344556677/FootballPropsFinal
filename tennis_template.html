@@ -7,8 +7,11 @@
 <meta property="og:url" content="https://propstreaklab.com/tennis.html">
 <meta property="og:title" content="Tennis Match Picks | Prop Streak Lab">
 <meta property="og:description" content="Free ATP and WTA tennis research: the model's chance for every match winner, game spread and total games against Polymarket and Kalshi, with every pick graded in public.">
-<meta property="og:image" content="https://propstreaklab.com/icon-512.png">
-<meta name="twitter:card" content="summary">
+<meta property="og:image" content="https://propstreaklab.com/og/tennis.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Prop Streak Lab tennis: the model's chance next to the market price, and the record">
+<meta name="twitter:card" content="summary_large_image">
 <link rel="icon" href="/favicon.ico" sizes="48x48">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="icon" href="/icon-192.png" sizes="192x192" type="image/png">
@@ -19,10 +22,10 @@
 <style>
 :root{
   color-scheme:dark;
-  --ink:#22354f; --bg:#0a1628; --surface:#0f2038; --surface-2:#142743; --line:#22354f;
-  --text:#ffffff; --muted:#e6eaf0;
-  --accent:#22d07f; --blaze:#d98a3e; --gold:#22d07f;
-  --hit:#4fb583; --hit-soft:#12352a; --miss:#eb6f7d; --miss-soft:#3a1c22; --push:#8393a8;
+  --ink:var(--ps-line); --bg:var(--ps-bg); --surface:var(--ps-surface); --surface-2:var(--ps-surface-2); --line:var(--ps-line);
+  --text:var(--ps-text); --muted:#e6eaf0;
+  --accent:var(--ps-green); --blaze:#d98a3e; --gold:var(--ps-green);
+  --hit:#4fb583; --hit-soft:#12352a; --miss:var(--ps-red); --miss-soft:#3a1c22; --push:#8393a8;
   --shadow:0 20px 50px rgba(0,0,0,.45);
   --hard:0 18px 44px rgba(0,0,0,.45); --hard-sm:0 10px 26px rgba(0,0,0,.4);
   --display:"Cormorant Garamond",Georgia,"Times New Roman",serif;
@@ -33,10 +36,10 @@
 body{background:var(--bg);color:var(--text);font-family:var(--body);line-height:1.5;margin:0;
   -webkit-font-smoothing:antialiased;font-size:15px;overflow-x:hidden;
   background-image:
-    linear-gradient(rgba(34,208,127,.035) 1px,transparent 1px),
-    linear-gradient(90deg,rgba(34,208,127,.035) 1px,transparent 1px),
-    radial-gradient(1000px 640px at 15% -8%,rgba(34,208,127,.06),transparent 60%),
-    linear-gradient(180deg,#0b1a32,#0a1628 55%,#081120);
+    linear-gradient(rgba(var(--ps-green-rgb),.035) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(var(--ps-green-rgb),.035) 1px,transparent 1px),
+    radial-gradient(1000px 640px at 15% -8%,rgba(var(--ps-green-rgb),.06),transparent 60%),
+    linear-gradient(180deg,#0b1a32,var(--ps-bg) 55%,var(--ps-bg-2));
   background-size:58px 58px,58px 58px,100% 100%,100% 100%;
   background-attachment:fixed}
 .wrap{max-width:1120px;margin:0 auto;padding:20px 16px 70px}
@@ -143,7 +146,7 @@ input:focus,select:focus{outline:3px solid var(--accent);outline-offset:1px}
 /* stat chips */
 .chips{display:flex;flex-wrap:wrap;gap:7px}
 .chipgrp{display:flex;flex-wrap:wrap;gap:7px;align-items:center}
-.grplab{font-size:11px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);font-weight:700;margin-right:2px;align-self:center}
+.grplab{font-size:12px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);font-weight:700;margin-right:2px;align-self:center}
 .chip{border:2px solid var(--ink);background:var(--surface);color:var(--ink);border-radius:999px;padding:6px 13px;
   font-family:var(--dispers);font-size:15px;font-weight:600;letter-spacing:.3px;cursor:pointer;text-transform:uppercase;transition:.1s}
 .chip:hover{background:var(--surface-2)}
@@ -247,7 +250,7 @@ td.val b{font-weight:700}
 .parlaysum .lab{font-family:var(--dispers);font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--muted)}
 .parlaysum .big{font-family:var(--display);font-size:clamp(26px,4.5vw,36px);line-height:1;margin-top:3px}
 .parlaysum .big.hit{color:var(--hit)}
-.parlaysum .sub{font-size:11px;color:var(--muted);margin-top:3px}
+.parlaysum .sub{font-size:12px;color:var(--muted);margin-top:3px}
 .legrm{background:var(--surface);border:2px solid var(--ink);border-radius:7px;padding:1px 9px;cursor:pointer;color:var(--miss);font-weight:700;font-size:14px}
 .legrm:hover{background:var(--miss);color:#fff}
 .legodds{width:66px!important;background:var(--surface-2);color:var(--text);border:2px solid var(--ink);border-radius:7px;padding:4px 6px;font-family:var(--display);text-align:center;font-size:16px}
@@ -265,9 +268,9 @@ td.val b{font-weight:700}
 .twocol>*{min-width:0}
 .tiles>.tile,.trend>div,.parlaysum>div,.splitgrid>div,.howto>.step{min-width:0}
 .distsum{display:flex;flex-wrap:wrap;gap:16px;margin:10px 4px 0;color:var(--muted)}
-.distsum>span{font-family:var(--dispers);text-transform:uppercase;font-weight:600;letter-spacing:.4px;font-size:11px}
+.distsum>span{font-family:var(--dispers);text-transform:uppercase;font-weight:600;letter-spacing:.4px;font-size:12px}
 .distsum b{color:var(--text);font-family:var(--display);font-size:20px;display:block;line-height:1.1}
-.distsum .u{font-weight:400;font-size:11px}
+.distsum .u{font-weight:400;font-size:12px}
 .oppwrap{display:flex;align-items:center;gap:10px;margin:8px 4px 14px;flex-wrap:wrap}
 .oppwrap label{font-family:var(--dispers);font-size:13px;text-transform:uppercase;letter-spacing:.6px;color:var(--ink);font-weight:700}
 select{background:var(--surface-2);color:var(--text);border:2px solid var(--ink);border-radius:9px;padding:8px 11px;font-family:var(--dispers);font-weight:600;font-size:15px;text-transform:uppercase}
@@ -291,17 +294,17 @@ select{background:var(--surface-2);color:var(--text);border:2px solid var(--ink)
 .edgetbl tr:hover td{background:var(--surface-2)}
 .edgeval{font-family:var(--display);font-size:17px}
 .edgeval.pos{color:var(--hit)} .edgeval.neg{color:var(--miss)}
-.leantag{font-family:var(--dispers);font-weight:700;font-size:11px;padding:2px 8px;border-radius:5px;text-transform:uppercase;border:1.5px solid var(--ink)}
+.leantag{font-family:var(--dispers);font-weight:700;font-size:12px;padding:2px 8px;border-radius:5px;text-transform:uppercase;border:1.5px solid var(--ink)}
 .leantag.over{background:var(--hit);color:#fff} .leantag.under{background:var(--miss);color:#fff}
-.listchip{display:inline-block;font-family:var(--dispers);font-weight:700;font-size:10.5px;padding:1px 6px;border-radius:4px;border:1.5px solid var(--ink);margin-right:3px;text-transform:uppercase}
+.listchip{display:inline-block;font-family:var(--dispers);font-weight:700;font-size:12px;padding:1px 6px;border-radius:4px;border:1.5px solid var(--ink);margin-right:3px;text-transform:uppercase}
 .listchip.T{background:var(--ink);color:#fff} .listchip.V{background:var(--accent);color:#fff} .listchip.B{background:var(--gold);color:var(--ink)}
 .edgeload,.mktuse{background:var(--surface);border:2px solid var(--ink);border-radius:8px;padding:3px 11px;font-family:var(--dispers);font-weight:700;font-size:13px;cursor:pointer;text-transform:uppercase;color:var(--ink)}
 .edgeload:hover,.mktuse:hover{background:var(--accent);color:#fff}
-.rng{color:var(--muted);font-size:11px}
+.rng{color:var(--muted);font-size:12px}
 
 /* past picks filters */
 .pkfilters{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px;margin:12px 0 14px}
-.pkfilters label{display:block;font-family:var(--dispers);font-size:11px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);font-weight:700;margin-bottom:3px}
+.pkfilters label{display:block;font-family:var(--dispers);font-size:12px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);font-weight:700;margin-bottom:3px}
 .pkfilters select,.pkfilters input{width:100%;background:var(--surface-2);border:2px solid var(--ink);border-radius:8px;padding:7px 9px;font-family:var(--body);font-weight:600;font-size:14px;color:var(--text);text-transform:none}
 .caltbl td,.caltbl th{padding:5px 8px}
 
@@ -327,7 +330,7 @@ footer b{color:var(--ink)}
 .fbrow{display:flex;align-items:center;gap:12px;margin-top:10px;flex-wrap:wrap}
 .cardbtns{display:flex;gap:8px;flex-wrap:wrap}
 .cmpbtn.on{background:var(--accent);color:#fff}
-.cmptag{display:inline-block;font-family:var(--dispers);font-weight:700;font-size:10px;text-transform:uppercase;letter-spacing:.4px;padding:1px 6px;border-radius:4px;background:var(--hit);color:#fff;margin-left:6px}
+.cmptag{display:inline-block;font-family:var(--dispers);font-weight:700;font-size:12px;text-transform:uppercase;letter-spacing:.4px;padding:1px 6px;border-radius:4px;background:var(--hit);color:#fff;margin-left:6px}
 #comparebody .wload,#lbbody .wload{background:none;border:none;color:var(--accent);font-weight:700;cursor:pointer;font-family:inherit;font-size:inherit;padding:0}
 #comparebody .wload:hover,#lbbody .wload:hover{text-decoration:underline}
 #comparebody .wx{cursor:pointer;color:var(--muted);border:none;background:none;font-size:17px;line-height:1;padding:0 2px}
@@ -344,7 +347,7 @@ footer b{color:var(--ink)}
 .slipdrop{border:2.5px dashed var(--line);border-radius:14px;padding:18px;text-align:center;background:var(--surface-2);transition:border-color .12s,background .12s}
 .slipdrop.drag{border-color:var(--accent)}
 .sliplink{color:var(--accent);font-weight:700;cursor:pointer;text-decoration:underline}
-.beta{font-family:var(--dispers);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;background:var(--blaze);color:#fff;padding:1px 6px;border-radius:5px;vertical-align:3px}
+.beta{font-family:var(--dispers);font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;background:var(--blaze);color:#fff;padding:1px 6px;border-radius:5px;vertical-align:3px}
 .corrwarn{background:var(--surface-2);border-left:4px solid var(--gold);padding:9px 13px;border-radius:0 8px 8px 0;font-size:14px;margin-bottom:10px}
 .sliptext{white-space:pre-wrap;font-size:12px;background:var(--surface-2);padding:10px;border-radius:8px;max-height:220px;overflow:auto}
 .panel.collapsible > .mkthead, .panel.collapsible > h2:first-child{cursor:pointer;user-select:none}
@@ -362,11 +365,11 @@ a{color:var(--gold)}
 @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 
 /* hero */
-.hero{position:relative;overflow:hidden;border:1px solid rgba(34,208,127,.22);border-radius:14px;padding:40px 34px;margin-bottom:22px;
-  background:radial-gradient(1100px 540px at 12% -12%,rgba(34,208,127,.10),transparent 55%),linear-gradient(160deg,#112846,#0c1c34 55%,#0a1628);
+.hero{position:relative;overflow:hidden;border:1px solid rgba(var(--ps-green-rgb),.22);border-radius:14px;padding:40px 34px;margin-bottom:22px;
+  background:radial-gradient(1100px 540px at 12% -12%,rgba(var(--ps-green-rgb),.10),transparent 55%),linear-gradient(160deg,#112846,#0c1c34 55%,var(--ps-bg));
   box-shadow:0 26px 64px rgba(0,0,0,.5)}
 .hero::before{content:"";position:absolute;inset:0;pointer-events:none;z-index:0;
-  background-image:linear-gradient(rgba(34,208,127,.055) 1px,transparent 1px),linear-gradient(90deg,rgba(34,208,127,.055) 1px,transparent 1px);
+  background-image:linear-gradient(rgba(var(--ps-green-rgb),.055) 1px,transparent 1px),linear-gradient(90deg,rgba(var(--ps-green-rgb),.055) 1px,transparent 1px);
   background-size:54px 54px;opacity:.55;-webkit-mask-image:linear-gradient(180deg,#000,transparent 85%);mask-image:linear-gradient(180deg,#000,transparent 85%)}
 .hero::after{display:none}
 .hero-in{position:relative;z-index:1}
@@ -380,28 +383,28 @@ a{color:var(--gold)}
 .hero-meta .wk{color:#e7ecf3}
 
 /* tabs — refined nav */
-.tab{background:transparent;border:1px solid rgba(34,208,127,.30);color:var(--muted);border-radius:8px;box-shadow:none;
+.tab{background:transparent;border:1px solid rgba(var(--ps-green-rgb),.30);color:var(--muted);border-radius:8px;box-shadow:none;
   letter-spacing:1.6px;font-size:19px;padding:13px 32px}
-.tab:hover{color:var(--text);border-color:rgba(34,208,127,.6);transform:none}
-.tab[aria-selected=true]{background:var(--gold);color:#0a1628;border-color:var(--gold)}
+.tab:hover{color:var(--text);border-color:rgba(var(--ps-green-rgb),.6);transform:none}
+.tab[aria-selected=true]{background:var(--gold);color:var(--ps-bg);border-color:var(--gold)}
 
 /* exchange banners */
-.refbanner{border-radius:8px;border:1px solid var(--gold);color:#0a1628;background:var(--gold);
-  box-shadow:0 10px 24px rgba(34,208,127,0.1);letter-spacing:1px;text-shadow:none}
-.refbanner:hover{transform:translateY(-2px);box-shadow:0 12px 30px rgba(34,208,127,0.16)}
+.refbanner{border-radius:8px;border:1px solid var(--gold);color:var(--ps-bg);background:var(--gold);
+  box-shadow:0 10px 24px rgba(var(--ps-green-rgb),0.1);letter-spacing:1px;text-shadow:none}
+.refbanner:hover{transform:translateY(-2px);box-shadow:0 12px 30px rgba(var(--ps-green-rgb),0.16)}
 .refbanner:active{transform:translateY(0)}
-.refbanner.group{background:transparent;color:var(--gold);border:1px solid rgba(34,208,127,.6);box-shadow:none}
-.refbanner.group:hover{background:rgba(34,208,127,.08)}
+.refbanner.group{background:transparent;color:var(--gold);border:1px solid rgba(var(--ps-green-rgb),.6);box-shadow:none}
+.refbanner.group:hover{background:rgba(var(--ps-green-rgb),.08)}
 .socialbar{display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:16px;margin:26px auto 6px;max-width:860px;
-  padding:22px 18px;border:1px solid rgba(34,208,127,.35);border-radius:16px;background:rgba(34,208,127,.06)}
+  padding:22px 18px;border:1px solid rgba(var(--ps-green-rgb),.35);border-radius:16px;background:rgba(var(--ps-green-rgb),.06)}
 .socialtag{width:100%;text-align:center;font-family:var(--display);font-size:26px;letter-spacing:.5px;color:var(--gold);margin-bottom:4px}
 .sociallink{display:inline-flex;align-items:center;gap:10px;padding:15px 34px;border-radius:999px;border:2px solid var(--gold);
-  color:#0a1628;background:var(--gold);text-decoration:none;font-family:var(--dispers);text-transform:uppercase;letter-spacing:1.5px;font-size:20px;font-weight:700;
-  box-shadow:0 7px 19px rgba(34,208,127,0.14);transition:transform .15s,box-shadow .15s}
-.sociallink:hover{transform:translateY(-3px);box-shadow:0 11px 26px rgba(34,208,127,0.23)}
+  color:var(--ps-bg);background:var(--gold);text-decoration:none;font-family:var(--dispers);text-transform:uppercase;letter-spacing:1.5px;font-size:20px;font-weight:700;
+  box-shadow:0 7px 19px rgba(var(--ps-green-rgb),0.14);transition:transform .15s,box-shadow .15s}
+.sociallink:hover{transform:translateY(-3px);box-shadow:0 11px 26px rgba(var(--ps-green-rgb),0.23)}
 .hero-title .tm{font-size:.30em;vertical-align:super;font-style:normal;font-weight:600;opacity:.72;font-family:var(--body);margin-left:2px}
 .brandmark{color:var(--gold);margin:0 0 10px;line-height:0}
-.brandlogo{display:block;width:130px;min-width:0;height:auto;filter:drop-shadow(0 6px 18px rgba(34,208,127,.22))}
+.brandlogo{display:block;width:130px;min-width:0;height:auto;filter:drop-shadow(0 6px 18px rgba(var(--ps-green-rgb),.22))}
 @media(max-width:640px){.brandlogo{width:104px}}
 
 /* how-it-works steps */
@@ -417,7 +420,7 @@ a{color:var(--gold)}
 .panel .hint{color:var(--muted)}
 
 /* controls */
-.controls{background:var(--surface);border:1px solid rgba(34,208,127,.16);border-radius:12px;box-shadow:0 20px 50px rgba(0,0,0,.4)}
+.controls{background:var(--surface);border:1px solid rgba(var(--ps-green-rgb),.16);border-radius:12px;box-shadow:0 20px 50px rgba(0,0,0,.4)}
 .controls::before{color:var(--gold);letter-spacing:2px}
 .field label,.calcrow label,.oppwrap label{color:var(--muted)}
 
@@ -425,37 +428,37 @@ a{color:var(--gold)}
 input[type=text],input[type=number],input[type=search],select,.stepper input,.calcrow input,.legodds,.fbtext,
 .pkfilters select,.pkfilters input{background:var(--surface-2);color:var(--text);border:1px solid rgba(255,255,255,.10)}
 input::placeholder{color:#6f7f93}
-input:focus,select:focus,textarea:focus,.stepper input:focus{outline:0;border-color:var(--gold);box-shadow:0 0 0 3px rgba(34,208,127,.22)}
+input:focus,select:focus,textarea:focus,.stepper input:focus{outline:0;border-color:var(--gold);box-shadow:0 0 0 3px rgba(var(--ps-green-rgb),.22)}
 .acbox{background:var(--surface-2);border:1px solid rgba(255,255,255,.12);box-shadow:0 22px 50px rgba(0,0,0,.55)}
 .acitem+.acitem{border-top:1px solid rgba(255,255,255,.06)}
-.acitem:hover,.acitem.on{background:rgba(34,208,127,.14);color:var(--text)}
+.acitem:hover,.acitem.on{background:rgba(var(--ps-green-rgb),.14);color:var(--text)}
 .acitem:hover .acpos,.acitem.on .acpos{color:var(--gold)}
 .pmeta{color:var(--muted)} .pmeta b{color:var(--text)}
 
 /* badges */
 .badge{border:1px solid rgba(255,255,255,.14);background:var(--surface-2);color:var(--text)}
 .badge.bad{background:var(--miss);color:#1c0d10;border-color:transparent}
-.badge.warn{background:var(--gold);color:#0a1628;border-color:transparent}
-.badge.good{background:var(--hit);color:#07130d;border-color:transparent}
-.badge.info{background:transparent;color:var(--gold);border-color:rgba(34,208,127,.5)}
+.badge.warn{background:var(--gold);color:var(--ps-bg);border-color:transparent}
+.badge.good{background:var(--hit);color:var(--ps-ink);border-color:transparent}
+.badge.info{background:transparent;color:var(--gold);border-color:rgba(var(--ps-green-rgb),.5)}
 
 /* this-week strip */
-.weekstrip{background:var(--surface-2);border:1px solid rgba(34,208,127,.16);color:#cdd7e2}
+.weekstrip{background:var(--surface-2);border:1px solid rgba(var(--ps-green-rgb),.16);color:#cdd7e2}
 .weekstrip b{color:var(--gold)} .weekstrip .lab{color:var(--muted)}
 
 /* stat chips */
 .chip{border:1px solid rgba(255,255,255,.12);background:transparent;color:var(--muted)}
-.chip:hover{color:var(--text);border-color:rgba(34,208,127,.5);background:transparent}
-.chip[aria-pressed=true]{background:var(--gold);color:#0a1628;border-color:var(--gold)}
+.chip:hover{color:var(--text);border-color:rgba(var(--ps-green-rgb),.5);background:transparent}
+.chip[aria-pressed=true]{background:var(--gold);color:var(--ps-bg);border-color:var(--gold)}
 .grplab{color:var(--muted)}
 
 /* line stepper + over/under */
 .stepper button{background:var(--surface-2);border:1px solid rgba(255,255,255,.12);color:var(--text)}
-.stepper button:hover{background:var(--gold);color:#0a1628;border-color:var(--gold)}
+.stepper button:hover{background:var(--gold);color:var(--ps-bg);border-color:var(--gold)}
 .ou{border:1px solid rgba(255,255,255,.12)}
 .ou button{background:var(--surface-2);color:var(--muted)}
 .ou button+button{border-left:1px solid rgba(255,255,255,.12)}
-.ou #over[aria-pressed=true]{background:var(--hit);color:#07130d}
+.ou #over[aria-pressed=true]{background:var(--hit);color:var(--ps-ink)}
 .ou #under[aria-pressed=true]{background:var(--miss);color:#fff}
 .opts{color:var(--muted)}
 
@@ -463,7 +466,7 @@ input:focus,select:focus,textarea:focus,.stepper input:focus{outline:0;border-co
 .headline .who{font-family:var(--display);font-weight:600;text-transform:none;letter-spacing:0;color:#fff}
 .headline .q{color:var(--muted)} .headline .q b{color:var(--text)}
 .pill{border:1px solid transparent}
-.pill.over{background:var(--hit);color:#07130d} .pill.under{background:var(--miss);color:#fff}
+.pill.over{background:var(--hit);color:var(--ps-ink)} .pill.under{background:var(--miss);color:#fff}
 
 /* tiles */
 .tile{background:var(--surface);border:1px solid rgba(255,255,255,.06);border-radius:10px;box-shadow:0 14px 34px rgba(0,0,0,.34)}
@@ -472,8 +475,8 @@ input:focus,select:focus,textarea:focus,.stepper input:focus{outline:0;border-co
 .tile .cap,.tile .frac,.tile .avg{color:var(--muted)} .tile .frac b{color:var(--text)}
 .tile .pct{font-weight:600}
 .tile.hi .pct{color:var(--hit)} .tile.mid .pct{color:var(--gold)} .tile.lo .pct{color:var(--miss)}
-.tile.model{background:linear-gradient(180deg,#12294a,#0d1d34);border:1px solid rgba(34,208,127,.40);
-  box-shadow:0 0 0 1px rgba(34,208,127,.12) inset,0 18px 44px rgba(0,0,0,.45)}
+.tile.model{background:linear-gradient(180deg,#12294a,#0d1d34);border:1px solid rgba(var(--ps-green-rgb),.40);
+  box-shadow:0 0 0 1px rgba(var(--ps-green-rgb),.12) inset,0 18px 44px rgba(0,0,0,.45)}
 .tile.model .cap,.tile.model .frac,.tile.model .avg{color:#9fb0c4} .tile.model .frac b{color:#fff}
 .tile.model .pct{color:var(--gold)}
 .tile.model.hi .pct{color:var(--hit)} .tile.model.lo .pct{color:var(--miss)} .tile.model.mid .pct{color:var(--gold)}
@@ -488,38 +491,38 @@ input:focus,select:focus,textarea:focus,.stepper input:focus{outline:0;border-co
 .legend{color:var(--muted)}
 
 /* tables */
-thead th,.edgetbl th{color:var(--muted);border-bottom:1px solid rgba(34,208,127,.22)}
+thead th,.edgetbl th{color:var(--muted);border-bottom:1px solid rgba(var(--ps-green-rgb),.22)}
 tbody td,.edgetbl td{border-bottom:1px solid rgba(255,255,255,.06)}
-tbody tr:hover,.edgetbl tr:hover td{background:rgba(34,208,127,.07)}
+tbody tr:hover,.edgetbl tr:hover td{background:rgba(var(--ps-green-rgb),.07)}
 .edgeval{font-family:var(--display);font-weight:600}
 .edgeval.pos{color:var(--hit)} .edgeval.neg{color:var(--miss)} .rng{color:var(--muted)}
 .res{border:1px solid rgba(255,255,255,.12)}
-.res.h{background:var(--hit);color:#07130d;border-color:transparent} .res.m{background:var(--miss);color:#fff;border-color:transparent}
+.res.h{background:var(--hit);color:var(--ps-ink);border-color:transparent} .res.m{background:var(--miss);color:#fff;border-color:transparent}
 .res.p,.res.d,.res.w{background:var(--surface-2);color:var(--muted);border-color:rgba(255,255,255,.1)}
 .leantag{border:1px solid rgba(255,255,255,.12)}
-.leantag.over{background:var(--hit);color:#07130d;border-color:transparent} .leantag.under{background:var(--miss);color:#fff;border-color:transparent}
+.leantag.over{background:var(--hit);color:var(--ps-ink);border-color:transparent} .leantag.under{background:var(--miss);color:#fff;border-color:transparent}
 .listchip{border:1px solid rgba(255,255,255,.14)}
-.listchip.T{background:var(--gold);color:#0a1628;border-color:transparent}
-.listchip.V{background:transparent;color:var(--gold);border-color:rgba(34,208,127,.6)}
+.listchip.T{background:var(--gold);color:var(--ps-bg);border-color:transparent}
+.listchip.V{background:transparent;color:var(--gold);border-color:rgba(var(--ps-green-rgb),.6)}
 
 /* action buttons */
-.btn{background:var(--gold);color:#0a1628;border:1px solid var(--gold);border-radius:6px;box-shadow:0 7px 18px rgba(34,208,127,0.11);letter-spacing:1px}
-.btn:hover{transform:translateY(-2px);box-shadow:0 10px 23px rgba(34,208,127,0.17)}
+.btn{background:var(--gold);color:var(--ps-bg);border:1px solid var(--gold);border-radius:6px;box-shadow:0 7px 18px rgba(var(--ps-green-rgb),0.11);letter-spacing:1px}
+.btn:hover{transform:translateY(-2px);box-shadow:0 10px 23px rgba(var(--ps-green-rgb),0.17)}
 .btn:active{transform:translateY(0)}
-.btn.ghost{background:transparent;color:var(--gold);border:1px solid rgba(34,208,127,.55);box-shadow:none}
-.btn.ghost:hover{background:rgba(34,208,127,.08)}
-.edgeload,.mktuse{background:transparent;border:1px solid rgba(34,208,127,.45);color:var(--gold)}
-.edgeload:hover,.mktuse:hover{background:var(--gold);color:#0a1628;border-color:var(--gold)}
+.btn.ghost{background:transparent;color:var(--gold);border:1px solid rgba(var(--ps-green-rgb),.55);box-shadow:none}
+.btn.ghost:hover{background:rgba(var(--ps-green-rgb),.08)}
+.edgeload,.mktuse{background:transparent;border:1px solid rgba(var(--ps-green-rgb),.45);color:var(--gold)}
+.edgeload:hover,.mktuse:hover{background:var(--gold);color:var(--ps-bg);border-color:var(--gold)}
 #edgestatus,#pkstatus{color:var(--muted)}
 
 /* watch / compare */
-.watchstar{background:transparent;border:1px solid rgba(34,208,127,.45);color:var(--gold)}
-.watchstar:hover{background:rgba(34,208,127,.10);transform:none;box-shadow:none}
-.watchstar.on{background:var(--gold);color:#0a1628;border-color:var(--gold);box-shadow:none}
-.cmpbtn.on{background:var(--gold)!important;color:#0a1628!important}
+.watchstar{background:transparent;border:1px solid rgba(var(--ps-green-rgb),.45);color:var(--gold)}
+.watchstar:hover{background:rgba(var(--ps-green-rgb),.10);transform:none;box-shadow:none}
+.watchstar.on{background:var(--gold);color:var(--ps-bg);border-color:var(--gold);box-shadow:none}
+.cmpbtn.on{background:var(--gold)!important;color:var(--ps-bg)!important}
 .watchchip{background:var(--surface-2);border:1px solid rgba(255,255,255,.10)} .watchchip .wpos{color:var(--muted)}
 .watchchip .wload,#comparebody .wload,#lbbody .wload,#digestbody .wload{color:var(--gold)}
-.cmptag{background:var(--hit);color:#07130d}
+.cmptag{background:var(--hit);color:var(--ps-ink)}
 
 /* parlay + calc + splits + matchup */
 .parlaysum>div,.splitcard{background:var(--surface-2);border:1px solid rgba(255,255,255,.07)}
@@ -528,10 +531,10 @@ tbody tr:hover,.edgetbl tr:hover td{background:rgba(34,208,127,.07)}
 .legrm{background:var(--surface-2);border:1px solid rgba(255,255,255,.12);color:var(--miss)}
 .legrm:hover{background:var(--miss);color:#fff;border-color:transparent}
 .calcrow input{box-shadow:none;font-family:var(--display)}
-.warnbox{background:rgba(34,208,127,.10);border:1px solid rgba(34,208,127,.4);color:var(--text)}
+.warnbox{background:rgba(var(--ps-green-rgb),.10);border:1px solid rgba(var(--ps-green-rgb),.4);color:var(--text)}
 .matchrow{background:var(--surface-2);border:1px solid rgba(255,255,255,.07)}
 .matchrow .tag{border:1px solid rgba(255,255,255,.12)}
-.tag.soft{background:var(--hit);color:#07130d;border-color:transparent} .tag.tough{background:var(--miss);color:#fff;border-color:transparent}
+.tag.soft{background:var(--hit);color:var(--ps-ink);border-color:transparent} .tag.tough{background:var(--miss);color:#fff;border-color:transparent}
 .tag.mid{background:var(--surface-2);color:var(--muted);border-color:rgba(255,255,255,.1)}
 .distsum b{color:var(--text);font-family:var(--display);font-weight:600} .distsum{color:var(--muted)}
 
@@ -539,13 +542,13 @@ tbody tr:hover,.edgetbl tr:hover td{background:rgba(34,208,127,.07)}
 #trapalert{background:var(--surface-2);border:1px solid rgba(217,138,62,.5);box-shadow:none}
 .traphead{color:var(--blaze);font-family:var(--dispers);text-shadow:none}
 .digesttrap,.corrwarn{background:var(--surface-2);border-left:3px solid var(--gold)}
-.slipdrop{background:var(--surface-2);border:1.5px dashed rgba(34,208,127,.35)}
+.slipdrop{background:var(--surface-2);border:1.5px dashed rgba(var(--ps-green-rgb),.35)}
 .slipdrop.drag{border-color:var(--gold)}
 .sliplink{color:var(--gold)} .sliptext{background:var(--surface-2);color:var(--text)}
 .beta{background:var(--blaze);color:#1a0e04}
 .chev{color:var(--gold)}
 #digestbody p{color:#c3cddb} .mktnote,.mktmuted{color:var(--muted)}
-footer{color:var(--muted);border-top:1px solid rgba(34,208,127,.2)} footer b{color:var(--text)}
+footer{color:var(--muted);border-top:1px solid rgba(var(--ps-green-rgb),.2)} footer b{color:var(--text)}
 /* brighter text for readability */
 .hero-tag,.hero-meta,.hero-meta .wk,.weekstrip,#digestbody p,.step p,.mktnote,.mktmuted,.pmeta,.rng{color:#ffffff}
 .tile.model .cap,.tile.model .frac,.tile.model .avg{color:#dbe2ea}
@@ -581,7 +584,7 @@ table td,table th,thead th,tbody td,.edgetbl td,.edgetbl th,.caltbl td,.caltbl t
 .lbrow .lbgo{color:var(--muted);font-size:20px;margin-left:6px}
 .lbrow .lbn b{color:var(--gold)}
 .lbstreak{font-family:var(--display);font-size:26px;color:var(--hit)}
-.vbadge{display:inline-block;background:var(--gold);color:#04220a;font-family:var(--dispers);font-weight:700;font-size:11px;letter-spacing:.5px;padding:2px 7px;border-radius:6px}
+.vbadge{display:inline-block;background:var(--gold);color:#04220a;font-family:var(--dispers);font-weight:700;font-size:12px;letter-spacing:.5px;padding:2px 7px;border-radius:6px}
 .linectl{display:flex;align-items:center;gap:8px}
 .linectl button{width:38px;height:38px;border:2.5px solid var(--ink);background:var(--surface);color:var(--text);
   border-radius:10px;font-size:22px;cursor:pointer;font-weight:700}
@@ -610,11 +613,11 @@ tr.hit td{background:var(--hit-soft)} tr.miss td{background:var(--miss-soft)}
 .livehead{display:inline-flex;align-items:center;gap:5px}
 .livedot{width:6px;height:6px;border-radius:50%;background:var(--accent);display:inline-block;animation:pmpulse 1.6s ease-in-out infinite}
 details.valrules>summary{cursor:pointer}
-.valrules{background:rgba(34,208,127,.05);border:1px solid rgba(34,208,127,.28);border-radius:12px;padding:13px 16px;margin:2px 0 14px}
+.valrules{background:rgba(var(--ps-green-rgb),.05);border:1px solid rgba(var(--ps-green-rgb),.28);border-radius:12px;padding:13px 16px;margin:2px 0 14px}
 .valrules .vrhead{font-family:var(--dispers);text-transform:uppercase;letter-spacing:.9px;font-weight:700;font-size:13.5px;color:var(--gold);margin-bottom:9px}
 .valrules .vrlist{list-style:none;margin:0;padding:0;display:grid;gap:8px}
 .valrules .vrlist li{display:flex;gap:10px;align-items:flex-start;font-size:14px;color:#fff;line-height:1.5}
-.valrules .vrnum{flex:0 0 auto;width:21px;height:21px;border-radius:50%;background:var(--accent);color:#07130d;font-family:var(--dispers);font-weight:700;font-size:13px;display:flex;align-items:center;justify-content:center;margin-top:1px}
+.valrules .vrnum{flex:0 0 auto;width:21px;height:21px;border-radius:50%;background:var(--accent);color:var(--ps-ink);font-family:var(--dispers);font-weight:700;font-size:13px;display:flex;align-items:center;justify-content:center;margin-top:1px}
 .valrules .vrtxt{flex:1;min-width:0}
 .valrules .vrtxt b{color:#fff}
 .valrules .vrwhy{color:#cbd5e1;font-size:13px}
@@ -627,9 +630,9 @@ details.valrules>summary{cursor:pointer}
 .panel.collapsed{padding-bottom:14px}
 </style>
 
-<link rel="stylesheet" href="app.css?v=20261111a">
-<script src="app.js?v=20261111a"></script>
-<script src="/thanksgiving.js?v=20261101b"></script>
+<link rel="stylesheet" href="app.css?v=20261117e">
+<script src="app.js?v=20261117e"></script>
+<script src="/thanksgiving.js?v=20261117a"></script>
 
 <header class="apptop">
   <div class="apptop-in">
@@ -663,6 +666,7 @@ details.valrules>summary{cursor:pointer}
   </div>
 
 <div id="page-week">
+  <div id="fltbar" hidden></div>
   <div class="panel" id="valuepanel" hidden>
     <div class="mkthead"><h2>⚡ Value spots<button type="button" class="qhelp hq" data-help="value" aria-expanded="false" aria-label="What are Value spots?"><span class="qi" aria-hidden="true">?</span></button></h2><span class="mktmuted">ATP match winners: market gives it 30-80%, model is 8-20 points better</span><span class="mktmuted" id="recV"></span></div>
     <details class="valrules">
@@ -707,6 +711,11 @@ details.valrules>summary{cursor:pointer}
 </div>
 
 <div id="page-tools" hidden>
+  <div class="panel" id="watchpanel"><div class="mkthead"><h2>★ Watchlist</h2><span class="mktmuted">your starred players, with their upcoming priced markets</span></div><div id="watchbody"></div></div>
+  <div class="panel" id="calcpanel"><div class="mkthead"><h2>🧮 Bet calculator</h2><span class="mktmuted">the last pick you opened, at the price you see</span></div><div id="calcbody"></div></div>
+  <div class="panel" id="slippanel"><div class="mkthead"><h2>🧾 Your parlay slip</h2><span class="mktmuted">add the picks you open, one by one</span></div>
+    <p class="mktnote">Keep one leg per match: two tennis legs from the same match are never independent (one player's win is the other's loss, and a set, a spread and a total all hang on the same scoreline). The slip warns when two legs share a match.</p>
+    <div id="slipbody"></div></div>
   <div class="panel" id="pfpanel2"><div class="mkthead"><h2>🎯 Parlay by payout</h2><span class="mktmuted">pick the payout and the chance you want — we search every priced pick</span></div><div id="pfbody"></div></div>
 </div>
 
@@ -769,11 +778,11 @@ details.valrules>summary{cursor:pointer}
 </div>
 
 <style>
-.pslcookie{position:fixed;left:12px;right:12px;bottom:12px;z-index:9999;background:#0f2038;border:1px solid #2a3f5f;border-radius:12px;box-shadow:0 18px 44px rgba(0,0,0,.5);max-width:720px;margin:0 auto}
+.pslcookie{position:fixed;left:12px;right:12px;bottom:12px;z-index:9999;background:var(--ps-surface);border:1px solid #2a3f5f;border-radius:12px;box-shadow:0 18px 44px rgba(0,0,0,.5);max-width:720px;margin:0 auto}
 .pslcookie-in{display:flex;gap:14px;align-items:center;justify-content:space-between;flex-wrap:wrap;padding:12px 16px}
-.pslcookie p{margin:0;font-size:13px;color:#dfe6ef;line-height:1.5;flex:1;min-width:230px;text-align:left}
-.pslcookie a{color:#22d07f}
-.pslcookie button{background:#22d07f;color:#06210b;border:0;border-radius:8px;font-weight:700;padding:9px 18px;cursor:pointer;font-family:inherit;font-size:14px}
+.pslcookie p{margin:0;font-size:13px;color:var(--ps-soft);line-height:1.5;flex:1;min-width:230px;text-align:left}
+.pslcookie a{color:var(--ps-green)}
+.pslcookie button{background:var(--ps-green);color:var(--ps-green-ink);border:0;border-radius:8px;font-weight:700;padding:9px 18px;cursor:pointer;font-family:inherit;font-size:14px}
 .pslcookie button:hover{filter:brightness(1.08)}
 </style>
 <div id="pslcookie" class="pslcookie" role="region" aria-label="Privacy notice" hidden>
@@ -791,12 +800,12 @@ var ok=document.getElementById('pslcookieok');if(ok)ok.onclick=function(){el.hid
 <style>
 .tnfilter{display:inline-flex;gap:6px;margin-left:auto}
 .tnfilter .btn{padding:5px 12px;font-size:13px}
-.tnfilter .btn.on{background:var(--accent);color:#07130d;border-color:var(--accent)}
+.tnfilter .btn.on{background:var(--accent);color:var(--ps-ink);border-color:var(--accent)}
 .tngrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:14px}
 .tncard{background:var(--surface-2);border:1px solid var(--line);border-radius:14px;padding:14px 16px;min-width:0}
 .tncard.locked{opacity:.75}
 .tnmeta{display:flex;gap:8px;flex-wrap:wrap;align-items:center;font-size:12.5px;color:#aeb9c8;margin-bottom:10px}
-.tnsurf{font-family:var(--dispers);font-weight:700;font-size:10.5px;text-transform:uppercase;letter-spacing:.6px;padding:1px 7px;border-radius:4px}
+.tnsurf{font-family:var(--dispers);font-weight:700;font-size:12px;text-transform:uppercase;letter-spacing:.6px;padding:1px 7px;border-radius:4px}
 .tnsurf.hard{background:#1f4a7a;color:#cfe3ff} .tnsurf.clay{background:#7a3d1f;color:#ffdccc} .tnsurf.grass{background:#1f6a3a;color:#d4ffe0}
 .tnrow{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:10px;align-items:center;padding:6px 0}
 .tnrow+.tnrow{border-top:1px solid var(--line)}
@@ -811,7 +820,7 @@ var ok=document.getElementById('pslcookieok');if(ok)ok.onclick=function(){el.hid
 .tnbar i{display:block;height:100%;background:var(--accent)}
 .tnmk{display:grid;grid-template-columns:1fr 1fr;gap:6px 14px;font-size:13px;color:#cbd5e1;margin-top:8px}
 .tnmk b{color:#fff;font-variant-numeric:tabular-nums}
-.tnmk .lbl{font-family:var(--dispers);text-transform:uppercase;letter-spacing:.5px;font-size:11px;color:#aeb9c8}
+.tnmk .lbl{font-family:var(--dispers);text-transform:uppercase;letter-spacing:.5px;font-size:12px;color:#aeb9c8}
 .tnlines{grid-column:1/-1;font-size:12.5px;line-height:1.7}
 .tnlines span{display:inline-block;margin-right:12px;white-space:nowrap}
 .tnempty{padding:18px;text-align:center;color:#aeb9c8}
@@ -823,10 +832,25 @@ var ok=document.getElementById('pslcookieok');if(ok)ok.onclick=function(){el.hid
 .tnstats{display:flex;gap:10px;flex-wrap:wrap;margin:6px 0 14px}
 .tnstats div{background:var(--surface-2);border:1px solid var(--line);border-radius:10px;padding:8px 12px;min-width:92px}
 .tnstats b{display:block;font-family:var(--display);font-size:22px;color:#fff}
-.tnstats span{font-size:11.5px;color:#aeb9c8;text-transform:uppercase;letter-spacing:.5px;font-family:var(--dispers)}
+.tnstats span{font-size:12px;color:#aeb9c8;text-transform:uppercase;letter-spacing:.5px;font-family:var(--dispers)}
 .w{color:var(--hit);font-weight:700} .l{color:var(--miss);font-weight:700}
-.leantag.win,.leantag.cover{background:rgba(34,208,127,.14);color:var(--gold)}
+.leantag.win,.leantag.cover{background:rgba(var(--ps-green-rgb),.14);color:var(--gold)}
 @media(max-width:520px){.tngrid{grid-template-columns:1fr}.tnfilter{margin-left:0}}
+/* round 2 tools: the filter bar has no Over/Under (only total games has a side), the slip's bet is in its words */
+#fltbar [data-side]{display:none}
+#slipbody .leantag{display:none}
+.tnph{display:flex;align-items:center;gap:6px 10px;flex-wrap:wrap;margin:4px 0 2px}
+.tnph h3{margin:0;font-size:22px}
+.tnsides{display:grid;gap:6px;margin:4px 0 16px}
+.tnsideh{font-size:12.5px;color:#aeb9c8;margin:10px 2px 0}
+.tnside{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:4px 12px;align-items:center;width:100%;text-align:left;cursor:pointer;
+  background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.09);border-radius:10px;padding:9px 12px;color:#fff;font:inherit;min-height:44px}
+.tnside:hover{border-color:var(--accent)}
+.tnside .tsb{min-width:0;overflow-wrap:anywhere}
+.tnside .tsp{font-family:var(--display);font-size:20px;font-weight:600;font-variant-numeric:tabular-nums}
+.tnside .tsx{font-size:12.5px;color:#cbd5e1;white-space:nowrap;text-align:right;font-variant-numeric:tabular-nums}
+.tnside .tsx b{color:#fff}
+@media(max-width:420px){.tnside{grid-template-columns:minmax(0,1fr) auto}.tnside .tsx{grid-column:1/-1;text-align:left}}
 </style>
 
 <script>
@@ -897,17 +921,18 @@ function setPicks(d, full){
 }
 function loadPicks(){
   if(PICKS_FULL){ PICKS_FULL=false; loadFullPicks(); return; }
-  fetch('./tennis_picks_recent.json',{cache:'no-store'}).then(r=>r.ok? r.json() : Promise.reject()).then(d=>setPicks(d, false))
+  fetch('./tennis_picks_recent.json',{cache:'no-cache'}).then(r=>r.ok? r.json() : Promise.reject()).then(d=>setPicks(d, false))
     .catch(()=>loadFullPicks());
 }
 function loadFullPicks(){ if(PICKS_FULL||fullPicksLoading) return; fullPicksLoading=true;
-  fetch('./tennis_picks.json',{cache:'no-store'}).then(r=>r.ok? r.json() : null).then(d=>setPicks(d, true))
+  fetch('./tennis_picks.json',{cache:'no-cache'}).then(r=>r.ok? r.json() : null).then(d=>setPicks(d, true))
     .catch(()=>{ PICKS=PICKS||[]; PICKS_FULL=true; renderPickViews(); }).finally(()=>{ fullPicksLoading=false; });
 }
 function pickStarted(p){ const t=p.start? Date.parse(p.start) : NaN; return isFinite(t)? t<=Date.now() : false; }
 function upcomingPicks(){ return (PICKS||[]).filter(p=>p.res==null && !pickStarted(p)); }
 function awaitingGrade(p){ return p.res==null && pickStarted(p); }
-function renderPickViews(){ renderEdges(); renderValue(); renderMatches(); renderPast(); PS.ticker(tickerItems()); }
+function renderPickViews(){ updateFilterOptions(); renderEdges(); renderValue(); renderMatches(); renderPast(); PS.ticker(tickerItems());
+  renderWatch(); if(PLAYER_ID) renderPlayerSides(PLAYER_ID); freshCurrent(); if(CALC) CALC.refresh(); if(SLIP) SLIP.refresh(); }
 
 // ---- pick cards (Top 25 Surest, Value spots): the same cards as every sport page ----
 function normPick(p){ const px=p.price==null? null : p.price;
@@ -916,6 +941,41 @@ function normPick(p){ const px=p.price==null? null : p.price;
     pd:p.pd, kd:p.kd, px0:p.px0==null? null : p.px0, lk:p.lk||null, start:p.start, event:p.event, round:p.round, surface:p.surface,
     lists:p.lists||'', edge:(px==null||p.prob==null)? null : p.prob-px}; }
 function listRows(tag){ return upcomingPicks().filter(p=>(p.lists||'').includes(tag) && p.prob!=null && (TOUR==='all' || p.tour===TOUR)).map(normPick); }
+// ---- Filter bar (PS.filterBar) over Value and Top 25: the match, the market, a price band, starred players.
+// Its Over/Under chips are hidden (#fltbar CSS): only total games has a side, every other market is a player winning something.
+let FLT=null;
+function fltRow(r){ return {gid:String(r.mid), sk:r.sk, side:r.side, price:r.price, pid:r.pid, sport:SPORT_KEY}; }
+function fltRows(rows){ return FLT? rows.filter(r=>FLT.test(fltRow(r))) : rows; }
+function fltOn(){ if(!FLT) return false; const f=FLT.get(); return !!(f.game||f.stat||f.side||f.band||f.star); }
+// The note a list shows when it has picks but the filter hides every one of them, with a one-tap Clear.
+function fltNote(n, what){ return `<p class="mktnote">None of the ${n} ${what} match your filter. <button type="button" class="linkbtn" data-fclear="1">Clear the filter</button></p>`; }
+function fltShown(n, of){ return fltOn()? `<p class="mktnote" style="margin-top:8px">Filtered: <b>${n}</b> of ${of} shown. <button type="button" class="linkbtn" data-fclear="1">Clear the filter</button></p>` : ''; }
+function wireFltClear(el){ el.querySelectorAll('[data-fclear]').forEach(b=>b.onclick=()=>{ if(FLT) FLT.clear(); }); }
+const MATCH_BY = new Map((DB.matches || []).map(m => [String(m.mid), m]));
+function matchLabel(p){ const m = MATCH_BY.get(String(p.mid));
+  return m ? `${last(m.an)} v ${last(m.bn)}` : `${last(p.player)} v ${last(p.opp)}`; }
+function updateFilterOptions(){ const wrap=$('fltbar'); if(!wrap || !FLT) return;
+  const up=PICKS===null? [] : upcomingPicks().filter(p=>p.prob!=null && (TOUR==='all' || p.tour===TOUR));
+  wrap.hidden=!up.length;   // nothing upcoming (the off-season, or before picks load): no bar
+  const games={}, stats=new Set();
+  up.forEach(p=>{ const k=String(p.mid); if(p.mid!=null && !games[k]) games[k]={label:matchLabel(p), t:p.start||p.date||''}; if(p.stat) stats.add(p.stat); });
+  const gl=Object.keys(games).sort((a,b)=>String(games[a].t).localeCompare(String(games[b].t)) || games[a].label.localeCompare(games[b].label));
+  FLT.setOptions({games:gl.map(g=>[g, games[g].label]), stats:STATS.filter(x=>stats.has(x.key)).map(x=>[x.key, x.label])});
+}
+FLT=PS.filterBar($('fltbar'), {key:SPORT_KEY, options:{games:[], stats:[]}, onChange:()=>{ renderEdges(); renderValue(); }});
+
+// ---- the pick the Tools tab works on: the last one opened (a card, the Player tab's markets, a slip leg) ----
+let CUR=null, CALC=null, SLIP=null;
+// a side's price you can actually get: Polymarket with under $25 offered (and no Kalshi price) counts as none, as on the cards
+function pickPrice(p){ return (p.vn!=='K' && p.pd!=null && p.pd<25)? null : (p.price==null? null : p.price); }
+function legKey(p){ return [p.mid, p.pid, p.stat, +p.line, p.side||''].join('|'); }
+// total games is about the match (recorded under player A), so it's named by the match
+function legWho(p){ return p.stat==='games'? matchLabel(p) : p.player; }
+function legBet(p){ const b=betOf(p), vs=' v '+last(p.opp);
+  return p.stat==='ml'? 'wins the match'+vs : p.stat==='set'? 'wins '+b.line+vs : p.stat==='exact'? 'wins '+b.line+' in sets'+vs
+    : p.stat==='spread'? 'covers '+b.line+' games'+vs : b.side+' '+b.line+' total games'; }
+function setCurrent(p){ CUR=p || null; if(CALC) CALC.refresh(); if(SLIP) SLIP.refresh(); }
+function freshCurrent(){ if(!CUR || !PICKS) return; const k=legKey(CUR); CUR=PICKS.find(p=>legKey(p)===k) || CUR; }
 let edgeSort={key:'prob',dir:-1}, valueSort={key:'edge',dir:-1};
 function sortRows(rows, key, dir){ return [...rows].sort((a,b)=>{
   if(key==='matchup') return dir*(String(a.start||'').localeCompare(String(b.start||'')));
@@ -937,6 +997,7 @@ function pickTable(rows, sort){
     h+=`<article class="pickcard ${tier}${r.lk?' locked':''}" style="${PS.teamVars(SPORT_KEY, r.team)}">`+(r.lk? PS.lockRibbon(r.lk) : '')+
       `<div class="pc-top"><span class="av">${esc(initials(r.name))}</span>`+
         `<div class="pc-who"><b>${esc(r.name)}</b><span><span class="tbadge">${esc(r.team)}</span>vs ${esc(r.opp)}</span>${r.start? PS.gameTime(r.start) : ''}</div>`+
+        PS.starBtn(SPORT_KEY, {pid:r.pid, name:r.name, team:r.team})+
         `<div class="pc-prob"><div class="ring" style="--p:${pv}"><b>${pv}<small>%</small></b></div><span title="${esc(r.event)} · ${esc(r.round)} · ${esc(SURF[r.surface]||'')}">chance</span></div></div>`+
       `<div class="pc-bet"><span class="leantag ${esc(r.bet.side)}">${esc(r.bet.side)}</span><b>${esc(r.bet.line)}</b><span>${esc(r.bet.text || r.statText)}</span>${sp? PS.spark(sp.vals, sp.line, sp.side) : ''}</div>`+
       `<div class="pc-foot"><span class="pc-price livecell">${priceCell(r)}</span>${r.lk? PS.lockBadge(r.lk) : ''}<button class="edgeload" type="button" data-i="${idx}">Details</button></div>`+
@@ -958,8 +1019,11 @@ function whyOf(r){
   return out;
 }
 function openPickSheet(r){ const sp=r.sk==='games'? sparkOf(r.raw) : null;   // "cleared 22.5": only total games read right
+  setCurrent(r.raw);   // the Tools tab's calculator and parlay slip work on the last pick opened
   PS.pickSheet({name:r.name, team:r.team, sport:SPORT_KEY, vs:'vs '+r.opp, when:r.event, prob:r.prob, side:r.bet.side, line:r.bet.line, statText:r.bet.text || r.statText,
     price:(r.vn!=='K' && r.pd!=null && r.pd<25)? null : r.price, vn:r.vn, live:false, listed:r.lists.includes('V'), why:whyOf(r),
+    watch:{on:PS.watch.has(SPORT_KEY, r.pid), toggle:()=>PS.watch.toggle({sport:SPORT_KEY, pid:r.pid, name:r.name, team:r.team})},
+    links:PS.exchangeUrls(DB.links, r.raw.gid, r.sk),   // the match's exact Polymarket US event and this market's Kalshi event
     vals:sp? sp.vals : [], onOpen:()=>openPlayer(r.pid),
     more:PS.relatedPicks(r, upcomingPicks().filter(x=>x.prob!=null).map(normPick).map(x=>Object.assign(x, {side:x.bet.side, line:x.bet.line, statText:x.bet.text||x.statText})),
       {key:x=>[x.pid,x.sk,x.bet.line,x.bet.side].join("|"), game:x=>x.mid, pid:x=>x.pid, open:openPickSheet}),
@@ -985,10 +1049,12 @@ function renderEdges(){ const body=$('edgebody'); if(!body) return;
   if(!all.length){ body.innerHTML = upcomingPicks().length
       ? `<p class="mktnote">Nothing makes the list right now. A side needs a <b>90%+ model chance</b> <i>and</i> a <b>live Polymarket or Kalshi price</b> with $25+ offered, and nothing on the upcoming tennis slate clears both. It refills as markets post and prices update (every 10 minutes) — some days it stays short or empty on purpose.</p>`
       : scheduleNote('the Top 25 Surest board'); return; }
-  const rows=sortRows(all, edgeSort.key, edgeSort.dir).slice(0,25);
-  body.innerHTML=pickTable(rows, edgeSort)+
-    `<p class="mktnote" style="margin-top:8px">Up to 25 sides where the model gives the bet a <b>90%+ chance</b> and Polymarket or Kalshi has a <b>live market</b> for it, ranked by model chance with one side per match market — so a thin slate shows fewer than 25${rows.length<25?` (${rows.length} right now)`:''}. Any market can make it: match winner, set winner, exact score, game spread or total games. Best if you're holding <b>credits you can't withdraw without trading</b>, since these are the most likely to win. The price is the cheaper exchange for that exact side, the model's edge over it, and the payout multiplier. These picks are recorded before ${TIPOFF} and graded in <b>Past picks</b>.</p>`;
-  wireTable(body, rows, edgeSort, renderEdges); }
+  const shown=fltRows(all), total=Math.min(all.length, 25);
+  if(!shown.length){ body.innerHTML=fltNote(total, 'Top 25 Surest picks'); wireFltClear(body); return; }
+  const rows=sortRows(shown, edgeSort.key, edgeSort.dir).slice(0,25);
+  body.innerHTML=pickTable(rows, edgeSort)+fltShown(rows.length, total)+
+    `<p class="mktnote" style="margin-top:8px">Up to 25 sides where the model gives the bet a <b>90%+ chance</b> and Polymarket or Kalshi has a <b>live market</b> for it, ranked by model chance with one side per match market — so a thin slate shows fewer than 25${total<25?` (${total} right now)`:''}. Any market can make it: match winner, set winner, exact score, game spread or total games. Best if you're holding <b>credits you can't withdraw without trading</b>, since these are the most likely to win. The price is the cheaper exchange for that exact side, the model's edge over it, and the payout multiplier. These picks are recorded before ${TIPOFF} and graded in <b>Past picks</b>.</p>`;
+  wireTable(body, rows, edgeSort, renderEdges); wireFltClear(body); }
 function renderValue(){ const panel=$('valuepanel'), body=$('valuebody'); if(!panel||!body) return;
   if(PICKS===null){ panel.hidden=true; return; }
   panel.hidden=false;
@@ -996,9 +1062,11 @@ function renderValue(){ const panel=$('valuepanel'), body=$('valuebody'); if(!pa
   if(!all.length){ body.innerHTML = upcomingPicks().length
       ? `<p class="mktnote">No value spots right now. All four rules above are tested against a live price, and no ATP match winner on the upcoming slate clears them. It refills as prices move (every 10 minutes).</p>`
       : scheduleNote('Value spots'); return; }
-  const rows=sortRows(all, valueSort.key, valueSort.dir).slice(0,50);
-  body.innerHTML=pickTable(rows, valueSort)+`<p class="mktnote" style="margin-top:8px"><b>${rows.length}</b> ATP match winner${rows.length===1?'':'s'} clear all four rules at the recorded price. Picks are recorded before ${TIPOFF} and graded in <b>Past picks</b>. Backward-looking; not advice.</p>`;
-  wireTable(body, rows, valueSort, renderValue);
+  const shown=fltRows(all), total=Math.min(all.length, 50);
+  if(!shown.length){ body.innerHTML=fltNote(total, 'value spots'); wireFltClear(body); return; }
+  const rows=sortRows(shown, valueSort.key, valueSort.dir).slice(0,50);
+  body.innerHTML=pickTable(rows, valueSort)+fltShown(rows.length, total)+`<p class="mktnote" style="margin-top:8px"><b>${total}</b> ATP match winner${total===1?'':'s'} clear all four rules at the recorded price. Picks are recorded before ${TIPOFF} and graded in <b>Past picks</b>. Backward-looking; not advice.</p>`;
+  wireTable(body, rows, valueSort, renderValue); wireFltClear(body);
 }
 
 // ---- match cards: both players, every market the exchanges price ----
@@ -1037,16 +1105,44 @@ function renderMatches(){
 // ---- Player tab ----
 function openPlayer(pid){ if(!PLAYERS.has(String(pid))) return; renderPlayer(pid); $('psugg').hidden = true; showTab('player');
   try{ history.replaceState(null, '', '#player/' + pid); }catch(e){} window.scrollTo({top: 0, behavior: 'smooth'}); }
+let PLAYER_ID = null;
 function renderPlayer(pid){
   const p = PLAYERS.get(String(pid)); if(!p) return;
+  PLAYER_ID = String(p.id);
   const rank = (DB.rank || {})[p.id];
   const rows = (p.g || []).slice().reverse();
-  $('playerbody').innerHTML = `<h3 style="margin:4px 0 2px;font-size:22px">${esc(p.n)} <span class="mktmuted" style="font-size:14px">${p.t.toUpperCase()}${rank ? ' · model rank #' + rank : ''}</span></h3>
+  $('playerbody').innerHTML = `<div class="tnph"><h3>${esc(p.n)} <span class="mktmuted" style="font-size:14px">${esc(String(p.t).toUpperCase())}${rank ? ' · model rank #' + esc(rank) : ''}</span></h3>${PS.starBtn(SPORT_KEY, {pid:p.id, name:p.n, team:String(p.t).toUpperCase()}, {label:true})}</div>
+    <div id="psides"></div>
     <div class="tnstats"><div><b>${p.elo}</b><span>Rating</span></div><div><b>${p.surf.hard}</b><span>Hard</span></div><div><b>${p.surf.clay}</b><span>Clay</span></div><div><b>${p.surf.grass}</b><span>Grass</span></div><div><b>${p.w}-${p.m - p.w}</b><span>Last 12 months</span></div></div>
     <div class="chartwrap"><table class="edgetbl"><thead><tr><th>Date</th><th>Opponent</th><th>Result</th><th>Score</th><th>Round</th><th>Surface</th></tr></thead><tbody>
     ${rows.map(g => `<tr><td>${esc(g[0])}</td><td style="text-align:left"><button class="tnname" data-pid="${esc(g[1])}">${esc(g[2])}</button></td><td class="${g[3] ? 'w' : 'l'}">${g[3] ? 'W' : 'L'}</td><td>${esc(g[4])}</td><td>${esc(g[7])}</td><td>${SURF[g[6]] || ''}</td></tr>`).join('')}
     </tbody></table></div>
     <p class="mktmuted" style="font-size:12.5px;margin-top:10px">Ratings are the model's own, an Elo: a new player starts at 1500, and 100 points ahead is about a 64% chance to win. A match chance blends the overall rating with the surface's.</p>`;
+  renderPlayerSides(PLAYER_ID);
+}
+// A player's upcoming sides: every market of their next matches (total games counts for both players, since it is
+// recorded under one of them), each as {p, opp} with opp the other player from this player's view.
+const STAT_ORDER = {ml:0, set:1, exact:2, spread:3, games:4};
+function playerSides(pid){ pid = String(pid);
+  return upcomingPicks().filter(p => p.prob != null && (String(p.pid) === pid || (p.stat === 'games' && String(p.oid) === pid)))
+    .map(p => ({p, opp: String(p.pid) === pid ? p.opp : p.player})); }
+// Tennis has no player stat lines to ladder, so the Player tab lists the player's upcoming priced sides instead.
+function renderPlayerSides(pid){ const el = $('psides'); if(!el) return;
+  if(PICKS === null){ el.innerHTML = ''; return; }
+  const xs = playerSides(pid).filter(x => x.p.price != null)
+    .sort((a, b) => String(a.p.start || '').localeCompare(String(b.p.start || '')) || String(a.p.mid).localeCompare(String(b.p.mid))
+      || (STAT_ORDER[a.p.stat] ?? 9) - (STAT_ORDER[b.p.stat] ?? 9) || (+a.p.line) - (+b.p.line) || String(a.p.side).localeCompare(String(b.p.side)));
+  if(!xs.length){ el.innerHTML = ''; return; }
+  let h = '', mid = null;
+  xs.forEach((x, i) => { const p = x.p, b = betOf(p), px = pickPrice(p);
+    if(String(p.mid) !== mid){ mid = String(p.mid);
+      h += (h ? '</div>' : '') + `<div class="tnsideh">Upcoming: v <b>${esc(x.opp)}</b> · ${esc(p.event)}${p.start ? ' · ' + esc(startText(p.start)) : ''}</div><div class="tnsides">`; }
+    h += `<button type="button" class="tnside" data-i="${i}"><span class="tsb"><span class="leantag ${esc(b.side)}">${esc(b.side)}</span> ${esc(b.line)} ${esc(b.text || statLabel(p.stat))}`+
+      `${(p.lists||'').split('').filter(c => LIST_NAME[c]).map(c => ` <span class="listchip ${esc(c)}" title="${esc(LIST_NAME[c])}">${esc(c)}</span>`).join('')}</span>`+
+      `<span class="tsp">${pct(p.prob)}</span>`+
+      `<span class="tsx">${px == null ? '<span class="mktmuted">not enough offered</span>' : `<b>${cents(px)}</b> ${esc(PS.venueName(p.vn))}`}</span></button>`; });
+  el.innerHTML = h + '</div>';
+  el.querySelectorAll('.tnside').forEach(b => b.onclick = () => { const x = xs[+b.dataset.i]; if(x) openPickSheet(normPick(x.p)); });
 }
 function searchPlayers(q){
   q = norm(q.trim()); const box = $('psugg');
@@ -1278,7 +1374,7 @@ document.addEventListener('click', e => {
   const n = e.target.closest('.tnname[data-pid], .tnsugg [data-pid]');
   if(n){ openPlayer(n.dataset.pid); return; }
   const f = e.target.closest('[data-tour]');
-  if(f){ TOUR = f.dataset.tour; document.querySelectorAll('[data-tour]').forEach(x => x.classList.toggle('on', x === f)); renderEdges(); renderValue(); renderMatches(); }
+  if(f){ TOUR = f.dataset.tour; document.querySelectorAll('[data-tour]').forEach(x => x.classList.toggle('on', x === f)); updateFilterOptions(); renderEdges(); renderValue(); renderMatches(); }
 });
 $('psearch').addEventListener('input', e => searchPlayers(e.target.value));
 (function renderRecords(){ const R=DB.record||{};
@@ -1302,6 +1398,30 @@ PS.parlayFinder($('pfbody'), {sport:SPORT_KEY, gameWord:'match', emptyNote:'Tenn
 // from one match are contradictory or tied together, never independent. The same-match option stays off here.
 (function(){ const sg=$('pfbody').querySelector('#pfsg'); if(sg){ sg.checked=false; const lb=sg.closest('label'); if(lb) lb.hidden=true; } })();
 
+// ---- Tools: watchlist (PS.renderWatchlist; legs = the player's upcoming priced sides) ----
+function renderWatch(){
+  PS.renderWatchlist($('watchbody'), {sport:SPORT_KEY,
+    legsForPlayer:pid=>PICKS===null? [] : playerSides(pid).filter(x=>x.p.price!=null).map(x=>{ const p=x.p, b=betOf(p);
+      return {statText:(b.text? b.text+' ' : '')+'v '+last(x.opp), side:b.side, line:b.line, prob:p.prob, price:p.price, vn:p.vn,
+        thin:pickPrice(p)==null, lists:p.lists||''}; }),
+    open:pid=>openPlayer(pid),
+    player:pid=>{ const p=PLAYERS.get(String(pid)); return p? {name:p.n, team:String(p.t||'').toUpperCase()} : null; }});
+}
+renderWatch();
+// ---- Tools: bet calculator and parlay slip, both on the last pick opened (CUR) ----
+CALC=PS.betCalc($('calcbody'), {getPick:()=>{ if(!CUR || CUR.prob==null) return null; const b=betOf(CUR);
+  return {prob:CUR.prob, price:pickPrice(CUR), name:legWho(CUR), statText:b.text || statLabel(CUR.stat), side:b.side, line:b.line}; }});
+// A leg's bet goes in its words (statText; the slip's over/under tag is hidden on this page); gid = the match, so two
+// legs from one match get the slip's warning.
+function legOf(p){ return {key:legKey(p), gid:String(p.mid), pid:p.pid, name:legWho(p), statText:legBet(p),
+  side:p.side==='under'? 'under' : 'over', line:'', prob:p.prob, price:pickPrice(p)}; }
+SLIP=PS.parlaySlip($('slipbody'), {sport:SPORT_KEY,
+  getCurrent:()=>CUR && CUR.prob!=null? legOf(CUR) : null,
+  legsFor:legs=>{ if(PICKS===null) return []; const by=new Map(upcomingPicks().map(p=>[legKey(p), p]));
+    return legs.map(l=>{ const p=by.get(String(l.key)); return p? {key:l.key, prob:p.prob, price:pickPrice(p)} : null; }).filter(Boolean); },
+  open:l=>{ const p=(PICKS||[]).find(x=>legKey(x)===String(l.key)); if(p) openPickSheet(normPick(p)); else openPlayer(l.pid); }});
+
+if(FLT.get().side) FLT.set(Object.assign(FLT.get(), {side:''}));   // the side chips are hidden, so a saved side can't stay on
 renderEdges(); renderValue(); renderMatches();
 loadPicks();
 function fromHash(){ const h=location.hash.slice(1);

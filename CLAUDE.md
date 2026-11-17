@@ -18,8 +18,13 @@ README.md has the full feature tour; this file is the working rules.
   feed (home picks, Pick of the Day, 3 Picks, posts, parlays, pooled calibration) and `build_players.py`/`build_games.py` skip it,
   until it has a track record.
 - `build_today.py` → `today.json` (home feed), runs `botd.py` → `botd.json` (Pick of the Day; called Bet of the Day before Oct 12, 2026).
+- `build_record.py` → `record.html` + `record.json` (from `record_template.html`; since Nov 17, 2026): the public Record page, every list in
+  every sport with units, 30-day figures, weekly units lines, calibration and model-vs-market, losing lists named first ("What's losing").
+  Reuses build_today's calibration/fair_weight and depth.real_price; tennis shown apart as a sport under test. Non-fatal step.
 - `build_players.py` → `players/`, `build_games.py` → `games/` (one page per upcoming game), `best/` (today's best props
-  per sport) and `p/` (link-preview pages for shared picks, kept 14 days after the game), `health.py` → `health.json`,
+  per sport) and `p/` (link-preview pages for shared picks, kept 14 days after the game), `cards.py` (after build_games: the 1200x630
+  link-preview cards, `og/<site|home|record|sport>.png` and a card per Value pick's share page `p/<sport>/<key>.png`, drawn by `og/draw.html`
+  in headless Chrome, only when missing or changed, daily ones at most once a day; same copy rules as the ads), `health.py` → `health.json`,
   `post_daily.py` (Discord/Telegram, and the daily picks email via Buttondown: `BUTTONDOWN_API_KEY`, sign-up form on the
   home page shown once `NEWSLETTER` is set in index.html), `watchdog.py` (own workflow, started by every update run, so about every 20 min, with a 30-min schedule as backup: checks the live site and keeps one
   "Site watchdog" GitHub issue open while something is broken, and restarts the update chain when no update run has started in 30+ minutes (`restart_chain`, via `start_run.py`); the team dashboard reads it). `build_today.py` also writes `search.json` (home page player search).
@@ -85,11 +90,12 @@ README.md has the full feature tour; this file is the working rules.
 The bot overwrites these on every pass, so hand edits are lost and cause merge conflicts:
 
 - `nfl.html` ← `template.html`; `nba.html` ← `nba_template.html`; `nhl.html` ← `nhl_template.html`;
-  `mlb.html` ← `mlb_template.html`; `tennis.html` ← `tennis_template.html`. Edit the template (and the builder), never the output page.
+  `mlb.html` ← `mlb_template.html`; `tennis.html` ← `tennis_template.html`; `record.html` ← `record_template.html`. Edit the template (and the builder), never the output page.
 - `data.json`, `slate.json`, `picks.json`, `weekly.json`, `*_picks.json`, `*_stats.json`,
-  `nba.json`, `nhl.json`, `mlb.json`, `tennis.json`, `tennis_results.json`, `today.json`, `botd.json`, `health.json`, `top_cache.json`,
+  `nba.json`, `nhl.json`, `mlb.json`, `tennis.json`, `tennis_results.json`, `record.json`, `today.json`, `botd.json`, `health.json`, `top_cache.json`,
   `sitemap.xml`, `robots.txt`, `players/`, `games/`, `best/`, `p/`, `team/stats.enc`, `team/edges.enc`, `team/parlays.enc`, `team/parlays_nba.enc`, `team/parlays_nfl.enc`, `team/parlay_potd.enc`, `team/spreads.enc`, `team/arbs.enc`, `team/tpod.enc`, `spread_scores.json`, `fast_hist.json`, `*_picks_recent.json`, `search.json`,
-  `tiktok/<day>/` and `tiktok/posted.json` (the TikTok workflow; `tiktok/callback.html` is hand-written).
+  `tiktok/<day>/` and `tiktok/posted.json` (the TikTok workflow; `tiktok/callback.html` is hand-written),
+  `og/*.png`, `og/state.json` and `p/<sport>/*.png` (cards.py; `og/draw.html` is hand-written).
 
 `index.html` (home page), `methodology.html`, `guides/`, and the legal pages are hand-written and safe to edit.
 
@@ -100,9 +106,19 @@ The bot overwrites these on every pass, so hand edits are lost and cause merge c
 - **Cache-busting.** When you change `app.js` or `app.css`, bump the `?v=YYYYMMDDx` query on every
   page and template that loads them (`index.html`, all `*_template.html`/`template.html`, the
   hand-written pages), or browsers keep the old file.
+- **The service worker pins app.js/app.css.** `sw.js` precaches `app.js`/`app.css` at their `?v=`: bump its `SHELL`
+  line (and `VERSION`, kept equal to the app.js version) with every cache-bust, or `test_sw.py` fails. Pages and `.json`
+  stay network-first (a saved copy only when the network fails); never make them cache-first, and keep `/team/` out.
 - **Keep the public explanation in sync.** A change to a rule users see (list cutoffs, lock
   times, Bet of the Day windows, grading) also updates `methodology.html` and any on-page note
   in `app.js`/the templates, and the README if it describes it.
+- **One set of design tokens.** Colors, text sizes, corners and the tap size live in app.css's `:root` (`--ps-*`); page CSS uses
+  `var(--ps-...)`, never the hex, and translucent brand colors are `rgba(var(--ps-green-rgb),.14)`. The pages' short names
+  (`--bg`, `--green`, `--accent`...) are aliases of the tokens. A seasonal theme overrides tokens only (thanksgiving.css's
+  `html.thanksgiving{...}` block). Nothing smaller than 12px; on touch screens every control gets 44px (the `pointer:coarse`
+  block at the end of app.css). Changing thanksgiving.js/.css also bumps their `?v=` on every page (and in build_players.py).
+- **A page's script must parse.** One `//` comment that swallowed a closing brace took the whole tennis page down for 5 days (Nov 11-16, 2026).
+  After the last edit to any template or app.js, load the built page in a browser and check the console; the watchdog renders every sport page.
 - **The edge tracker follows every list change.** Adding, removing or changing a list, a list rule or what gets
   recommended (Value, Top 25, Pick of the Day, a new sport) also updates `edge_report.py` STRATEGIES in
   the same PR, so the team dashboard's edge tracker shows it. The owner treats it as the most important number.

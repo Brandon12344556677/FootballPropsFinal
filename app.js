@@ -385,11 +385,13 @@ window.PS = (function(){
   }
   const initialsOf=n=>{ const w=String(n||'').replace(/\s+(Jr|Sr|II|III|IV)\.?$/i,'').trim().split(/\s+/); return ((w[0]||'')[0]||'')+(w.length>1? (w[w.length-1][0]||'') : ''); };
   // A pick card's details: the verdict, the last 10 games, then the full breakdown or share.
-  // o: {name, team, sport, vs, when, prob, lo, hi, neff, side, line, statText, price, live, vals, onOpen, onShare}
+  // o: {name, team, sport, vs, when, prob, lo, hi, neff, side, line, statText, price, live, vals, onOpen, onShare,
+  //     watch: {on, toggle() -> bool} (a star in the header), links: {P, K} (exact market URLs, PS.exchangeUrls)}
   function pickSheet(o){
     const v=(o.vals||[]).filter(x=>x!=null && isFinite(x)).slice(-10), hits=v.filter(x=> o.side==='under'? x<+o.line : x>+o.line).length;
     const w=sheet(`<div class="ps-head" style="${teamVars(o.sport, o.team)}"><span class="av">${esc(initialsOf(o.name))}</span>`+
-        `<div><b>${esc(o.name)}</b><span><span class="tbadge">${esc(o.team)}</span>${esc(o.vs||'')}${o.when? ' · '+esc(o.when) : ''}</span></div></div>`+
+        `<div><b>${esc(o.name)}</b><span><span class="tbadge">${esc(o.team)}</span>${esc(o.vs||'')}${o.when? ' · '+esc(o.when) : ''}</span></div>`+
+        (o.watch? `<button type="button" class="ps-star"></button>` : '')+`</div>`+
       `<div class="verdict" hidden></div>`+fastHtml(o)+reasonHtml(o)+
       (v.length>=3? `<div class="ps-l10"><div class="ps-sub">Last ${v.length} games · cleared ${esc(o.line)} <b>${hits} of ${v.length}</b></div>${bigSpark(v, o.line, o.side)}</div>` : '')+
       `<div class="ps-actions"><button type="button" class="btn ps-open">Full breakdown →</button></div>`+
@@ -398,15 +400,24 @@ window.PS = (function(){
     verdict(w.querySelector('.verdict'), o);
     w.querySelector('.ps-open').onclick=()=>{ closeSheet(); if(o.onOpen) o.onOpen(); };
     w.querySelectorAll('.ps-mi').forEach(b=>b.onclick=()=>{ const it=o.more[+b.dataset.g].items[+b.dataset.i]; closeSheet(); it.open(); });
+    const sb=w.querySelector('.ps-star');   // o.watch: {on, toggle() -> now starred}
+    if(sb){ const paint=on=>{ sb.classList.toggle('on', !!on); sb.setAttribute('aria-pressed', String(!!on));
+        sb.setAttribute('aria-label', on? `Remove ${o.name} from your watchlist` : `Star ${o.name} to your watchlist`);
+        sb.innerHTML=`<span aria-hidden="true">${on? '\u2605' : '\u2606'}</span><span>${on? 'Watching' : 'Watch'}</span>`; };
+      paint(o.watch.on);
+      sb.onclick=()=>{ const on=!!o.watch.toggle(); o.watch.on=on; paint(on); toast(on? '\u2605 Added to your watchlist' : 'Removed from your watchlist'); }; }
   }
   // Where to find the pick: the exchange with the cheaper price for this pick first. Plain links, no referral codes.
   // data-place="sheet" makes the click count as "<exchange>-site-sheet" on the team dashboard.
   const REF={P:{name:'Polymarket', href:'https://polymarket.us'},
              K:{name:'Kalshi', href:'https://kalshi.com'}};
+  // o.links: {P, K} exact URLs for this game's market (PS.exchangeUrls); each falls back to the exchange's home page.
+  const okUrl=u=> typeof u==='string' && /^https:\/\/(polymarket\.us|kalshi\.com)\//.test(u);
   function promoHtml(o){
-    const a=REF[o.vn==='K'? 'K' : 'P'], b=REF[o.vn==='K'? 'P' : 'K'];
-    return `<div class="ps-promo"><a class="ps-ref" href="${esc(a.href)}" target="_blank" rel="noopener" data-place="sheet"><span>Find this prop on <b>${a.name}</b> →</span></a>`+
-      `<a class="ps-ref2" href="${esc(b.href)}" target="_blank" rel="noopener" data-place="sheet">or on ${b.name} →</a>`+
+    const ka=o.vn==='K'? 'K' : 'P', kb=ka==='K'? 'P' : 'K', a=REF[ka], b=REF[kb], L=o.links||{};
+    const ha=okUrl(L[ka])? L[ka] : a.href, hb=okUrl(L[kb])? L[kb] : b.href;
+    return `<div class="ps-promo"><a class="ps-ref" href="${esc(ha)}" target="_blank" rel="noopener" data-place="sheet"><span>Find this prop on <b>${a.name}</b> →</span></a>`+
+      `<a class="ps-ref2" href="${esc(hb)}" target="_blank" rel="noopener" data-place="sheet">or on ${b.name} →</a>`+
       `<p class="ps-fine">Research, not betting advice.</p></div>`;
   }
   // "More from this game" / "More for <player>": o.more = [{title, items:[{name, side, line, statText, prob, open}]}]
@@ -465,7 +476,8 @@ window.PS = (function(){
 
   // ---- one-time 18+ check. It carries the storage notice, so a first visit sees one pop-up, not two.
   // Then, once, how to see the boards (Simple or Pro); a visitor who passed the check before
-  // the question existed gets just the question. ----
+  // the question existed gets just the question. Only a sport board asks it (the views differ nowhere
+  // else), so a visitor landing on the home page gets one tap, and the question on their first board. ----
   const GATE_LOGO='<svg class="psgate-logo" viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" rx="14" fill="#0f2038"/><path d="M32,6 Q32,32 54,32 Q32,32 32,58 Q32,32 10,32 Q32,32 32,6 Z" fill="#22d07f"/></svg>';
   function viewStep(card, done){
     try{ localStorage.setItem('psl_view_asked','1'); }catch(e){}
@@ -481,7 +493,8 @@ window.PS = (function(){
   }
   function ageGate(){
     let ok=false; try{ ok=localStorage.getItem('psl_age_ok')==='1'; }catch(e){}
-    if(!document.body || (ok && viewAsked())) return;
+    const board=/\/(nfl|nba|nhl|mlb|tennis)\.html$/.test(location.pathname);   // PAGE_SPORT is declared further down
+    if(!document.body || (ok && (!board || viewAsked()))) return;
     const g=document.createElement('div'); g.className='psgate'; g.setAttribute('role','dialog'); g.setAttribute('aria-modal','true'); g.setAttribute('aria-labelledby','psgate-h');
     g.innerHTML=`<div class="psgate-card"></div>`;
     const card=g.firstChild, close=()=>{ g.remove(); document.documentElement.classList.remove('ps-lock'); };
@@ -491,11 +504,11 @@ window.PS = (function(){
       `<h2 id="psgate-h">Are you 18 or older?</h2>`+
       `<p>Prop Streak Lab is player-prop research for adults. It isn't a sportsbook and takes no bets. Some links go to Polymarket and Kalshi, which have their own age and location rules.</p>`+
       `<div class="psgate-btns"><button type="button" class="btn" id="psgate-ok">Yes, I'm 18 or older</button><a class="btn ghost" href="https://www.google.com" rel="noopener">No, leave</a></div>`+
-      `<p class="psgate-fine">We use only essential local storage for your preferences and cookieless analytics — no ads, no cross-site tracking. <a href="cookies.html">Cookie Policy</a> · <a href="privacy.html">Privacy</a><br>Gambling problem? Call 1-800-522-4700 or visit <a href="https://www.ncpgambling.org" rel="noopener" target="_blank">ncpgambling.org</a>.</p>`;
+      `<p class="psgate-fine">We use only essential local storage for your preferences and cookieless analytics — no ads, no cross-site tracking. <a href="/cookies.html">Cookie Policy</a> · <a href="/privacy.html">Privacy</a><br>Gambling problem? Call 1-800-522-4700 or visit <a href="https://www.ncpgambling.org" rel="noopener" target="_blank">ncpgambling.org</a>.</p>`;
     const bar=document.getElementById('pslcookie'); if(bar) bar.hidden=true;    // the check carries the same notice
     const btn=g.querySelector('#psgate-ok'); btn.focus({preventScroll:true});
     btn.onclick=()=>{ try{ localStorage.setItem('psl_age_ok','1'); localStorage.setItem('psl_notice_ok','1'); }catch(e){}
-      if(canStore() && !viewAsked()) viewStep(card, close); else close(); };
+      if(board && canStore() && !viewAsked()) viewStep(card, close); else close(); };
   }
   if(document.readyState!=='loading') ageGate(); else document.addEventListener('DOMContentLoaded', ageGate);
 
@@ -547,11 +560,11 @@ window.PS = (function(){
   // share pages that exist for this board's picks (p/keys.json, build_games.py): {sport: {key: expiry}}
   let SHARE_KEYS=null;
   const shareKey=st=> `${st.player.id}-${st.stat}-${String(Number(st.line))}-${st.ou}`;   // = build_games.share_key
-  if(PAGE_SPORT) fetch('p/keys.json',{cache:'no-store'}).then(r=>r.ok? r.json() : null)
+  if(PAGE_SPORT) fetch('p/keys.json',{cache:'no-cache'}).then(r=>r.ok? r.json() : null)
     .then(d=>{ SHARE_KEYS=new Set(Object.keys((d&&d[PAGE_SPORT])||{})); }).catch(()=>{});
   // props whose price moved 10c+ in the last hour (today.json "fast", build_today.fast_moves): a warning in the pick sheet
   let FAST=[];
-  if(PAGE_SPORT) fetch('today.json',{cache:'no-store'}).then(r=>r.ok? r.json() : null)
+  if(PAGE_SPORT) fetch('today.json',{cache:'no-cache'}).then(r=>r.ok? r.json() : null)
     .then(d=>{ FAST=((d&&d.fast)||[]).filter(f=>f.sport===PAGE_SPORT); }).catch(()=>{});
   // Plain-English reasons for a pick, from its own numbers: the last games against the line, the
   // streak, the average against the line, and the model against the market price.
@@ -690,13 +703,13 @@ window.PS = (function(){
       el.innerHTML=(upd? `<span class="tr-upd"><i class="tr-dot" aria-hidden="true"></i>Updated <b data-ago="${upd}">${ago(upd)}</b></span>` : '')+
         (tr && tr.graded? `<span class="tr-grd">${icon('shield-check')}<b>${tr.graded.toLocaleString('en-US')} picks graded in public</b>${since? ' since '+esc(since) : ''}</span>` : '')+
         lastResults(t)+
-        `<a class="tr-how" href="methodology.html">How the model works →</a>`;
+        `<a class="tr-how" href="/record.html">The full record, losses included →</a><a class="tr-how" href="/methodology.html">How the model works →</a>`;
       el.hidden=false;
       const go=el.querySelector('[data-tab-go]');
       if(go) go.onclick=e=>{ const tab=document.querySelector(`.tab[data-tab="${go.dataset.tabGo}"]`); if(tab){ e.preventDefault(); tab.click(); } };
     };
     paint(null);
-    fetch('today.json',{cache:'no-store'}).then(r=>r.ok? r.json() : null).then(t=>{ if(t){ paint(t); if(t.fair) setFair(t.fair.w); } }).catch(()=>{});
+    fetch('today.json',{cache:'no-cache'}).then(r=>r.ok? r.json() : null).then(t=>{ if(t){ paint(t); if(t.fair) setFair(t.fair.w); } }).catch(()=>{});
     setInterval(()=>el.querySelectorAll('[data-ago]').forEach(b=>{ b.textContent=ago(+b.dataset.ago); }), 60000);
   }
   if(document.readyState!=='loading') trust(); else document.addEventListener('DOMContentLoaded', trust);
@@ -752,6 +765,24 @@ window.PS = (function(){
     const say=d>=1? `the market moved ${d}\u00a2 toward this pick` : d<=-1? `the market moved ${-d}\u00a2 away from this pick` : 'no real move';
     const title=`Price (the cheaper of Polymarket and Kalshi) when the site first recorded this pick: ${o}\u00a2. ${closed?'Last price before it locked (or, for picks before October 7, 2026, before the game)':'Now'}: ${n}\u00a2 \u2014 ${say}.`;
     return `<span class="pxmove ${cls}${closed?' inl':''}" title="${esc(title)}">${closed? `${o}\u00a2 \u2192 ${n}\u00a2` : `opened ${o}\u00a2`} <b>${arrow}</b></span>`;
+  }
+
+  // ---- the price since the pick was listed, as a tiny line (today.json's sp: cents, oldest first, one point
+  // about every 30 minutes or on each change; build_today.py keeps them). Up = toward the pick. Nothing for
+  // fewer than 3 points or a move under 2 cents. ----
+  function pxSpark(sp){
+    const v=(sp||[]).map(Number).filter(x=>isFinite(x));
+    if(v.length<3) return '';
+    const lo=Math.min(...v), hi=Math.max(...v);
+    if(hi-lo<2) return '';
+    const W=56, H=18, d=v[v.length-1]-v[0];
+    const pts=v.map((x,i)=>`${(i*(W-4)/(v.length-1)+2).toFixed(1)},${(H-2-(x-lo)*(H-4)/(hi-lo)).toFixed(1)}`);
+    const last=pts[pts.length-1].split(',');
+    const cls=d>=1?'up':d<=-1?'dn':'flat';
+    const say=`Price since it was listed: ${v[0]}\u00a2 \u2192 ${v[v.length-1]}\u00a2 (low ${lo}\u00a2, high ${hi}\u00a2)`;
+    return `<svg class="pxs ${cls}" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-label="${esc(say)}"><title>${esc(say)}</title>`+
+      `<polyline points="${pts.join(' ')}" fill="none" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"/>`+
+      `<circle cx="${last[0]}" cy="${last[1]}" r="2.2"/></svg>`;
   }
 
   // ---- nothing is certain: no chance above 99% (or below 1%) is shown, even on picks recorded before
@@ -915,8 +946,364 @@ window.PS = (function(){
     };
   }
 
+  // ======== daily tools, shared by every sport page: filter bar, watchlist, line ladder, exact-market
+  // links, bet calculator and parlay slip. Everything is saved on this device only (localStorage, and the
+  // page still works when storage is blocked). Prices may come in as fractions or the NFL's cents. ========
+  const lsGet=(k, d)=>{ try{ const v=JSON.parse(localStorage.getItem(k)); return v==null? d : v; }catch(e){ return d; } };
+  const lsSet=(k, v)=>{ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} };
+  const frac=x=>{ if(x==null || x==='') return null; const v=+x; return isFinite(v)? (v>1? v/100 : v) : null; };
+  const pctTxt=p=>{ const v=p*100; return (v>0 && v<10? v.toFixed(1) : Math.round(v))+'%'; };
+  const multTxt=m=> m>=100? Math.round(m).toLocaleString()+'×' : m.toFixed(m<10? 2 : 1)+'×';
+  const SPORT_NAME={nfl:'NFL', nba:'NBA', nhl:'NHL', mlb:'MLB', tennis:'Tennis'};
+  const listTags=lists=>{ const s=lists===true? 'L' : String(lists||'');
+    return (s.includes('T')? '<span class="pst-tag top">on Top 25</span>' : '')+(s.includes('V')? '<span class="pst-tag val">on Value</span>' : '')+
+      (s==='L'? '<span class="pst-tag">on a list</span>' : ''); };
+
+  // ---- watchlist across sports: [{sport, pid, name, team}] in psl_watch_all. The older per-sport lists
+  // (pids only: psl_watch for the NFL, psl_<sport>_watch for the others) are copied in once and kept,
+  // and every change is written back to them too, so a page that still reads its own list agrees. ----
+  const WATCH_KEY='psl_watch_all', WATCH_MIG='psl_watch_mig',
+        WATCH_OLD={nfl:'psl_watch', nba:'psl_nba_watch', nhl:'psl_nhl_watch', mlb:'psl_mlb_watch', tennis:'psl_tennis_watch'};
+  let WL=null; const wFns=[];
+  function wLoad(){
+    if(WL) return WL;
+    const raw=lsGet(WATCH_KEY, []), mig=lsGet(WATCH_MIG, {}) || {};
+    let a=(Array.isArray(raw)? raw : []).filter(x=>x && x.sport && x.pid!=null && x.pid!=='')
+      .map(x=>({sport:String(x.sport), pid:String(x.pid), name:String(x.name||''), team:String(x.team||'')}));
+    let changed=false;
+    Object.keys(WATCH_OLD).forEach(sp=>{
+      if(mig[sp]) return;
+      const old=lsGet(WATCH_OLD[sp], []);
+      if(Array.isArray(old)) old.forEach(pid=>{ if(pid==null || pid==='') return; pid=String(pid);
+        if(!a.some(x=>x.sport===sp && x.pid===pid)) a.push({sport:sp, pid, name:'', team:''}); });
+      mig[sp]=1; changed=true;
+    });
+    WL=a;
+    if(changed){ lsSet(WATCH_KEY, a); lsSet(WATCH_MIG, mig); }
+    return WL;
+  }
+  function wSave(){
+    lsSet(WATCH_KEY, WL);
+    Object.keys(WATCH_OLD).forEach(sp=>{   // keep each sport's older list in step (same ids, its own types kept)
+      const old=lsGet(WATCH_OLD[sp], null), mine=WL.filter(x=>x.sport===sp).map(x=>x.pid);
+      const base=Array.isArray(old)? old.filter(id=>mine.includes(String(id))) : [];
+      mine.forEach(id=>{ if(!base.some(b=>String(b)===id)) base.push(id); });
+      if(Array.isArray(old) || base.length) lsSet(WATCH_OLD[sp], base);
+    });
+    wFns.slice().forEach(fn=>{ try{ fn(watch.list()); }catch(e){} });
+  }
+  const watch={
+    list(){ return wLoad().map(x=>Object.assign({}, x)); },
+    has(sport, pid){ return pid!=null && wLoad().some(x=>x.sport===String(sport) && x.pid===String(pid)); },
+    // adds or removes; returns true when the player is now starred
+    toggle(p){
+      if(!p || !p.sport || p.pid==null || p.pid==='') return false;
+      const a=wLoad(), sp=String(p.sport), id=String(p.pid), i=a.findIndex(x=>x.sport===sp && x.pid===id);
+      if(i>=0) a.splice(i, 1); else a.push({sport:sp, pid:id, name:String(p.name||''), team:String(p.team||'')});
+      wSave(); return i<0;
+    },
+    // fills in a starred player's name/team (an entry copied from an older list has only the id); no-op otherwise
+    note(sport, pid, name, team){
+      const x=wLoad().find(y=>y.sport===String(sport) && y.pid===String(pid));
+      if(!x || (!name || x.name===String(name)) && (!team || x.team===String(team))) return;
+      if(name) x.name=String(name); if(team) x.team=String(team); lsSet(WATCH_KEY, WL);
+    },
+    onChange(fn){ if(typeof fn==='function') wFns.push(fn); return ()=>{ const i=wFns.indexOf(fn); if(i>=0) wFns.splice(i, 1); }; }
+  };
+  // another tab changed the list
+  window.addEventListener('storage', e=>{ if(e.key===WATCH_KEY){ WL=null; wFns.slice().forEach(fn=>{ try{ fn(watch.list()); }catch(err){} }); } });
+
+  // A star button for a player. player: {pid|id, name|n, team|t}; opts.label: also say "Watch"/"Watching".
+  // One delegated listener toggles it (before any card's own click handler) and repaints every star for that player.
+  function starInner(on, label){ return `<span aria-hidden="true">${on? '★' : '☆'}</span>${label? `<span>${on? 'Watching' : 'Watch'}</span>` : ''}`; }
+  function starBtn(sport, player, opts){
+    const p=player||{}, pid=p.pid!=null? p.pid : p.id, name=p.name!=null? p.name : (p.n||''), team=p.team!=null? p.team : (p.t||'');
+    const on=watch.has(sport, pid), label=!!(opts && opts.label);
+    return `<button type="button" class="psstar${on? ' on' : ''}${label? ' wl' : ''}" data-star-sport="${esc(sport)}" data-star-pid="${esc(pid)}" data-star-name="${esc(name)}" data-star-team="${esc(team)}"`+
+      ` aria-pressed="${on}" aria-label="${esc((on? 'Remove ' : 'Star ')+(name||'this player')+(on? ' from' : ' to')+' your watchlist')}" title="${on? 'On your watchlist' : 'Add to your watchlist'}">${starInner(on, label)}</button>`;
+  }
+  function paintStars(){
+    document.querySelectorAll('.psstar').forEach(b=>{
+      const on=watch.has(b.dataset.starSport, b.dataset.starPid), name=b.dataset.starName||'this player';
+      if(b.getAttribute('aria-pressed')===String(on)) return;
+      b.classList.toggle('on', on); b.setAttribute('aria-pressed', String(on));
+      b.setAttribute('aria-label', (on? 'Remove ' : 'Star ')+name+(on? ' from' : ' to')+' your watchlist');
+      b.title= on? 'On your watchlist' : 'Add to your watchlist';
+      b.innerHTML=starInner(on, b.classList.contains('wl'));
+    });
+  }
+  watch.onChange(paintStars);
+  document.addEventListener('click', e=>{
+    const b=e.target && e.target.closest && e.target.closest('.psstar'); if(!b) return;
+    e.preventDefault(); e.stopPropagation();
+    const on=watch.toggle({sport:b.dataset.starSport, pid:b.dataset.starPid, name:b.dataset.starName, team:b.dataset.starTeam});
+    toast(on? '★ Added to your watchlist' : 'Removed from your watchlist');
+  }, true);
+
+  // Every starred player. cfg: {sport, legsForPlayer(pid) -> [{statText, side, line, prob, price, vn, thin, lists}],
+  // open(pid), player(pid) -> {name, team} (optional: fills in names copied from an older list)}.
+  // This sport's players come with their upcoming priced props; other sports' are links to their page.
+  // Repaints itself when the list changes.
+  function renderWatchlist(el, cfg){
+    if(!el) return;
+    el._pswCfg=cfg||{};
+    if(!el._pswSub){ el._pswSub=watch.onChange(()=>{ if(el.isConnected) renderWatchlist(el, el._pswCfg); }); }
+    const c=el._pswCfg, sp=String(c.sport||''), all=watch.list();
+    if(typeof c.player==='function') all.forEach(x=>{ if(x.sport===sp && !x.name){ let p=null; try{ p=c.player(x.pid); }catch(e){}
+      if(p && (p.name||p.n)){ x.name=String(p.name||p.n); x.team=String(p.team||p.t||x.team||''); watch.note(sp, x.pid, x.name, x.team); } } });
+    if(!all.length){
+      el.innerHTML=`<div class="psw-empty"><p class="mktnote"><b>No players starred yet.</b> Tap the <span class="psw-ic" aria-hidden="true">☆</span> star next to any player, on a pick or on their page, and they show up here with today's props. Your list covers every sport and is saved on this device only.</p></div>`;
+      return;
+    }
+    const mine=all.filter(x=>x.sport===sp), others=all.filter(x=>x.sport!==sp);
+    const legRow=l=>{
+      const px=frac(l.price), prob=frac(l.prob);
+      const price= px==null? '<span class="mktmuted">no price</span>' : l.thin? '<span class="mktmuted">not enough offered</span>'
+        : `<b>${Math.round(px*100)}¢</b> <span class="mktmuted">${esc(venueName(l.vn))}</span>`;
+      return `<li><span class="psw-bet"><span class="leantag ${esc(l.side)}">${esc(l.side)}</span> ${esc(l.line)} ${esc(l.statText)}${listTags(l.lists)}</span>`+
+        `<span class="psw-num">${prob!=null? `<b>${Math.round(prob*100)}%</b>` : '—'} <span class="psw-px">${price}</span></span></li>`;
+    };
+    const mineHtml=mine.map(x=>{
+      let legs=[]; try{ legs=(c.legsForPlayer && c.legsForPlayer(x.pid))||[]; }catch(e){ legs=[]; }
+      legs=legs.filter(Boolean).slice().sort((a,b)=>((b.lists? 1 : 0)-(a.lists? 1 : 0)) || ((frac(b.prob)||0)-(frac(a.prob)||0))).slice(0, 6);
+      return `<div class="psw-p"><div class="psw-h">${starBtn(sp, x)}<button type="button" class="psw-open" data-pid="${esc(x.pid)}"><b>${esc(x.name||'Player '+x.pid)}</b>`+
+          `${x.team? ` <span class="tbadge" style="${teamVars(sp, x.team)}">${esc(x.team)}</span>` : ''}<span class="psw-go" aria-hidden="true">›</span></button></div>`+
+        (legs.length? `<ul class="psw-legs">${legs.map(legRow).join('')}</ul>` : `<p class="psw-none">No priced props for an upcoming game right now.</p>`)+`</div>`;
+    }).join('');
+    const bySport={}; others.forEach(x=>{ (bySport[x.sport]=bySport[x.sport]||[]).push(x); });
+    const othersHtml=Object.keys(bySport).map(s=>`<div class="psw-o"><div class="ps-sub">${esc(SPORT_NAME[s]||s.toUpperCase())}</div>`+
+      bySport[s].map(x=>`<div class="psw-orow">${starBtn(s, x)}<a href="${esc(encodeURIComponent(s)+'.html#player/'+encodeURIComponent(x.pid))}">${esc(x.name||'Player '+x.pid)}`+
+        `${x.team? ` <span class="mktmuted">${esc(x.team)}</span>` : ''} <span aria-hidden="true">→</span></a></div>`).join('')+`</div>`).join('');
+    el.innerHTML=`<div class="psw">`+(mine.length? mineHtml : `<p class="mktnote">No ${esc(SPORT_NAME[sp]||sp)} players starred yet — tap ☆ next to one.</p>`)+
+      (othersHtml? `<div class="psw-others"><div class="psw-oh">Starred in other sports</div>${othersHtml}</div>` : '')+`</div>`;
+    el.querySelectorAll('.psw-open').forEach(b=>b.onclick=()=>{ if(c.open) c.open(b.dataset.pid); });
+  }
+
+  // ---- filter bar: game, prop, side, price band and starred players, remembered per sport on this device.
+  // cfg: {key (the sport), sport (for "starred only"; defaults to key), options:{games:[[value,label]], stats:[[value,label]]},
+  // onChange(filters)}. Returns {get(), test(row), set(filters), setOptions(options), clear()};
+  // row: {gid, sk, side, price, pid, sport}. ----
+  const PRICE_BANDS=[['lt30','Under 30¢',0,0.30],['30-50','30–50¢',0.30,0.50],['50-70','50–70¢',0.50,0.70],['70p','70¢+',0.70,1.01]];
+  function filterBar(el, cfg){
+    cfg=cfg||{};
+    const KEY='psl_flt_'+String(cfg.key||'x'), sport=String(cfg.sport||cfg.key||'');
+    let opts={games:[], stats:[]};
+    const blank={game:'', stat:'', side:'', band:'', star:false};
+    const saved=lsGet(KEY, {}) || {};
+    const F=Object.assign({}, blank, {game:String(saved.game||''), stat:String(saved.stat||''), side:['over','under'].includes(saved.side)? saved.side : '',
+      band:PRICE_BANDS.some(b=>b[0]===saved.band)? saved.band : '', star:!!saved.star});
+    const uid='psf'+Math.random().toString(36).slice(2, 8);
+    const any=()=>!!(F.game || F.stat || F.side || F.band || F.star);
+    function sel(id, label, all, items, val){
+      return `<label class="psf-sel"><span class="sr">${esc(label)}</span><select id="${uid}-${id}" data-f="${id}" aria-label="${esc(label)}">`+
+        `<option value="">${esc(all)}</option>${items.map(([v,l])=>`<option value="${esc(v)}"${String(v)===val? ' selected' : ''}>${esc(l)}</option>`).join('')}</select></label>`;
+    }
+    function draw(){
+      el.innerHTML=`<div class="psf" role="group" aria-label="Filter picks">`+
+        sel('game', 'Game', 'All games', opts.games, F.game)+
+        sel('stat', 'Prop', 'All props', opts.stats, F.stat)+
+        `<button type="button" class="chip psf-c" data-side="over" aria-pressed="${F.side==='over'}">Over</button>`+
+        `<button type="button" class="chip psf-c" data-side="under" aria-pressed="${F.side==='under'}">Under</button>`+
+        sel('band', 'Price', 'Any price', PRICE_BANDS.map(b=>[b[0], b[1]]), F.band)+
+        `<button type="button" class="chip psf-c" data-star="1" aria-pressed="${F.star}"><span aria-hidden="true">★</span> Starred</button>`+
+        (any()? `<button type="button" class="chip psf-c psf-clear" data-clear="1">✕ Clear</button>` : '')+`</div>`;
+      el.querySelectorAll('select[data-f]').forEach(s=>s.onchange=()=>{ F[s.dataset.f]=s.value; changed(); });
+      el.querySelectorAll('[data-side]').forEach(b=>b.onclick=()=>{ F.side= F.side===b.dataset.side? '' : b.dataset.side; changed(); });
+      const st=el.querySelector('[data-star]'); if(st) st.onclick=()=>{ F.star=!F.star; changed(); };
+      const cl=el.querySelector('[data-clear]'); if(cl) cl.onclick=()=>{ Object.assign(F, blank); changed(); };
+    }
+    function changed(){
+      lsSet(KEY, F);
+      const focus=document.activeElement && el.contains(document.activeElement)? (document.activeElement.dataset.f || document.activeElement.dataset.side || (document.activeElement.dataset.star && 'star')) : null;
+      draw();
+      if(focus){ const t=el.querySelector(`[data-f="${focus}"],[data-side="${focus}"]`) || (focus==='star' && el.querySelector('[data-star]')); if(t) t.focus({preventScroll:true}); }
+      if(cfg.onChange) cfg.onChange(api.get());
+    }
+    function setOptions(o){
+      opts={games:((o||{}).games||[]).map(x=>[String(x[0]), String(x[1])]), stats:((o||{}).stats||[]).map(x=>[String(x[0]), String(x[1])])};
+      // a saved game or prop that isn't on today's board would hide everything
+      if(F.game && !opts.games.some(g=>g[0]===F.game)) F.game='';
+      if(F.stat && opts.stats.length && !opts.stats.some(s=>s[0]===F.stat)) F.stat='';
+      draw();
+    }
+    const api={
+      get(){ return Object.assign({}, F); },
+      test(r){
+        if(!r) return false;
+        if(F.game && String(r.gid)!==F.game) return false;
+        if(F.stat && String(r.sk)!==F.stat) return false;
+        if(F.side && r.side!==F.side) return false;
+        if(F.band){ const b=PRICE_BANDS.find(x=>x[0]===F.band), px=frac(r.price); if(!b || px==null || px<b[2] || px>=b[3]) return false; }
+        if(F.star && !watch.has(r.sport||sport, r.pid)) return false;
+        return true;
+      },
+      set(f){ Object.assign(F, blank, f||{}); changed(); },
+      setOptions,
+      clear(){ Object.assign(F, blank); changed(); }
+    };
+    if(el){ setOptions(cfg.options); if(cfg.sport || cfg.key) watch.onChange(()=>{ if(F.star && el.isConnected && cfg.onChange) cfg.onChange(api.get()); }); }
+    return api;
+  }
+
+  // ---- line ladder: every listed line of one player's prop. rows: [{line, side, prob, pp, kp, vn, pd, kd, edge, listed}]
+  // (prices as fractions or cents; pd/kd the dollars offered near pp/kp, under $25 = thin; edge in points or as a
+  // fraction, or left out to use the model minus the cheaper price you can get; listed: the pick's lists, e.g. "TV").
+  // o: {statText, open(row)}. The best edge is highlighted; tapping a row calls open(row). ----
+  function lineLadder(el, rows, o){
+    if(!el) return;
+    o=o||{};
+    rows=(rows||[]).filter(r=>r && r.line!=null).slice().sort((a,b)=>(+a.line- +b.line) || String(a.side).localeCompare(String(b.side)));
+    if(!rows.length){ el.innerHTML=`<p class="mktnote">No listed lines for this prop right now.</p>`; return; }
+    const thin=d=> d!=null && +d<25;
+    const info=rows.map(r=>{
+      const prob=frac(r.prob), pp=frac(r.pp), kp=frac(r.kp);
+      const can=[pp!=null && !thin(r.pd)? pp : null, kp!=null && !thin(r.kd)? kp : null].filter(x=>x!=null);
+      let edge=r.edge!=null && isFinite(+r.edge)? (Math.abs(+r.edge)<=1? +r.edge*100 : +r.edge) : (prob!=null && can.length? (prob-Math.min(...can))*100 : null);
+      return {r, prob, pp, kp, edge:edge==null? null : Math.round(edge)};
+    });
+    const best=info.reduce((m,x)=> x.edge!=null && x.edge>0 && (m==null || x.edge>m.edge)? x : m, null);
+    const cell=(name, v, d, on)=> v==null? `<span class="psl-px none">—</span>`
+      : name==='P' && thin(d)? `<span class="psl-px thin" title="Less than $25 is offered near this price on Polymarket">thin</span>`
+      : `<span class="psl-px${on? ' on' : ''}${thin(d)? ' thin' : ''}">${Math.round(v*100)}¢${thin(d)? '<i>thin</i>' : ''}</span>`;
+    el.innerHTML=`<div class="psl" role="table" aria-label="${esc((o.statText||'Prop')+': every listed line')}">`+
+      `<div class="psl-hd" role="row"><span role="columnheader">Line</span><span role="columnheader">Model</span><span role="columnheader" title="Polymarket"><span class="psl-lg">Polymarket</span><span class="psl-sm" aria-hidden="true">Poly</span></span><span role="columnheader">Kalshi</span><span role="columnheader">Edge</span></div>`+
+      info.map((x,i)=>`<button type="button" class="psl-row${x===best? ' best' : ''}" role="row" data-i="${i}">`+
+        `<span class="psl-line" role="cell"><span class="leantag ${esc(x.r.side)}">${esc(x.r.side)}</span> <b>${esc(x.r.line)}</b>${listTags(x.r.listed)}${x===best? '<span class="pst-tag best">best edge</span>' : ''}</span>`+
+        `<span class="psl-pr" role="cell">${x.prob!=null? Math.round(x.prob*100)+'%' : '—'}</span>`+
+        `<span role="cell">${cell('P', x.pp, x.r.pd, x.r.vn!=='K' && x.pp!=null)}</span>`+
+        `<span role="cell">${cell('K', x.kp, x.r.kd, x.r.vn==='K')}</span>`+
+        `<span class="psl-ed ${x.edge==null? '' : x.edge>=0? 'pos' : 'neg'}" role="cell">${x.edge==null? '—' : (x.edge>=0? '+' : '−')+Math.abs(x.edge)}</span></button>`).join('')+
+      `</div><p class="psl-note">${esc(o.statText||'')} · edge = model chance minus the cheaper price with $25+ offered, in points. “thin” = under $25 offered near that price. Research, not betting advice.</p>`;
+    el.querySelectorAll('.psl-row').forEach(b=>b.onclick=()=>{ if(o.open) o.open(info[+b.dataset.i].r); });
+  }
+
+  // ---- exact-market links: a page's DB.links (the builders' depth.exchange_links) -> {P, K} URLs for one game
+  // and prop, null where unknown (the sheet then links the exchange's home page). ----
+  function exchangeUrls(links, gid, stat){
+    const g=links && gid!=null? links[String(gid)] : null, out={P:null, K:null};
+    if(!g) return out;
+    if(g.p && /^[a-z0-9-]+$/.test(g.p)) out.P='https://polymarket.us/event/'+g.p;
+    const ev=g.k && stat!=null? g.k[String(stat)] : null;
+    if(ev && /^[A-Za-z0-9]+-[A-Za-z0-9]+$/.test(ev)){ const s=ev.split('-')[0].toLowerCase(); out.K='https://kalshi.com/markets/'+s+'/props/'+ev.toLowerCase(); }
+    return out;
+  }
+
+  // ---- bet calculator: one prop at the price you type. cfg.getPick() -> {prob, lo, hi, price, name, statText, side, line} or null.
+  // The price box starts at the pick's price (fraction or cents) and keeps what you type until the pick changes.
+  // Returns {refresh()}: call it when the page's current pick changes. ----
+  function betCalc(el, cfg){
+    if(!el) return {refresh(){}};
+    cfg=cfg||{};
+    const uid='psc'+Math.random().toString(36).slice(2, 8);
+    let sig=null;
+    function refresh(){
+      let p=null; try{ p=cfg.getPick && cfg.getPick(); }catch(e){ p=null; }
+      if(!p || p.prob==null){ sig=null; el.innerHTML=`<p class="mktnote">Pick a player, a prop and a line to price it here.</p>`; return; }
+      const s=[p.name, p.statText, p.side, p.line].join('|'), inp=el.querySelector('.psc-in');
+      const keep= s===sig && inp? inp.value : (frac(p.price)!=null? String(Math.round(frac(p.price)*100)) : '');
+      sig=s;
+      el.innerHTML=`<div class="psc">`+
+        `<p class="psc-what">${p.name? `<b>${esc(p.name)}</b> · ` : ''}<span class="leantag ${esc(p.side)}">${esc(p.side)} ${esc(p.line)}</span> ${esc(p.statText)}</p>`+
+        `<div class="psc-row"><label for="${uid}">Your price</label><span class="psc-box"><input class="psc-in" id="${uid}" type="number" inputmode="numeric" min="1" max="99" step="1" value="${esc(keep)}" placeholder="45"><span aria-hidden="true">¢</span></span>`+
+        `<span class="mktmuted">what you'd pay for this side on Polymarket or Kalshi</span></div><div class="psc-out" aria-live="polite"></div></div>`;
+      el.querySelector('.psc-in').addEventListener('input', ()=>out(p));
+      out(p);
+    }
+    function out(p){
+      const box=el.querySelector('.psc-out'), c=parseFloat(el.querySelector('.psc-in').value), prob=frac(p.prob);
+      const lo=frac(p.lo), hi=frac(p.hi), range=lo!=null && hi!=null? ` (range ${Math.round(lo*100)}–${Math.round(hi*100)}%)` : '';
+      if(!(isFinite(c) && c>=1 && c<=99)){
+        box.innerHTML=`<p class="mktnote">Model chance for this side: <b>${pctTxt(prob)}</b>${range}. Type the price you see, in cents, for the payout, the edge and a stake guide.</p>`; return;
+      }
+      const price=c/100, mult=1/price, edge=prob-price, ev=prob*mult-1, b=mult-1, qk=Math.max(0, (prob*b-(1-prob))/b)/4;
+      const conf= lo!=null && lo>price? 'Even the low end of the model range is above this price.' : hi!=null && hi<price? 'Even the high end of the model range is below this price: the market disagrees with the history.' : lo!=null? 'The price sits inside the model range: no clear edge either way.' : '';
+      box.innerHTML=`<div class="pst-sum">`+
+        `<div><span class="lab">Pays</span><b>${multTxt(mult)}</b><span class="sub">$10 returns $${(10*mult).toFixed(2)}</span></div>`+
+        `<div><span class="lab">Model chance</span><b>${pctTxt(prob)}</b><span class="sub">price implies ${Math.round(c)}%</span></div>`+
+        `<div><span class="lab">Edge</span><b class="${edge>=0? 'pos' : 'neg'}">${edge>=0? '+' : '−'}${Math.abs(Math.round(edge*100))}</b><span class="sub">points over the price</span></div>`+
+        `<div><span class="lab">Expected return</span><b class="${ev>=0? 'pos' : 'neg'}">${ev>=0? '+' : '−'}${Math.abs(Math.round(ev*100))}¢</b><span class="sub">per $1 · ¼-Kelly ${(qk*100).toFixed(1)}% of bankroll</span></div>`+
+        `</div><p class="mktnote psc-fine">${conf} Edge = model chance minus the price; expected return = chance × payout − 1. Kelly sizing assumes the model is right, and it isn't always, so a quarter of it is shown. Research, not betting advice.</p>`;
+    }
+    refresh();
+    return {refresh};
+  }
+
+  // ---- parlay slip (any sport): your own legs, saved per sport on this device (psl_slip_<sport>).
+  // cfg: {sport, getCurrent() -> leg or null (the prop on screen), legsFor(legs) -> the same legs with today's
+  // prob/price (optional; matched by key, a missing one keeps its saved numbers), open(leg) (optional)}.
+  // leg: {key, gid, pid, name, statText, side, line, prob, price}. Each leg's price is editable.
+  // Returns {add(leg), refresh(), clear(), legs()}. ----
+  const SLIP_MAX=12;
+  function parlaySlip(el, cfg){
+    cfg=cfg||{};
+    const KEY='psl_slip_'+String(cfg.sport||'x');
+    let legs=(lsGet(KEY, [])||[]).filter(l=>l && l.key!=null);
+    const save=()=>lsSet(KEY, legs);
+    const clean=l=>({key:String(l.key), gid:l.gid==null? '' : String(l.gid), pid:l.pid==null? '' : String(l.pid), name:String(l.name||''),
+      statText:String(l.statText||''), side:l.side==='under'? 'under' : 'over', line:l.line, prob:frac(l.prob), price:frac(l.price), my:l.my!=null? +l.my : null});
+    legs=legs.map(clean);
+    function sync(){
+      if(typeof cfg.legsFor!=='function' || !legs.length) return;
+      let fresh=[]; try{ fresh=cfg.legsFor(legs.map(l=>Object.assign({}, l)))||[]; }catch(e){ fresh=[]; }
+      const by={}; fresh.forEach(f=>{ if(f && f.key!=null) by[String(f.key)]=f; });
+      legs.forEach(l=>{ const f=by[l.key]; if(!f) return; if(f.prob!=null) l.prob=frac(f.prob); if(f.price!==undefined) l.price=frac(f.price); });
+      save();
+    }
+    function add(leg){
+      if(!leg || leg.key==null){ toast('Pick a player, a prop and a line first'); return false; }
+      const l=clean(leg);
+      if(legs.some(x=>x.key===l.key)){ toast('That prop is already in your slip'); return false; }
+      if(legs.length>=SLIP_MAX){ toast(`A slip holds up to ${SLIP_MAX} legs`); return false; }
+      legs.push(l); save(); draw(); toast('Added to your parlay slip'); return true;
+    }
+    const legPx=l=> l.my!=null && l.my>=1 && l.my<=99? l.my/100 : l.price;
+    function sumHtml(){
+      if(!legs.length) return '';
+      const probs=legs.map(l=>l.prob), pxs=legs.map(legPx), allP=probs.every(p=>p!=null), allX=pxs.every(x=>x!=null && x>0);
+      const chance=allP? probs.reduce((a,b)=>a*b, 1) : null, pay=allX? pxs.reduce((a,x)=>a/x, 1) : null, ev=chance!=null && pay!=null? chance*pay-1 : null;
+      const g={}; legs.forEach(l=>{ if(l.gid) g[l.gid]=(g[l.gid]||0)+1; });
+      const same=Object.values(g).filter(n=>n>1).reduce((a,n)=>a+n, 0);
+      return `<div class="pst-sum">`+
+        `<div><span class="lab">Model chance</span><b>${chance!=null? pctTxt(chance) : '—'}</b><span class="sub">all ${legs.length} leg${legs.length>1? 's' : ''} hit</span></div>`+
+        `<div><span class="lab">Pays</span><b>${pay!=null? multTxt(pay) : '—'}</b><span class="sub">${pay!=null? `$10 returns $${(10*pay).toFixed(2)}` : 'type every price'}</span></div>`+
+        `<div><span class="lab">Fair payout</span><b>${chance? multTxt(1/chance) : '—'}</b><span class="sub">break-even for that chance</span></div>`+
+        `<div><span class="lab">Expected return</span><b class="${ev==null? '' : ev>=0? 'pos' : 'neg'}">${ev!=null? (ev>=0? '+' : '−')+Math.abs(Math.round(ev*100))+'¢' : '—'}</b><span class="sub">per $1, at your prices</span></div>`+
+        `</div>`+
+        (same? `<div class="pst-warn" role="note"><b>${same} legs come from the same game.</b> Props in one game move together (a quarterback's yards and his receiver's, a scorer's points and his team's total), so the chance above, which treats the legs as independent, is not reliable for them. Read it as a rough guide.</div>` : '');
+    }
+    function draw(){
+      if(!el) return;
+      let cur=null; try{ cur=cfg.getCurrent && cfg.getCurrent(); }catch(e){ cur=null; }
+      const curIn= cur && cur.key!=null && legs.some(l=>l.key===String(cur.key));
+      el.innerHTML=`<div class="pss">`+
+        `<div class="pss-top"><button type="button" class="btn pss-add"${!cur || curIn? ' disabled' : ''}>${curIn? '✓ In your slip' : '＋ Add current pick'}</button>`+
+          (cur && !curIn? `<span class="pss-cur">${esc(cur.name)} <span class="leantag ${esc(cur.side)}">${esc(cur.side)}</span> ${esc(cur.line)} ${esc(cur.statText)}</span>` : !cur? `<span class="mktmuted">Open a player's prop to add it.</span>` : '')+`</div>`+
+        (legs.length
+          ? `<ol class="pss-legs">${legs.map((l,i)=>`<li class="pss-leg"><button type="button" class="pss-who" data-i="${i}"${cfg.open? '' : ' disabled'}><b>${esc(l.name)}</b> <span class="leantag ${esc(l.side)}">${esc(l.side)}</span> ${esc(l.line)} ${esc(l.statText)}</button>`+
+              `<span class="pss-pr">${l.prob!=null? Math.round(l.prob*100)+'%' : '—'}<small>model</small></span>`+
+              `<label class="pss-px"><span class="sr">Your price for ${esc(l.name)}, cents</span><input type="number" inputmode="numeric" min="1" max="99" step="1" data-i="${i}" value="${esc(l.my!=null? l.my : l.price!=null? Math.round(l.price*100) : '')}" placeholder="¢"><span aria-hidden="true">¢</span></label>`+
+              `<button type="button" class="pss-rm" data-i="${i}" aria-label="Remove ${esc(l.name)} ${esc(l.statText)}">✕</button></li>`).join('')}</ol>`+
+            `<div class="pss-sum" aria-live="polite">${sumHtml()}</div>`+
+            `<div class="pss-foot"><button type="button" class="btn ghost pss-clear">Clear slip</button></div>`+
+            `<p class="mktnote pss-fine">The chance multiplies each leg's model chance, which treats the legs as independent; the payout multiplies 1 / each price, starting from the live price (edit any of them to what you see). Research, not betting advice.</p>`
+          : `<p class="mktnote">Your slip is empty. Open any prop and tap <b>＋ Add current pick</b> to build a parlay: you'll see the model's chance that every leg hits and the payout at your prices. Saved on this device.</p>`)+
+        `</div>`;
+      const ab=el.querySelector('.pss-add'); if(ab) ab.onclick=()=>{ let c=null; try{ c=cfg.getCurrent && cfg.getCurrent(); }catch(e){} add(c); };
+      el.querySelectorAll('.pss-rm').forEach(b=>b.onclick=()=>{ legs.splice(+b.dataset.i, 1); save(); draw(); });
+      el.querySelectorAll('.pss-px input').forEach(inp=>inp.addEventListener('input', ()=>{
+        const v=parseFloat(inp.value), l=legs[+inp.dataset.i]; if(!l) return;
+        l.my= isFinite(v) && v>=1 && v<=99? Math.round(v) : null; save();
+        const s=el.querySelector('.pss-sum'); if(s) s.innerHTML=sumHtml(); }));
+      el.querySelectorAll('.pss-who').forEach(b=>b.onclick=()=>{ const l=legs[+b.dataset.i]; if(l && cfg.open) cfg.open(Object.assign({}, l)); });
+      const cb=el.querySelector('.pss-clear'); if(cb) cb.onclick=()=>{ legs=[]; save(); draw(); };
+    }
+    sync(); draw();
+    return {add, refresh(){ sync(); draw(); }, clear(){ legs=[]; save(); draw(); }, legs(){ return legs.map(l=>Object.assign({}, l)); }};
+  }
+
   return {teamVars, parlaySearch, parlayFinder, ticker, until, skeleton, esc, hashFor, pickHash, parsePickHash, syncHash, sharePick, toast, helpBtn, spark, verdict, icon, sheet, closeSheet, pickSheet, relatedPicks,
-          isTracked, toggleBet, renderBets, loadBets, fairOf, setFair, pxMove, lockBadge, lockRibbon, lockNote, startLabel, gameTime, liveUS, venues, venueName, thinPrice, cap, capPick, thinOut, getView, setView};
+          isTracked, toggleBet, renderBets, loadBets, fairOf, setFair, pxMove, pxSpark, lockBadge, lockRibbon, lockNote, startLabel, gameTime, liveUS, venues, venueName, thinPrice, cap, capPick, thinOut, getView, setView,
+          watch, starBtn, renderWatchlist, filterBar, lineLadder, exchangeUrls, betCalc, parlaySlip};
 })();
 
 // ---- live tracker: follows picks through today's games from ESPN's public box scores ----
@@ -1201,4 +1588,43 @@ window.PSLive=(function(){
   }
   document.addEventListener('click', onClick, true);
   document.addEventListener('auxclick', e => { if (e.button === 1) onClick(e); }, true);   // middle-click: new tab
+})();
+
+// ---- offline app: sw.js keeps the last good copy of each page and data file for when the network is down ----
+// Pages and data always come from the network when it answers; a saved copy is only used when it doesn't,
+// and then this bar says so ("Offline: showing data from ..."). Not on the team dashboard.
+// ?nosw on any page removes the worker and its caches from this browser (sw.js has a site-wide KILL switch).
+(function(){
+  const sw = navigator.serviceWorker;
+  if (!sw || location.pathname.startsWith('/team/')) return;
+  if (!(location.protocol === 'https:' || /^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname))) return;
+  if (/[?&]nosw\b/.test(location.search)) {
+    if (sw.controller) sw.controller.postMessage({type: 'nosw'});   // stops it answering this page's requests too
+    sw.getRegistrations().then(rs => rs.forEach(r => r.unregister())).catch(() => {});
+    if (window.caches) caches.keys().then(ks => ks.forEach(k => k.startsWith('psl-') && caches.delete(k))).catch(() => {});
+    return;
+  }
+  function bar(when){
+    if (document.getElementById('psoffline')) return;
+    const d = when ? new Date(when) : null, ok = d && !isNaN(d);
+    const sameDay = ok && d.toDateString() === new Date().toDateString();
+    const t = ok ? d.toLocaleString([], sameDay ? {hour:'numeric', minute:'2-digit'} : {month:'short', day:'numeric', hour:'numeric', minute:'2-digit'}) : '';
+    const b = document.createElement('div');
+    b.id = 'psoffline'; b.setAttribute('role', 'status');
+    b.style.cssText = 'position:fixed;left:50%;bottom:12px;transform:translateX(-50%);z-index:9999;max-width:calc(100% - 32px);display:flex;align-items:center;gap:10px;' +
+      'padding:8px 10px 8px 14px;border-radius:999px;background:#241a0e;border:1px solid #6a5326;color:#f6ecd9;font:500 13.5px/1.3 var(--ps-body,system-ui,sans-serif);box-shadow:0 6px 20px rgba(0,0,0,.35)';
+    b.innerHTML = `<span>${navigator.onLine ? 'No connection to the site' : 'Offline'}: showing data from ${t || 'your last visit'}. Prices may have moved.</span>` +
+      '<button type="button" style="flex:none;border:0;border-radius:999px;padding:6px 12px;background:#e8b54a;color:#241a0e;font-family:inherit;font-weight:700;font-size:13px;line-height:1;cursor:pointer">Retry</button>';
+    b.querySelector('button').onclick = () => location.reload();
+    (document.body || document.documentElement).appendChild(b);
+  }
+  sw.addEventListener('message', e => { if (e.data && e.data.type === 'psl-offline') bar(e.data.when); });
+  sw.startMessages && sw.startMessages();
+  addEventListener('load', () => {
+    sw.register('/sw.js').catch(() => {});
+    // was this page itself the saved copy? (the worker can't message a page before it exists, so ask)
+    const url = location.href.split('#')[0];
+    if (sw.controller) sw.controller.postMessage({type: 'status', url});
+    else sw.ready.then(r => r.active && r.active.postMessage({type: 'status', url, save: true}));   // first visit: loaded before the worker
+  });
 })();

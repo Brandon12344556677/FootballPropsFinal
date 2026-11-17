@@ -91,7 +91,7 @@ def game_props(sport, db, picks_doc, labels, now):
         g["props"].append({"pid": str(p["pid"]), "player": p["player"], "team": p.get("team"), "stat": p["stat"],
                            "statText": labels.get(p["stat"], p["stat"]), "line": p["line"], "side": p.get("side") or "over",
                            "prob": prob, "price": price, "edge": None if price is None else prob - price,
-                           "verdict": label, "cls": cls})
+                           "verdict": label, "cls": cls, "vn": p.get("vn")})
     return games
 
 
@@ -146,7 +146,7 @@ def game_page(sport, g, built):
     desc = (f"{away} @ {home} ({name}, {when(g['start'], g.get('timed', True))}): {n} player props with the model's chance, the market price"
             f"{f', {len(values)} on the Value and Top 25 lists' if values else ''}. Free, updated every 10 minutes.")
     h = P.HEAD.format(title=P.esc(title), desc=P.esc(desc), url=url, og_title=P.esc(f"{away} @ {home} player props"),
-                      site=SITE, css=P.CSS + GAME_CSS, crumbs=f'<a href="/{OUT}/">Games</a> · {name}').replace('content="profile"', 'content="website"').replace('</head>', GC_TAG + '</head>', 1)
+                      site=SITE, css=P.CSS + GAME_CSS, crumbs=f'<a href="/{OUT}/">Games</a> · {name}').replace('content="profile"', 'content="website"').replace("/og/site.png", f"/og/{sport}.png").replace('</head>', GC_TAG + '</head>', 1)
     h += f"  <h1>{P.esc(away)} @ {P.esc(home)} player props</h1>\n"
     h += f'  <p class="sub">{name} · {P.esc(when(g["start"], g.get("timed", True)))} · {n} props modeled · updated {P.esc(built)}</p>\n'
     h += f'  <p><a class="cta" href="/{sport}.html">Open the {name} board →</a></p>\n'
@@ -212,7 +212,7 @@ def best_page(sport, rows, built, today):
     desc = (f"Today's best {name} player props: {len(values)} value spot{'' if len(values) == 1 else 's'} and the surest props on the "
             f"slate, with the model's chance and the market price. Free, updated every 10 minutes.")
     h = P.HEAD.format(title=P.esc(title), desc=P.esc(desc), url=url, og_title=P.esc(f"Best {name} player props today"),
-                      site=SITE, css=P.CSS + GAME_CSS, crumbs=f'<a href="/{BEST}/">Best props</a> · {name}').replace('content="profile"', 'content="website"').replace('</head>', GC_TAG + '</head>', 1)
+                      site=SITE, css=P.CSS + GAME_CSS, crumbs=f'<a href="/{BEST}/">Best props</a> · {name}').replace('content="profile"', 'content="website"').replace("/og/site.png", f"/og/{sport}.png").replace('</head>', GC_TAG + '</head>', 1)
     h += f"  <h1>Best {name} player props today</h1>\n"
     h += f'  <p class="sub">{P.esc(day)} · from every upcoming {name} game · updated {P.esc(built)}</p>\n'
     h += f'  <p><a class="cta" href="/{sport}.html">Open the {name} board →</a></p>\n'
@@ -253,6 +253,24 @@ def best_index(counts, built):
     return h + P.FOOT.replace('<a href="/players/">All players</a>', f'<a href="/players/">All players</a> · <a href="/{OUT}/">All games</a>')
 
 
+def og_image(sport, key=None):
+    """The wide preview card cards.py drew for this pick (or the sport's card), else the logo."""
+    for path in ([os.path.join(SHARE, sport, key + ".png")] if key else []) + [os.path.join("og", sport + ".png")]:
+        if os.path.exists(path):
+            url = f"{SITE}/{path.replace(os.sep, '/')}"
+            return (f"<meta property=\"og:image\" content=\"{url}\">\n<meta property=\"og:image:width\" content=\"1200\">\n"
+                    f"<meta property=\"og:image:height\" content=\"630\">\n<meta name=\"twitter:card\" content=\"summary_large_image\">\n"
+                    f"<meta name=\"twitter:image\" content=\"{url}\">\n")
+    return f"<meta property=\"og:image\" content=\"{SITE}/icon-512.png\">\n<meta name=\"twitter:card\" content=\"summary\">\n"
+
+
+def card_job(sport, c, g, today):
+    """What cards.py needs to draw a Value pick's share card (.cards/queue.json)."""
+    return {"sport": sport, "key": share_key(c), "asOf": today.strftime("%b ") + str(today.day),
+            "game": f"{g['away']} @ {g['home']} · {when(g['start'], g.get('timed', True))}",
+            "pick": {k: c.get(k) for k in ("player", "side", "line", "statText", "prob", "price", "vn")}}
+
+
 def share_page(sport, c, g):
     """A link preview for one pick: the title and description a chat app shows, then straight on to
     the pick on its board. noindex: it's a doorway for shared links, not a page to rank."""
@@ -270,7 +288,7 @@ def share_page(sport, c, g):
             "<meta property=\"og:type\" content=\"website\">\n"
             f"<meta property=\"og:url\" content=\"{e(target)}\">\n<meta property=\"og:title\" content=\"{t}\">\n"
             f"<meta property=\"og:description\" content=\"{d}\">\n<meta property=\"og:site_name\" content=\"Prop Streak Lab\">\n"
-            f"<meta property=\"og:image\" content=\"{SITE}/icon-512.png\">\n<meta name=\"twitter:card\" content=\"summary\">\n"
+            + og_image(sport, share_key(c)) +
             f"<meta name=\"twitter:title\" content=\"{t}\">\n<meta name=\"twitter:description\" content=\"{d}\">\n"
             f"<meta http-equiv=\"refresh\" content=\"0; url={e(target)}\">\n"
             f"<script>location.replace({json.dumps(target)});</script>\n</head>\n"
@@ -297,7 +315,7 @@ def main():
         P.FAIR_W = T.fair_weight([(sp, T.load(pf)) for sp, _, pf, _ in T.SPORTS if os.path.exists(pf) and sp not in T.NOT_FEATURED])["w"]
     except Exception as e:
         print(f"  fair weight: default ({e})")
-    listing, keep, best_counts = {}, set(), {}
+    listing, keep, best_counts, card_jobs = {}, set(), {}, []
     try:   # {sport: {share key: expiry date}}: every share page still kept, so old links don't break
         with open(os.path.join(SHARE, "keys.json"), encoding="utf-8") as f:
             kept = json.load(f)
@@ -328,6 +346,8 @@ def main():
                     f.write(share_page(sport, p, g))
                 expires = (g["start"].astimezone(ET).date() + datetime.timedelta(days=SHARE_DAYS)).isoformat()
                 kept.setdefault(sport, {})[k] = max(expires, kept.get(sport, {}).get(k, ""))
+                if p["cls"] == "value":
+                    card_jobs.append(card_job(sport, p, g, now.astimezone(ET).date()))
             os.makedirs(os.path.join(OUT, sport), exist_ok=True)
             for g in sorted(games.values(), key=lambda g: g["start"]):
                 page, url = game_page(sport, g, built)
@@ -351,8 +371,9 @@ def main():
         d = os.path.join(SHARE, sport)        # share pages go only once expired
         if os.path.isdir(d):
             for fn in os.listdir(d):
-                if fn.endswith(".html") and fn[:-5] not in kept.get(sport, {}):
-                    os.remove(os.path.join(d, fn))
+                stem = fn.rsplit(".", 1)[0]
+                if fn.endswith((".html", ".png")) and stem not in kept.get(sport, {}):
+                    os.remove(os.path.join(d, fn))     # a share card goes with its page
     os.makedirs(OUT, exist_ok=True)
     with open(os.path.join(OUT, "index.html"), "w", encoding="utf-8") as f:
         f.write(index_page(listing, built))
@@ -362,6 +383,12 @@ def main():
     os.makedirs(SHARE, exist_ok=True)
     with open(os.path.join(SHARE, "keys.json"), "w", encoding="utf-8") as f:   # which picks have a share page (app.js reads it too)
         json.dump(kept, f, separators=(",", ":"), sort_keys=True)
+    try:     # cards.py draws these next (a share page shows its card from the next pass on, the sport's card until then)
+        os.makedirs(".cards", exist_ok=True)
+        with open(os.path.join(".cards", "queue.json"), "w", encoding="utf-8") as f:
+            json.dump(card_jobs, f)
+    except OSError as e:
+        print(f"  card queue: not written ({e})")
     update_sitemap(urls, now.astimezone(ET).date().isoformat())
     print(f"  {OUT}/: {sum(len(v) for v in listing.values())} game page(s), sitemap updated")
     return 0

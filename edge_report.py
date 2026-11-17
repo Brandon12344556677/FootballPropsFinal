@@ -10,6 +10,12 @@ each graded as one bet at the product of its legs' prices), the home page's Pick
 record, return, a likely range (a bootstrap over game days, since picks from one night win
 and lose together) and the last 7 days, so the team sees an edge grow or fade.
 
+Each sport also has two market-move rows: picks whose price had risen, or fallen, MOVE cents or more
+from the first recorded price (px0) to the last one before the game (pxc), bought at that closing
+price. The move is only known at lock, so the closing price is the only one it could be bet at:
+the same picks staked at px0 look far better (or worse) than anyone could have got. Every row
+also carries its average closing line value (clv: pxc minus px0, in cents).
+
 Prices that can't have been real are left out: under 10c, or 35c+ away from the pick's
 first price (a stale or pulled book; depth.guard stops new ones from being recorded).
 
@@ -43,6 +49,18 @@ BOOT = 400
 WAITING = {"nba", "tennis"}   # rows shown even before their first graded pick (NBA season Oct 2026; tennis added Nov 2, 2026)
 WAITING_KEYS = {"parlays", "parlays-nba", "parlays-nfl", "parlay-potd", "spreads-all", "spreads-nba", "spreads-nfl", "spreads-nhl", "spreads-mlb", "botd-value", "botd-lock"}     # and rows for lists that start posting later
 OWN_ROWS = {"parlay", "parlay-nba", "parlay-nfl", "parlay-potd", "spread", "botd"}  # rows that repeat picks already counted: only their own strategies grade them
+MOVE = 3   # cents the price must have moved from its first recording (px0) to the close (pxc) for the market-move rows
+
+
+def moved(sign):
+    """Test for the market-move rows: the pick's price rose (sign 1) or fell (sign -1) MOVE cents or
+    more between its first recording and the last price before its game. stake = "pc" has build()
+    bet the row at that closing price: by the time the move is known, the first price is gone."""
+    def test(p):
+        return p.get("pc") is not None and p.get("mv") is not None and p["mv"] * sign >= MOVE
+    test.stake = "pc"
+    return test
+
 
 STRATEGIES = [   # (key, label, sport or None, test)
     ("nhl-value", "NHL Value spots", "nhl", lambda p: "V" in p["lists"]),
@@ -72,6 +90,16 @@ STRATEGIES = [   # (key, label, sport or None, test)
     ("tennis-games-over", "Tennis total games, overs", "tennis", lambda p: p["stat"] == "games" and p["side"] == "over"),
     ("tennis-games-under", "Tennis total games, unders", "tennis", lambda p: p["stat"] == "games" and p["side"] == "under"),
     ("all-tennis", "Every tennis pick", "tennis", lambda p: True),
+    ("nhl-rose", f"NHL picks whose price rose {MOVE}c+ before lock, bought at the closing price", "nhl", moved(1)),
+    ("nhl-fell", f"NHL picks whose price fell {MOVE}c+ before lock, bought at the closing price", "nhl", moved(-1)),
+    ("nfl-rose", f"NFL picks whose price rose {MOVE}c+ before lock, bought at the closing price", "nfl", moved(1)),
+    ("nfl-fell", f"NFL picks whose price fell {MOVE}c+ before lock, bought at the closing price", "nfl", moved(-1)),
+    ("mlb-rose", f"MLB picks whose price rose {MOVE}c+ before lock, bought at the closing price", "mlb", moved(1)),
+    ("mlb-fell", f"MLB picks whose price fell {MOVE}c+ before lock, bought at the closing price", "mlb", moved(-1)),
+    ("nba-rose", f"NBA picks whose price rose {MOVE}c+ before lock, bought at the closing price", "nba", moved(1)),
+    ("nba-fell", f"NBA picks whose price fell {MOVE}c+ before lock, bought at the closing price", "nba", moved(-1)),
+    ("tennis-rose", f"Tennis picks whose price rose {MOVE}c+ before lock, bought at the closing price", "tennis", moved(1)),
+    ("tennis-fell", f"Tennis picks whose price fell {MOVE}c+ before lock, bought at the closing price", "tennis", moved(-1)),
     ("botd-value", "Value Shot (Pick of the Day, pays 2x+)", "botd", lambda p: p["lists"] == "value"),
     ("botd-lock", "Safe Pick of the Day", "botd", lambda p: p["lists"] == "lock"),
     ("parlays", "Model parlays, NHL (three a day, 3-4.5x, 35-55% by the model)", "parlay", lambda p: True),
@@ -132,9 +160,13 @@ def graded(sport, doc):
         day = et_day(p)
         if not day:
             continue
+        pc = frac(p.get("pxc"))      # the last price before the game: what the market-move rows are bet at
+        if pc is not None and (not 0.10 <= pc <= 0.99 or (p0 is not None and abs(pc - p0) > 0.35)):   # the same test as the price
+            pc = None
         out.append({"sport": sport, "day": day, "pr": pr, "win": p["res"] == "hit", "side": p.get("side") or "over",
                     "stat": p.get("stat"), "line": p.get("line"), "lists": p.get("lists") or "",
-                    "p0": p0, "prob": p.get("prob"), "pos": p.get("pos"), "tour": p.get("tour")})   # for the private rules' filters
+                    "p0": p0, "prob": p.get("prob"), "pos": p.get("pos"), "tour": p.get("tour"),   # for the private rules' filters
+                    "pc": pc, "mv": None if pc is None or p0 is None else round((pc - p0) * 100)})   # whole cents
     return out
 
 
@@ -227,6 +259,7 @@ def summary(rows, today, rng):
     recent = [p for p in rows if p["day"] > week]
     lo, hi = boots[int(BOOT * 0.025)], boots[int(BOOT * 0.975) - 1]
     roi = units / n
+    mv = [p["mv"] for p in rows if p.get("mv") is not None]   # closing line value, where both prices were recorded
     verdict = ("Edge holding" if lo > 0 else "Promising" if roi >= 0.05 else
                "Losing" if hi < 0 or roi <= -0.05 else "No clear edge")
     return {"n": n, "days": len(days), "hit": round(sum(p["win"] for p in rows) / n, 3),
@@ -234,6 +267,7 @@ def summary(rows, today, rng):
             "lo": round(lo, 4), "hi": round(hi, 4), "verdict": verdict,
             "n7": len(recent), "roi7": round(sum(pnl(p) for p in recent) / len(recent), 4) if recent else None,
             "first": min(byday), "last": max(byday),
+            "clv": round(sum(mv) / len(mv), 1) if mv else None, "clvn": len(mv),   # avg cents the price moved toward the pick by the close
             "daily": [[d, round(sum(byday[d]), 2)] for d in sorted(byday)][-30:]}
 
 
@@ -361,7 +395,10 @@ def build(rows, today, seed=1, strategies=None, waiting=()):
     out = []
     for key, label, sport, test in (STRATEGIES if strategies is None else strategies):
         mine = [p for p in rows if (p["sport"] == sport if sport else p["sport"] not in OWN_ROWS) and test(p)]
-        s = summary(mine, today, rng)
+        stake = getattr(test, "stake", None)
+        if stake:   # bet at another recorded price (the close); its own seeded draw, so the rows after it keep their ranges
+            mine = [dict(p, pr=p[stake]) for p in mine]
+        s = summary(mine, today, random.Random(f"{seed}:{key}") if stake else rng)
         if s:
             prev = before(mine, latest) if latest else None
             out.append(dict(s, key=key, label=label, sport=sport, prev=prev, prev_day=latest))

@@ -341,6 +341,38 @@ def ckey(c):
 
 
 FAST_ALL_N = 25                  # the team dashboard's list of every pick moving fast, not only featured ones
+SPARK_N = 24                     # price-since-listed line on the home cards (app.js pxSpark): points kept per pick
+SPARK_GAP = 30                   # a new point every 30 minutes, or sooner when the price changes
+
+
+def spark(feat, hist, now):
+    """{ckey: [[minute, cents], ...]} for every featured pick (kept in fast_hist.json under "spark"):
+    the first price the site recorded (px0) first, then a point per pass when the price changed or
+    SPARK_GAP minutes passed. Picks no longer featured (the game started) drop out."""
+    old = (hist or {}).get("spark") or {}
+    t = int(now.timestamp() // 60)
+    out = {}
+    for c in feat:
+        if c.get("price") is None:
+            continue
+        k = ckey(c)
+        pts = [p for p in old.get(k) or [] if isinstance(p, list) and len(p) == 2]
+        cents = round(c["price"] * 100)
+        if not pts and c.get("px0") is not None:
+            pts = [[t - 1, round(c["px0"] * 100)]]
+        if not pts or cents != pts[-1][1] or t - pts[-1][0] >= SPARK_GAP:
+            pts.append([t, cents])
+        out[k] = pts[-SPARK_N:]
+    return out
+
+
+def with_spark(picks, sp):
+    """Each home pick with its price line ("sp": cents, oldest first) when it has 3+ points."""
+    for p in picks:
+        pts = sp.get(ckey(p)) or []
+        if len(pts) >= 3:
+            p["sp"] = [v for _, v in pts]
+    return picks
 
 
 def fast_moves(cands, hist, now, n=8, pool=None):
@@ -556,6 +588,8 @@ def main():
         old = load(FAST_STATE) if os.path.exists(FAST_STATE) else {}
         fast, hist = fast_moves(cands, old, now, pool=feat)              # the site: featured picks only
         fast_all, _ = fast_moves(cands, old, now, n=FAST_ALL_N)          # the team dashboard: every pick
+        hist["spark"] = spark(feat, old, now)
+        with_spark(picks, hist["spark"])
         # "why": what the site's own news feeds already say (ESPN injury status, MLB lineups, NFL
         # practice reports, via botd.news_flag), or None; the dashboard's Moving fast panel shows it.
         info = {ckey(c): (c.get("lists") or "", c.get("flag") or None) for c in cands}

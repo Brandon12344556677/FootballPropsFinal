@@ -1,0 +1,239 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="robots" content="noindex">
+<title>Card drawer</title>
+<!-- Draws the 1200x630 link-preview cards (og:image) for cards.py, which opens this page in headless
+     Chrome as draw.html?plan=<json file> and reads the images back from the page (the out element). Not a page for people.
+     Same copy rules as the ads: no "bet"/"lock", an 18+ line, research not advice. -->
+<link rel="stylesheet" href="/fonts.css">
+<style>body{margin:0;background:#0a1628}</style>
+</head>
+<body>
+<pre id="out"></pre>
+<script>
+(async () => {
+  const out = document.getElementById('out');
+  const W = 1200, H = 630, PAD = 64;
+  const C = {bg: '#0a1628', surface: '#0f2038', line: '#22354f', text: '#ffffff', soft: '#dfe6ef', muted: '#b8c5d6',
+             green: '#22d07f', ink: '#06210b', red: '#eb6f7d', gold: '#e8b54a'};
+  const DISPLAY = '"Archivo","Inter",sans-serif', BODY = '"Inter",sans-serif';
+  const SPORT = {nfl: 'NFL', nba: 'NBA', nhl: 'NHL', mlb: 'MLB', tennis: 'Tennis'};
+
+  function font(ctx, weight, size, fam) { ctx.font = `${weight} ${size}px ${fam || BODY}`; }
+  // The biggest size from `size` down to `min` at which the text fits in `maxW`; past that, cut with an ellipsis.
+  function fit(ctx, text, weight, size, min, maxW, fam) {
+    let s = size;
+    for (; s > min; s -= 2) { font(ctx, weight, s, fam); if (ctx.measureText(text).width <= maxW) return [text, s]; }
+    font(ctx, weight, min, fam);
+    let t = text;
+    while (t.length > 1 && ctx.measureText(t + '…').width > maxW) t = t.slice(0, -1);
+    return [t === text ? t : t.trimEnd() + '…', min];
+  }
+  function text(ctx, s, x, y, weight, size, color, fam, align) {
+    font(ctx, weight, size, fam); ctx.fillStyle = color; ctx.textAlign = align || 'left'; ctx.fillText(s, x, y);
+    return ctx.measureText(s).width;
+  }
+  // Letter-spaced capitals for labels (canvas letterSpacing where supported, plain otherwise).
+  function caps(ctx, s, x, y, size, color, align) {
+    font(ctx, 700, size); ctx.fillStyle = color; ctx.textAlign = align || 'left';
+    if ('letterSpacing' in ctx) ctx.letterSpacing = Math.round(size * 0.12) + 'px';
+    ctx.fillText(s.toUpperCase(), x, y);
+    const w = ctx.measureText(s.toUpperCase()).width;
+    if ('letterSpacing' in ctx) ctx.letterSpacing = '0px';
+    return w;
+  }
+  function rrect(ctx, x, y, w, h, r, fill, stroke) {
+    ctx.beginPath(); ctx.roundRect(x, y, w, h, r);
+    if (fill) { ctx.fillStyle = fill; ctx.fill(); }
+    if (stroke) { ctx.strokeStyle = stroke; ctx.lineWidth = 2; ctx.stroke(); }
+  }
+  const pct = p => Math.round(p * 100) + '%';
+  const cents = p => Math.round(p * 100) + '¢';
+  const units = u => (u >= 0 ? '+' : '−') + Math.abs(u).toFixed(1) + 'u';
+  const venue = v => v === 'K' ? 'Kalshi' : v === 'P' ? 'Polymarket' : '';
+
+  let logo = null;
+  try { logo = new Image(); logo.src = '/icon-192.png'; await logo.decode(); } catch (e) { logo = null; }
+
+  // Shared frame: background, the green edge, the brand at the top left, a chip at the top right, the footer.
+  function frame(ctx, chip, foot) {
+    ctx.fillStyle = C.bg; ctx.fillRect(0, 0, W, H);
+    ctx.fillStyle = C.green; ctx.fillRect(0, 0, 12, H);
+    if (logo) ctx.drawImage(logo, PAD, 40, 52, 52);
+    text(ctx, 'Prop Streak Lab', PAD + (logo ? 68 : 0), 78, 800, 32, C.text, DISPLAY);
+    if (chip) {
+      font(ctx, 700, 20);
+      if ('letterSpacing' in ctx) ctx.letterSpacing = '2px';
+      const w = ctx.measureText(chip.toUpperCase()).width + 40;
+      if ('letterSpacing' in ctx) ctx.letterSpacing = '0px';
+      rrect(ctx, W - PAD - w, 44, w, 44, 22, 'rgba(34,208,127,.14)', 'rgba(34,208,127,.55)');
+      caps(ctx, chip, W - PAD - w / 2, 73, 20, C.green, 'center');
+    }
+    ctx.fillStyle = C.line; ctx.fillRect(PAD, H - 92, W - 2 * PAD, 2);
+    text(ctx, foot || 'Free research · every pick graded in public · 18+, not betting advice', PAD, H - 44, 500, 22, C.muted);
+    text(ctx, 'propstreaklab.com', W - PAD, H - 44, 800, 26, C.green, BODY, 'right');
+  }
+  // A row of stat tiles: [[label, value, color, note]].
+  function tiles(ctx, rows, y, h) {
+    const gap = 20, w = (W - 2 * PAD - gap * (rows.length - 1)) / rows.length;
+    rows.forEach(([label, value, color, note], i) => {
+      const x = PAD + i * (w + gap);
+      rrect(ctx, x, y, w, h, 20, C.surface, C.line);
+      caps(ctx, label, x + 26, y + 40, 18, C.muted);
+      const [v, s] = fit(ctx, value, 800, 60, 34, w - 52);
+      text(ctx, v, x + 26, y + 50 + s * 0.8, 800, s, color || C.text);
+      if (note) { const [n, ns] = fit(ctx, note, 500, 20, 15, w - 52); text(ctx, n, x + 26, y + h - 20, 500, ns, C.muted); }
+    });
+  }
+  function propLine(p) { return `${p.side === 'under' ? 'Under' : 'Over'} ${p.line} ${p.statText}`; }
+  function last10(p) {
+    const g = (p.l10 || []).filter(v => v !== null && v !== undefined);
+    if (!g.length) return null;
+    const n = g.filter(v => p.side === 'under' ? v < p.line : v > p.line).length;
+    return [`${n} of ${g.length}`, `went ${p.side} ${p.line} lately`];
+  }
+
+  // A 256-colour palette PNG of the canvas: the cards are flat colours plus text edges, so this keeps them
+  // sharp at about a quarter of canvas.toDataURL's size. Colours past the 255 most used snap to the nearest one.
+  const CRC = new Uint32Array(256).map((_, n) => { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1; return c >>> 0; });
+  function crc32(buf) { let c = 0xffffffff; for (let i = 0; i < buf.length; i++) c = CRC[(c ^ buf[i]) & 255] ^ (c >>> 8); return (c ^ 0xffffffff) >>> 0; }
+  function chunk(type, data) {
+    const out = new Uint8Array(12 + data.length), dv = new DataView(out.buffer);
+    dv.setUint32(0, data.length);
+    for (let i = 0; i < 4; i++) out[4 + i] = type.charCodeAt(i);
+    out.set(data, 8);
+    dv.setUint32(8 + data.length, crc32(out.subarray(4, 8 + data.length)));
+    return out;
+  }
+  async function palettePng(cv) {
+    const w = cv.width, h = cv.height, px = cv.getContext('2d').getImageData(0, 0, w, h).data;
+    const count = new Map();
+    for (let i = 0; i < px.length; i += 4) { const k = (px[i] << 16) | (px[i + 1] << 8) | px[i + 2]; count.set(k, (count.get(k) || 0) + 1); }
+    const top = [...count.entries()].sort((a, b) => b[1] - a[1]).slice(0, 256).map(e => e[0]);
+    const index = new Map(top.map((k, i) => [k, i]));
+    const near = k => {
+      let best = 0, bd = Infinity;
+      const r = k >> 16, g = (k >> 8) & 255, b = k & 255;
+      top.forEach((t, i) => { const d = (r - (t >> 16)) ** 2 + (g - ((t >> 8) & 255)) ** 2 + (b - (t & 255)) ** 2; if (d < bd) { bd = d; best = i; } });
+      index.set(k, best); return best;
+    };
+    const raw = new Uint8Array(h * (w + 1));
+    for (let y = 0, o = 0, i = 0; y < h; y++) {
+      raw[o++] = 0;       // filter: none (indexed colours compress best unfiltered)
+      for (let x = 0; x < w; x++, i += 4) { const k = (px[i] << 16) | (px[i + 1] << 8) | px[i + 2]; const v = index.get(k); raw[o++] = v === undefined ? near(k) : v; }
+    }
+    const z = new Uint8Array(await new Response(new Blob([raw]).stream().pipeThrough(new CompressionStream('deflate'))).arrayBuffer());
+    const ihdr = new Uint8Array(13), dv = new DataView(ihdr.buffer);
+    dv.setUint32(0, w); dv.setUint32(4, h); ihdr[8] = 8; ihdr[9] = 3;    // 8-bit indexed
+    const plte = new Uint8Array(top.length * 3);
+    top.forEach((t, i) => { plte[i * 3] = t >> 16; plte[i * 3 + 1] = (t >> 8) & 255; plte[i * 3 + 2] = t & 255; });
+    const parts = [new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10]), chunk('IHDR', ihdr), chunk('PLTE', plte), chunk('IDAT', z), chunk('IEND', new Uint8Array(0))];
+    let bin = '';
+    for (const part of parts) for (let i = 0; i < part.length; i += 0x8000) bin += String.fromCharCode.apply(null, part.subarray(i, i + 0x8000));
+    return 'data:image/png;base64,' + btoa(bin);
+  }
+
+  const DRAW = {
+    // One shared pick: who, the prop, the game, then the model, the price and how far the model is over it.
+    pick(ctx, d) {
+      const p = d.pick;
+      frame(ctx, `${SPORT[d.sport] || d.sport} · ${d.label || 'Value pick'}`);
+      const [name, ns] = fit(ctx, p.player, 800, 96, 54, W - 2 * PAD, DISPLAY);
+      text(ctx, name, PAD, 132 + ns * 0.9, 800, ns, C.text, DISPLAY);
+      let y = 132 + ns * 0.9 + 66;
+      const side = p.side === 'under' ? 'Under' : 'Over';
+      const sw = text(ctx, side + ' ', PAD, y, 800, 50, C.green);
+      const [rest, rs] = fit(ctx, `${p.line} ${p.statText}`, 800, 50, 32, W - 2 * PAD - sw);
+      text(ctx, rest, PAD + sw, y, 800, rs, C.text);
+      y += 46;
+      const [g, gs] = fit(ctx, d.game || '', 500, 28, 20, W - 2 * PAD);
+      text(ctx, g, PAD, y, 500, gs, C.soft);
+      const rows = [['Model', pct(p.prob), C.green, 'chance it hits']];
+      if (p.price != null) rows.push(['Price', cents(p.price), C.text, venue(p.vn) ? 'on ' + venue(p.vn) + (d.asOf ? ', ' + d.asOf : '') : (d.asOf || '')]);
+      if (p.price != null && p.prob > p.price) rows.push(['Model over price', `+${Math.round((p.prob - p.price) * 100)} pts`, C.green, 'the chance minus the price']);
+      else { const l = last10(p); if (l) rows.push(['Recent games', l[0], C.text, l[1]]); }
+      tiles(ctx, rows, 366, 150);
+    },
+    // A sport page: the last 30 days of its lists, losses shown as losses.
+    sport(ctx, d) {
+      frame(ctx, `${SPORT[d.sport]} player props`);
+      const [h, hs] = fit(ctx, d.title, 800, 66, 40, W - 2 * PAD, DISPLAY);
+      text(ctx, h, PAD, 200, 800, hs, C.text, DISPLAY);
+      const [s, ss] = fit(ctx, d.sub, 500, 28, 20, W - 2 * PAD);
+      text(ctx, s, PAD, 252, 500, ss, C.soft);
+      tiles(ctx, d.tiles.map(t => [t[0], t[1], t[2] === 'up' ? C.green : t[2] === 'dn' ? C.red : C.text, t[3]]), 316, 170);
+    },
+    // Pick of the Day: both picks side by side.
+    potd(ctx, d) {
+      frame(ctx, 'Pick of the Day');
+      text(ctx, d.title, PAD, 168, 800, 52, C.text, DISPLAY);
+      const gap = 24, w = (W - 2 * PAD - gap) / 2, y = 206, h = 300;
+      d.slots.forEach((s, i) => {
+        const x = PAD + i * (w + gap);
+        rrect(ctx, x, y, w, h, 22, C.surface, i === 0 ? 'rgba(34,208,127,.6)' : C.line);
+        caps(ctx, s.title + (s.sport ? ' · ' + (SPORT[s.sport] || s.sport) : ''), x + 28, y + 46, 18, i === 0 ? C.green : C.gold);
+        if (!s.pick) { text(ctx, s.empty || 'Posts at 11 AM ET', x + 28, y + 110, 600, 28, C.soft); return; }
+        const p = s.pick;
+        const [n, ns] = fit(ctx, p.player, 800, 50, 30, w - 56, DISPLAY);
+        text(ctx, n, x + 28, y + 108, 800, ns, C.text, DISPLAY);
+        const [l, ls] = fit(ctx, propLine(p), 700, 32, 22, w - 56);
+        text(ctx, l, x + 28, y + 156, 700, ls, C.soft);
+        text(ctx, pct(p.prob), x + 28, y + 246, 800, 62, C.green);
+        caps(ctx, 'model', x + 28, y + 276, 16, C.muted);
+        if (p.price != null) {
+          text(ctx, cents(p.price), x + w / 2, y + 246, 800, 62, C.text);
+          caps(ctx, 'price' + (venue(p.vn) ? ' · ' + venue(p.vn) : ''), x + w / 2, y + 276, 16, C.muted);
+        }
+      });
+    },
+    // The record: every sport's Value units over 30 days, as bars that go red when a list is down.
+    record(ctx, d) {
+      frame(ctx, 'The record', 'Every list in every sport, losses included · 18+, not betting advice');
+      const [h, hs] = fit(ctx, d.title, 800, 60, 38, W - 2 * PAD, DISPLAY);
+      text(ctx, h, PAD, 186, 800, hs, C.text, DISPLAY);
+      text(ctx, d.sub, PAD, 232, 500, 26, C.soft);
+      const rows = d.rows, top = 272, rowH = Math.min(62, (H - 120 - top) / Math.max(1, rows.length));
+      const max = Math.max(1, ...rows.map(r => Math.abs(r.units))), x0 = PAD + 320, bw = W - PAD - x0 - 150;
+      rows.forEach((r, i) => {
+        const y = top + i * rowH;
+        text(ctx, r.label, PAD, y + rowH / 2 + 10, 700, 26, C.text);
+        rrect(ctx, x0, y + 12, bw, rowH - 24, 10, C.surface);
+        const len = Math.max(6, bw * Math.abs(r.units) / max);
+        rrect(ctx, x0, y + 12, len, rowH - 24, 10, r.units >= 0 ? C.green : C.red);
+        text(ctx, units(r.units), W - PAD, y + rowH / 2 + 11, 800, 30, r.units >= 0 ? C.green : C.red, BODY, 'right');
+      });
+    },
+    // The site itself (players, games, guides): what it is and how big the record is.
+    site(ctx, d) {
+      frame(ctx, 'NFL · NBA · NHL · MLB');
+      text(ctx, 'Free player-prop research', PAD, 214, 800, 72, C.text, DISPLAY);
+      const [s, ss] = fit(ctx, 'The model’s chance next to the Polymarket and Kalshi price, for every prop.', 500, 30, 22, W - 2 * PAD);
+      text(ctx, s, PAD, 270, 500, ss, C.soft);
+      tiles(ctx, d.tiles.map(t => [t[0], t[1], t[2] === 'up' ? C.green : t[2] === 'dn' ? C.red : C.text, t[3]]), 330, 156);
+    },
+  };
+
+  try {
+    const q = new URLSearchParams(location.search);
+    const plan = await (await fetch(q.get('plan'), {cache: 'no-store'})).json();
+    await Promise.all(['800 40px "Archivo"', '800 40px "Inter"', '700 40px "Inter"', '500 40px "Inter"'].map(f => document.fonts.load(f)));
+    const fmt = plan.format === 'jpeg' ? 'image/jpeg' : 'image/png';
+    const cards = {};
+    for (const c of plan.cards) {
+      try {
+        const cv = document.createElement('canvas'); cv.width = W; cv.height = H;
+        const ctx = cv.getContext('2d');
+        DRAW[c.kind](ctx, c.data);
+        cards[c.name] = plan.format === 'png8' ? await palettePng(cv) : cv.toDataURL(fmt, 0.9);
+      } catch (e) { cards[c.name] = {error: String(e && e.message || e)}; }
+    }
+    out.textContent = JSON.stringify({ok: true, cards});
+  } catch (e) {
+    out.textContent = JSON.stringify({ok: false, error: String(e && e.stack || e)});
+  }
+})();
+</script>
+</body>
+</html>

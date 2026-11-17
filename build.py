@@ -1925,6 +1925,7 @@ def build_live_picks(picks, slate_games, sched, by_key, snap, pmus=None, kal=Non
                       "pp", "kp", "pd", "kd", "vn", "th", "hd"):
                 ex[k] = f[k]
             ex["pj"] = f.get("pj")    # set only while a price jump waits for confirmation (depth.guard)
+            ex["_ps"], ex["_kt"] = f.get("_ps"), f.get("_kt")   # this run's books (in memory only: depth.exchange_links)
             note_price(ex)
             updated += 1
     return len(fresh), added, updated
@@ -2351,6 +2352,7 @@ def main():
         # live price has moved since: "pid|stat|line|side" -> px0
         "open": {f"{p['pid']}|{p['stat']}|{js_num(p['line'])}|{p['side']}": p["px0"] for p in picks
                  if p["src"] == "live" and p["res"] is None and p.get("px0") is not None},
+        "links": depth.exchange_links(picks),   # exact Polymarket US / Kalshi game pages for the sheet's links
         "players": players,
     }
     sanity_check(db)
@@ -2368,7 +2370,7 @@ def main():
     # SEO: sitemap (with a fresh lastmod each build) and robots.txt.
     site = "https://propstreaklab.com"
     pages = [("/", "daily", "1.0"), ("/nfl.html", "daily", "0.9"), ("/nba.html", "daily", "0.9"),
-             ("/nhl.html", "daily", "0.9"), ("/mlb.html", "daily", "0.9"), ("/tennis.html", "daily", "0.9"), ("/methodology.html", "monthly", "0.6"), ("/privacy.html", "monthly", "0.3"),
+             ("/nhl.html", "daily", "0.9"), ("/mlb.html", "daily", "0.9"), ("/tennis.html", "daily", "0.9"), ("/record.html", "daily", "0.7"), ("/methodology.html", "monthly", "0.6"), ("/privacy.html", "monthly", "0.3"),
              ("/terms.html", "monthly", "0.3"), ("/cookies.html", "monthly", "0.3")]
     with open("sitemap.xml", "w", encoding="utf-8") as f:
         f.write('<?xml version="1.0" encoding="UTF-8"?>\n'

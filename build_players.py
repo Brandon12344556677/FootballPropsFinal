@@ -175,15 +175,17 @@ HEAD = """<!doctype html>
 <meta property="og:title" content="{og_title}">
 <meta property="og:description" content="{desc}">
 <meta property="og:site_name" content="Prop Streak Lab">
-<meta property="og:image" content="{site}/icon-512.png">
-<meta name="twitter:card" content="summary">
+<meta property="og:image" content="{site}/og/site.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
 <link rel="icon" href="/favicon.ico" sizes="48x48">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="icon" href="/icon-192.png" sizes="192x192" type="image/png">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <meta name="theme-color" content="#0a1628">
 <link rel="stylesheet" href="/fonts.css">
-<script src="/thanksgiving.js?v=20261101b"></script>
+<script src="/thanksgiving.js?v=20261117a"></script>
 <style>{css}</style>
 </head>
 <body>

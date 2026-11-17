@@ -28,6 +28,7 @@ import kalshi  # Kalshi prices, side by side with Polymarket's
 import depth   # enough money at the price? (thin-market filter)
 import arbs    # Polymarket US / Kalshi arbitrage finder (team only)
 import holds   # props that wait for injury news
+import slim    # the slim data baked into the page
 
 TODAY = datetime.date.today()
 ET_TODAY = (datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(hours=4)).date().isoformat()
@@ -1722,6 +1723,7 @@ def main():
         "calT": cal_t,
         "record": live_record(picks),
         "us": live_markets(picks),
+        "links": depth.exchange_links(picks, pick_locked),   # exact Polymarket US / Kalshi game pages for the sheet's links
         "players": players,
     }
     payload = json.dumps(db, separators=(",", ":"), ensure_ascii=False)
@@ -1736,8 +1738,11 @@ def main():
             print(f"  WARNING: {TEMPLATE} missing __NHLDATA__ placeholder — not writing {PAGE}")
         else:
             with open(PAGE, "w", encoding="utf-8") as f:
-                f.write(template.replace("__NHLDATA__", payload))
-            print(f"  {PAGE}: written")
+                # the page gets a slim copy: game logs only for players with a pending pick; the rest
+                # load from nhl.json when the page needs them (slim.py, ensureFull() in the template)
+                page_payload = slim.page_payload(db, picks, DATA_FILE, TODAY)
+                f.write(template.replace("__NHLDATA__", page_payload))
+            print(f"  {PAGE}: baked {len(page_payload)} bytes of data (slim; full file {len(payload)})")
     else:
         print(f"  {TEMPLATE} not found — skipping {PAGE}")
 

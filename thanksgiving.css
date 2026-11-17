@@ -6,6 +6,12 @@
    Colors here are written so thanksgiving.js's swap leaves them alone (#2ed18a, not the brand #22d07f). */
 
 html.thanksgiving{--tg-hit:#2ed18a;--tg-hit-ink:#05200f}
+/* the theme itself: app.css's design tokens, overridden (the -rgb ones carry the translucent tints;
+   thanksgiving.js still recolors the few colors pages write from script) */
+html.thanksgiving{
+  --ps-green:#f0a33a; --ps-green-2:#f0a33a; --ps-green-rgb:240,163,58; --ps-mint:#f7cf8e; --ps-green-ink:#2a1606; --ps-ink:#1f1007;
+  --ps-bg:#1c130d; --ps-bg-rgb:28,19,13; --ps-bg-2:#201108; --ps-surface:#38200f; --ps-surface-2:#432714; --ps-line:#4f3522;
+  --ps-soft:#efe6df; --ps-muted:#d6c5b8}
 html.thanksgiving body{
   background-image:
     linear-gradient(rgba(240,163,58,.03) 1px,transparent 1px),
@@ -78,3 +84,6 @@ html.thanksgiving .bs-dots i.miss::before{content:"\2717"}
   .tg-fall,.tg-fall svg,.tg-banner .tg-leaf{animation:none}
   .tg-fall{transform:translateY(calc(var(--x)*0.8vh))}
 }
+
+/* the price sparkline: up stays green (it means the market moved toward the pick) */
+html.thanksgiving .pxs.up{stroke:var(--tg-hit);fill:var(--tg-hit)}

@@ -71,6 +71,21 @@ exchange chip) in Simple.
   expected value and a quarter-Kelly stake.
 - **Parlay builder** — combined model chance, real payout at your prices, and a
   warning when legs come from the same game (they're correlated).
+- **Filter bar** (Today tab, every sport page) — narrow Value spots and Top 25 Surest to one game,
+  one prop, over or under, a price band, or only starred players (`PS.filterBar`, app.js). Remembered
+  on the device per sport.
+- **Watchlist across sports** — a ☆ on every pick card and in each pick's details sheet stars the
+  player; the Tools tab's Watchlist shows every starred player's upcoming priced props on that page
+  and links to starred players on the other sport pages (`PS.watch`, `PS.renderWatchlist`; saved on
+  the device in `psl_watch_all`, older per-sport watchlists carried over).
+- **Every listed line** (Player tab, NFL/NBA/NHL/MLB) — under the verdict, every line the exchanges
+  list for that player and stat, with the model's chance, both prices and the edge, the best edge
+  marked (`PS.lineLadder`). Tennis lists the player's upcoming priced sides instead.
+- **Exact market links** — "Find this prop on Polymarket / Kalshi" opens that game's market, not the
+  exchange's home page: the builders save each game's Polymarket US event and Kalshi event per stat
+  (`depth.exchange_links` → `links` in each sport's JSON), and `PS.exchangeUrls` builds the URLs.
+- **Bet calculator and parlay builder on every sport** — the NFL page's tools, shared in app.js
+  (`PS.betCalc`, `PS.parlaySlip`) and added to the NBA, NHL, MLB and tennis Tools tabs.
 - **Parlay by payout** (Tools tab, every sport page, tennis included) — set a payout range (say
   1.4x–1.6x), a lowest model chance (say 90%) and the most legs, and `PS.parlayFinder` (app.js)
   finds the parlay with the highest model chance whose real payout lands in the range: each leg at
@@ -138,6 +153,16 @@ details (`REF` in `app.js`) and `guides/polymarket-and-kalshi.html`. (The sport 
 buttons for the two exchanges were removed on Oct 15, 2026.) The boards' "Join our Polymarket
 group" button links to the Prop Streak Lab squad, also without a referral tag.
 
+## Offline app
+`sw.js` (a service worker, registered by `app.js`) makes the home-screen app open instantly and keeps
+working offline. Pages and `.json` data always come from the network when it answers, and are saved
+as they load; only when the network fails or stays silent for 4 seconds does the last saved copy come
+back, with a small bar saying "Offline: showing data from 9:42 PM". A page never saved shows
+`offline.html`. `app.js`, `app.css`, fonts and icons are served from the cache (a new `?v=` is a new
+file). Prices fetched from Polymarket/Kalshi, anything under `/team/` and any `{cache:'no-store'}`
+fetch are never cached. `?nosw` on any page removes it from that browser; `KILL = true` in `sw.js`
+removes it everywhere.
+
 ---
 
 ## What's in this folder
@@ -151,7 +176,9 @@ group" button links to the Prop Streak Lab squad, also without a referral tag.
 | `slate.json` | This week's Polymarket player-prop events, used by the board scan. |
 | `picks.json` | Every recorded pick, live and backtest, with grades. Read by the Past picks tab. |
 | `build_tennis.py` | The tennis builder (ATP and WTA singles, match markets, not player props). Reads every result from ESPN's tennis scoreboards (cached in `tennis_results.json`), rates every player (Elo, overall and per surface), plays each upcoming match out game by game for the chance of every scoreline, prices the match winner (Polymarket US and Kalshi), set winners, exact scores, game spreads and total games (Kalshi), records and grades the picks (`tennis_picks.json`), and writes `tennis.json` and `tennis.html` (from `tennis_template.html`). `python build_tennis.py backtest` prints the calibration and totals checks. Standard library only; never fails the deploy. |
+| `build_record.py` | Writes the public **Record page** (`record.html`, `record.json`, from `record_template.html`) every pass: every list in every sport, all-time and last 30 days (picks, hit rate, units and return at the recorded price, price move), a weekly units line per list, calibration, model vs. market (Brier scores), Pick of the Day, and a "What's losing" block that names the lists that are down. Tennis is shown apart as a sport under test. Linked from the trust line on every page. Tested in `test_build_record.py`. |
 | `build_today.py` | Runs after the five builders and writes `today.json` from their picks and season records, plus `live` (every Value and Top 25 pick in today's games, which the home page's "Live now" section follows from ESPN's live box scores, with your tracked bets) and three agent feeds: `fast` (featured props whose price moved 10¢+ in the last hour, from snapshots in `fast_hist.json`; shown on the home page and in the board's pick details), `fastAll` (the same for every upcoming priced pick, Value and Top 25 or not, up to 25, each with `why`: what the injury and lineup feeds say; the team dashboard's Moving fast panel), `flags` (featured picks whose player is on an injury report or missing from a posted lineup) and `promo` (today's Value spots against a usual day), both for the team dashboard. Standard library only; never fails the deploy. |
+| `slim.py` | Keeps the NHL, NBA and MLB pages light. Each builder still writes its full `<sport>.json` (every player's game log, read by the other scripts), but bakes a slim copy into `<sport>.html`: only players with a pending pick on a list (the Today tab's cards) keep their game logs; everyone else keeps their name, position and team (`lazy: 1`, `gn` = games). The page draws Today from that, then loads `<sport>.json` in the background (`ensureFull()` in each template) and waits on it wherever another player's log is needed: the Player tab, the hit-streak leaderboard, Compare, tracked bets, the parlay slip and the bet-slip scanner. If that file can't load, the page says so and the picks keep working. Tested in `test_slim_players.py`. |
 | `today.json` | The home page's cross-sport **Today** feed (the best upcoming value spots, at most 3 per sport up top, each linking to its prop) and the season records on the sport tiles. |
 | `botd.py` | **Pick of the Day** for the home page (renamed from "Bet of the Day", its Lock now "Safe Pick", for Meta ad review), run by `build_today.py`: a **Safe Pick** (`lock` in the data) (Polymarket price 90–96¢ and a model chance of 90%+: 135 of 138 graded picks like that hit) and a **Value Shot** (price 30–50¢, so 2x or more, and a model chance of 70–80%), from every sport's upcoming picks. Picked from 11 AM ET, never swapped once posted, "No bet today" if nothing qualifies by 7:30 PM ET. Skips players the news flags (injury status, limited practice, not in a posted lineup) and props with under 6 effective games. Graded from each sport's own picks file; a DNP is a void. |
 | `botd.json` | Every Bet of the Day ever posted (that's the record), its results, the running record per slot, and how picks inside each slot's price/chance window have done on the whole graded record (the "picks like this" rate the home page quotes). |
@@ -162,8 +189,10 @@ group" button links to the Prop Streak Lab squad, also without a referral tag.
 | `test_news.py` | Unit tests for `news.py` and the builders' `news_test` steps, on payloads shaped like the real feeds: `python -m unittest test_news`. |
 | `test_botd.py` | Unit tests for `botd.py`: the slot rules, the news filter, posting at 11 AM ET without ever swapping, closing empty days, grading and the record: `python -m unittest test_botd`. |
 | `methodology.html` | "How the model works" — the public write-up of the model, the matchup adjustments, calibration, the list rules and how picks are graded. Linked from every footer and the trust line under each hero. |
+| `cards.py` + `og/draw.html` | **Link-preview cards** (1200x630 `og:image`) so a shared link unfurls as a wide card instead of the square logo: `og/site.png` (player, game and guide pages), `og/<sport>.png` (each sport page: its lists over 30 days, losses in red), `og/home.png` (today's Pick of the Day, both picks), `og/record.png` (every sport's Value units), and one card per Value pick's share page (`p/<sport>/<key>.png`, queued by `build_games.py`, drawn once with the price and chance "as of" that day, deleted with the page). `og/draw.html` draws them on a canvas with the site's fonts and writes 256-colour PNGs (about 35 KB each); `cards.py` opens it in headless Chrome after `build_games.py`, only for cards that are missing or changed (`og/state.json`), the daily ones at most once a day. No Chrome: nothing drawn, pages keep their images. Tested in `test_cards.py`. |
 | `build_players.py` → `players/` | One static page per most-bet player (up to 60 per sport): title, description and share preview, this week's props with model chance, price, edge and call, the last 10 games, and a link into the full model; plus `players/index.html`. Rebuilt once a day (`--force` rebuilds now); the pages are re-added to `sitemap.xml` every run, since `build.py` rewrites it. |
 | `app.js` / `app.css` | Shared look and behavior for every page: fonts (Archivo headlines, Inter body and numbers), colors, icons (Lucide, swapped in for emoji at runtime), the verdict card, pick-details sheet, one-time 18+ check, explainers, share links, ticker (no page shows it since Oct 13, 2026) and trust line. |
+| Design tokens | The top of `app.css` is the site's one design system: colors (`--ps-bg`, `--ps-green`, with `-rgb` twins for tints), a type scale (12px floor), corner radii and the 44px tap size. Every page's CSS reads them, so a seasonal theme is one block of overrides (see `thanksgiving.css`). The end of `app.css` makes controls 44px on touch screens and cross-fades between pages (`@view-transition`, off with reduced motion). Home pick cards draw a price-since-listed sparkline (`PS.pxSpark`, from `today.json`'s `sp`, kept in `fast_hist.json` by `build_today.py`; tested in `test_spark.py`). |
 | `fonts/` | Self-hosted fonts (Barlow Condensed for labels, Archivo, Inter), with their SIL Open Font License files. |
 | `LICENSE-lucide-icons.txt` | License notice for the Lucide icon shapes bundled in `app.js`. |
 | `start_run.py` | Used by the update job to start the next update run and a watchdog check: it asks GitHub for the run, then checks that run really started and asks again if it didn't (on Nov 11, 2026 a request GitHub accepted ended in "startup_failure" and the chain stopped for an hour). Tested in `test_start_run.py`. |
