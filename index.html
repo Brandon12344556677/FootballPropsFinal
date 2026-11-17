@@ -36,7 +36,7 @@
 <script data-goatcounter="https://propstreaklive.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
 <link rel="stylesheet" href="fonts.css">
 <link rel="stylesheet" href="app.css?v=20261111a">
-<script src="app.js?v=20261111a"></script>
+<script src="app.js?v=20261117a"></script>
 <script src="/thanksgiving.js?v=20261101b"></script>
 <style>
 :root{
@@ -65,7 +65,6 @@ body{margin:0;background:var(--bg);color:var(--text);font-family:var(--body);fon
   background-size:58px 58px,58px 58px,100% 100%,100% 100%,100% 100%;background-attachment:fixed}
 a{color:var(--green)}
 .wrap{max-width:1160px;margin:0 auto;padding:0 20px}
-.cond{font-family:var(--cond);text-transform:uppercase;letter-spacing:.06em}
 .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
 
 /* ---------- header ---------- */
@@ -86,16 +85,9 @@ a{color:var(--green)}
 .btn-go:hover{transform:translateY(-2px);box-shadow:0 10px 24px rgba(34,208,127,0.21)}
 .btn-ghost{background:transparent;color:#fff;border:1px solid rgba(255,255,255,.22)}
 .btn-ghost:hover{border-color:var(--green);color:var(--green)}
-.top .btn{padding:9px 18px;font-size:14px}
+.top .btn{padding:9px 18px;font-size:14px;white-space:nowrap}
 
-/* ---------- hero ---------- */
-.hero{position:relative;padding:74px 0 60px}
-.hero .wrap{display:grid;grid-template-columns:1.08fr .92fr;gap:54px;align-items:center}
-.eyebrow{display:inline-flex;align-items:center;gap:10px;font-family:var(--cond);text-transform:uppercase;letter-spacing:.06em;
-  font-size:13px;font-weight:700;color:var(--green);background:rgba(34,208,127,.08);border:1px solid rgba(34,208,127,.3);
-  padding:7px 14px;border-radius:999px}
-.eyebrow .dot{width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 0 0 rgba(34,208,127,.7);animation:ping 2s infinite}
-@keyframes ping{0%{box-shadow:0 0 0 0 rgba(34,208,127,.6)}80%,100%{box-shadow:0 0 0 10px rgba(34,208,127,0)}}
+/* ---------- top of the page ---------- */
 h1{font-family:var(--display);font-weight:800;font-size:clamp(38px,5.2vw,64px);line-height:1.02;letter-spacing:-.03em;margin:22px 0 20px}
 h1 i{color:var(--green);font-weight:600}
 .lede{font-size:clamp(17px,1.6vw,19px);color:var(--soft);max-width:34em;margin:0 0 30px}
@@ -108,69 +100,12 @@ h1 i{color:var(--green);font-weight:600}
 .sport .ico{width:42px;height:42px;border-radius:12px;display:grid;place-items:center;font-size:22px;background:rgba(34,208,127,.1);border:1px solid rgba(34,208,127,.25)}
 .sport b{display:block;font-family:var(--cond);font-size:20px;letter-spacing:.06em;line-height:1.1}
 .sport small{display:block;color:var(--muted);font-size:12.5px;line-height:1.2}
-.trust{display:flex;flex-wrap:wrap;gap:18px;color:var(--muted);font-size:14px}
-.trust span{display:inline-flex;align-items:center;gap:7px}
-.trust svg{color:var(--green)}
-
-/* hero demo card */
-.stage{position:relative;min-height:470px}
-.glow{position:absolute;inset:6% 4% 0 8%;background:radial-gradient(closest-side,rgba(34,208,127,.14),rgba(34,208,127,0));filter:blur(18px);z-index:0}
-.demo{position:relative;z-index:1;background:linear-gradient(180deg,rgba(20,39,67,.92),rgba(12,26,48,.94));
-  border:1px solid rgba(34,208,127,.28);border-radius:22px;padding:22px 22px 18px;box-shadow:0 30px 80px rgba(0,0,0,.5);
-  animation:float 7s ease-in-out infinite}
-@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
-.demo-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
-.tag{font-family:var(--cond);font-weight:700;letter-spacing:.06em;text-transform:uppercase;font-size:11px;
-  color:var(--green-ink);background:var(--green);padding:3px 9px;border-radius:6px}
-.demo-sport{font-family:var(--cond);letter-spacing:.1em;text-transform:uppercase;font-size:12.5px;color:var(--muted)}
-.demo-q{font-family:var(--display);font-weight:700;font-size:22px;line-height:1.2;letter-spacing:-.01em;margin:6px 0 16px}
-.demo-q b{color:var(--green)}
-.demo-main{display:grid;grid-template-columns:132px 1fr;gap:18px;align-items:center}
-.ring{position:relative;width:132px;height:132px}
-.ring svg{transform:rotate(-90deg)}
-.ring .num{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
-.ring .num b{font-family:var(--num);font-size:36px;line-height:1;font-weight:800;font-variant-numeric:tabular-nums;letter-spacing:-.03em}
-.ring .num small{font-family:var(--cond);text-transform:uppercase;letter-spacing:.1em;font-size:10.5px;color:var(--muted)}
-.ring .arc{transition:stroke-dashoffset 1.6s cubic-bezier(.2,.8,.2,1)}
-.dstats{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.dstats div{background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.07);border-radius:12px;padding:9px 11px}
-.dstats b{display:block;font-family:var(--num);font-size:20px;line-height:1.1;font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
-.dstats span{font-family:var(--cond);text-transform:uppercase;letter-spacing:.08em;font-size:10.5px;color:var(--muted)}
-.dstats .pos b{color:var(--green)}
-.bars{position:relative;display:flex;align-items:flex-end;gap:6px;height:92px;margin-top:18px;padding-top:6px}
-.bars i{flex:1;border-radius:5px 5px 2px 2px;background:var(--green);opacity:.9;transform-origin:bottom;transform:scaleY(0);transition:transform .7s cubic-bezier(.2,.8,.2,1)}
-.bars i.u{background:#3a4d6b}
-.bars.go i{transform:scaleY(1)}
-.bars .line{position:absolute;left:0;right:0;border-top:1.5px dashed rgba(255,255,255,.55)}
-.bars .line em{position:absolute;right:0;top:-18px;font-style:normal;font-family:var(--cond);font-size:11px;letter-spacing:.08em;color:var(--soft)}
-.chip{position:absolute;z-index:2;display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;
-  background:rgba(10,22,40,.92);border:1px solid rgba(34,208,127,.35);border-radius:999px;padding:9px 14px;box-shadow:0 14px 34px rgba(0,0,0,.45)}
-.chip svg{color:var(--green)}
-.chip.c1{left:-24px;bottom:34px;animation:float 6s ease-in-out infinite .6s}
-.chip.c2{right:10px;top:-40px;animation:float 8s ease-in-out infinite 1.2s}
-
-/* ---------- stats strip ---------- */
-.strip{border-top:1px solid rgba(255,255,255,.06);border-bottom:1px solid rgba(255,255,255,.06);background:rgba(15,32,56,.55)}
-.strip .wrap{display:grid;grid-template-columns:repeat(4,1fr)}
-.stat{padding:26px 18px;text-align:center;border-right:1px solid rgba(255,255,255,.06)}
-.stat:last-child{border-right:0}
-.stat b{display:block;font-family:var(--num);font-weight:800;font-size:clamp(30px,3.4vw,42px);line-height:1;color:#fff;font-variant-numeric:tabular-nums;letter-spacing:-.03em}
-.stat b em{font-style:normal;color:var(--green)}
-.stat>span{font-family:var(--cond);text-transform:uppercase;letter-spacing:.06em;font-size:13px;color:var(--muted)}
-
 /* ---------- sections ---------- */
 section{padding:96px 0}
 .kicker{font-family:var(--cond);text-transform:uppercase;letter-spacing:.18em;font-size:13px;font-weight:700;color:var(--green);margin:0 0 12px}
 h2{font-family:var(--display);font-weight:800;font-size:clamp(30px,3.6vw,46px);line-height:1.06;margin:0 0 16px;letter-spacing:-.025em}
 h2 i{color:var(--green)}
 .sub{color:var(--soft);font-size:18px;max-width:40em;margin:0}
-.center{text-align:center}.center .sub{margin:0 auto}
-
-/* hero card once it shows today's real top pick */
-.tag.live{background:var(--green);color:var(--green-ink);border-color:var(--green)}
-.tag.live::before{content:"";display:inline-block;width:6px;height:6px;margin-right:6px;border-radius:50%;background:var(--green-ink);vertical-align:1px;animation:psping 2s infinite}
-.demo-go{display:block;margin-top:14px;color:var(--green);font-family:var(--cond);font-weight:700;text-transform:uppercase;letter-spacing:.1em;font-size:13px;text-decoration:none}
-.demo-go:hover{text-decoration:underline}
 
 /* pick of the day: two slots, each a pick card from app.css plus the record */
 #botd{padding:16px 0 8px}
@@ -195,13 +130,25 @@ h2 i{color:var(--green)}
 .bs-st.live{color:var(--gold);border-color:rgba(232,181,74,.5)}
 .bs-st.hit{background:var(--green);border-color:var(--green);color:var(--green-ink)}
 .bs-st.miss{background:rgba(235,111,125,.14);border-color:rgba(235,111,125,.6);color:var(--red)}
+/* a long status ("Live · graded after the final") drops under the price on a narrow card instead of running over it */
+.botdslot .pc-foot{flex-wrap:wrap}
+.botdslot .pc-price{flex:none}
+.botdslot .pc-foot .bs-st{white-space:normal;max-width:100%}
 .bs-facts{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:13.5px;color:var(--soft);margin:0}
 .bs-facts b{color:var(--text)}
 .bs-empty{border:1px dashed var(--line);border-radius:16px;padding:26px 16px;text-align:center;color:var(--soft);font-size:15px;margin:0}
 .bs-dots{display:flex;align-items:center;gap:5px;font-size:12px;color:var(--muted)}
 .bs-dots i{width:11px;height:11px;border-radius:50%;display:inline-block;background:var(--line)}
 .bs-dots i.hit{background:var(--green)} .bs-dots i.miss{background:var(--red)} .bs-dots i.push,.bs-dots i.void{background:var(--muted)}
-@media(max-width:760px){#botd{padding:26px 0 0}.botdgrid{grid-template-columns:1fr;margin-top:16px}.botdslot{padding:14px}}
+/* placeholders until botd.json / today.json arrive: app.css's shimmer, sized like the real cards so nothing jumps */
+.bs-skrec{width:118px;height:14px}
+.bs-skl{height:12px;width:90%} .bs-skl.s{width:56%}
+.botdslot .pickcard.skel{min-height:213px}
+.botdslot:has(.skel){min-height:366px}
+#todaygrid .pickcard.skel{min-height:236px}
+#todaygrid .bs-empty{grid-column:1/-1}
+@media(max-width:760px){#botd{padding:26px 0 0}.botdgrid{grid-template-columns:1fr;margin-top:16px}.botdslot{padding:14px}
+  .botdslot:has(.skel){min-height:513px}#todaygrid .pickcard.skel{min-height:258px}}
 
 /* today feed: pick cards from app.css, as links */
 #today{padding:64px 0 8px}
@@ -211,112 +158,22 @@ h2 i{color:var(--green)}
 .todayfeed .pc-who .cd{display:inline;color:var(--soft)}
 .todayfeed .pc-kind{font-family:var(--cond);font-weight:700;text-transform:uppercase;letter-spacing:.1em;font-size:12.5px;color:var(--green);white-space:nowrap}
 .todayfeed .pc-kind.safe{color:#86e6b6}
-.todayfeed .pc-go{font-family:var(--cond);font-weight:700;text-transform:uppercase;letter-spacing:.1em;font-size:12.5px;color:var(--soft);white-space:nowrap}
-.todayfeed .pickcard:hover .pc-go{color:var(--green)}
 .todaynote{color:var(--muted);font-size:13.5px;margin:14px 0 0}
 @media(max-width:760px){#today{padding:44px 0 0}.todayfeed{margin-top:20px}}
 
-/* sport tabs */
-.tabs{display:inline-flex;gap:6px;padding:6px;border-radius:999px;background:var(--surface);border:1px solid var(--line);margin:34px 0 22px}
-.tab{appearance:none;border:0;background:transparent;color:var(--soft);font-family:var(--body);font-weight:700;text-transform:none;
-  letter-spacing:.1em;font-size:16px;padding:11px 22px;border-radius:999px;cursor:pointer;display:inline-flex;align-items:center;gap:8px}
-.tab[aria-selected="true"]{background:var(--green);color:var(--green-ink)}
-.tab:focus-visible{outline:2px solid var(--green);outline-offset:2px}
-.tabpanel{display:grid;grid-template-columns:1.1fr .9fr;gap:30px;align-items:stretch;text-align:left;
-  background:linear-gradient(180deg,rgba(20,39,67,.7),rgba(15,32,56,.7));border:1px solid var(--line);border-radius:24px;padding:34px}
-.tabpanel h3{font-family:var(--display);font-size:30px;font-weight:800;line-height:1.1;letter-spacing:-.02em;margin:0 0 10px}
-.tabpanel p{color:var(--soft);margin:0 0 20px}
-.stats-list{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 26px;padding:0;list-style:none}
-.stats-list li{font-family:var(--cond);text-transform:uppercase;letter-spacing:.08em;font-size:13.5px;font-weight:600;
-  border:1px solid rgba(34,208,127,.3);background:rgba(34,208,127,.06);color:#fff;border-radius:999px;padding:6px 12px}
-.panel-side{display:grid;gap:12px;align-content:start}
-.mini{display:flex;gap:14px;align-items:flex-start;background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.07);border-radius:16px;padding:16px}
-.mini .ic{flex:none;width:38px;height:38px;border-radius:11px;display:grid;place-items:center;background:rgba(34,208,127,.1);color:var(--green)}
-.mini b{display:block;font-size:16px;margin-bottom:2px}
-.mini span{color:var(--muted);font-size:14.5px;line-height:1.45}
-
-/* features */
-.grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-top:44px}
-.feat{position:relative;background:linear-gradient(180deg,rgba(20,39,67,.75),rgba(15,32,56,.75));border:1px solid var(--line);
-  border-radius:var(--r);padding:26px 22px;overflow:hidden;transition:transform .2s ease,border-color .2s ease}
-.feat:hover{transform:translateY(-4px);border-color:rgba(34,208,127,.45)}
-.feat::after{content:"";position:absolute;right:-40px;top:-40px;width:120px;height:120px;border-radius:50%;background:radial-gradient(closest-side,rgba(34,208,127,.16),transparent)}
-.feat .ic{width:46px;height:46px;border-radius:13px;display:grid;place-items:center;background:rgba(34,208,127,.1);border:1px solid rgba(34,208,127,.28);color:var(--green);margin-bottom:18px}
-.feat h3{font-family:var(--display);font-weight:700;letter-spacing:-.01em;font-size:19px;margin:0 0 8px;line-height:1.2}
-.feat p{color:var(--soft);font-size:15px;margin:0}
-.steps{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:22px}
-.step{display:flex;gap:16px;align-items:flex-start;padding:20px;border-radius:var(--r);border:1px dashed rgba(255,255,255,.14)}
-.step .n{flex:none;width:40px;height:40px;border-radius:50%;display:grid;place-items:center;font-family:var(--num);font-size:19px;font-weight:800;color:var(--green-ink);background:var(--green)}
-.step b{display:block;font-size:17px}
-.step span{color:var(--muted);font-size:14.5px}
-
-/* free / advantage */
-.free{position:relative}
-.free-hero{display:grid;grid-template-columns:.9fr 1.1fr;gap:44px;align-items:center}
-.zero{position:relative;font-family:var(--num);font-weight:800;line-height:.8;font-size:clamp(140px,19vw,250px);color:#fff;letter-spacing:-.03em}
-.zero sup{font-size:.34em;vertical-align:.95em;color:var(--green);margin-right:4px}
-.zero small{display:block;font-family:var(--cond);font-size:18px;letter-spacing:.2em;text-transform:uppercase;color:var(--green);margin-top:18px}
-.checks{list-style:none;margin:22px 0 0;padding:0;display:grid;gap:12px}
-.checks li{display:flex;gap:12px;align-items:flex-start;color:var(--soft)}
-.checks li b{color:#fff}
-.checks svg{flex:none;margin-top:3px;color:var(--green)}
-.compare{margin-top:56px;border:1px solid var(--line);border-radius:22px;overflow:hidden;background:rgba(15,32,56,.6)}
-.crow{display:grid;grid-template-columns:1fr 1.2fr 1.2fr;border-top:1px solid rgba(255,255,255,.06)}
-.crow:first-child{border-top:0}
-.crow>div{padding:16px 22px;display:flex;align-items:center;gap:10px}
-.crow .k{font-family:var(--cond);text-transform:uppercase;letter-spacing:.1em;font-size:14px;font-weight:700;color:var(--muted)}
-.crow .them{color:var(--muted)}
-.crow .us{color:#fff;font-weight:600;background:rgba(34,208,127,.07);border-left:1px solid rgba(34,208,127,.25)}
-.crow.head>div{font-family:var(--cond);text-transform:uppercase;letter-spacing:.06em;font-size:14px;font-weight:700}
-.crow.head .us{color:var(--green)}
-.crow .x{color:var(--red)} .crow .ok{color:var(--green)}
-.howfree{margin-top:22px;color:var(--muted);font-size:14.5px;text-align:center}
-.howfree b{color:var(--soft)}
-
-/* receipts */
-.receipt{display:grid;grid-template-columns:auto 1fr auto;gap:26px;align-items:center;margin-top:40px;
-  background:linear-gradient(90deg,rgba(34,208,127,.12),rgba(34,208,127,.02));border:1px solid rgba(34,208,127,.35);border-radius:22px;padding:26px 30px}
-.receipt .big{font-family:var(--num);font-weight:800;font-variant-numeric:tabular-nums;letter-spacing:-.03em;font-size:clamp(40px,4.6vw,58px);line-height:.95;color:var(--green)}
-.receipt .lbl{font-family:var(--cond);text-transform:uppercase;letter-spacing:.06em;font-size:13px;color:var(--soft)}
-.receipt p{margin:4px 0 0;color:var(--soft)}
-.receipt .fine{font-size:12.5px;color:var(--muted);margin-top:6px}
-.pillars{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:22px}
-.pill{border:1px solid var(--line);border-radius:var(--r);padding:22px;background:rgba(15,32,56,.55)}
-.pill b{display:block;font-family:var(--display);font-weight:700;letter-spacing:-.01em;font-size:17px;margin-bottom:6px}
-.pill span{color:var(--soft);font-size:15px}
-
-/* about */
-.about{display:grid;grid-template-columns:1fr 1fr;gap:54px;align-items:center}
-.quote{position:relative;font-family:var(--display);font-size:clamp(26px,2.6vw,34px);line-height:1.25;font-style:italic;color:#fff;margin:0;padding-left:26px;border-left:3px solid var(--green)}
-.about p{color:var(--soft);font-size:17px}
-.values{display:flex;flex-wrap:wrap;gap:10px;margin-top:22px}
-.values span{font-family:var(--cond);text-transform:uppercase;letter-spacing:.1em;font-size:14px;font-weight:700;padding:8px 14px;border-radius:999px;border:1px solid rgba(255,255,255,.18)}
-.values span:first-child{background:var(--green);color:var(--green-ink);border-color:var(--green)}
-
-/* CTA + social */
-.cta{position:relative;overflow:hidden;border-radius:28px;padding:56px 30px;text-align:center;border:1px solid rgba(34,208,127,.35);
-  background:radial-gradient(700px 300px at 50% 0%,rgba(34,208,127,.22),transparent 70%),linear-gradient(180deg,#10254a,#0c1c36)}
-.cta .sports{justify-content:center;margin:26px 0 0}
-.ref{display:block;margin:30px auto 0;max-width:760px;text-decoration:none;border-radius:16px;padding:16px 20px;text-align:center;
-  background:var(--green);color:var(--green-ink);font-family:var(--body);font-weight:700;font-size:16px;
-  box-shadow:0 8px 24px rgba(34,208,127,0.15);transition:transform .15s ease}
-.ref:hover{transform:translateY(-2px)}
-.ref2{display:block;margin:12px auto 0;max-width:760px;text-decoration:none;border-radius:16px;padding:13px 20px;text-align:center;
-  border:1px solid rgba(34,208,127,.55);color:var(--green);font-family:var(--body);font-weight:700;font-size:15px}
-.ref2:hover{background:rgba(34,208,127,.08)}
+/* social links (footer) */
 .social{display:flex;justify-content:center;flex-wrap:wrap;gap:12px;margin-top:34px}
 .social a{display:inline-flex;align-items:center;gap:9px;text-decoration:none;color:#fff;border:1px solid rgba(255,255,255,.18);
   border-radius:999px;padding:11px 20px;font-family:var(--body);font-weight:600;font-size:14.5px;transition:all .15s ease}
 .social a:hover{border-color:var(--green);color:var(--green);transform:translateY(-2px)}
 
-/* promo strip at the top of the page */
+/* top of the page: headline + proof strip, and (after Pick of the Day) the sport tiles + search */
 .pickbar{padding:12px 0 4px}
 .pickbar .wrap{display:grid;gap:10px}
 /* wide screens: sport tiles and the player search share one row, so both picks fit on the first screen */
 @media (min-width:1000px){.pickbar .wrap{grid-template-columns:minmax(0,1.75fr) minmax(0,1fr)}.pickbar .wrap>*{grid-column:1/-1}
   .pickbar .wrap>.sports{grid-column:1}.pickbar .wrap>.psearch{grid-column:2;display:flex}.psearch input{height:100%}
   .pickbar .sport{padding-top:10px;padding-bottom:10px;gap:10px}.pickbar .sport .ico{width:36px;height:36px;flex:none}.pickbar .sport small{font-size:12px;overflow-wrap:anywhere}}
-.pickbar-h{margin:0;font-family:var(--cond);font-size:14px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--green)}
 .pickbar .sports{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px;margin:0}
 .pickbar .sport{min-width:0}
 @media (max-width:620px){.pickbar{padding-top:12px}.pickbar .sports{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.pickbar .sport{padding:12px}
@@ -324,8 +181,14 @@ h2 i{color:var(--green)}
 .pickbar h1{margin:6px 0 0;font-size:clamp(30px,3.6vw,44px);text-wrap:balance}
 .pickbar .lede{margin:0 0 4px;font-size:16px;max-width:none}
 .pickbar-more{margin:0;font-size:14px;color:var(--muted);white-space:nowrap}
-.calibmore{margin-top:14px}
-.calibmore summary{cursor:pointer;color:#86e6b6;font-weight:600;font-size:15px}
+/* proof strip under the lede: app.js trust() paints it from today.json (picks graded, latest Top 25 results, updated).
+   The home page shows the latest results in Simple too, and holds the strip's height so the picks below don't move as it fills in. */
+.pickbar .pstrust{margin:8px 0 2px;min-height:30px;font-size:13.5px}
+html[data-view] .pickbar .pstrust .tr-res{display:inline-flex}
+.pickbar .pstrust .tr-grd{order:-2} .pickbar .pstrust .tr-res{order:-1}
+@media (max-width:620px){.pickbar .pstrust{font-size:12.5px;gap:6px 10px;min-height:106px;align-content:flex-start}
+  .pickbar .pstrust .tr-grd,.pickbar .pstrust .tr-res{flex:1 1 100%}.pickbar .pstrust .tr-res{border-radius:14px}}
+#sports{scroll-margin-top:76px;padding-top:20px}
 .whylist{list-style:none;padding:0;margin:22px 0 0;display:grid;gap:12px;max-width:780px}
 .whylist li{color:var(--soft);font-size:16px;line-height:1.55;padding-left:16px;border-left:3px solid rgba(34,208,127,.45)}
 .whylist b{color:#fff}
@@ -352,7 +215,7 @@ h2 i{color:var(--green)}
 .squadcard .kicker{margin:0}
 .squadcard b{font-family:var(--display);font-weight:800;letter-spacing:-.02em;font-size:clamp(17px,1.7vw,20px);line-height:1.15}
 .squadcard b i{color:var(--green)}
-.squadcard .sub{margin:0;font-size:13px;color:var(--muted)}
+.squadcard .sub{margin:0;font-size:13px;line-height:1.35;color:var(--muted)}
 .squadcard .btn{flex:none}
 @media (max-width:620px){.squadqr{display:none}.squadcard{padding:12px 14px}}
 #email{min-width:0}
@@ -433,32 +296,36 @@ h2 i{color:var(--green)}
   .seeall:not([hidden]){display:flex;justify-content:center;width:100%;margin-top:12px}
 }
 @media (min-width:761px){.seeall{display:none!important}}
+/* calibration: a reliability chart (model said vs actually hit, against the 45° line) with the same numbers as a table */
 #calib{padding:64px 0 8px}
-.calib{display:grid;gap:12px;margin-top:26px;max-width:780px}
-.cr{display:grid;grid-template-columns:78px minmax(0,1fr) 220px;align-items:center;gap:14px}
-.cr-l{font-family:var(--cond);font-weight:700;letter-spacing:.06em;color:var(--soft);font-size:16px}
-.cr-track{position:relative;height:14px;border-radius:7px;background:var(--surface-2);border:1px solid var(--line)}
-.cr-bar{position:absolute;left:0;top:0;bottom:0;border-radius:7px;background:var(--green)}
-.cr-said{position:absolute;top:-6px;bottom:-6px;width:3px;margin-left:-1.5px;border-radius:2px;background:#fff;box-shadow:0 0 0 2px var(--bg)}
-.cr-v{font-size:14px;color:var(--soft);font-variant-numeric:tabular-nums}
-.cr-v b{color:#fff;font-size:18px}
-.cr-v small{display:block;color:var(--muted);font-size:12.5px}
-.calib-key{display:flex;flex-wrap:wrap;gap:8px 18px;margin-top:14px;font-size:13px;color:var(--muted)}
-.calib-key span{display:inline-flex;align-items:center;gap:8px}
-.calib-key .k-bar{width:22px;height:10px;border-radius:5px;background:var(--green)}
-.calib-key .k-said{width:3px;height:16px;border-radius:2px;background:#fff}
-@media (max-width:620px){#calib{padding:44px 0 0}.cr{grid-template-columns:70px minmax(0,1fr);gap:6px 12px}.cr-v{grid-column:2}}
-.promo{padding:16px 0 0}
-.promo .wrap{display:flex;flex-wrap:wrap;gap:10px;justify-content:center}
-.promo .ref,.promo .ref2{display:inline-flex;align-items:center;margin:0;max-width:none;border-radius:999px;padding:10px 20px;
-  font-size:15px;text-transform:none;letter-spacing:.05em}
-.promo + .hero{padding-top:40px}
-@media (max-width:620px){.promo .ref,.promo .ref2{width:100%;justify-content:center;font-size:14.5px;padding:11px 14px}}
-/* sport tiles: an even grid, so four sports never leave one stranded on its own row */
-.hero .sports{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));max-width:460px}
-.cta .sports{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));max-width:780px;margin:26px auto 0}
+.calgrid{display:grid;grid-template-columns:minmax(0,460px) minmax(0,1fr);gap:20px 40px;align-items:center;margin-top:26px}
+.calfig{margin:0;min-width:0}
+.calchart{position:relative;aspect-ratio:360/336;background:var(--surface);border:1px solid var(--line);border-radius:20px;overflow:hidden}
+.calchart svg{display:block;width:100%;height:100%}
+.calchart>.sk{position:absolute;inset:16px;border-radius:12px}
+.cc-grid{stroke:rgba(255,255,255,.08);stroke-width:1}
+.cc-tick{fill:var(--muted);font:500 11px var(--body);font-variant-numeric:tabular-nums}
+.cc-axis{fill:var(--soft);font:700 10.5px var(--body);letter-spacing:.08em;text-transform:uppercase}
+.cc-diag{stroke:rgba(255,255,255,.6);stroke-width:1.5;stroke-dasharray:5 5}
+.cc-diagl{fill:var(--muted);font:500 11px var(--body)}
+.cc-dot{fill:var(--green);stroke:var(--surface);stroke-width:2}
+.cc-hit{fill:#fff;font:700 12.5px var(--body);font-variant-numeric:tabular-nums}
+.cc-n{fill:var(--muted);font:500 10.5px var(--body);font-variant-numeric:tabular-nums}
+/* drawn in once, when the chart scrolls into view (.go): the line fades in, then each dot rises onto it */
+.cc-diag,.cc-diagl{animation:ccfade .6s ease both paused}
+.cc-pt{animation:ccrise .55s cubic-bezier(.2,.8,.2,1) both paused;animation-delay:calc(.3s + var(--i)*.12s)}
+.calchart.go .cc-diag,.calchart.go .cc-diagl,.calchart.go .cc-pt{animation-play-state:running}
+@keyframes ccfade{from{opacity:0}}
+@keyframes ccrise{from{opacity:0;transform:translateY(18px)}}
+.calcap{margin:12px 0 0;color:var(--soft);font-size:14px;line-height:1.5}
+.caltable{width:100%;border-collapse:collapse;font-size:15px;font-variant-numeric:tabular-nums}
+.caltable th,.caltable td{padding:10px;text-align:right;border-bottom:1px solid var(--line);color:var(--soft);font-weight:500}
+.caltable th:first-child{text-align:left}
+.caltable thead th{font-family:var(--cond);font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.caltable tbody th,.caltable td b{color:#fff;font-weight:700;white-space:nowrap}
+@media (max-width:860px){.calgrid{grid-template-columns:minmax(0,1fr)}.calfig{max-width:460px}}
+@media (max-width:620px){#calib{padding:44px 0 0}.caltable{font-size:13.5px}.caltable th,.caltable td{padding:9px 5px}}
 .sports .sport{min-width:0}
-@media (max-width:720px){.cta .sports{grid-template-columns:repeat(2,minmax(0,1fr))}}
 footer .social{justify-content:flex-start;margin:0 0 18px}
 footer .social a{padding:8px 16px;font-size:14px}
 
@@ -471,12 +338,6 @@ footer nav a:hover{color:#fff}
 footer .fine{font-size:12px;line-height:1.6;margin:6px 0 0;color:#8394ab}
 footer .fine a{color:#8394ab}
 
-/* reveal on scroll — only hidden once the script has started (html.js), and the script
-   reveals everything if the observer never fires, so content can never get stuck invisible */
-.js .rv{opacity:0;transform:translateY(22px);transition:opacity .7s ease,transform .7s cubic-bezier(.2,.8,.2,1)}
-.js .rv.in{opacity:1;transform:none}
-.rv.d1{transition-delay:.08s}.rv.d2{transition-delay:.16s}.rv.d3{transition-delay:.24s}
-
 /* cookie notice (same as the sport pages) */
 .pslcookie{position:fixed;left:12px;right:12px;bottom:12px;z-index:9999;background:#0f2038;border:1px solid #2a3f5f;border-radius:12px;box-shadow:0 18px 44px rgba(0,0,0,.5);max-width:720px;margin:0 auto}
 .pslcookie-in{display:flex;gap:14px;align-items:center;justify-content:space-between;flex-wrap:wrap;padding:12px 16px}
@@ -484,45 +345,21 @@ footer .fine a{color:#8394ab}
 .pslcookie a{color:#22d07f}
 .pslcookie button{background:#22d07f;color:#06210b;border:0;border-radius:8px;font-weight:700;padding:9px 18px;cursor:pointer;font-family:inherit;font-size:14px}
 
-/* grid children may shrink below their content width (otherwise phones scroll sideways) */
-.hero .wrap>*,.free-hero>*,.about>*,.tabpanel>*,.receipt>*,.grid4>*,.steps>*,.pillars>*,.crow>*,.demo-main>*{min-width:0}
-.eyebrow{max-width:100%;flex-wrap:nowrap}.eyebrow .dot{flex:none}
 /* ---------- responsive ---------- */
 @media (max-width:980px){
-  .hero .wrap,.free-hero,.about,.tabpanel{grid-template-columns:1fr}
-  .stage{min-height:0;max-width:520px;margin:10px auto 0;width:100%}
-  .grid4{grid-template-columns:1fr 1fr}
-  .steps,.pillars{grid-template-columns:1fr}
   .topnav{display:none}
   .top .btn{margin-left:auto}
-  .receipt{grid-template-columns:1fr;text-align:center}
 }
 @media (max-width:620px){
   section{padding:70px 0}
-  .hero{padding:44px 0 40px}
-  .grid4{grid-template-columns:1fr}
-  .strip .wrap{grid-template-columns:1fr 1fr}
-  .stat:nth-child(2){border-right:0}
-  .stat:nth-child(-n+2){border-bottom:1px solid rgba(255,255,255,.06)}
   .sport{flex:1 1 100%}
-  .demo-main{grid-template-columns:1fr;justify-items:center}
-  .chip.c1{left:6px;bottom:-16px}.chip.c2{right:6px;top:-16px}
-  .tabs{display:flex;width:100%}.tab{flex:1;justify-content:center;padding:11px 8px}
-  .tabpanel{padding:24px}
-  .crow{grid-template-columns:1fr 1fr}
-  .crow .k{grid-column:1 / -1;padding-bottom:0}
-  .crow.head .k{display:none}
   .brand b{font-size:19px}
   .top .wrap{gap:10px}
   .top .btn{padding:8px 13px;font-size:13px;letter-spacing:.07em}
   .hide-sm{display:none}
-  .eyebrow{letter-spacing:.1em;font-size:12px}
-  .chip.c2{right:auto;left:6px;top:-30px}
 }
 @media (prefers-reduced-motion:reduce){
   *{animation:none!important;transition:none!important;scroll-behavior:auto!important}
-  .rv{opacity:1;transform:none}
-  .bars i{transform:none}
 }
 </style>
 </head>
@@ -535,7 +372,7 @@ footer .fine a{color:#8394ab}
       <b>Prop <i>Streak</i> Lab</b>
     </a>
     <nav class="topnav" aria-label="Sections">
-      <a href="#pickbar-h">Sports</a>
+      <a href="#sports">Sports</a>
       <a href="#why">Why trust it</a>
       <a href="methodology.html">How it works</a>
     </nav>
@@ -544,12 +381,34 @@ footer .fine a{color:#8394ab}
 </header>
 
 <main>
-  <!-- TOP: what the site is in one line, then the sports, so a visitor is one tap from a board.
-       Each tile's second line becomes that sport's Top 25 hit rate once today.json loads. -->
+  <!-- TOP: what the site is in one line, then the proof: picks graded in public, the latest Top 25 results
+       and when the data last updated (app.js trust() fills #pstrust from today.json). -->
   <section class="pickbar" aria-labelledby="pickbar-h">
     <div class="wrap">
       <h1 id="pickbar-h">Today's best player props, <i>graded in public</i>.</h1>
       <p class="lede">A model checks every player's game log against the market price for the NFL, NBA, NHL and MLB. Free, no account. <span class="pickbar-more"><a href="guides/">New to props? Start here →</a></span></p>
+      <div id="pstrust" class="pstrust" hidden></div>
+    </div>
+  </section>
+
+  <!-- PICK OF THE DAY: a Safe Pick and a Value Shot, from botd.json (botd.py): picked once a day, never swapped, graded in public.
+       Ships with placeholder cards so the page doesn't jump when the file arrives. -->
+  <section id="botd" aria-labelledby="botd-h">
+    <div class="wrap">
+      <p class="kicker" id="botdkick">Pick of the Day</p>
+      <h2 id="botd-h">Today's <i>Safe Pick</i> &amp; <i>Value Shot</i>.</h2>
+      <p class="sub">One sure pick and one bigger payout, picked once a day from the NFL, NBA, NHL and MLB and graded in public.</p>
+      <div class="app botdgrid">
+        <div class="botdslot lock" id="botd-lock"><div class="bs-head"><span class="bs-title">✅ Safe Pick of the Day</span><span class="sk bs-skrec"></span></div><div class="pickcard skel"><div class="pc-top"><span class="sk sk-av"></span><div class="pc-who"><span class="sk sk-l1"></span><span class="sk sk-l2"></span></div><span class="sk sk-ring"></span></div><span class="sk sk-l3"></span><span class="sk sk-l4"></span></div><span class="sk bs-skl"></span><span class="sk bs-skl s"></span></div>
+        <div class="botdslot" id="botd-value"><div class="bs-head"><span class="bs-title">🎯 Value Shot</span><span class="sk bs-skrec"></span></div><div class="pickcard skel"><div class="pc-top"><span class="sk sk-av"></span><div class="pc-who"><span class="sk sk-l1"></span><span class="sk sk-l2"></span></div><span class="sk sk-ring"></span></div><span class="sk sk-l3"></span><span class="sk sk-l4"></span></div><span class="sk bs-skl"></span><span class="sk bs-skl s"></span></div>
+      </div>
+      <p class="todaynote" id="botdnote"></p>
+    </div>
+  </section>
+
+  <!-- SPORTS: one tap to a board. Each tile's second line becomes that sport's Top 25 hit rate once today.json loads. -->
+  <section class="pickbar" id="sports" aria-label="Pick a sport">
+    <div class="wrap">
       <div class="sports">
         <a class="sport" href="./nfl.html"><span class="ico" aria-hidden="true">🏈</span><span><b>NFL</b><small data-rec="nfl">Football props</small></span></a>
         <a class="sport" href="./nba.html"><span class="ico" aria-hidden="true">🏀</span><span><b>NBA</b><small data-rec="nba">Basketball props</small></span></a>
@@ -557,7 +416,7 @@ footer .fine a{color:#8394ab}
         <a class="sport" href="./mlb.html"><span class="ico" aria-hidden="true">⚾</span><span><b>MLB</b><small data-rec="mlb">Baseball props</small></span></a>
         <a class="sport" href="./tennis.html"><span class="ico" aria-hidden="true">🎾</span><span><b>Tennis</b><small data-rec="tennis">ATP &amp; WTA matches</small></span></a>
       </div>
-      <!-- Player search across all four sports (search.json, from build_today.py), loaded on first focus -->
+      <!-- Player search across every sport, tennis included (search.json, from build_today.py), loaded on first focus -->
       <div class="psearch">
         <input id="psq" type="search" placeholder="Search any player: Mahomes, Jokic…" autocomplete="off" spellcheck="false"
                role="combobox" aria-expanded="false" aria-controls="psres" aria-autocomplete="list" aria-label="Search any player">
@@ -566,7 +425,20 @@ footer .fine a{color:#8394ab}
     </div>
   </section>
 
-  <!-- JOIN: the team's Polymarket squad and the daily picks email, side by side right under the top.
+  <!-- TODAY: the best bets across the NFL, NBA, NHL and MLB, from today.json (rebuilt every 10 minutes).
+       Tennis has its own board and stays out of this feed until it has a track record. -->
+  <section id="today" aria-labelledby="today-h">
+    <div class="wrap">
+      <p class="kicker">Right now · NFL, NBA, NHL, MLB</p>
+      <h2 id="today-h">Today's best <i>value</i>.</h2>
+      <p class="sub">Where the model's chance beats the market price (the cheaper of Polymarket and Kalshi) by the most — NFL, NBA, NHL and MLB in one feed. Tap a pick for the game log, the live price and the full breakdown.</p>
+      <div class="app todayfeed"><div class="pickgrid" id="todaygrid"><div class="pickcard skel"><div class="pc-top"><span class="sk sk-av"></span><div class="pc-who"><span class="sk sk-l1"></span><span class="sk sk-l2"></span></div><span class="sk sk-ring"></span></div><span class="sk sk-l3"></span><span class="sk sk-l4"></span></div><div class="pickcard skel"><div class="pc-top"><span class="sk sk-av"></span><div class="pc-who"><span class="sk sk-l1"></span><span class="sk sk-l2"></span></div><span class="sk sk-ring"></span></div><span class="sk sk-l3"></span><span class="sk sk-l4"></span></div><div class="pickcard skel"><div class="pc-top"><span class="sk sk-av"></span><div class="pc-who"><span class="sk sk-l1"></span><span class="sk sk-l2"></span></div><span class="sk sk-ring"></span></div><span class="sk sk-l3"></span><span class="sk sk-l4"></span></div><div class="pickcard skel"><div class="pc-top"><span class="sk sk-av"></span><div class="pc-who"><span class="sk sk-l1"></span><span class="sk sk-l2"></span></div><span class="sk sk-ring"></span></div><span class="sk sk-l3"></span><span class="sk sk-l4"></span></div><div class="pickcard skel"><div class="pc-top"><span class="sk sk-av"></span><div class="pc-who"><span class="sk sk-l1"></span><span class="sk sk-l2"></span></div><span class="sk sk-ring"></span></div><span class="sk sk-l3"></span><span class="sk sk-l4"></span></div><div class="pickcard skel"><div class="pc-top"><span class="sk sk-av"></span><div class="pc-who"><span class="sk sk-l1"></span><span class="sk sk-l2"></span></div><span class="sk sk-ring"></span></div><span class="sk sk-l3"></span><span class="sk sk-l4"></span></div></div><button type="button" class="btn ghost seeall" id="todayall" hidden></button><div id="todaylock"></div></div>
+      <p class="todaynote" id="todaynote"></p>
+      <p class="todaynote"><a href="games/">Browse every game's props →</a> · <a href="best/">Today's best props by sport →</a></p>
+    </div>
+  </section>
+
+  <!-- JOIN: the team's Polymarket squad and the daily picks email, side by side below the picks.
        Squad clicks count as click/polymarket-signup-squad/home (app.js outbound clicks). -->
   <section class="joinrow" aria-label="Join the community">
     <div class="wrap">
@@ -575,7 +447,7 @@ footer .fine a{color:#8394ab}
         <span class="squadcopy">
           <span class="kicker">Polymarket group</span>
           <b>Join our <i>squad</i> on Polymarket</b>
-          <span class="sub hide-sm">Scan with your phone or tap to join.</span>
+          <span class="sub">Our group inside the Polymarket app. Polymarket is a separate service with its own age and location rules.</span>
         </span>
         <span class="btn btn-go">Join →</span>
       </a>
@@ -595,29 +467,6 @@ footer .fine a{color:#8394ab}
           </form>
         </div>
       </div>
-    </div>
-  </section>
-
-  <!-- PICK OF THE DAY: a Safe Pick and a Value Shot, from botd.json (botd.py): picked once a day, never swapped, graded in public -->
-  <section id="botd" aria-labelledby="botd-h" hidden>
-    <div class="wrap">
-      <p class="kicker" id="botdkick">Pick of the Day</p>
-      <h2 id="botd-h">Today's <i>Safe Pick</i> &amp; <i>Value Shot</i>.</h2>
-      <p class="sub">One sure pick and one bigger payout, picked once a day from all four sports and graded in public.</p>
-      <div class="app botdgrid"><div class="botdslot lock" id="botd-lock"></div><div class="botdslot" id="botd-value"></div></div>
-      <p class="todaynote" id="botdnote"></p>
-    </div>
-  </section>
-
-  <!-- TODAY: the best bets across all four sports, from today.json (rebuilt hourly) -->
-  <section id="today" aria-labelledby="today-h" hidden>
-    <div class="wrap">
-      <p class="kicker">Right now · all four sports</p>
-      <h2 id="today-h">Today's best <i>value</i>.</h2>
-      <p class="sub">Where the model's chance beats the market price (the cheaper of Polymarket and Kalshi) by the most — NFL, NBA, NHL and MLB in one feed. Tap a pick for the game log, the live price and the full breakdown.</p>
-      <div class="app todayfeed"><div class="pickgrid" id="todaygrid"></div><button type="button" class="btn ghost seeall" id="todayall" hidden></button><div id="todaylock"></div></div>
-      <p class="todaynote" id="todaynote"></p>
-      <p class="todaynote"><a href="games/">Browse every game's props →</a> · <a href="best/">Today's best props by sport →</a></p>
     </div>
   </section>
 
@@ -647,17 +496,25 @@ footer .fine a{color:#8394ab}
     </div>
   </section>
 
-  <!-- HONEST NUMBERS: how often each confidence level hit, from today.json "calib" (build_today.py) -->
-  <section id="calib" aria-labelledby="calib-h" hidden>
+  <!-- HONEST NUMBERS: a reliability chart of how often each confidence level hit, from today.json "calib" (build_today.py) -->
+  <section id="calib" aria-labelledby="calib-h">
     <div class="wrap">
       <p class="kicker">Honest numbers</p>
       <h2 id="calib-h">When we say <i>70%</i>, it hits about <i>70%</i>.</h2>
-      <p class="sub" id="calibsub"></p>
-      <details class="calibmore"><summary>See every range</summary>
-        <div class="calib" id="calibrows" role="list"></div>
-        <div class="calib-key" aria-hidden="true"><span><i class="k-bar"></i>How often it hit</span><span><i class="k-said"></i>What the model said</span></div>
-        <p class="todaynote">Every pick recorded before its game and graded from the box score. Pushes and players who didn't play are left out.</p>
-      </details>
+      <p class="sub" id="calibsub">Every graded pick, grouped by the chance the model gave it, against how often those picks really hit.</p>
+      <div class="calgrid">
+        <figure class="app calfig">
+          <div class="calchart" id="calchart"><span class="sk"></span></div>
+          <figcaption class="calcap" id="calcap">&nbsp;</figcaption>
+        </figure>
+        <div>
+          <table class="caltable">
+            <thead><tr><th scope="col">Model said</th><th scope="col">Actually hit</th><th scope="col">Gap</th><th scope="col">Picks</th></tr></thead>
+            <tbody id="calibrows"><tr><th scope="row">&nbsp;</th><td></td><td></td><td></td></tr><tr><th scope="row">&nbsp;</th><td></td><td></td><td></td></tr><tr><th scope="row">&nbsp;</th><td></td><td></td><td></td></tr><tr><th scope="row">&nbsp;</th><td></td><td></td><td></td></tr><tr><th scope="row">&nbsp;</th><td></td><td></td><td></td></tr></tbody>
+          </table>
+          <p class="todaynote">Every pick recorded before its game and graded from the box score. Pushes and players who didn't play are left out.</p>
+        </div>
+      </div>
     </div>
   </section>
 
@@ -680,7 +537,7 @@ footer .fine a{color:#8394ab}
       <a class="brand" href="./"><svg width="28" height="28" viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" rx="14" fill="#0f2038"/><path d="M32,6 Q32,32 54,32 Q32,32 32,58 Q32,32 10,32 Q32,32 32,6 Z" fill="#22d07f"/></svg><b>Prop <i>Streak</i> Lab</b></a>
       <nav aria-label="Footer">
         <a href="./nfl.html">NFL</a><a href="./nba.html">NBA</a><a href="./nhl.html">NHL</a><a href="./mlb.html">MLB</a><a href="./tennis.html">Tennis</a>
-        <a href="players/">Players</a><a href="methodology.html">How the model works</a><a href="privacy.html">Privacy Policy</a><a href="terms.html">Terms &amp; Conditions</a><a href="cookies.html">Cookies Policy</a><a href="games/">Games</a><a href="best/">Best props</a><a href="#email">Free daily email</a><a href="guides/">Guides</a><a href="team/">Team</a>
+        <a href="players/">Players</a><a href="record.html">The record</a><a href="methodology.html">How the model works</a><a href="privacy.html">Privacy Policy</a><a href="terms.html">Terms &amp; Conditions</a><a href="cookies.html">Cookies Policy</a><a href="games/">Games</a><a href="best/">Best props</a><a href="#email">Free daily email</a><a href="guides/">Guides</a><a href="team/">Team</a>
         <a href="mailto:info@propstreaklab.com">Contact</a>
       </nav>
     </div>
@@ -712,28 +569,6 @@ footer .fine a{color:#8394ab}
   var el=document.getElementById('pslcookie'); if(!el) return; el.hidden=false;
   document.getElementById('pslcookieok').onclick=function(){ el.hidden=true; try{ localStorage.setItem(K,'1'); }catch(e){} }; })();
 
-const reduce = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
-
-// Reveal-on-scroll, with a safety net: if the observer hasn't fired within ~1.2s
-// (some in-app browsers, link previewers), just show everything.
-(function(){ const els=[...document.querySelectorAll('.rv')];
-  const showAll=()=>{ els.forEach(e=>e.classList.add('in')); };
-  if(!('IntersectionObserver' in window) || reduce){ showAll(); return; }
-  let fired=false;
-  const io=new IntersectionObserver(es=>{ fired=true; es.forEach(en=>{ if(!en.isIntersecting) return; const el=en.target;
-    el.classList.add('in'); io.unobserve(el); }); },
-    {threshold:0, rootMargin:'0px 0px -40px 0px'});
-  els.forEach(e=>io.observe(e));
-  setTimeout(()=>{ if(!fired){ io.disconnect(); showAll(); } }, 1200); })();
-
-// Sport tabs (keyboard: ←/→ move between tabs).
-(function(){ const tabs=[...document.querySelectorAll('[role="tab"]')];
-  function select(t){ tabs.forEach(x=>{ const on=x===t; x.setAttribute('aria-selected',on); x.tabIndex=on?0:-1;
-      const p=document.getElementById(x.getAttribute('aria-controls')); if(p){ p.hidden=!on; if(on) p.classList.add('in'); } }); }
-  tabs.forEach((t,i)=>{ t.addEventListener('click',()=>select(t));
-    t.addEventListener('keydown',e=>{ let j=null; if(e.key==='ArrowRight') j=(i+1)%tabs.length; if(e.key==='ArrowLeft') j=(i-1+tabs.length)%tabs.length;
-      if(j!=null){ e.preventDefault(); tabs[j].focus(); select(tabs[j]); } }); }); })();
-
 // The Today feed and the sections below it, from today.json (rebuilt every 10 minutes).
 (function(){ if(!window.PS) return;
   const esc=PS.esc, SPORT={nfl:'🏈 NFL', nba:'🏀 NBA', nhl:'🏒 NHL', mlb:'⚾ MLB', tennis:'🎾 Tennis'};
@@ -762,18 +597,19 @@ const reduce = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)
     const sig=picks.map(p=>[p.sport,p.pid,p.stat,p.line,p.side,p.lk||''].join('|')).join(',');
     if(grid.dataset.sig===sig) return;       // unchanged: don't restart the ring animations
     grid.dataset.sig=sig;
-    if(!picks.length){ sec.hidden=true; return; }
+    const all=document.getElementById('todayall'); grid.classList.remove('all');
+    if(!picks.length){      // between slates: say so, and keep the links to the games and the boards
+      grid.innerHTML='<p class="bs-empty">Nothing on the list right now. Picks leave when their game starts, and new ones post as the next games get prices.</p>';
+      all.hidden=true; document.getElementById('todaylock').innerHTML=''; document.getElementById('todaynote').textContent=''; return; }
     const anyValue=picks.some(p=>p.kind==='value');
     document.getElementById('today-h').innerHTML= anyValue? 'Today\'s best <i>value</i>.' : 'Today\'s <i>surest</i> bets that pay.';
     grid.innerHTML=picks.map(card).join('');
     // phones show the first 3; "See all" opens the rest
-    const all=document.getElementById('todayall'); grid.classList.remove('all');
     all.hidden=picks.length<=3; all.textContent=`See all ${picks.length} ↓`;
     all.onclick=()=>{ grid.classList.add('all'); all.hidden=true; };
     document.getElementById('todaylock').innerHTML=picks.length? PS.lockNote(picks.some(p=>p.lk)) : '';
     const at=new Date(t.gen); const when=isFinite(at)? at.toLocaleTimeString([], {hour:'numeric', minute:'2-digit'}) : 'the last update';
     document.getElementById('todaynote').textContent=`Prices as of ${when} — tap a pick for the live price. Picks leave this list when their game starts. Research, not betting advice.`;
-    sec.hidden=false;
   }
 
   // Bet of the Day (botd.json, botd.py): today's entry from 11 AM ET; before that, yesterday's
@@ -828,13 +664,19 @@ const reduce = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)
       : show? `Pick of the Day · yesterday’s results · today’s post at 11 AM ET` : 'Pick of the Day';
     document.getElementById('botd-h').innerHTML = day||!show? 'Today\'s <i>Safe Pick</i> &amp; <i>Value Shot</i>.' : 'Yesterday\'s <i>Safe Pick</i> &amp; <i>Value Shot</i>.';
     ['lock','value'].forEach(s=>{ document.getElementById('botd-'+s).innerHTML=bsSlot(s, show, b); });
-    document.getElementById('botdnote').textContent='Picked from every sport’s upcoming props at the best price at that moment (the cheaper of Polymarket and Kalshi) and never swapped afterward, even if the price moves. A player who doesn’t play is a void. Research, not betting advice — 18+.';
+    document.getElementById('botdnote').textContent='Picked from the upcoming NFL, NBA, NHL and MLB props at the best price at that moment (the cheaper of Polymarket and Kalshi) and never swapped afterward, even if the price moves. A player who doesn’t play is a void. Research, not betting advice — 18+.';
     sec.hidden=false;
   }
   // Nothing is certain: picks recorded before the 99% cap still show 99% at most.
   const capBotd=b=>{ (b&&b.days||[]).forEach(d=>{ PS.capPick(d.lock); PS.capPick(d.value); }); return b; };
-  get('botd.json').then(b=>{ if(!b) return; renderBotd(capBotd(b));
-    setInterval(()=>{ if(!document.hidden) get('botd.json').then(n=>{ if(n){ b=capBotd(n); renderBotd(b); } }); }, 300000); });
+  // If the file can't be read, the placeholders go away (the section hides) rather than shimmer forever; the next try brings it back.
+  let botdOk=false;
+  // The same if the file is there but can't be drawn (a pick missing a field): never a half-painted card.
+  const loadBotd=()=>get('botd.json').then(b=>{
+    if(b){ try{ renderBotd(capBotd(b)); botdOk=true; return; }catch(e){ botdOk=false; } }
+    if(!botdOk) document.getElementById('botd').hidden=true; });
+  loadBotd(); setTimeout(()=>{ if(!botdOk) loadBotd(); }, 4000);
+  setInterval(()=>{ if(!document.hidden) loadBotd(); }, 300000);
 
   // Player search: every player with a game this season or last (search.json), any sport. A result
   // opens that player on their board (#player/<id>). Accents and punctuation are ignored.
@@ -882,7 +724,6 @@ const reduce = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)
     document.addEventListener('click', e=>{ if(!e.target.closest('.psearch')){ list.hidden=true; inp.setAttribute('aria-expanded','false'); } });
   })();
 
-  // On the move: hot streaks and prices moving toward a pick (today.json "streaks", "moves"); games still ahead only.
   // DAILY EMAIL: the Buttondown newsletter's username (buttondown.com/<name>). Empty keeps the sign-up box hidden.
   const NEWSLETTER='PropStreakLab';
   (function(){
@@ -893,7 +734,6 @@ const reduce = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)
       const gc=window.goatcounter; if(gc && gc.count) gc.count({path:'click/email-list/'+from, title:'Joined the email list ('+from+')', event:true});
       setTimeout(()=>{ f.querySelector('.emailfine').textContent='Check your inbox for a confirmation link.'; }, 300); });
     sec.hidden=false;
-    document.querySelectorAll('.pb-email').forEach(x=>{ x.hidden=false; });
   })();
 
   // LIVE NOW: today's listed picks and your tracked bets, from ESPN's live box scores (app.js PSLive)
@@ -944,6 +784,7 @@ const reduce = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)
     PSLive.track(items, render);
   }
 
+  // On the move: hot streaks and prices moving toward a pick (today.json "streaks", "moves"); games still ahead only.
   function renderMove(t){
     const sec=document.getElementById('move'); if(!sec) return;
     const up=p=>Date.parse(p.start)>Date.now();
@@ -974,20 +815,50 @@ const reduce = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)
     pick(cur? cur.id : cols.length? cols[0].id : '');
   }
 
-  // Calibration: for each band of model chance, how often those picks hit (today.json "calib").
-  // The track runs 40-100% so the gaps between bands are visible; the white line is the model's average.
+  // Calibration: for each band of model chance, how often those picks hit (today.json "calib"), as a
+  // reliability chart: across is what the model said, up is how often it hit, so a dot on the dashed
+  // 45° line was exactly right. Each dot carries its hit rate and its number of picks; the table repeats them.
+  const pct1=v=>(v*100).toFixed(1)+'%', num=n=>n.toLocaleString('en-US');
+  function calChart(rows){
+    const W=360, H=336, L=44, T=30, S=268;      // the plot is a square, so the "exactly right" line runs at 45°
+    let lo=Math.min(90, ...rows.map(b=>Math.floor(Math.min(b.said, b.hit)*10)*10));
+    if(100-lo>60) lo=Math.floor(lo/20)*20;      // wide range: a tick every 20, starting on one so the last tick is 100%
+    const span=100-lo, step=span>60? 20 : 10;
+    const x=v=>L+(v*100-lo)/span*S, y=v=>T+S-(v*100-lo)/span*S, f=v=>v.toFixed(1);
+    let g='';
+    for(let v=lo; v<=100; v+=step){ const px=f(x(v/100)), py=f(y(v/100));
+      g+=`<line class="cc-grid" x1="${L}" x2="${L+S}" y1="${py}" y2="${py}"/><line class="cc-grid" x1="${px}" x2="${px}" y1="${T}" y2="${T+S}"/>`+
+         `<text class="cc-tick" x="${L-8}" y="${f(y(v/100)+4)}" text-anchor="end">${v}%</text><text class="cc-tick" x="${px}" y="${T+S+16}" text-anchor="middle">${v}%</text>`; }
+    // the line's own label sits between the two middle dots, just above it
+    const m=rows.length>>1, mid=(rows[m-1].said+rows[m].said)/2, lx=f(x(mid)-7), ly=f(y(mid)-7);
+    g+=`<line class="cc-diag" x1="${L}" y1="${T+S}" x2="${L+S}" y2="${T}"/><text class="cc-diagl" x="${lx}" y="${ly}" text-anchor="middle" transform="rotate(-45 ${lx} ${ly})">exactly right</text>`;
+    rows.forEach((b,i)=>{ const cx=x(b.said), cy=y(b.hit), left=cx+10+72>W;      // labels go below-right, clear of the line; above-left where that would run off the edge
+      const tx=f(left? cx-10 : cx+10), a=left? 'end' : 'start';
+      g+=`<g class="cc-pt" style="--i:${i}"><title>Model said ${pct1(b.said)} on average (the ${b.lo}–${b.hi}% range): ${pct1(b.hit)} of ${num(b.n)} picks hit</title>`+
+        `<circle class="cc-dot" cx="${f(cx)}" cy="${f(cy)}" r="6"/>`+
+        `<text class="cc-hit" x="${tx}" y="${f(cy+(left? -19 : 4))}" text-anchor="${a}">${pct1(b.hit)} hit</text>`+
+        `<text class="cc-n" x="${tx}" y="${f(cy+(left? -6 : 17))}" text-anchor="${a}">${num(b.n)} picks</text></g>`; });
+    return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Chart: what the model said against how often those picks hit. The table has the same numbers.">`+g+
+      `<text class="cc-axis" x="6" y="16">Actually hit</text><text class="cc-axis" x="${L+S/2}" y="${H-6}" text-anchor="middle">Model said</text></svg>`;
+  }
   function renderCalib(t){
-    const rows=(t&&t.calib||[]).filter(b=>b.n>=200), sec=document.getElementById('calib'); if(!sec || rows.length<3) return;
-    const pos=v=>Math.max(0, Math.min(100, (v-0.4)/0.6*100)).toFixed(1)+'%', pct=v=>Math.round(v*100)+'%';
+    const rows=(t&&t.calib||[]).filter(b=>b.n>=200), sec=document.getElementById('calib'); if(!sec) return;
+    if(rows.length<3){ sec.hidden=true; return; }      // too little graded yet to draw honestly
     const total=(t.calib||[]).reduce((a,b)=>a+b.n,0), tr=t.tracked||{};
     const since=tr.since? new Date(tr.since+'T12:00:00Z').toLocaleDateString('en-US',{month:'short', day:'numeric', year:'numeric'}) : '';
-    document.getElementById('calibsub').textContent=`${total.toLocaleString('en-US')} graded picks across all four sports${since? ' since '+since : ''}. A well-calibrated model hits about as often as it says it will, and ours does.`;
+    document.getElementById('calibsub').textContent=`${num(total)} graded NFL, NBA, NHL and MLB picks${since? ' since '+since : ''}, grouped by the chance the model gave them. A well-calibrated model hits about as often as it says it will. Tennis is graded on its own board and isn't counted here.`;
+    const gap=b=>(b.hit-b.said)*100, worst=rows.reduce((a,b)=>Math.abs(gap(b))>Math.abs(gap(a))? b : a);
+    document.getElementById('calcap').textContent=`A dot on the dashed line means the model was exactly right. The widest gap: picks it rated ${worst.lo}–${worst.hi}% hit ${pct1(worst.hit)}, `+
+      `${Math.abs(gap(worst)).toFixed(1)} points ${gap(worst)<0? 'below' : 'above'} the ${pct1(worst.said)} it gave them on average.`;
     document.getElementById('calibrows').innerHTML=rows.map(b=>
-      `<div class="cr" role="listitem" aria-label="Model said ${b.lo} to ${b.hi} percent: hit ${pct(b.hit)} of ${b.n.toLocaleString('en-US')} picks">`+
-      `<span class="cr-l">${b.lo}–${b.hi}%</span>`+
-      `<div class="cr-track"><i class="cr-bar" style="width:${pos(b.hit)}"></i><b class="cr-said" style="left:${pos(b.said)}"></b></div>`+
-      `<span class="cr-v"><b>${pct(b.hit)}</b> hit<small>model said ${pct(b.said)} · ${b.n.toLocaleString('en-US')} picks</small></span></div>`).join('');
-    sec.hidden=false;
+      `<tr><th scope="row">${b.lo}–${b.hi}%</th><td><b>${pct1(b.hit)}</b></td><td>${gap(b)<0? '−' : '+'}${Math.abs(gap(b)).toFixed(1)} pts</td><td>${num(b.n)}</td></tr>`).join('');
+    const ch=document.getElementById('calchart'); ch.innerHTML=calChart(rows);
+    // draw it in once, as it scrolls into view; right away where the observer never reports (some in-app browsers)
+    const go=()=>ch.classList.add('go');
+    if(!('IntersectionObserver' in window)){ go(); return; }
+    let fired=false;
+    const io=new IntersectionObserver(es=>{ fired=true; if(es.some(e=>e.isIntersecting)){ io.disconnect(); go(); } }, {threshold:0.35});
+    io.observe(ch); setTimeout(()=>{ if(!fired){ io.disconnect(); go(); } }, 1200);
   }
 
   // "Pick a sport" tiles: each sport's season Top 25 hit rate under its name, once there are enough graded picks
@@ -996,17 +867,21 @@ const reduce = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)
     document.querySelectorAll('.pickbar [data-rec]').forEach(el=>{ const r=(R[el.dataset.rec]||{}).T;
       if(r && r.n>=20) el.textContent=`Top 25: ${Math.round(100*r.hit/r.n)}% hit`; });
   }
-  get('today.json').then(t=>{
-    if(!t) return;
-    pickbarRecords(t);
-    renderCalib(t);
-    renderMove(t);
-    try { renderLive(t); } catch(e){}
-    (t.picks||[]).forEach(PS.capPick);
-    if(t.fair && t.fair.w>=0) FAIRW=t.fair.w;
-    renderToday(t);
-    setInterval(()=>{ if(!document.hidden) renderToday(t); }, 60000);
+  // If today.json can't be read (one more try after 4 seconds), the placeholder sections hide rather than shimmer forever.
+  const loadToday=again=>get('today.json').then(t=>{
+    if(!t){ if(again) setTimeout(()=>loadToday(false), 4000); else ['today','calib'].forEach(id=>{ document.getElementById(id).hidden=true; }); return; }
+    // each part on its own: one that can't be drawn hides its section and never stops the ones after it
+    const part=(id, f)=>{ try{ f(); }catch(e){ const s=id && document.getElementById(id); if(s) s.hidden=true; } };
+    part('', ()=>pickbarRecords(t));
+    part('calib', ()=>renderCalib(t));
+    part('move', ()=>renderMove(t));
+    part('live', ()=>renderLive(t));
+    part('today', ()=>{ (t.picks||[]).forEach(PS.capPick);
+      if(t.fair && t.fair.w>=0) FAIRW=t.fair.w;
+      renderToday(t);
+      setInterval(()=>{ if(!document.hidden) part('today', ()=>renderToday(t)); }, 60000); });
   });
+  loadToday(true);
 })();
 </script>
 </body>
