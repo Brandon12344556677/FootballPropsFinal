@@ -12,7 +12,8 @@ Families: baselines (every pick, each list), fixed model-edge cut-offs, the walk
 uses, recalibrating the model on past results, blending model and market (logistic regression), price bands
 (favourite/longshot), over/under, stat by side cells, market moves before lock (follow and fade), the two
 exchanges disagreeing, line shopping, model confidence (games of history, range width), hot streaks, fading the
-model, two-leg parlays of the best bets, and staking/money-management rules (flat, Kelly variants, stop after a
+model, injury news, weather and lineups (news.py's test-mode fields), each player's own past results (hot and
+cold streaks, beating the market, the model's record on him), two-leg parlays of the best bets, and staking/money-management rules (flat, Kelly variants, stop after a
 4% day, doubling after a losing day). Pick of the Day is shown from botd.json.
 
 roi4.py runs study() once and freezes its result into team/roi4.enc, so the dashboard's 4% return tab can show
@@ -344,6 +345,31 @@ def edge_prop(base_test):
     return m
 
 
+def news(c, key, default=None):
+    return (c.get("nw") or {}).get(key, default)
+
+
+def history_rule(test):
+    """Bet the picks whose player's own earlier results pass test(c, h): h = the player's (sport, pid) and
+    the player-stat-side's earlier graded picks, as lists of (hit - price, hit - model, hit), oldest first."""
+    def m(train, today, day, ctx, bets):
+        if getattr(ctx, "h_day", None) != day:
+            pl, pss = {}, {}
+            for c in train_dedupe(ctx, train, day):
+                x = (float(c["res"] == "hit") - c["pr"], float(c["res"] == "hit") - c["prob"], c["res"] == "hit")
+                pl.setdefault((c["sport"], c["pid"]), []).append(x)
+                pss.setdefault((c["sport"], c["pid"], c["stat"], c["side"]), []).append(x)
+            ctx.h_day, ctx.h = day, (pl, pss)
+        pl, pss = ctx.h
+        return [(c, 1.0, c["pr"]) for c in roi4.dedupe(today)
+                if test(c, pl.get((c["sport"], c["pid"]), []), pss.get((c["sport"], c["pid"], c["stat"], c["side"]), []))]
+    return m
+
+
+def avg(xs, i):
+    return sum(x[i] for x in xs) / len(xs) if xs else 0.0
+
+
 def methods():
     E = lambda e, s=None: (lambda c: edge(c) >= e and (s is None or c["sport"] == s))
     nfl_edge = E(0.10, "nfl")
@@ -403,6 +429,32 @@ def methods():
     out.append(("Hot cells: sport x stat x side up 10%+ the last 7 days", "Hot streaks",
                 cells_rule(lambda c: (c["sport"], c["stat"], c["side"]), min_n=60, min_days=2, recent=7, min_roi=0.10, lo_floor=-1)))
     out.append(("Fade the model: picks it rates 10+ points under the price", "Fade the model", flat(lambda c: edge(c) <= -0.10)))
+    # injury news and weather (news.py records them on each pick in test mode: "om" the usual minutes of NBA regulars
+    # listed Out, "p2" the chance with the news applied, "wx" [temp F, wind mph, rain mm], "roof")
+    p2 = lambda c: news(c, "p2") if news(c, "p2") is not None else c["prob"]
+    out.append(("NBA picks with a starter-level teammate out (24+ minutes)", "Injury news", flat(lambda c: c["sport"] == "nba" and (news(c, "om") or 0) >= 24)))
+    out.append(("NBA overs on boosted stats with a teammate out", "Injury news",
+                flat(lambda c: c["sport"] == "nba" and (news(c, "om") or 0) >= 24 and c["side"] == "over" and c["stat"] in ("pts", "ast", "tpm", "pra"))))
+    out.append(("News-adjusted chance 10+ points over the price, every sport", "Injury news", flat(lambda c: p2(c) - c["pr"] >= 0.10)))
+    out.append(("NBA news-adjusted chance 10+ points over", "Injury news", flat(lambda c: c["sport"] == "nba" and p2(c) - c["pr"] >= 0.10)))
+    out.append(("NFL news- and wind-adjusted chance 10+ points over", "Injury news", flat(lambda c: c["sport"] == "nfl" and p2(c) - c["pr"] >= 0.10)))
+    out.append(("NFL model 10+ over, dome or closed roof", "Weather", flat(lambda c: nfl_edge(c) and news(c, "roof") in ("dome", "closed"))))
+    out.append(("NFL model 10+ over, outdoors", "Weather", flat(lambda c: nfl_edge(c) and news(c, "roof") == "outdoors")))
+    out.append(("NFL passing/receiving unders, wind 10+ mph", "Weather",
+                flat(lambda c: c["sport"] == "nfl" and c["side"] == "under" and c["stat"] in ("pass_yds", "pass_cmp", "rec", "rec_yds")
+                     and (news(c, "wx") or [0, 0, 0])[1] >= 10)))
+    out.append(("MLB hitters batting 1st-3rd", "Lineups", flat(lambda c: c["sport"] == "mlb" and news(c, "lu") in (1, 2, 3))))
+    # each player's own earlier results against the market and the model
+    out.append(("Hot streak: the player's last 3 at this stat and side all hit", "Past performance",
+                history_rule(lambda c, pl, ps: len(ps) >= 3 and all(x[2] for x in ps[-3:]))))
+    out.append(("Cold streak: the last 3 all missed (bounce back)", "Past performance",
+                history_rule(lambda c, pl, ps: len(ps) >= 3 and not any(x[2] for x in ps[-3:]))))
+    out.append(("Players who beat the market 10%+ over 8+ earlier picks", "Past performance",
+                history_rule(lambda c, pl, ps: len(pl) >= 8 and avg(pl, 0) >= 0.10)))
+    out.append(("Players who lost to the market 10%+ over 8+ earlier picks", "Past performance",
+                history_rule(lambda c, pl, ps: len(pl) >= 8 and avg(pl, 0) <= -0.10)))
+    out.append(("Model 10+ over after correcting for how the model did on that player", "Past performance",
+                history_rule(lambda c, pl, ps: c["prob"] + (0.5 * avg(pl, 1) if len(pl) >= 8 else 0) - c["pr"] >= 0.10)))
     out.append(("Two-leg parlays of NFL model 10+ picks", "Parlays", parlays2(flat(nfl_edge))))
     out.append(("Two-leg parlays of every-sport model 10+ picks", "Parlays", parlays2(flat(E(0.10)))))
     out.append(("NFL model 10+ over, flat 1 unit", "Staking", flat(nfl_edge)))

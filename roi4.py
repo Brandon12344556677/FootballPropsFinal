@@ -119,7 +119,8 @@ def candidate(sport, p):
             # for the methods study (roi4_study.py): both exchanges' prices and depth, the first and closing price, the model's range
             "pp": frac(p.get("pp")), "kp": frac(p.get("kp")), "pd": p.get("pd"), "kd": p.get("kd"),
             "p0": frac(p.get("px0")), "pc": frac(p.get("pxc")), "neff": p.get("neff"), "lo": p.get("lo"), "hi": p.get("hi"),
-            "pos": p.get("pos"), "team": p.get("team"), "opp": p.get("opp"), "tour": p.get("tour")}
+            "pos": p.get("pos"), "team": p.get("team"), "opp": p.get("opp"), "tour": p.get("tour"),
+            "nw": p.get("nw") if isinstance(p.get("nw"), dict) else None, "actual": p.get("actual")}
 
 
 def load_docs():

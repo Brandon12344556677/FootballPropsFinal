@@ -200,6 +200,21 @@ class LiveTest(unittest.TestCase):
         self.assertFalse(any(s["ok"] for s in plans["2026-11-10"]))
 
 
+class StudyTest(unittest.TestCase):
+    def test_every_method_runs_walk_forward(self):
+        import roi4_study
+        h = [dict(c, res="hit" if i % 5 < 3 else "miss", nw={"om": 30, "p2": 0.8, "roof": "dome", "wx": [60, 12, 0]})
+             for i, c in enumerate(history(days=20, per_day=20, start="2026-10-01"))]
+        res = roi4_study.study(h, "2026-11-01", test_from="2026-10-10")
+        self.assertEqual(res["days"], 11)              # Oct 10-20
+        names = [r["name"] for r in res["rows"]]
+        self.assertEqual(len(names), len(set(names)))
+        self.assertTrue(any(r["family"] == "Injury news" for r in res["rows"]))
+        self.assertTrue(any(r["family"] == "Past performance" and r["n"] for r in res["rows"]))
+        few = [r["n"] < roi4_study.FEW for r in res["rows"]]
+        self.assertEqual(few, sorted(few))                 # too-few-to-judge methods come last
+
+
 class EdgeReportTest(unittest.TestCase):
     def test_rows(self):
         doc = {"bets": [{"day": "2026-11-15", "price": 0.55, "res": "hit", "stake": 0.9, "sport": "nfl", "side": "over",
