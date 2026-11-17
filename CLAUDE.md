@@ -46,6 +46,12 @@ README.md has the full feature tour; this file is the working rules.
   pass the prices they already read to `arbs.note` (both sides, paired on player, stat, exact line and game date; saved to `.arbs/`, gitignored),
   then `arbs.py` reads both live books of each pair quoted under $1.00 and keeps those returning 1%+ after taker fees (`FEE`: Polymarket US 0.05,
   Kalshi 0.07 × p × (1 − p)) with $25+ a side at those prices; the dashboard's Arbitrage tab. Not a list of picks, so not in the edge tracker.
+  `roi4.py` → `team/roi4.enc` (team only, encrypted; since Nov 17, 2026): the "4% return" track, paper bets sized in units on recorded
+  picks bought at the locked price with $25+ offered. Each day's plan (frozen at the day's first run) bets only the menu segments
+  (each sport's Value, Top 25, model 10+ points over) with 300+ graded picks on 6+ days in the last 42 returning 4%+, bootstrap low end
+  above zero; one bet per player, stat and game; quarter Kelly on the segment's shrunk return, 0.10-1u, 5u a game, 25u a day. Frozen,
+  graded from the picks; the first run freezes a walk-forward backtest and `roi4_study.py`'s study of every other method into the file
+  (results stay encrypted: never put them in public code, the README or a PR). Dashboard tab 4% return; edge tracker row "roi4".
   `tpod.py` → `team/tpod.enc` (team only, encrypted; build_today.py runs it after Pick of the Day): 3 Picks of the Day for TikTok from the
   private methods (rules.enc), each judged by its record in the pick's sport (30+ picks there, in profit): 35-75c on Polymarket with $25+ offered on that side (NBA unders were not tradable there Oct 22-28, 2026), model 60%+ and 5+ points over the price, no news flag or price drop, three games, at most two of a kind unless a third proven pick would otherwise lose its slot to a fill-in;
   no parlay (the fun parlay was dropped Oct 23, 2026; older days keep theirs in the file, unread). Frozen once made, graded like Pick of the Day; a script and caption that never name a method. After filming, the tab's Lock button saves the day's picks to `tpod_locks.enc` on `team-data` (needs a GitHub token, as in Expenses); `tpod.load_locks` reads it through the API each run, and a locked day is never remade or filled (picks changed after filming are put back). Dashboard tab 3 Picks of the Day (each pick shows how to say the player's name: `team/pronounce.js`, from Wikipedia in the browser, with a Hear it voice; today's picks followed live through `parlaylive.js`).
@@ -55,7 +61,7 @@ README.md has the full feature tour; this file is the working rules.
 - `team_stats.py` → `team/stats.enc`: GoatCounter visitor totals (and traffic spikes), encrypted with the
   `TEAM_DASH_PASSWORD` secret, for the password-protected team dashboard `team/index.html`
   (hand-written, noindex, not in the sitemap). Totals only — no IPs or per-visitor data.
-  The dashboard is split into tabs (Overview, Audience, Sign-ups, Picks & edges, Parlays, Parlay of the Day, Spreads, Arbitrage, Secret methods, 3 Picks of the Day, Social, Sponsors, Affiliates, Expenses: each panel has
+  The dashboard is split into tabs (Overview, Audience, Sign-ups, Picks & edges, Parlays, Parlay of the Day, Spreads, Arbitrage, 4% return, Secret methods, 3 Picks of the Day, Social, Sponsors, Affiliates, Expenses: each panel has
   `data-view`). `app.js` feeds it anonymous GoatCounter events, `time/<range>`, `click/<what>/<page>`, `view/<n>`, `visitor/new|returning`
   (the visitor's n-th page today: page views and unique visitors) and `ref/<code>/visit|new`; their labels are mirrored in `team_stats.py`
   (TIME_RANGES, CLICK_RE, VIEW_RE, REF_RE) and `team/index.html`. `view/<n>` and `ref/` are disclosed in privacy.html and cookies.html.
@@ -93,7 +99,7 @@ The bot overwrites these on every pass, so hand edits are lost and cause merge c
   `mlb.html` ← `mlb_template.html`; `tennis.html` ← `tennis_template.html`; `record.html` ← `record_template.html`. Edit the template (and the builder), never the output page.
 - `data.json`, `slate.json`, `picks.json`, `weekly.json`, `*_picks.json`, `*_stats.json`,
   `nba.json`, `nhl.json`, `mlb.json`, `tennis.json`, `tennis_results.json`, `record.json`, `today.json`, `botd.json`, `health.json`, `top_cache.json`,
-  `sitemap.xml`, `robots.txt`, `players/`, `games/`, `best/`, `p/`, `team/stats.enc`, `team/edges.enc`, `team/parlays.enc`, `team/parlays_nba.enc`, `team/parlays_nfl.enc`, `team/parlay_potd.enc`, `team/spreads.enc`, `team/arbs.enc`, `team/tpod.enc`, `spread_scores.json`, `fast_hist.json`, `*_picks_recent.json`, `search.json`,
+  `sitemap.xml`, `robots.txt`, `players/`, `games/`, `best/`, `p/`, `team/stats.enc`, `team/edges.enc`, `team/parlays.enc`, `team/parlays_nba.enc`, `team/parlays_nfl.enc`, `team/parlay_potd.enc`, `team/spreads.enc`, `team/arbs.enc`, `team/tpod.enc`, `team/roi4.enc`, `spread_scores.json`, `fast_hist.json`, `*_picks_recent.json`, `search.json`,
   `tiktok/<day>/` and `tiktok/posted.json` (the TikTok workflow; `tiktok/callback.html` is hand-written),
   `og/*.png`, `og/state.json` and `p/<sport>/*.png` (cards.py; `og/draw.html` is hand-written).
 

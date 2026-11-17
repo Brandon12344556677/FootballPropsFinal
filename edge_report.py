@@ -40,6 +40,7 @@ PARLAYS_NBA = os.path.join("team", "parlays_nba.enc")   # parlay.py's NBA track,
 PARLAYS_NFL = os.path.join("team", "parlays_nfl.enc")   # and its NFL track
 PARLAY_POTD = os.path.join("team", "parlay_potd.enc")   # and Parlay of the Day
 SPREADS = os.path.join("team", "spreads.enc")           # spreads.py: the private game-spread test
+ROI4 = os.path.join("team", "roi4.enc")                 # roi4.py: the 4% return track
 BOTD = "botd.json"
 ET = ZoneInfo("America/New_York")
 FILES = [("nfl", "picks.json"), ("nhl", "nhl_picks.json"), ("mlb", "mlb_picks.json"), ("nba", "nba_picks.json"),
@@ -47,8 +48,8 @@ FILES = [("nfl", "picks.json"), ("nhl", "nhl_picks.json"), ("mlb", "mlb_picks.js
 NHL_REGULAR = "2026-09-29"     # NHL 2026-27 regular season opener: anything earlier is left out (current season only)
 BOOT = 400
 WAITING = {"nba", "tennis"}   # rows shown even before their first graded pick (NBA season Oct 2026; tennis added Nov 2, 2026)
-WAITING_KEYS = {"parlays", "parlays-nba", "parlays-nfl", "parlay-potd", "spreads-all", "spreads-nba", "spreads-nfl", "spreads-nhl", "spreads-mlb", "botd-value", "botd-lock"}     # and rows for lists that start posting later
-OWN_ROWS = {"parlay", "parlay-nba", "parlay-nfl", "parlay-potd", "spread", "botd"}  # rows that repeat picks already counted: only their own strategies grade them
+WAITING_KEYS = {"parlays", "parlays-nba", "parlays-nfl", "parlay-potd", "spreads-all", "spreads-nba", "spreads-nfl", "spreads-nhl", "spreads-mlb", "botd-value", "botd-lock", "roi4"}     # and rows for lists that start posting later
+OWN_ROWS = {"parlay", "parlay-nba", "parlay-nfl", "parlay-potd", "spread", "botd", "roi4"}  # rows that repeat picks already counted: only their own strategies grade them
 MOVE = 3   # cents the price must have moved from its first recording (px0) to the close (pxc) for the market-move rows
 
 
@@ -111,6 +112,7 @@ STRATEGIES = [   # (key, label, sport or None, test)
     ("spreads-nfl", "Game spreads, NFL", "spread", lambda p: p["lists"] == "nfl"),
     ("spreads-nhl", "Game spreads, NHL", "spread", lambda p: p["lists"] == "nhl"),
     ("spreads-mlb", "Game spreads, MLB", "spread", lambda p: p["lists"] == "mlb"),
+    ("roi4", "4% return track's bets, live (graded flat 1 unit here; the 4% return tab shows them at their stakes)", "roi4", lambda p: True),
 ]
 # Private strategies (the unders rules and any the team adds) are not in this file: they live
 # encrypted in rules.enc on the repo's team-data branch, written from the team dashboard's
@@ -219,6 +221,27 @@ def botd_rows(doc):
             out.append({"sport": "botd", "day": d["date"], "pr": frac(p["price"]), "win": p["res"] == "hit",
                         "side": p.get("side") or "over", "stat": p.get("stat"), "line": p.get("line"), "lists": slot})
     return out
+
+
+def roi4_rows(doc):
+    """roi4.py's live bets (team/roi4.enc, decrypted) that won or lost, as rows for the "roi4" strategy: each a
+    flat 1-unit bet at its frozen price (the tab shows them at their own stakes). The backtest is never counted."""
+    out = []
+    for b in (doc or {}).get("bets") or []:
+        if b.get("res") not in ("hit", "miss") or not b.get("price"):
+            continue
+        out.append({"sport": "roi4", "day": b["day"], "pr": float(b["price"]), "win": b["res"] == "hit",
+                    "side": b.get("side") or "over", "stat": b.get("stat"), "line": b.get("line"), "lists": b.get("sport") or ""})
+    return out
+
+
+def load_roi4(password):
+    try:
+        with open(ROI4, encoding="ascii") as f:
+            return roi4_rows(json.loads(team_stats.decrypt(f.read().strip(), password)))
+    except Exception as e:  # noqa: BLE001 - no 4% bets yet (or unreadable) only empties that row
+        print(f"edge report: no 4% return bets loaded ({type(e).__name__})")
+        return []
 
 
 def load_parlays(password):
@@ -421,7 +444,7 @@ def main():
             rows += graded(sport, doc)
     private = load_private(password)
     report = {"generated_at": now.strftime("%Y-%m-%dT%H:%M:%SZ"), "day": today, "picks": len(current_season(rows)),
-              "strategies": build(rows + load_parlays(password) + load_spreads(password) + botd_rows(load(BOTD)), today,
+              "strategies": build(rows + load_parlays(password) + load_spreads(password) + load_roi4(password) + botd_rows(load(BOTD)), today,
                                   strategies=STRATEGIES + private, waiting={k for k, _, _, _ in private})}
     mark_private(report["strategies"], private, rows, today)
     try:   # the same numbers as the last pass: leave the file alone (a new salt would change it every time)
