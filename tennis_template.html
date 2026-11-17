@@ -627,8 +627,8 @@ details.valrules>summary{cursor:pointer}
 .panel.collapsed{padding-bottom:14px}
 </style>
 
-<link rel="stylesheet" href="app.css?v=20261111a">
-<script src="app.js?v=20261117a"></script>
+<link rel="stylesheet" href="app.css?v=20261117b">
+<script src="app.js?v=20261117b"></script>
 <script src="/thanksgiving.js?v=20261101b"></script>
 
 <header class="apptop">
@@ -663,6 +663,7 @@ details.valrules>summary{cursor:pointer}
   </div>
 
 <div id="page-week">
+  <div id="fltbar" hidden></div>
   <div class="panel" id="valuepanel" hidden>
     <div class="mkthead"><h2>⚡ Value spots<button type="button" class="qhelp hq" data-help="value" aria-expanded="false" aria-label="What are Value spots?"><span class="qi" aria-hidden="true">?</span></button></h2><span class="mktmuted">ATP match winners: market gives it 30-80%, model is 8-20 points better</span><span class="mktmuted" id="recV"></span></div>
     <details class="valrules">
@@ -707,6 +708,11 @@ details.valrules>summary{cursor:pointer}
 </div>
 
 <div id="page-tools" hidden>
+  <div class="panel" id="watchpanel"><div class="mkthead"><h2>★ Watchlist</h2><span class="mktmuted">your starred players, with their upcoming priced markets</span></div><div id="watchbody"></div></div>
+  <div class="panel" id="calcpanel"><div class="mkthead"><h2>🧮 Bet calculator</h2><span class="mktmuted">the last pick you opened, at the price you see</span></div><div id="calcbody"></div></div>
+  <div class="panel" id="slippanel"><div class="mkthead"><h2>🧾 Your parlay slip</h2><span class="mktmuted">add the picks you open, one by one</span></div>
+    <p class="mktnote">Keep one leg per match: two tennis legs from the same match are never independent (one player's win is the other's loss, and a set, a spread and a total all hang on the same scoreline). The slip warns when two legs share a match.</p>
+    <div id="slipbody"></div></div>
   <div class="panel" id="pfpanel2"><div class="mkthead"><h2>🎯 Parlay by payout</h2><span class="mktmuted">pick the payout and the chance you want — we search every priced pick</span></div><div id="pfbody"></div></div>
 </div>
 
@@ -827,6 +833,21 @@ var ok=document.getElementById('pslcookieok');if(ok)ok.onclick=function(){el.hid
 .w{color:var(--hit);font-weight:700} .l{color:var(--miss);font-weight:700}
 .leantag.win,.leantag.cover{background:rgba(34,208,127,.14);color:var(--gold)}
 @media(max-width:520px){.tngrid{grid-template-columns:1fr}.tnfilter{margin-left:0}}
+/* round 2 tools: the filter bar has no Over/Under (only total games has a side), the slip's bet is in its words */
+#fltbar [data-side]{display:none}
+#slipbody .leantag{display:none}
+.tnph{display:flex;align-items:center;gap:6px 10px;flex-wrap:wrap;margin:4px 0 2px}
+.tnph h3{margin:0;font-size:22px}
+.tnsides{display:grid;gap:6px;margin:4px 0 16px}
+.tnsideh{font-size:12.5px;color:#aeb9c8;margin:10px 2px 0}
+.tnside{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:4px 12px;align-items:center;width:100%;text-align:left;cursor:pointer;
+  background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.09);border-radius:10px;padding:9px 12px;color:#fff;font:inherit;min-height:44px}
+.tnside:hover{border-color:var(--accent)}
+.tnside .tsb{min-width:0;overflow-wrap:anywhere}
+.tnside .tsp{font-family:var(--display);font-size:20px;font-weight:600;font-variant-numeric:tabular-nums}
+.tnside .tsx{font-size:12.5px;color:#cbd5e1;white-space:nowrap;text-align:right;font-variant-numeric:tabular-nums}
+.tnside .tsx b{color:#fff}
+@media(max-width:420px){.tnside{grid-template-columns:minmax(0,1fr) auto}.tnside .tsx{grid-column:1/-1;text-align:left}}
 </style>
 
 <script>
@@ -907,7 +928,8 @@ function loadFullPicks(){ if(PICKS_FULL||fullPicksLoading) return; fullPicksLoad
 function pickStarted(p){ const t=p.start? Date.parse(p.start) : NaN; return isFinite(t)? t<=Date.now() : false; }
 function upcomingPicks(){ return (PICKS||[]).filter(p=>p.res==null && !pickStarted(p)); }
 function awaitingGrade(p){ return p.res==null && pickStarted(p); }
-function renderPickViews(){ renderEdges(); renderValue(); renderMatches(); renderPast(); PS.ticker(tickerItems()); }
+function renderPickViews(){ updateFilterOptions(); renderEdges(); renderValue(); renderMatches(); renderPast(); PS.ticker(tickerItems());
+  renderWatch(); if(PLAYER_ID) renderPlayerSides(PLAYER_ID); freshCurrent(); if(CALC) CALC.refresh(); if(SLIP) SLIP.refresh(); }
 
 // ---- pick cards (Top 25 Surest, Value spots): the same cards as every sport page ----
 function normPick(p){ const px=p.price==null? null : p.price;
@@ -916,6 +938,41 @@ function normPick(p){ const px=p.price==null? null : p.price;
     pd:p.pd, kd:p.kd, px0:p.px0==null? null : p.px0, lk:p.lk||null, start:p.start, event:p.event, round:p.round, surface:p.surface,
     lists:p.lists||'', edge:(px==null||p.prob==null)? null : p.prob-px}; }
 function listRows(tag){ return upcomingPicks().filter(p=>(p.lists||'').includes(tag) && p.prob!=null && (TOUR==='all' || p.tour===TOUR)).map(normPick); }
+// ---- Filter bar (PS.filterBar) over Value and Top 25: the match, the market, a price band, starred players.
+// Its Over/Under chips are hidden (#fltbar CSS): only total games has a side, every other market is a player winning something.
+let FLT=null;
+function fltRow(r){ return {gid:String(r.mid), sk:r.sk, side:r.side, price:r.price, pid:r.pid, sport:SPORT_KEY}; }
+function fltRows(rows){ return FLT? rows.filter(r=>FLT.test(fltRow(r))) : rows; }
+function fltOn(){ if(!FLT) return false; const f=FLT.get(); return !!(f.game||f.stat||f.side||f.band||f.star); }
+// The note a list shows when it has picks but the filter hides every one of them, with a one-tap Clear.
+function fltNote(n, what){ return `<p class="mktnote">None of the ${n} ${what} match your filter. <button type="button" class="linkbtn" data-fclear="1">Clear the filter</button></p>`; }
+function fltShown(n, of){ return fltOn()? `<p class="mktnote" style="margin-top:8px">Filtered: <b>${n}</b> of ${of} shown. <button type="button" class="linkbtn" data-fclear="1">Clear the filter</button></p>` : ''; }
+function wireFltClear(el){ el.querySelectorAll('[data-fclear]').forEach(b=>b.onclick=()=>{ if(FLT) FLT.clear(); }); }
+const MATCH_BY = new Map((DB.matches || []).map(m => [String(m.mid), m]));
+function matchLabel(p){ const m = MATCH_BY.get(String(p.mid));
+  return m ? `${last(m.an)} v ${last(m.bn)}` : `${last(p.player)} v ${last(p.opp)}`; }
+function updateFilterOptions(){ const wrap=$('fltbar'); if(!wrap || !FLT) return;
+  const up=PICKS===null? [] : upcomingPicks().filter(p=>p.prob!=null && (TOUR==='all' || p.tour===TOUR));
+  wrap.hidden=!up.length;   // nothing upcoming (the off-season, or before picks load): no bar
+  const games={}, stats=new Set();
+  up.forEach(p=>{ const k=String(p.mid); if(p.mid!=null && !games[k]) games[k]={label:matchLabel(p), t:p.start||p.date||''}; if(p.stat) stats.add(p.stat); });
+  const gl=Object.keys(games).sort((a,b)=>String(games[a].t).localeCompare(String(games[b].t)) || games[a].label.localeCompare(games[b].label));
+  FLT.setOptions({games:gl.map(g=>[g, games[g].label]), stats:STATS.filter(x=>stats.has(x.key)).map(x=>[x.key, x.label])});
+}
+FLT=PS.filterBar($('fltbar'), {key:SPORT_KEY, options:{games:[], stats:[]}, onChange:()=>{ renderEdges(); renderValue(); }});
+
+// ---- the pick the Tools tab works on: the last one opened (a card, the Player tab's markets, a slip leg) ----
+let CUR=null, CALC=null, SLIP=null;
+// a side's price you can actually get: Polymarket with under $25 offered (and no Kalshi price) counts as none, as on the cards
+function pickPrice(p){ return (p.vn!=='K' && p.pd!=null && p.pd<25)? null : (p.price==null? null : p.price); }
+function legKey(p){ return [p.mid, p.pid, p.stat, +p.line, p.side||''].join('|'); }
+// total games is about the match (recorded under player A), so it's named by the match
+function legWho(p){ return p.stat==='games'? matchLabel(p) : p.player; }
+function legBet(p){ const b=betOf(p), vs=' v '+last(p.opp);
+  return p.stat==='ml'? 'wins the match'+vs : p.stat==='set'? 'wins '+b.line+vs : p.stat==='exact'? 'wins '+b.line+' in sets'+vs
+    : p.stat==='spread'? 'covers '+b.line+' games'+vs : b.side+' '+b.line+' total games'; }
+function setCurrent(p){ CUR=p || null; if(CALC) CALC.refresh(); if(SLIP) SLIP.refresh(); }
+function freshCurrent(){ if(!CUR || !PICKS) return; const k=legKey(CUR); CUR=PICKS.find(p=>legKey(p)===k) || CUR; }
 let edgeSort={key:'prob',dir:-1}, valueSort={key:'edge',dir:-1};
 function sortRows(rows, key, dir){ return [...rows].sort((a,b)=>{
   if(key==='matchup') return dir*(String(a.start||'').localeCompare(String(b.start||'')));
@@ -937,6 +994,7 @@ function pickTable(rows, sort){
     h+=`<article class="pickcard ${tier}${r.lk?' locked':''}" style="${PS.teamVars(SPORT_KEY, r.team)}">`+(r.lk? PS.lockRibbon(r.lk) : '')+
       `<div class="pc-top"><span class="av">${esc(initials(r.name))}</span>`+
         `<div class="pc-who"><b>${esc(r.name)}</b><span><span class="tbadge">${esc(r.team)}</span>vs ${esc(r.opp)}</span>${r.start? PS.gameTime(r.start) : ''}</div>`+
+        PS.starBtn(SPORT_KEY, {pid:r.pid, name:r.name, team:r.team})+
         `<div class="pc-prob"><div class="ring" style="--p:${pv}"><b>${pv}<small>%</small></b></div><span title="${esc(r.event)} · ${esc(r.round)} · ${esc(SURF[r.surface]||'')}">chance</span></div></div>`+
       `<div class="pc-bet"><span class="leantag ${esc(r.bet.side)}">${esc(r.bet.side)}</span><b>${esc(r.bet.line)}</b><span>${esc(r.bet.text || r.statText)}</span>${sp? PS.spark(sp.vals, sp.line, sp.side) : ''}</div>`+
       `<div class="pc-foot"><span class="pc-price livecell">${priceCell(r)}</span>${r.lk? PS.lockBadge(r.lk) : ''}<button class="edgeload" type="button" data-i="${idx}">Details</button></div>`+
@@ -958,8 +1016,11 @@ function whyOf(r){
   return out;
 }
 function openPickSheet(r){ const sp=r.sk==='games'? sparkOf(r.raw) : null;   // "cleared 22.5": only total games read right
+  setCurrent(r.raw);   // the Tools tab's calculator and parlay slip work on the last pick opened
   PS.pickSheet({name:r.name, team:r.team, sport:SPORT_KEY, vs:'vs '+r.opp, when:r.event, prob:r.prob, side:r.bet.side, line:r.bet.line, statText:r.bet.text || r.statText,
     price:(r.vn!=='K' && r.pd!=null && r.pd<25)? null : r.price, vn:r.vn, live:false, listed:r.lists.includes('V'), why:whyOf(r),
+    watch:{on:PS.watch.has(SPORT_KEY, r.pid), toggle:()=>PS.watch.toggle({sport:SPORT_KEY, pid:r.pid, name:r.name, team:r.team})},
+    links:PS.exchangeUrls(DB.links, r.raw.gid, r.sk),   // the match's exact Polymarket US event and this market's Kalshi event
     vals:sp? sp.vals : [], onOpen:()=>openPlayer(r.pid),
     more:PS.relatedPicks(r, upcomingPicks().filter(x=>x.prob!=null).map(normPick).map(x=>Object.assign(x, {side:x.bet.side, line:x.bet.line, statText:x.bet.text||x.statText})),
       {key:x=>[x.pid,x.sk,x.bet.line,x.bet.side].join("|"), game:x=>x.mid, pid:x=>x.pid, open:openPickSheet}),
@@ -985,10 +1046,12 @@ function renderEdges(){ const body=$('edgebody'); if(!body) return;
   if(!all.length){ body.innerHTML = upcomingPicks().length
       ? `<p class="mktnote">Nothing makes the list right now. A side needs a <b>90%+ model chance</b> <i>and</i> a <b>live Polymarket or Kalshi price</b> with $25+ offered, and nothing on the upcoming tennis slate clears both. It refills as markets post and prices update (every 10 minutes) — some days it stays short or empty on purpose.</p>`
       : scheduleNote('the Top 25 Surest board'); return; }
-  const rows=sortRows(all, edgeSort.key, edgeSort.dir).slice(0,25);
-  body.innerHTML=pickTable(rows, edgeSort)+
-    `<p class="mktnote" style="margin-top:8px">Up to 25 sides where the model gives the bet a <b>90%+ chance</b> and Polymarket or Kalshi has a <b>live market</b> for it, ranked by model chance with one side per match market — so a thin slate shows fewer than 25${rows.length<25?` (${rows.length} right now)`:''}. Any market can make it: match winner, set winner, exact score, game spread or total games. Best if you're holding <b>credits you can't withdraw without trading</b>, since these are the most likely to win. The price is the cheaper exchange for that exact side, the model's edge over it, and the payout multiplier. These picks are recorded before ${TIPOFF} and graded in <b>Past picks</b>.</p>`;
-  wireTable(body, rows, edgeSort, renderEdges); }
+  const shown=fltRows(all), total=Math.min(all.length, 25);
+  if(!shown.length){ body.innerHTML=fltNote(total, 'Top 25 Surest picks'); wireFltClear(body); return; }
+  const rows=sortRows(shown, edgeSort.key, edgeSort.dir).slice(0,25);
+  body.innerHTML=pickTable(rows, edgeSort)+fltShown(rows.length, total)+
+    `<p class="mktnote" style="margin-top:8px">Up to 25 sides where the model gives the bet a <b>90%+ chance</b> and Polymarket or Kalshi has a <b>live market</b> for it, ranked by model chance with one side per match market — so a thin slate shows fewer than 25${total<25?` (${total} right now)`:''}. Any market can make it: match winner, set winner, exact score, game spread or total games. Best if you're holding <b>credits you can't withdraw without trading</b>, since these are the most likely to win. The price is the cheaper exchange for that exact side, the model's edge over it, and the payout multiplier. These picks are recorded before ${TIPOFF} and graded in <b>Past picks</b>.</p>`;
+  wireTable(body, rows, edgeSort, renderEdges); wireFltClear(body); }
 function renderValue(){ const panel=$('valuepanel'), body=$('valuebody'); if(!panel||!body) return;
   if(PICKS===null){ panel.hidden=true; return; }
   panel.hidden=false;
@@ -996,9 +1059,11 @@ function renderValue(){ const panel=$('valuepanel'), body=$('valuebody'); if(!pa
   if(!all.length){ body.innerHTML = upcomingPicks().length
       ? `<p class="mktnote">No value spots right now. All four rules above are tested against a live price, and no ATP match winner on the upcoming slate clears them. It refills as prices move (every 10 minutes).</p>`
       : scheduleNote('Value spots'); return; }
-  const rows=sortRows(all, valueSort.key, valueSort.dir).slice(0,50);
-  body.innerHTML=pickTable(rows, valueSort)+`<p class="mktnote" style="margin-top:8px"><b>${rows.length}</b> ATP match winner${rows.length===1?'':'s'} clear all four rules at the recorded price. Picks are recorded before ${TIPOFF} and graded in <b>Past picks</b>. Backward-looking; not advice.</p>`;
-  wireTable(body, rows, valueSort, renderValue);
+  const shown=fltRows(all), total=Math.min(all.length, 50);
+  if(!shown.length){ body.innerHTML=fltNote(total, 'value spots'); wireFltClear(body); return; }
+  const rows=sortRows(shown, valueSort.key, valueSort.dir).slice(0,50);
+  body.innerHTML=pickTable(rows, valueSort)+fltShown(rows.length, total)+`<p class="mktnote" style="margin-top:8px"><b>${total}</b> ATP match winner${total===1?'':'s'} clear all four rules at the recorded price. Picks are recorded before ${TIPOFF} and graded in <b>Past picks</b>. Backward-looking; not advice.</p>`;
+  wireTable(body, rows, valueSort, renderValue); wireFltClear(body);
 }
 
 // ---- match cards: both players, every market the exchanges price ----
@@ -1037,16 +1102,44 @@ function renderMatches(){
 // ---- Player tab ----
 function openPlayer(pid){ if(!PLAYERS.has(String(pid))) return; renderPlayer(pid); $('psugg').hidden = true; showTab('player');
   try{ history.replaceState(null, '', '#player/' + pid); }catch(e){} window.scrollTo({top: 0, behavior: 'smooth'}); }
+let PLAYER_ID = null;
 function renderPlayer(pid){
   const p = PLAYERS.get(String(pid)); if(!p) return;
+  PLAYER_ID = String(p.id);
   const rank = (DB.rank || {})[p.id];
   const rows = (p.g || []).slice().reverse();
-  $('playerbody').innerHTML = `<h3 style="margin:4px 0 2px;font-size:22px">${esc(p.n)} <span class="mktmuted" style="font-size:14px">${p.t.toUpperCase()}${rank ? ' · model rank #' + rank : ''}</span></h3>
+  $('playerbody').innerHTML = `<div class="tnph"><h3>${esc(p.n)} <span class="mktmuted" style="font-size:14px">${esc(String(p.t).toUpperCase())}${rank ? ' · model rank #' + esc(rank) : ''}</span></h3>${PS.starBtn(SPORT_KEY, {pid:p.id, name:p.n, team:String(p.t).toUpperCase()}, {label:true})}</div>
+    <div id="psides"></div>
     <div class="tnstats"><div><b>${p.elo}</b><span>Rating</span></div><div><b>${p.surf.hard}</b><span>Hard</span></div><div><b>${p.surf.clay}</b><span>Clay</span></div><div><b>${p.surf.grass}</b><span>Grass</span></div><div><b>${p.w}-${p.m - p.w}</b><span>Last 12 months</span></div></div>
     <div class="chartwrap"><table class="edgetbl"><thead><tr><th>Date</th><th>Opponent</th><th>Result</th><th>Score</th><th>Round</th><th>Surface</th></tr></thead><tbody>
     ${rows.map(g => `<tr><td>${esc(g[0])}</td><td style="text-align:left"><button class="tnname" data-pid="${esc(g[1])}">${esc(g[2])}</button></td><td class="${g[3] ? 'w' : 'l'}">${g[3] ? 'W' : 'L'}</td><td>${esc(g[4])}</td><td>${esc(g[7])}</td><td>${SURF[g[6]] || ''}</td></tr>`).join('')}
     </tbody></table></div>
     <p class="mktmuted" style="font-size:12.5px;margin-top:10px">Ratings are the model's own, an Elo: a new player starts at 1500, and 100 points ahead is about a 64% chance to win. A match chance blends the overall rating with the surface's.</p>`;
+  renderPlayerSides(PLAYER_ID);
+}
+// A player's upcoming sides: every market of their next matches (total games counts for both players, since it is
+// recorded under one of them), each as {p, opp} with opp the other player from this player's view.
+const STAT_ORDER = {ml:0, set:1, exact:2, spread:3, games:4};
+function playerSides(pid){ pid = String(pid);
+  return upcomingPicks().filter(p => p.prob != null && (String(p.pid) === pid || (p.stat === 'games' && String(p.oid) === pid)))
+    .map(p => ({p, opp: String(p.pid) === pid ? p.opp : p.player})); }
+// Tennis has no player stat lines to ladder, so the Player tab lists the player's upcoming priced sides instead.
+function renderPlayerSides(pid){ const el = $('psides'); if(!el) return;
+  if(PICKS === null){ el.innerHTML = ''; return; }
+  const xs = playerSides(pid).filter(x => x.p.price != null)
+    .sort((a, b) => String(a.p.start || '').localeCompare(String(b.p.start || '')) || String(a.p.mid).localeCompare(String(b.p.mid))
+      || (STAT_ORDER[a.p.stat] ?? 9) - (STAT_ORDER[b.p.stat] ?? 9) || (+a.p.line) - (+b.p.line) || String(a.p.side).localeCompare(String(b.p.side)));
+  if(!xs.length){ el.innerHTML = ''; return; }
+  let h = '', mid = null;
+  xs.forEach((x, i) => { const p = x.p, b = betOf(p), px = pickPrice(p);
+    if(String(p.mid) !== mid){ mid = String(p.mid);
+      h += (h ? '</div>' : '') + `<div class="tnsideh">Upcoming: v <b>${esc(x.opp)}</b> · ${esc(p.event)}${p.start ? ' · ' + esc(startText(p.start)) : ''}</div><div class="tnsides">`; }
+    h += `<button type="button" class="tnside" data-i="${i}"><span class="tsb"><span class="leantag ${esc(b.side)}">${esc(b.side)}</span> ${esc(b.line)} ${esc(b.text || statLabel(p.stat))}`+
+      `${(p.lists||'').split('').filter(c => LIST_NAME[c]).map(c => ` <span class="listchip ${esc(c)}" title="${esc(LIST_NAME[c])}">${esc(c)}</span>`).join('')}</span>`+
+      `<span class="tsp">${pct(p.prob)}</span>`+
+      `<span class="tsx">${px == null ? '<span class="mktmuted">not enough offered</span>' : `<b>${cents(px)}</b> ${esc(PS.venueName(p.vn))}`}</span></button>`; });
+  el.innerHTML = h + '</div>';
+  el.querySelectorAll('.tnside').forEach(b => b.onclick = () => { const x = xs[+b.dataset.i]; if(x) openPickSheet(normPick(x.p)); });
 }
 function searchPlayers(q){
   q = norm(q.trim()); const box = $('psugg');
@@ -1278,7 +1371,7 @@ document.addEventListener('click', e => {
   const n = e.target.closest('.tnname[data-pid], .tnsugg [data-pid]');
   if(n){ openPlayer(n.dataset.pid); return; }
   const f = e.target.closest('[data-tour]');
-  if(f){ TOUR = f.dataset.tour; document.querySelectorAll('[data-tour]').forEach(x => x.classList.toggle('on', x === f)); renderEdges(); renderValue(); renderMatches(); }
+  if(f){ TOUR = f.dataset.tour; document.querySelectorAll('[data-tour]').forEach(x => x.classList.toggle('on', x === f)); updateFilterOptions(); renderEdges(); renderValue(); renderMatches(); }
 });
 $('psearch').addEventListener('input', e => searchPlayers(e.target.value));
 (function renderRecords(){ const R=DB.record||{};
@@ -1302,6 +1395,30 @@ PS.parlayFinder($('pfbody'), {sport:SPORT_KEY, gameWord:'match', emptyNote:'Tenn
 // from one match are contradictory or tied together, never independent. The same-match option stays off here.
 (function(){ const sg=$('pfbody').querySelector('#pfsg'); if(sg){ sg.checked=false; const lb=sg.closest('label'); if(lb) lb.hidden=true; } })();
 
+// ---- Tools: watchlist (PS.renderWatchlist; legs = the player's upcoming priced sides) ----
+function renderWatch(){
+  PS.renderWatchlist($('watchbody'), {sport:SPORT_KEY,
+    legsForPlayer:pid=>PICKS===null? [] : playerSides(pid).filter(x=>x.p.price!=null).map(x=>{ const p=x.p, b=betOf(p);
+      return {statText:(b.text? b.text+' ' : '')+'v '+last(x.opp), side:b.side, line:b.line, prob:p.prob, price:p.price, vn:p.vn,
+        thin:pickPrice(p)==null, lists:p.lists||''}; }),
+    open:pid=>openPlayer(pid),
+    player:pid=>{ const p=PLAYERS.get(String(pid)); return p? {name:p.n, team:String(p.t||'').toUpperCase()} : null; }});
+}
+renderWatch();
+// ---- Tools: bet calculator and parlay slip, both on the last pick opened (CUR) ----
+CALC=PS.betCalc($('calcbody'), {getPick:()=>{ if(!CUR || CUR.prob==null) return null; const b=betOf(CUR);
+  return {prob:CUR.prob, price:pickPrice(CUR), name:legWho(CUR), statText:b.text || statLabel(CUR.stat), side:b.side, line:b.line}; }});
+// A leg's bet goes in its words (statText; the slip's over/under tag is hidden on this page); gid = the match, so two
+// legs from one match get the slip's warning.
+function legOf(p){ return {key:legKey(p), gid:String(p.mid), pid:p.pid, name:legWho(p), statText:legBet(p),
+  side:p.side==='under'? 'under' : 'over', line:'', prob:p.prob, price:pickPrice(p)}; }
+SLIP=PS.parlaySlip($('slipbody'), {sport:SPORT_KEY,
+  getCurrent:()=>CUR && CUR.prob!=null? legOf(CUR) : null,
+  legsFor:legs=>{ if(PICKS===null) return []; const by=new Map(upcomingPicks().map(p=>[legKey(p), p]));
+    return legs.map(l=>{ const p=by.get(String(l.key)); return p? {key:l.key, prob:p.prob, price:pickPrice(p)} : null; }).filter(Boolean); },
+  open:l=>{ const p=(PICKS||[]).find(x=>legKey(x)===String(l.key)); if(p) openPickSheet(normPick(p)); else openPlayer(l.pid); }});
+
+if(FLT.get().side) FLT.set(Object.assign(FLT.get(), {side:''}));   // the side chips are hidden, so a saved side can't stay on
 renderEdges(); renderValue(); renderMatches();
 loadPicks();
 function fromHash(){ const h=location.hash.slice(1);

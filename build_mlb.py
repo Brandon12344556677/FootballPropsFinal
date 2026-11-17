@@ -1442,6 +1442,7 @@ def main():
         "calT": cal_t,
         "record": live_record(picks),
         "us": live_markets(picks),
+        "links": depth.exchange_links(picks, pick_locked),   # exact Polymarket US / Kalshi game pages for the sheet's links
         "players": players,
     }
     payload = json.dumps(db, separators=(",", ":"), ensure_ascii=False)

@@ -21,6 +21,7 @@ Standard library only. Never fatal: a book that can't be read leaves that depth 
 unknown depth doesn't count as enough.
 """
 import json
+import re
 import time
 import urllib.request
 
@@ -254,3 +255,52 @@ def verify(picks, wanted, workers=4):
     for p in {id(j[0]): j[0] for j in jobs}.values():
         choose(p)
     return len(jobs)
+
+
+# ---- exact-market links for the pages' "Find this prop on Polymarket / Kalshi" buttons ----
+# A Polymarket US market slug carries its event's slug: "astatc-nhl-la-bos-2026-11-17-ast-quibyf-gte1"
+# is a market in the event "nhl-la-bos-2026-11-17" (league-away-home-date). A Kalshi market ticker's
+# first two segments are its event: "KXNHLPTS-26NOV16VANUTA-VANTWILLANDER5-1" is in "KXNHLPTS-26NOV16VANUTA".
+_EVENT_RE = re.compile(r"(?:^|-)([a-z]+-[a-z0-9]+-[a-z0-9]+-\d{4}-\d{2}-\d{2})(?=-|$)")
+
+
+def pmus_event(slug):
+    """The Polymarket US event slug inside a market slug (or the slug itself, when it's an event's); None if unknown."""
+    m = _EVENT_RE.search(str(slug or "").lower())
+    return m.group(1) if m else None
+
+
+def kalshi_event(ticker):
+    """The Kalshi event ticker of a market ticker ("SERIES-EVENT-..."); None if it has no event part."""
+    parts = str(ticker or "").upper().split("-")
+    return parts[0] + "-" + parts[1] if len(parts) >= 2 and parts[0] and parts[1] else None
+
+
+def exchange_links(picks, locked=None):
+    """{gid: {"p": Polymarket US event slug, "k": {stat: Kalshi event ticker}}} for the pending, unlocked
+    picks, from the books each builder already found this run (_us / _ps market slug, _kt Kalshi ticker;
+    in memory only). The pages turn them into links to the exact game. locked(p): the builder's own
+    lock test (a pick with "lk" counts as locked either way). Never raises: {} on anything unexpected."""
+    out = {}
+    try:
+        for p in picks or []:
+            if p.get("src", "live") != "live" or p.get("res") is not None or p.get("lk"):
+                continue
+            if locked is not None and locked(p):
+                continue
+            gid = p.get("gid")
+            if gid in (None, ""):
+                continue
+            gid = str(gid)
+            ev = pmus_event(p.get("_us") or p.get("_ps"))
+            kt = kalshi_event(p.get("_kt"))
+            if not ev and not kt:
+                continue
+            g = out.setdefault(gid, {})
+            if ev and "p" not in g:
+                g["p"] = ev
+            if kt and p.get("stat"):
+                g.setdefault("k", {}).setdefault(str(p["stat"]), kt)
+    except Exception:  # noqa: BLE001 — links are a nicety; a build never fails over them
+        return {}
+    return out
