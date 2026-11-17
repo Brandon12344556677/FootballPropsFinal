@@ -52,7 +52,8 @@ TRIES, WAIT = 3, 20                # network retries, seconds apart
 
 PAGES = ["/", "/nfl.html", "/nba.html", "/nhl.html", "/mlb.html", "/tennis.html", "/games/", "/best/", "/best/nfl.html",
          "/guides/", "/players/", "/methodology.html", "/team/"]
-BOARDS = {"/": None, "/nfl.html": "nfl", "/nba.html": "nba", "/nhl.html": "nhl", "/mlb.html": "mlb"}   # rendered in Chrome
+BOARDS = {"/": None, "/nfl.html": "nfl", "/nba.html": "nba", "/nhl.html": "nhl", "/mlb.html": "mlb",
+          "/tennis.html": "tennis"}   # rendered in Chrome (tennis since Nov 16, 2026: a script error there went unseen for 5 days)
 JSON_FILES = ["/today.json", "/botd.json", "/health.json", "/search.json", "/data.json", "/nba.json", "/nhl.json", "/mlb.json", "/tennis.json"]
 PLACEHOLDER_RE = re.compile(r"__(?:NBA|NHL|MLB|TENNIS)?DATA__")
 ASSET_RE = re.compile(r"""(?:src|href)="/?(app\.(?:js|css)\?v=[\w]+)\"""")
