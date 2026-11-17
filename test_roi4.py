@@ -189,6 +189,50 @@ class MonthTest(unittest.TestCase):
         self.assertEqual(roi4.outlook(daily, 20, sims=2000), o)   # seeded: the frozen numbers never drift
 
 
+class PostTest(unittest.TestCase):
+    NOW = datetime.datetime(2026, 11, 15, 16, 5, tzinfo=UTC)          # 11:05 AM ET
+    META = {"links": {("nfl", "G1"): "nfl-aaa-bbb-2026-11-15"}, "nfl_starts": {"G1": "2026-11-15T18:00Z"}}
+
+    def state(self):
+        return {"posted": [], "plans": {"2026-11-15": PLAN}}
+
+    def test_posts_at_the_polymarket_price_from_11(self):
+        c = cand(date="2026-11-15", start=None, price=0.50, pp=0.55, pd=40, kp=0.50, prob=0.70)
+        st = self.state()
+        self.assertEqual(roi4.post(st, [c], self.NOW - datetime.timedelta(hours=1), self.META), [])   # 10:05 AM: not yet
+        new = roi4.post(st, [c], self.NOW, self.META)
+        self.assertEqual(len(new), 1)
+        b = new[0]
+        self.assertEqual((b["price"], b["vn"]), (0.55, "P"))            # Polymarket's price, not the cheaper Kalshi one
+        self.assertEqual(b["url"], "https://polymarket.us/event/nfl-aaa-bbb-2026-11-15")
+        self.assertEqual(b["start"], "2026-11-15T18:00Z")                 # NFL kickoff from slate.json
+        self.assertEqual(b["max"], 0.60)                                  # model 70%: still 10 points over at 60c
+        self.assertEqual(roi4.post(st, [dict(c, pp=0.40)], self.NOW + datetime.timedelta(minutes=10), self.META), [])   # frozen, never twice
+        self.assertEqual(st["posted"][0]["price"], 0.55)
+
+    def test_only_buyable_on_polymarket_and_not_too_late(self):
+        st = self.state()
+        base = dict(date="2026-11-15", start="2026-11-15T18:00Z", prob=0.70)
+        for bad in ({"pp": None}, {"pp": 0.55, "pd": 10}, {"pp": 0.55, "pd": 40, "lk": "2026-11-15T17:35Z"},
+                    {"pp": 0.55, "pd": 40, "start": "2026-11-15T16:20Z"}, {"pp": 0.65, "pd": 40},     # 15 minutes away; 5 points over only
+                    {"pp": 0.55, "pd": 40, "date": "2026-11-16", "start": "2026-11-16T18:00Z"}):
+            self.assertEqual(roi4.post(st, [cand(**dict(base, **bad))], self.NOW, self.META), [], bad)
+
+    def test_graded_and_counted_apart(self):
+        c = cand(date="2026-11-15", start="2026-11-15T18:00Z", pp=0.55, pd=40, prob=0.70)
+        past = [dict(x, res="hit" if i % 5 < 3 else "miss") for i, x in enumerate(history(start="2026-11-01"))]
+        st = {}
+        roi4.update(st, past + [c], self.NOW, self.META)
+        self.assertEqual(len(st["posted"]), 1)
+        self.assertEqual(st["bets"], [])                                  # not locked: no at-lock bet yet
+        roi4.update(st, past + [dict(c, res="hit")], self.NOW + datetime.timedelta(hours=6), self.META)
+        self.assertEqual(st["posted"][0]["res"], "hit")
+        self.assertEqual(st["posted_stats"]["n"], 1)
+        self.assertEqual(st["season"]["n"], st["backtest"]["stats"]["n"])   # season = backtest + live at-lock bets (none yet)
+        rows = edge_report.roi4_rows(st, "posted", "roi4-posted")
+        self.assertEqual([r["sport"] for r in rows], ["roi4-posted"])
+
+
 class LiveTest(unittest.TestCase):
     def test_bettable(self):
         now = datetime.datetime(2026, 11, 15, 17, 40, tzinfo=UTC)
@@ -260,6 +304,8 @@ class EdgeReportTest(unittest.TestCase):
         self.assertIn("roi4", edge_report.OWN_ROWS)
         self.assertIn("roi4", [k for k, _, _, _ in edge_report.STRATEGIES])
         self.assertIn("roi4", edge_report.WAITING_KEYS)
+        self.assertIn("roi4-posted", [k for k, _, _, _ in edge_report.STRATEGIES])
+        self.assertIn("roi4-posted", edge_report.OWN_ROWS)
 
 
 if __name__ == "__main__":

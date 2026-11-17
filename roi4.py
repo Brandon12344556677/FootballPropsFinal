@@ -74,6 +74,13 @@ GAME_CAP = 5.0       # units on one game
 DAY_CAP = 25.0       # units in a day
 VOID_AFTER = 5       # days
 NFL_BET_MIN = 15     # NFL picks carry no start time: bet only within this many minutes of the lock
+# Posted picks (since Nov 17, 2026): the same plan, posted from POST_FROM ET for buying on Polymarket US by hand, at the
+# Polymarket price then (frozen), for games 30+ minutes away. The at-lock bets above stay as the tested comparison:
+# NFL edge picks' prices fall ~8c on average from first listing to the lock, so buying early may cost the edge.
+POST_FROM = (11, 0)
+POST_LEAD = 30       # minutes before the start
+POST_USD = 25.0      # dollars offered near the Polymarket price for the side (the pick's "pd")
+SPORT_DATA = {"nfl": "data.json", "nba": "nba.json", "nhl": "nhl.json", "mlb": "mlb.json", "tennis": "tennis.json"}
 
 
 def frac(x):
@@ -413,9 +420,72 @@ def slim_plan(p):
     return [{k: s[k] for k in ("key", "label", "sport", "n", "days", "roi", "lo", "ok", "r")} for s in p]
 
 
-def update(state, cands, now):
-    """One pass: freeze the backtest (first run), plan today, add today's new bets, grade. Returns True on a change."""
+def load_meta():
+    """What a posted pick needs that the picks files don't carry: each game's Polymarket event slug (the sport files'
+    "links", as the pages use them) and NFL kickoff times (slate.json; NFL picks carry no start)."""
+    links = {}
+    for sport, path in SPORT_DATA.items():
+        doc = edge_report.load(path) or {}
+        for gid, g in (doc.get("links") or {}).items():
+            if isinstance(g, dict) and g.get("p"):
+                links[(sport, str(gid))] = g["p"]
+    starts = {str(g.get("gid")): g.get("start") for g in (edge_report.load("slate.json") or {}).get("games") or [] if g.get("gid")}
+    return {"links": links, "nfl_starts": starts}
+
+
+def post_candidates(cands, now, meta):
+    """Today's picks that can still be posted for buying on Polymarket US: not locked, the game 30+ minutes away,
+    a Polymarket price for the side with POST_USD+ offered near it. Priced at that Polymarket price."""
+    today = now.astimezone(ET).date().isoformat()
+    out = []
+    for c in cands:
+        if c["day"] != today or c["res"] is not None or c.get("lk"):
+            continue
+        start = c.get("start")
+        if not start and c["sport"] == "nfl":
+            start = (meta.get("nfl_starts") or {}).get(str(c["gid"]))
+        t = utc(start)
+        if t is None or t < now + datetime.timedelta(minutes=POST_LEAD):
+            continue
+        pp = c.get("pp")
+        if pp is None or not 0.10 <= pp <= 0.95 or (c.get("pd") or 0) < POST_USD:
+            continue
+        out.append(dict(c, pr=pp, vn="P", start=start))
+    return out
+
+
+def post(state, cands, now, meta):
+    """From POST_FROM ET, post today's picks that fit the day's plan at their Polymarket price (frozen once posted),
+    with the event link and the most worth paying. Returns the new ones."""
+    et = now.astimezone(ET)
+    if (et.hour, et.minute) < POST_FROM:
+        return []
+    today = et.date().isoformat()
+    pool = {c["key"]: c for c in post_candidates(cands, now, meta)}
+    new = choose(list(pool.values()), state["plans"][today], state["posted"])
+    for b in new:
+        c = pool[b["key"]]
+        slug = (meta.get("links") or {}).get((c["sport"], str(c["gid"])))
+        b.update({"start": c["start"], "team": c.get("team"), "opp": c.get("opp"), "posted": now.strftime("%Y-%m-%dT%H:%MZ"),
+                  "url": f"https://polymarket.us/event/{slug}" if slug else None,
+                  # the most worth paying: where the model is still EDGE_MIN over (Value / Top 25 picks: the posted price)
+                  "max": round(max(b["price"], int((c["prob"] - EDGE_MIN) * 100) / 100), 2) if b["seg"].endswith("-edge") else b["price"]})
+    state["posted"] += new
+    return new
+
+
+def season_stats(state):
+    """The at-lock record from the start of the backtest: the backtest's bets, then the live ones (each tagged)."""
+    bt = [dict(b, src="backtest") for b in (state.get("backtest") or {}).get("bets") or []]
+    return stats(bt + [dict(b, src="live") for b in state.get("bets") or []])
+
+
+def update(state, cands, now, meta=None):
+    """One pass: freeze the backtest (first run), plan today, post today's Polymarket picks (from 11 AM ET), add the
+    at-lock bets, grade both. Returns True on a change."""
+    meta = meta or {}
     before = json.dumps(state, sort_keys=True)
+    state.setdefault("posted", [])
     today = now.astimezone(ET).date().isoformat()
     state.setdefault("live_from", today)
     state.setdefault("bets", [])
@@ -434,13 +504,19 @@ def update(state, cands, now):
     graded = dedupe([c for c in cands if c["res"] in ("hit", "miss")])
     if today not in plans:
         plans[today] = slim_plan(plan(graded, today))
+    post(state, cands, now, meta)
     state["bets"] += choose([c for c in cands if c["day"] == today and bettable(c, now)], plans[today], state["bets"])
-    grade(state["bets"], {c["key"]: c["res"] for c in cands}, today)
+    results = {c["key"]: c["res"] for c in cands}
+    grade(state["bets"], results, today)
+    grade(state["posted"], results, today)
     state["stats"] = stats(state["bets"], [d for d in plans if d < today])
+    state["posted_stats"] = stats(state["posted"], [d for d in plans if d < today])
+    state["season"] = season_stats(state)
     state["rules"] = {"target": TARGET, "edge_min": EDGE_MIN, "lookback": LOOKBACK, "min_n": MIN_N, "min_days": MIN_DAYS,
                       "min_roi": MIN_ROI, "lo_floor": LO_FLOOR, "shrink_n": SHRINK_N, "bank": BANK, "kelly": KELLY,
                       "min_bet": MIN_BET, "max_bet": MAX_BET, "game_cap": GAME_CAP, "day_cap": DAY_CAP,
-                      "month_target": MONTH_TARGET, "review_on": REVIEW_ON}
+                      "month_target": MONTH_TARGET, "review_on": REVIEW_ON,
+                      "post_from": "%d:%02d" % POST_FROM, "post_lead": POST_LEAD, "post_usd": POST_USD}
     return json.dumps(state, sort_keys=True) != before
 
 
@@ -483,7 +559,7 @@ def main():
             state = json.loads(team_stats.decrypt(f.read().strip(), password))
     except FileNotFoundError:
         state = {}
-    if not update(state, cands, now):
+    if not update(state, cands, now, load_meta()):
         print(f"4% return: no change ({len(state.get('bets') or [])} live bets)")
         return 0
     state["gen"] = now.strftime("%Y-%m-%dT%H:%M:%SZ")
