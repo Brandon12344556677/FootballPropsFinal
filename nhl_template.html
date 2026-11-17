@@ -629,7 +629,7 @@ details.valrules>summary{cursor:pointer}
 </style>
 
 <link rel="stylesheet" href="app.css?v=20261117b">
-<script src="app.js?v=20261117b"></script>
+<script src="app.js?v=20261117c"></script>
 <script src="/thanksgiving.js?v=20261101b"></script>
 
 <header class="apptop">
@@ -1024,8 +1024,39 @@ const isGoalie = p => !!p && p.p==='G';
 const GOALIE_STATS = new Set(['sv']);
 const floorFor = k => BW_FLOOR[k] || 1.0;
 
+// ---- Slim page data (slim.py): only players with a pending pick carry their game logs in this page. Everyone
+// else has lazy:1, an empty g and gn (their game count). ensureFull() fetches DB.full once and fills those logs
+// in place (same objects, so byId keeps working); every place that reads a lazy player's logs waits on it.
+const glen = p => p? (p.g.length || p.gn || 0) : 0;   // games in the dataset, loaded or not
+let FULL_OK=!DB.slim, FULL_ERR=false, FULL_P=null;
+const LOADING_LOGS='<p class="mktnote">Loading every game log…</p>';
+function ensureFull(){
+  if(FULL_OK) return Promise.resolve();
+  if(!FULL_P){ FULL_ERR=false;
+    FULL_P=fetch('./'+DB.full, {cache:'no-cache'}).then(r=>{ if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); })
+      .then(d=>{ if(!d || !Array.isArray(d.players)) throw new Error('no players in '+DB.full);
+        const got={}; d.players.forEach(q=>{ got[q.id]=q; });
+        DB.players.forEach(p=>{ if(!p.lazy) return; const q=got[p.id]; if(q && Array.isArray(q.g)) p.g=q.g; delete p.lazy; delete p.gn; });
+        FULL_OK=true; fullReady(); })
+      .catch(e=>{ FULL_P=null; if(!FULL_OK){ FULL_ERR=true; fullReady(); } throw e; });   // the slim data stays usable
+  }
+  return FULL_P;
+}
+// Repaint whatever waited on the logs (or now says they couldn't load).
+function fullReady(){ try{ buildLeaderboard(); if(PICKS!==null) renderPickViews(); else PS.ticker(tickerItems());
+  renderMyBets(); renderCompare(); refreshPropTools(); }catch(e){ console.error(e); } }
+// The Player tab for someone whose logs haven't arrived: a short loading line (or the error with a retry), never a blank.
+function lazyPlayer(p){
+  const ws=$('weekstrip'); if(ws) ws.hidden=true;
+  $('pmeta').innerHTML=`<b>${esc(p.n)}</b> &middot; ${esc(p.p)} &middot; ${esc(p.t)}`;
+  $('tiles').innerHTML=''; drawDist([],0,'pts'); drawChart([],0,'pts'); $('tbl').innerHTML=''; $('splitbody').innerHTML='';
+  if(FULL_ERR){ $('headline').innerHTML=`<span class="who">${esc(p.n)}</span><span class="q">Couldn't load this player's game log. Check your connection, then <button type="button" class="btn ghost" id="fullretry">Try again</button></span>`;
+    const b=$('fullretry'); if(b) b.onclick=()=>{ FULL_ERR=false; render(); }; return; }
+  $('headline').innerHTML=`<span class="who">${esc(p.n)}</span><span class="q">Loading every game log…</span>`;
+  ensureFull().then(()=>{ if(state.player===p) render(); }, ()=>{ if(state.player===p) render(); });
+}
 const byId = {}, byKey = {};
-DB.players.forEach(p=>{ byId[p.id]=p; const k=pkey(p.n); if(!byKey[k]||(!byKey[k].g.length&&p.g.length)) byKey[k]=p; });
+DB.players.forEach(p=>{ byId[p.id]=p; const k=pkey(p.n); if(!byKey[k]||(!glen(byKey[k])&&glen(p))) byKey[k]=p; });
 const WEEK = DB.week || {games:[]};
 const TEAM_GAME = {}; (WEEK.games||[]).forEach(g=>{ TEAM_GAME[g.away]=g; TEAM_GAME[g.home]=g; });
 function teamGame(t){ return TEAM_GAME[t]||null; }
@@ -1036,7 +1067,7 @@ function dlabel(iso){ if(!iso) return ''; const d=new Date(iso+'T12:00:00'); if(
   return `${MONS[d.getMonth()]} ${d.getDate()}`; }
 function gameLabel(row){ return (row[3]==='REG'? '' : 'PO ')+dlabel(row[1]); }
 
-$('dncount').textContent = DB.players.filter(p=>p.g.length).length.toLocaleString();
+$('dncount').textContent = DB.players.filter(p=>glen(p)).length.toLocaleString();
 $('dnthru').textContent = DB.thru? dlabel(DB.thru) : '—';
 
 // ---- state + shared getters ----
@@ -1095,11 +1126,11 @@ function reseedLine(){ const p=state.player; if(!p){ state.line=0.5; return; }
   const vals=valuesOf(p, state.stat); state.line=seedLine(vals); $('line').value=state.line; }
 
 // ---- player search ----
-const NAME_INDEX=DB.players.filter(p=>p.g&&p.g.length).map(p=>({p, key:pkey(p.n)}));
+const NAME_INDEX=DB.players.filter(p=>glen(p)).map(p=>({p, key:pkey(p.n)}));
 function search(q){ const k=pkey(q); if(k.length<2) return [];
   const starts=[], has=[];
   NAME_INDEX.forEach(e=>{ const i=e.key.indexOf(k); if(i===0) starts.push(e.p); else if(i>0) has.push(e.p); });
-  const byGames=(a,b)=>(b.g.length-a.g.length)||a.n.localeCompare(b.n);
+  const byGames=(a,b)=>(glen(b)-glen(a))||a.n.localeCompare(b.n);
   return starts.sort(byGames).concat(has.sort(byGames)).slice(0,12);
 }
 const inp=$('player'), ac=$('acbox');
@@ -1112,6 +1143,7 @@ inp.addEventListener('input', ()=>renderAC(search(inp.value)));
 inp.addEventListener('focus', ()=>{ if(inp.value) renderAC(search(inp.value)); });
 document.addEventListener('click', e=>{ if(!ac.contains(e.target)&&e.target!==inp) ac.hidden=true; });
 function pick(id){ const p=byId[id]; if(!p) return; state.player=p; inp.value=p.n; ac.hidden=true;
+  if(p.lazy && !FULL_ERR){ render(); ensureFull().then(()=>{ if(state.player===p) pick(id); }, ()=>{}); return; }   // logs loading: pick again once they're in
   const s=$('oppsel'); if(s) s.value='';   // default the matchup to this player's own next opponent
   if(isGoalie(p)!==GOALIE_STATS.has(state.stat) && state.stat!=='toi'){ state.stat=isGoalie(p)? 'sv' : 'pts'; syncChips(); }
   reseedLine(); render(); }
@@ -1141,13 +1173,15 @@ function betFor(p, sk, line, side, prob, price, gid){
   return {sport:SPORT_KEY, pid:String(p.id), name:p.n, team:p.t, opp, stat:sk, statText:statLabel(sk), line:+line, side,
     prob, price:price==null? null : price, game:day, when}; }
 function betResult(b){
-  const p=byId[b.pid], st=STATMAP[b.stat]; if(!p || !st) return null;
+  const p=byId[b.pid], st=STATMAP[b.stat]; if(!p || !st || p.lazy) return null;   // logs not loaded yet: pending, never void
   const d0=Date.parse(b.game+'T12:00:00Z');
   const row=(p.g||[]).find(r=>r[1]===b.game && r[2]===b.opp);
   if(!row) return Date.now()-d0>3*864e5? {res:'void'} : null;   // no box score 3 days on: didn't play
   const v=st.get(row);
   return {res: v===b.line? 'push' : (b.side==='under'? v<b.line : v>b.line)? 'hit' : 'miss', actual:v}; }
-function renderMyBets(){ PS.renderBets($('betsbody'), SPORT_KEY, betResult); }
+function renderMyBets(){ const el=$('betsbody');
+  if(el && !FULL_OK && !FULL_ERR && PS.loadBets().some(b=>b.sport===SPORT_KEY && byId[b.pid] && byId[b.pid].lazy)){ el.innerHTML=LOADING_LOGS; return; }   // fullReady repaints
+  PS.renderBets(el, SPORT_KEY, betResult); }
 function trackFor(bet){ return bet? {on:PS.isTracked(bet), toggle:()=>{ const on=PS.toggleBet(bet); renderMyBets(); return on; }} : null; }
 // The verdict card under the headline: the model's chance against the Polymarket price saved
 // with this exact pick at the last hourly update (these boards don't poll prices live).
@@ -1198,6 +1232,7 @@ function render(){
   updatePlayerBtns();
   if(!p){ $('headline').innerHTML='<span class="q">Search a player above to see their prop chances.</span>';
     $('tiles').innerHTML=''; $('pmeta').textContent=''; drawDist([],0,'pts'); drawChart([],0,'pts'); $('tbl').innerHTML=''; $('splitbody').innerHTML=''; return; }
+  if(p.lazy){ lazyPlayer(p); return; }   // logs still loading (ensureFull)
   const sk=state.stat, st=STATMAP[sk], gs=gamesOf(p), vals=gs.map(st.get);
   $('pmeta').innerHTML=`<b>${esc(p.n)}</b> &middot; ${esc(p.p)} &middot; ${esc(p.t)} &middot; ${gs.length} game${gs.length===1?'':'s'} in dataset`;
   // weekstrip / tonight game
@@ -1385,6 +1420,7 @@ function pickTable(rows, sort){
 // Tapping a pick card opens its details — the verdict and the last 10 games — in a sheet;
 // "Full breakdown" there loads it on the Player tab, as the old Load button did.
 function openPickSheet(r){ const p=byId[r.pid]; if(!p){ loadPick(r); return; }
+  if(p.lazy && !FULL_ERR){ PS.toast('Loading every game log…'); ensureFull().then(()=>openPickSheet(r), ()=>openPickSheet(r)); return; }
   const g=r.game||{}, vs=r.team===g.home? 'vs '+g.away : r.team===g.away? '@ '+g.home : '';
   PS.pickSheet({name:r.name, team:r.team, sport:SPORT_KEY, vs, prob:r.prob, lo:r.lo, hi:r.hi, neff:r.n, side:r.side, line:r.line, statText:r.statText,
     price:(r.vn!=='K' && r.pd!=null && r.pd<25)? null : r.price, vn:r.vn, live:false, vals:valuesOf(p, r.sk), onOpen:()=>loadPick(r),
@@ -1474,6 +1510,7 @@ function computeStreak(vals, line){ let s=0; for(let i=vals.length-1;i>=0;i--){ 
 const LEADER_STATS=['pts','sog','g'];
 let TOP_STREAK=null;   // longest active streak, for the ticker
 function buildLeaderboard(){
+  if(!FULL_OK){ TOP_STREAK=null; $('lbbody').innerHTML= FULL_ERR? '<p class="mktnote">Couldn\'t load every game log, so the streak leaderboard is off for now. Reload the page to try again.</p>' : LOADING_LOGS; return; }   // fullReady rebuilds it
   const rows=[];
   DB.players.forEach(p=>{ if(!p.g||p.g.length<4) return; const live=p.g[p.g.length-1][0]===CUR_SEASON; if(!live) return;
     LEADER_STATS.forEach(sk=>{ const vals=p.g.map(STATMAP[sk].get); const line=seedLine(vals); const s=computeStreak(vals, line);
@@ -1527,11 +1564,11 @@ function setPicks(d, full){
 }
 function loadPicks(){
   if(PICKS_FULL){ PICKS_FULL=false; loadFullPicks(); return; }   // a rescan after the Past tab opened: keep the full history
-  fetch('./nhl_picks_recent.json',{cache:'no-store'}).then(r=>r.ok? r.json() : Promise.reject()).then(d=>setPicks(d, false))
+  fetch('./nhl_picks_recent.json',{cache:'no-cache'}).then(r=>r.ok? r.json() : Promise.reject()).then(d=>setPicks(d, false))
     .catch(()=>loadFullPicks());
 }
 function loadFullPicks(){ if(PICKS_FULL||fullPicksLoading) return; fullPicksLoading=true;
-  fetch('./nhl_picks.json',{cache:'no-store'}).then(r=>r.ok? r.json() : null).then(d=>setPicks(d, true))
+  fetch('./nhl_picks.json',{cache:'no-cache'}).then(r=>r.ok? r.json() : null).then(d=>setPicks(d, true))
     .catch(()=>{ PICKS=PICKS||[]; PICKS_FULL=true; renderPickViews(); }).finally(()=>{ fullPicksLoading=false; });
 }
 let upSig=-1;
@@ -1766,8 +1803,11 @@ function renderWatch(){ const body=$('watchbody'); if(!body) return;
   PS.renderWatchlist(body, {sport:SPORT_KEY, legsForPlayer:watchLegs, open:pid=>openPlayer(pid),
     player:pid=>{ const p=byId[pid]; return p? {name:p.n, team:p.t} : null; }}); }
 function renderCompare(){ const body=$('cmpbody'); if(!body) return;
+  const lazyN=CMP.filter(id=>byId[id] && byId[id].lazy).length;
+  if(lazyN && !FULL_ERR){ body.innerHTML=LOADING_LOGS; ensureFull().catch(()=>{}); return; }   // fullReady repaints
   $('cmpcap').textContent = CMP.length? `${statLabel(state.stat)} ${state.ou} ${state.line}` : '';
   const items=CMP.map(id=>byId[id]).filter(p=>p&&p.g&&p.g.length);
+  if(lazyN && !items.length){ body.innerHTML='<p class="mktnote">Couldn\'t load these players\' game logs. Reload the page to try again.</p>'; return; }
   if(!items.length){ body.innerHTML='<p class="mktnote">No players added. Use <b>⚖ Compare</b> on the Player tab.</p>'; return; }
   const sk=state.stat, line=state.line, side=state.ou;
   const rows=items.map(p=>{ const vals=valuesOf(p,sk), mp=playerModel(p,sk,line);
@@ -1839,6 +1879,7 @@ function slipLegsFor(legs){ const up=upcomingPicks().filter(x=>x.prob!=null);
   return legs.map(l=>{ const [pid, sk]=String(l.key).split('|');
     const x=up.find(y=>String(y.pid)===pid && y.stat===sk && +y.line===+l.line && (y.side||'over')===l.side);
     if(x){ const r=normPick(x); return {key:l.key, prob:r.prob, price:(r.vn!=='K' && r.pd!=null && r.pd<25)? null : r.price}; }
+    if(byId[pid] && byId[pid].lazy){ if(!FULL_ERR) ensureFull().catch(()=>{}); return null; }   // logs loading: the saved numbers stay
     const p=byId[pid], mp=p && STATMAP[sk]? playerModel(p, sk, +l.line) : null;
     return mp? {key:l.key, prob:l.side==='under'? mp.under : mp.over} : null; }).filter(Boolean); }
 CALC=PS.betCalc($('calcbody'), {getPick:()=>CUR});
@@ -1930,6 +1971,7 @@ async function scanSlip(blob){
   status.textContent='Reading the slip…';
   try{
     const { data } = await Tesseract.recognize(blob, 'eng', { logger:m=>{ if(m.status==='recognizing text') status.textContent=`Reading the slip… ${Math.round(m.progress*100)}%`; } });
+    if(!FULL_OK && !FULL_ERR){ status.textContent='Loading every game log…'; try{ await ensureFull(); }catch(e){} }
     status.textContent=''; renderSlip(parseBetSlip(data.text||''), data.text||'');
   }catch(e){ status.textContent='Couldn\'t read that image — try a tighter, higher-contrast screenshot.'; }
 }
@@ -2022,4 +2064,6 @@ renderMyBets();
   // a plain player link (#player/<id>, from the home page search): that player with the default stat
   const pm=/^player\/([^/]+)\/?$/.exec(h); if(pm && byId[decodeURIComponent(pm[1])]){ pick(decodeURIComponent(pm[1])); showTab('player'); return; }
   if(h) showTab(h); })();
+// Every other player's game logs, once the first screen is drawn (ensureFull, above).
+if(DB.slim){ const go=()=>ensureFull().catch(()=>{}); if(window.requestIdleCallback) requestIdleCallback(go, {timeout:3000}); else setTimeout(go, 1500); }
 </script>

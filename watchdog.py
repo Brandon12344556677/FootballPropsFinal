@@ -60,7 +60,8 @@ ASSET_RE = re.compile(r"""(?:src|href)="/?(app\.(?:js|css)\?v=[\w]+)\"""")
 # Console lines from a page that mean a script broke or a file it needs is missing.
 CONSOLE_RE = re.compile(r'CONSOLE[^\]]*\] "(.*)", source: (\S*)')
 JS_ERROR_RE = re.compile(r"Uncaught|TypeError|ReferenceError|SyntaxError|RangeError|is not defined|Failed to load resource")
-CONSOLE_IGNORE_RE = re.compile(r"Manifest|Banner not shown|favicon|goatcounter|gc\.zgo\.at|polymarket|kalshi", re.I)
+CONSOLE_IGNORE_RE = re.compile(r"Manifest|Banner not shown|favicon|goatcounter|gc\.zgo\.at|polymarket|kalshi|"
+                               r"service ?worker|fetching the script", re.I)   # sw.js registration: headless Chrome may refuse it; the page itself is fine
 
 HINTS = {
     "update": "Open the repo's Actions tab → \"Update NFL data\" and read the newest red run's log.",
