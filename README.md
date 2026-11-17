@@ -71,6 +71,21 @@ exchange chip) in Simple.
   expected value and a quarter-Kelly stake.
 - **Parlay builder** — combined model chance, real payout at your prices, and a
   warning when legs come from the same game (they're correlated).
+- **Filter bar** (Today tab, every sport page) — narrow Value spots and Top 25 Surest to one game,
+  one prop, over or under, a price band, or only starred players (`PS.filterBar`, app.js). Remembered
+  on the device per sport.
+- **Watchlist across sports** — a ☆ on every pick card and in each pick's details sheet stars the
+  player; the Tools tab's Watchlist shows every starred player's upcoming priced props on that page
+  and links to starred players on the other sport pages (`PS.watch`, `PS.renderWatchlist`; saved on
+  the device in `psl_watch_all`, older per-sport watchlists carried over).
+- **Every listed line** (Player tab, NFL/NBA/NHL/MLB) — under the verdict, every line the exchanges
+  list for that player and stat, with the model's chance, both prices and the edge, the best edge
+  marked (`PS.lineLadder`). Tennis lists the player's upcoming priced sides instead.
+- **Exact market links** — "Find this prop on Polymarket / Kalshi" opens that game's market, not the
+  exchange's home page: the builders save each game's Polymarket US event and Kalshi event per stat
+  (`depth.exchange_links` → `links` in each sport's JSON), and `PS.exchangeUrls` builds the URLs.
+- **Bet calculator and parlay builder on every sport** — the NFL page's tools, shared in app.js
+  (`PS.betCalc`, `PS.parlaySlip`) and added to the NBA, NHL, MLB and tennis Tools tabs.
 - **Parlay by payout** (Tools tab, every sport page, tennis included) — set a payout range (say
   1.4x–1.6x), a lowest model chance (say 90%) and the most legs, and `PS.parlayFinder` (app.js)
   finds the parlay with the highest model chance whose real payout lands in the range: each leg at

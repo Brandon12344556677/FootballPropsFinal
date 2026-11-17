@@ -1925,6 +1925,7 @@ def build_live_picks(picks, slate_games, sched, by_key, snap, pmus=None, kal=Non
                       "pp", "kp", "pd", "kd", "vn", "th", "hd"):
                 ex[k] = f[k]
             ex["pj"] = f.get("pj")    # set only while a price jump waits for confirmation (depth.guard)
+            ex["_ps"], ex["_kt"] = f.get("_ps"), f.get("_kt")   # this run's books (in memory only: depth.exchange_links)
             note_price(ex)
             updated += 1
     return len(fresh), added, updated
@@ -2351,6 +2352,7 @@ def main():
         # live price has moved since: "pid|stat|line|side" -> px0
         "open": {f"{p['pid']}|{p['stat']}|{js_num(p['line'])}|{p['side']}": p["px0"] for p in picks
                  if p["src"] == "live" and p["res"] is None and p.get("px0") is not None},
+        "links": depth.exchange_links(picks),   # exact Polymarket US / Kalshi game pages for the sheet's links
         "players": players,
     }
     sanity_check(db)

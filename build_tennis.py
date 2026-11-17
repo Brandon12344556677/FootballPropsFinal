@@ -1043,6 +1043,11 @@ def update_picks(picks, upcoming, R, km, pm_list, books, by_mid, now, gone=()):
                      n=m["n"][s["pid"]], on=m["n"][s["oid"]],
                      pp=s.get("pp"), pd=s.get("pd"), kp=s.get("kp"), kd=s.get("kd"))
             p["price"], p["vn"], p["th"] = prev
+            # this run's books, in memory only (not in PICK_COLS): depth.exchange_links turns them into the page's
+            # exact-market links. A set winner's Kalshi event carries the set number (KXATPSETWINNER-26NOV03SHENOR-1),
+            # which kalshi_event would cut off, so set sides link Kalshi's home page instead of a wrong event.
+            p["_ps"] = s.get("_ps")
+            p["_kt"] = None if s["stat"] == "set" else s.get("_kt")
             depth.choose(p)
             if p.get("price") is not None:
                 if p.get("px0") is None:
@@ -1180,6 +1185,7 @@ def main():
           "model": {"elo": ELO, "hold": HOLD, "tau": TAU, "cal": CAL, "pMax": P_MAX, "minMatches": MIN_MATCHES},
           "matches": sorted((match_card(u, u["_price"]) for u in upcoming), key=lambda c: c["start"] or ""),
           "record": record(picks), "rank": rank_of(players), "players": players,
+          "links": depth.exchange_links(picks, pick_locked),   # exact Polymarket US / Kalshi match pages for the sheet's links
           "us": {u["mid"]: u["_pm"]["slug"] for u in upcoming if u.get("_pm") and not u["locked"]}}
     payload = json.dumps(db, separators=(",", ":"), ensure_ascii=False)
     with open(DATA_FILE, "w", encoding="utf-8") as f:
