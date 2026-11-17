@@ -81,6 +81,61 @@ class Summary(unittest.TestCase):
         self.assertLess(s["prev"]["roi"], s["roi"])         # the two wins pushed the return up
 
 
+class MarketMove(unittest.TestCase):
+    """The rows for picks the market moved on before lock, bet at the closing price (pxc)."""
+    C = COLS + ["pxc"]
+
+    def graded(self, rows, sport="nba"):
+        return E.graded(sport, {"cols": self.C, "picks": [[r.get(c) for c in self.C] for r in rows]})
+
+    def pick(self, px0, pxc, res="hit", price=None, day="2026-11-03"):
+        return {"src": "live", "res": res, "price": pxc if price is None else price, "px0": px0, "pxc": pxc,
+                "start": day + "T23:00:00Z", "vn": "P"}
+
+    def test_rose_and_fell_rows_stake_at_the_close(self):
+        rows = self.graded([self.pick(0.50, 0.53), self.pick(0.50, 0.60, "miss"),          # rose 3c and 10c
+                            self.pick(0.47, 0.44), self.pick(0.70, 0.50, "miss"),          # fell 3c (-2.999... in floats) and 20c
+                            self.pick(0.50, 0.52), self.pick(0.50, 0.48),                  # 2c either way: neither row
+                            self.pick(None, 0.60)])                                        # no first price: no move known
+        self.assertEqual([p["mv"] for p in rows], [3, 10, -3, -20, 2, -2, None])
+        out = {s["key"]: s for s in E.build(rows, "2026-11-04")}
+        up, dn = out["nba-rose"], out["nba-fell"]
+        self.assertEqual((up["n"], up["hit"], up["px"], up["clv"]), (2, 0.5, 0.565, 6.5))
+        self.assertEqual(up["units"], round(0.47 / 0.53 - 1, 1))      # the win pays at 53c (the close), not the 50c first price
+        self.assertEqual((dn["n"], dn["hit"], dn["px"], dn["clv"]), (2, 0.5, 0.47, -11.5))
+        self.assertNotIn("nhl-rose", out)                             # another sport's rows stay away
+        self.assertEqual((out["all-nba"]["n"], out["all-nba"]["clv"], out["all-nba"]["clvn"]), (7, -1.7, 6))
+
+    def test_closing_price_is_carried_apart_from_the_recorded_one(self):
+        # price (what every other row is bet at) and pxc differ here: only the market-move rows use pxc
+        rows = self.graded([self.pick(0.40, 0.50, price=0.45)])
+        self.assertEqual((rows[0]["pr"], rows[0]["pc"], rows[0]["mv"]), (0.45, 0.5, 10))
+        out = {s["key"]: s for s in E.build(rows, "2026-11-04")}
+        self.assertEqual((out["all-nba"]["px"], out["all-nba"]["units"]), (0.45, round(0.55 / 0.45, 1)))
+        self.assertEqual((out["nba-rose"]["px"], out["nba-rose"]["units"]), (0.5, 1.0))
+        nfl = self.graded([dict(self.pick(50, 56), start=None, date="2026-11-01")], "nfl")   # NFL prices are in cents
+        self.assertEqual((nfl[0]["pc"], nfl[0]["mv"]), (0.56, 6))
+        junk = self.graded([self.pick(0.40, 0.05, price=0.45)])       # a closing price that can't be real: no move, no row
+        self.assertEqual((junk[0]["pc"], junk[0]["mv"]), (None, None))
+        far = self.graded([self.pick(0.40, 0.80, price=0.45)])        # a close 35c+ from the first price: stale, like a price
+        self.assertEqual((far[0]["pr"], far[0]["pc"], far[0]["mv"]), (0.45, None, None))
+        self.assertEqual({s["key"]: s for s in E.build(junk, "2026-11-04")}["nba-rose"]["n"], 0)   # NBA rows wait, empty
+
+    def test_new_rows_leave_the_other_rows_numbers_alone(self):
+        rows = self.graded([self.pick(0.50, 0.50 + i % 7 / 100, "hit" if i % 3 else "miss", day=f"2026-11-{i % 9 + 1:02d}")
+                            for i in range(60)])
+        old = [s for s in E.STRATEGIES if not getattr(s[3], "stake", None)]
+        self.assertEqual(len(E.STRATEGIES) - len(old), 10)            # rose and fell for five sports
+        keys = {k for k, _, _, _ in old}
+        strip = lambda out: {s["key"]: s for s in out if s["key"] in keys}
+        self.assertEqual(strip(E.build(rows, "2026-11-10")), strip(E.build(rows, "2026-11-10", strategies=old)))
+        self.assertEqual(E.build(rows, "2026-11-10"), E.build(rows, "2026-11-10"))   # and the report is still repeatable
+
+    def test_rows_without_recorded_moves_have_no_clv(self):
+        out = {s["key"]: s for s in E.build(E.botd_rows({"days": [{"date": "2026-10-15", "value": {"res": "hit", "price": 0.4}}]}), "2026-10-17")}
+        self.assertEqual((out["botd-value"]["clv"], out["botd-value"]["clvn"]), (None, 0))
+
+
 class PickOfTheDay(unittest.TestCase):
     def test_value_shot_and_safe_pick_rows(self):
         pick = lambda res, price: {"res": res, "price": price, "side": "under", "stat": "tb", "line": 1.5}

@@ -162,16 +162,17 @@ footer a:hover{color:#dfe6ef}
       </ul>
 
       <h2 id="vsmarket">Model vs. market — what the record says</h2>
-      <p>We test the model against the market on every graded pick that had a Polymarket price, and publish the result, including when it's unflattering. As of September 30, 2026 (910 priced, graded picks, NFL and NHL):</p>
+      <p>We test the model against the market on every graded live pick that had a price, and publish the result, including when it's unflattering. The numbers change with every update, so they aren't copied here: the <a href="record.html">Record page</a> has the current ones, for every list in every sport.</p>
       <ul>
-        <li><b>The market has predicted better than the model.</b> On the Brier score (squared error; lower is better) the Polymarket price scored <b>0.196</b> and the model <b>0.212</b>. Prices react to injuries, role changes and news that a game log can't see.</li>
-        <li><b>The value rule is roughly break-even so far.</b> Picks clearing both value rules returned +8% over 118 bets — but the margin of error at that sample size is about ±9 points, so that's not evidence of an edge in either direction.</li>
-        <li><b>The model's own percentages are close to honest.</b> Recalibrating it on live results didn't improve its accuracy on picks it hadn't seen, so we didn't ship one.</li>
-        <li><b>Overs have done worse than unders.</b> On priced NFL picks, overs hit <b>47%</b> against a model average of 61% and a price of 53¢; unders hit about what the model said. Most of that gap came in week 1, when a player's history is mostly last season. A stricter bar for overs, tested one week at a time on weeks it wasn't fitted to, would have lost more than it saved, so the rules are unchanged — but it's worth knowing before you take an over early in a season.</li>
+        <li><b>Brier score.</b> For the model and for the market's price, the average squared gap between the stated chance and what happened (1 for a hit, 0 for a miss). Lower is better. Whichever scores lower has predicted better so far; <a href="record.html#market">the Record page</a> shows both, pooled and by sport. A market price reacts to injuries, role changes and news that a game log can't see.</li>
+        <li><b>Units and return.</b> Each list is scored as 1 unit on every pick at the price recorded before its game: a hit at 40¢ returns +1.50, a miss −1. A price that can't have been real (under 10¢, or 35¢ away from the pick's first price) counts in the hit rate but not in the units. Lists that are down are <a href="record.html#losing">named on the Record page</a>, all-time and over the last 30 days.</li>
+        <li><b>Calibration.</b> Whether picks the model called 70% hit about 70% of the time is checked on every graded live pick, listed or not, and <a href="record.html#calibration">charted there</a>.</li>
+        <li><b>Small samples.</b> A list with a few dozen graded picks can be up or down by chance alone. Read the pick counts beside every number before reading the number.</li>
+        <li><b>Overs have done worse than unders.</b> Across the record, picks on the over have returned less than picks on the under, most clearly in MLB, where Value now takes unders only. Each sport's Past picks tab can be filtered by side to see it.</li>
       </ul>
       <div class="card">
         <h3 style="margin-top:0">The fair chance</h3>
-        <p style="margin-bottom:0">Because of that, every card that shows a price also shows a <b>fair chance</b>: the model blended with the market, <code>w × model + (1 − w) × price</code>, where <i>w</i> is the mix that has predicted the graded picks best. It's refit on every run; right now it's about <b>10% model, 90% market</b>. It's the most realistic number on the card — and the gap between it and the price is the realistic edge, which is usually small.</p>
+        <p style="margin-bottom:0">Because the market's price has carried most of the predictive weight on the record so far, every card that shows a price also shows a <b>fair chance</b>: the model blended with the market, <code>w × model + (1 − w) × price</code>, where <i>w</i> is the mix that has predicted the graded picks best (lowest Brier score), kept between 10% and 90% model. It's refit on every run; the <a href="record.html#market">Record page</a> shows the current mix. It's the most realistic number on the card — and the gap between it and the price is the realistic edge, which is usually small.</p>
       </div>
 
       <h2 id="lists">Value spots and Top 25 Surest</h2>
@@ -243,6 +244,7 @@ footer a:hover{color:#dfe6ef}
         <a href="nhl.html">NHL</a>
         <a href="mlb.html">MLB</a>
         <a href="tennis.html">Tennis</a>
+        <a href="record.html">Record</a>
         <a href="players/">Players</a>
         <a href="privacy.html">Privacy</a>
         <a href="terms.html">Terms</a>

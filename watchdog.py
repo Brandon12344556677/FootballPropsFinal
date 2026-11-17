@@ -51,11 +51,11 @@ HEALTH_ALERT_AFTER = 18            # health.py's ALERT_AFTER: only problems it h
 TRIES, WAIT = 3, 20                # network retries, seconds apart
 
 PAGES = ["/", "/nfl.html", "/nba.html", "/nhl.html", "/mlb.html", "/tennis.html", "/games/", "/best/", "/best/nfl.html",
-         "/guides/", "/players/", "/methodology.html", "/team/"]
+         "/guides/", "/players/", "/methodology.html", "/record.html", "/team/"]
 BOARDS = {"/": None, "/nfl.html": "nfl", "/nba.html": "nba", "/nhl.html": "nhl", "/mlb.html": "mlb",
           "/tennis.html": "tennis"}   # rendered in Chrome (tennis since Nov 16, 2026: a script error there went unseen for 5 days)
 JSON_FILES = ["/today.json", "/botd.json", "/health.json", "/search.json", "/data.json", "/nba.json", "/nhl.json", "/mlb.json", "/tennis.json"]
-PLACEHOLDER_RE = re.compile(r"__(?:NBA|NHL|MLB|TENNIS)?DATA__")
+PLACEHOLDER_RE = re.compile(r"__(?:NBA|NHL|MLB|TENNIS|RECORD)?DATA__")
 ASSET_RE = re.compile(r"""(?:src|href)="/?(app\.(?:js|css)\?v=[\w]+)\"""")
 # Console lines from a page that mean a script broke or a file it needs is missing.
 CONSOLE_RE = re.compile(r'CONSOLE[^\]]*\] "(.*)", source: (\S*)')

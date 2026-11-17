@@ -465,7 +465,8 @@ window.PS = (function(){
 
   // ---- one-time 18+ check. It carries the storage notice, so a first visit sees one pop-up, not two.
   // Then, once, how to see the boards (Simple or Pro); a visitor who passed the check before
-  // the question existed gets just the question. ----
+  // the question existed gets just the question. Only a sport board asks it (the views differ nowhere
+  // else), so a visitor landing on the home page gets one tap, and the question on their first board. ----
   const GATE_LOGO='<svg class="psgate-logo" viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" rx="14" fill="#0f2038"/><path d="M32,6 Q32,32 54,32 Q32,32 32,58 Q32,32 10,32 Q32,32 32,6 Z" fill="#22d07f"/></svg>';
   function viewStep(card, done){
     try{ localStorage.setItem('psl_view_asked','1'); }catch(e){}
@@ -481,7 +482,8 @@ window.PS = (function(){
   }
   function ageGate(){
     let ok=false; try{ ok=localStorage.getItem('psl_age_ok')==='1'; }catch(e){}
-    if(!document.body || (ok && viewAsked())) return;
+    const board=/\/(nfl|nba|nhl|mlb|tennis)\.html$/.test(location.pathname);   // PAGE_SPORT is declared further down
+    if(!document.body || (ok && (!board || viewAsked()))) return;
     const g=document.createElement('div'); g.className='psgate'; g.setAttribute('role','dialog'); g.setAttribute('aria-modal','true'); g.setAttribute('aria-labelledby','psgate-h');
     g.innerHTML=`<div class="psgate-card"></div>`;
     const card=g.firstChild, close=()=>{ g.remove(); document.documentElement.classList.remove('ps-lock'); };
@@ -495,7 +497,7 @@ window.PS = (function(){
     const bar=document.getElementById('pslcookie'); if(bar) bar.hidden=true;    // the check carries the same notice
     const btn=g.querySelector('#psgate-ok'); btn.focus({preventScroll:true});
     btn.onclick=()=>{ try{ localStorage.setItem('psl_age_ok','1'); localStorage.setItem('psl_notice_ok','1'); }catch(e){}
-      if(canStore() && !viewAsked()) viewStep(card, close); else close(); };
+      if(board && canStore() && !viewAsked()) viewStep(card, close); else close(); };
   }
   if(document.readyState!=='loading') ageGate(); else document.addEventListener('DOMContentLoaded', ageGate);
 
@@ -690,7 +692,7 @@ window.PS = (function(){
       el.innerHTML=(upd? `<span class="tr-upd"><i class="tr-dot" aria-hidden="true"></i>Updated <b data-ago="${upd}">${ago(upd)}</b></span>` : '')+
         (tr && tr.graded? `<span class="tr-grd">${icon('shield-check')}<b>${tr.graded.toLocaleString('en-US')} picks graded in public</b>${since? ' since '+esc(since) : ''}</span>` : '')+
         lastResults(t)+
-        `<a class="tr-how" href="methodology.html">How the model works →</a>`;
+        `<a class="tr-how" href="record.html">The full record, losses included →</a><a class="tr-how" href="methodology.html">How the model works →</a>`;
       el.hidden=false;
       const go=el.querySelector('[data-tab-go]');
       if(go) go.onclick=e=>{ const tab=document.querySelector(`.tab[data-tab="${go.dataset.tabGo}"]`); if(tab){ e.preventDefault(); tab.click(); } };

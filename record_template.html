@@ -1,0 +1,327 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Record — Every List, Every Sport, Losses Included | Prop Streak Lab</title>
+<meta name="description" content="Prop Streak Lab's full public record: every list in every sport, all-time and the last 30 days. Hit rate, units, return, calibration and model vs. market, with the lists that are down named plainly.">
+<link rel="canonical" href="https://propstreaklab.com/record.html">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://propstreaklab.com/record.html">
+<meta property="og:title" content="The Record: every list, losses included | Prop Streak Lab">
+<meta property="og:description" content="Every list in every sport, all-time and the last 30 days: hit rate, units, return, calibration and model vs. market. The lists that are down are named plainly.">
+<meta property="og:image" content="https://propstreaklab.com/icon-512.png">
+<meta name="twitter:card" content="summary">
+<link rel="icon" href="/favicon.ico" sizes="48x48">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="/icon-192.png" sizes="192x192" type="image/png">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="manifest" href="/site.webmanifest">
+<meta name="theme-color" content="#0a1628">
+<script data-goatcounter="https://propstreaklive.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
+<link rel="stylesheet" href="fonts.css">
+<style>
+/* The page's own styles; app.css (loaded after) brings the shared header, panels, hero and footer. */
+:root{
+  color-scheme:dark;
+  --ink:#22354f; --bg:#0a1628; --surface:#0f2038; --surface-2:#142743; --line:#22354f;
+  --text:#ffffff; --muted:#b8c5d6;
+  --accent:#22d07f; --gold:#e8b54a;
+  --hit:#4fb583; --miss:#eb6f7d;
+  --s1:#5aa9ff; --s2:#e8b54a; --s3:#c58af9;   /* chart series: Value, Top 25, a third row */
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--text);margin:0;line-height:1.5;font-size:15px;overflow-x:hidden;-webkit-font-smoothing:antialiased}
+.wrap{max-width:1120px;margin:0 auto;padding:20px 16px 70px}
+a{color:var(--accent)}
+h2{margin:0}
+.apptop .psview{display:none!important}   /* nothing here differs between Simple and Pro */
+.panel{padding:20px;margin:0 0 18px}
+.rc-sub{color:var(--muted);font-size:14px;margin:6px 0 14px;max-width:62em}
+.rc-jump{display:flex;flex-wrap:wrap;gap:8px;margin:14px 0 18px}
+.rc-jump a{padding:7px 14px;border-radius:999px;border:1px solid var(--line);color:#dfe6ef;text-decoration:none;font-size:13.5px}
+.rc-jump a:hover{border-color:rgba(34,208,127,.5);color:#fff}
+.rc-badge{display:inline-block;margin-left:8px;padding:2px 9px;border-radius:999px;border:1px solid rgba(232,181,74,.55);color:var(--gold);
+  font-size:11.5px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;vertical-align:middle}
+.rc-grid{display:grid;grid-template-columns:minmax(0,1fr);gap:18px}
+@media(min-width:880px){.rc-grid{grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);align-items:start}}
+.rc-list{margin:0 0 14px}
+.rc-list h3{font-size:15px;margin:0 0 4px;color:#fff;display:flex;align-items:center;gap:8px}
+.rc-sw{width:14px;height:3px;border-radius:2px;flex:none;display:inline-block}
+.rc-t{width:100%;border-collapse:collapse;font-size:13px;font-variant-numeric:tabular-nums}
+.rc-t th,.rc-t td{padding:6px 3px;border-bottom:1px solid rgba(255,255,255,.07);text-align:right;white-space:nowrap}
+.rc-t th:first-child,.rc-t td:first-child{text-align:left;padding-left:0}
+.rc-t thead th{color:var(--muted);font-weight:500;font-size:11.5px;text-transform:uppercase;letter-spacing:.04em}
+.rc-t tbody th{font-weight:500;color:#dfe6ef}
+.rc-t .rc-none{text-align:left;color:var(--muted)}
+.rc-up{color:var(--hit);font-weight:600}
+.rc-dn{color:var(--miss);font-weight:600}
+.rc-note{color:var(--muted);font-size:12.5px;margin:5px 0 0;line-height:1.5}
+.rc-chart{position:relative;max-width:560px}
+.rc-chart svg{display:block;width:100%;height:auto;touch-action:pan-y}
+.rc-chart h3{font-size:13px;font-weight:500;color:var(--muted);margin:0 0 6px}
+.rc-legend{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:12.5px;color:#dfe6ef;margin:0 0 4px}
+.rc-legend span{display:inline-flex;align-items:center;gap:6px}
+.rc-tip{position:absolute;top:0;pointer-events:none;background:#081120;border:1px solid var(--line);border-radius:10px;padding:7px 10px;
+  font-size:12px;line-height:1.5;color:#dfe6ef;white-space:nowrap;z-index:2;font-variant-numeric:tabular-nums}
+.rc-tip b{color:#fff}
+.rc-tip span{display:flex;align-items:center;gap:6px}
+.rc-more{display:inline-block;margin-top:10px;font-size:13.5px}
+.rc-lose{margin:0;padding:0;list-style:none}
+.rc-lose li{padding:9px 0;border-bottom:1px solid rgba(255,255,255,.07);font-size:14.5px}
+.rc-lose li:last-child{border-bottom:0}
+.rc-lose b{color:#fff}
+.rc-h3{font-size:13px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin:16px 0 2px}
+.rc-scroll{overflow-x:auto}
+@media(max-width:400px){.rc-t{font-size:12px}.rc-t th,.rc-t td{padding:6px 2px}.rc-t thead th{font-size:10.5px;letter-spacing:0}}
+</style>
+
+<link rel="stylesheet" href="app.css?v=20261111a">
+<script src="app.js?v=20261117a"></script>
+<script src="/thanksgiving.js?v=20261101b"></script>
+
+<header class="apptop">
+  <div class="apptop-in">
+    <a class="brand" href="./" aria-label="Prop Streak Lab home"><svg width="30" height="30" viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" rx="14" fill="#0f2038"/><path d="M32,6 Q32,32 54,32 Q32,32 32,58 Q32,32 10,32 Q32,32 32,6 Z" fill="#22d07f"/></svg><b>Prop <i>Streak</i> Lab</b></a>
+    <nav class="sportnav" aria-label="Sports">
+      <a href="./nfl.html">🏈 NFL</a>
+      <a href="./nba.html">🏀 NBA</a>
+      <a href="./nhl.html">🏒 NHL</a>
+      <a href="./mlb.html">⚾ MLB</a>
+      <a href="./tennis.html">🎾 Tennis</a>
+    </nav>
+  </div>
+</header>
+
+<div class="wrap app">
+  <section class="apphero">
+    <h1>The full record. <i>Losses</i> included.</h1>
+    <p class="lede">Every list the site publishes, in every sport: how often it hit, what the model said, and what 1 unit on each pick returned at the price recorded before the game. Nothing is left out for how it turned out.</p>
+    <p class="rc-note" id="rc-asof" style="margin:-8px 0 14px"></p>
+    <div class="herostats">
+      <div><b id="rc-graded">—</b><span>Live picks graded</span></div>
+      <div><b id="rc-gen">—</b><span>Updated</span></div>
+      <div><b id="rc-since">—</b><span>Tracking since</span></div>
+    </div>
+  </section>
+
+  <nav class="rc-jump" id="rc-jump" aria-label="On this page"></nav>
+
+  <section class="panel" id="losing">
+    <h2>What's losing</h2>
+    <p class="rc-sub">The lists that are down units, worst first. A list that is up overall but down over the last 30 days is named too.</p>
+    <div id="rc-losing"></div>
+  </section>
+
+  <div id="rc-sports"></div>
+
+  <section class="panel" id="potd">
+    <h2>Pick of the Day</h2>
+    <p class="rc-sub">Two picks a day on the home page, chosen once and never swapped: the Value Shot and the Safe Pick. Each counts as 1 unit at the price it was frozen at. Voids and pushes don't count.</p>
+    <div id="rc-botd"></div>
+  </section>
+
+  <section class="panel" id="calibration">
+    <h2>Calibration: did 70% mean 70%?</h2>
+    <p class="rc-sub">Every graded live pick in the NFL, NBA, NHL and MLB (not only the listed ones), grouped by the chance the model gave it. A dot on the dashed line means the model was right about how sure to be; below it, the model was too confident.</p>
+    <div class="rc-grid">
+      <div class="rc-chart" id="rc-calchart"></div>
+      <div class="rc-scroll" id="rc-caltable"></div>
+    </div>
+  </section>
+
+  <section class="panel" id="market">
+    <h2>Model vs. market</h2>
+    <p class="rc-sub" id="rc-fairline"></p>
+    <div class="rc-scroll" id="rc-fairtable"></div>
+    <p class="rc-note">Brier score: the average squared gap between a stated chance and what happened (1 for a hit, 0 for a miss). Lower is better; always saying 50% scores 0.250. Picks are the graded ones that had a price. Weight is the share of the model that scored best on that row's picks, refit on every update, never under 10% or over 90%. The cards in every sport use the top row's weight; the rows under it show what each sport would get on its own. <a href="methodology.html#vsmarket">How it's worked out</a>.</p>
+  </section>
+
+  <div id="rc-test"></div>
+
+  <section class="panel" id="how">
+    <h2>How this page counts</h2>
+    <p class="rc-sub" style="margin-bottom:0">Only picks recorded before their game count: no backtests. "Model" is the average chance the model gave those picks, to set beside how often they hit. A pick is a hit or a miss; pushes, voids and players who didn't play are left out. Units are 1 unit on each pick at its recorded Polymarket or Kalshi price: a hit at 40¢ returns +1.50, a miss returns −1. A pick with no price, or a price that can't have been real (under 10¢, or 35¢ away from its first price), counts in the hit rate but not in the units. Return is units divided by priced picks. Price move is how the price of the side taken changed from its first recording to its last before the game. The MLB Value list has been unders only since its overs lost; those overs keep their own row here. Past results don't predict future ones. Research and entertainment, not advice. 18+. <a href="methodology.html">How the model works</a>.</p>
+    <p class="rc-note" id="rc-stamp"></p>
+  </section>
+
+  <footer style="text-align:center;color:var(--muted);font-size:13px;margin-top:40px">
+    Prop Streak Lab · model estimates for entertainment, not betting advice · <a href="./">Home</a> · <a href="./nfl.html">NFL</a> · <a href="./nba.html">NBA</a> · <a href="./nhl.html">NHL</a> · <a href="./mlb.html">MLB</a> · <a href="./tennis.html">Tennis</a><br>
+    <span style="display:inline-block;margin-top:10px"><a href="./#email">Free daily email</a> · Record · <a href="players/">Players</a> · <a href="methodology.html">How the model works</a> · <a href="privacy.html">Privacy Policy</a> · <a href="terms.html">Terms &amp; Conditions</a> · <a href="cookies.html">Cookies Policy</a> · <a href="mailto:info@propstreaklab.com">Contact</a> · <a href="games/">Games</a> · <a href="best/">Best props</a> · <a href="guides/">Guides</a> · <a href="team/">Team</a></span><br>
+    <span style="display:inline-block;margin-top:6px">Informational and entertainment use only. Not affiliated with or endorsed by the NFL, NBA, NHL, MLB, ATP, WTA, any team, Polymarket or Kalshi. © 2026 Prop Streak Lab.</span><br>
+    <span style="display:inline-block;margin-top:6px;font-size:11px;opacity:.8">Data accuracy: stats, lines, injury reports and prices come from third-party sources (ESPN, Polymarket, Kalshi) and may be delayed, incomplete, or occasionally wrong. Model outputs are estimates, not guarantees — verify independently before relying on anything here.</span><br>
+    <span style="display:inline-block;margin-top:6px;font-size:11px;opacity:.8">For adults, 18+. If gambling stops being fun, stop — call 1-800-522-4700 (US, National Problem Gambling Helpline) or visit <a href="https://www.ncpgambling.org" rel="noopener" target="_blank">ncpgambling.org</a>. Prop Streak Lab does not accept bets or facilitate wagering.</span>
+  </footer>
+</div>
+
+<script>
+// record.json, baked in by build_record.py. The page only draws it: no number here is recomputed.
+const R=__RECORDDATA__;
+const $=id=>document.getElementById(id);
+const MONTHS=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const COLORS={V:'var(--s1)', value:'var(--s1)', T:'var(--s2)', lock:'var(--s2)', Vpre:'var(--s3)', A:'var(--s3)'};
+const num=n=>Number(n).toLocaleString('en-US');
+const pct=(x,d=1)=>(100*x).toFixed(d)+'%';
+const sign=x=>x>0? '+' : x<0? '−' : '';
+const units=x=>sign(x)+Math.abs(x).toFixed(2);
+const cls=x=>x>0? 'rc-up' : x<0? 'rc-dn' : '';
+const day=(iso,year)=>{ const p=String(iso).slice(0,10).split('-'); return MONTHS[+p[1]-1]+' '+(+p[2])+(year? ', '+(+p[0]) : ''); };   // numbers only: these go into innerHTML
+const dayMs=iso=>{ const p=iso.split('-'); return Date.UTC(+p[0], +p[1]-1, +p[2]); };
+
+// ---- one list: its name, an all-time and a last-30-days row, and the notes under them ----
+function statRow(label, s){
+  if(!s.n) return `<tr><th scope="row">${label}</th><td class="rc-none" colspan="5">No graded picks</td></tr>`;
+  return `<tr><th scope="row">${label}</th><td>${num(s.n)}</td><td>${pct(s.hit/s.n)}</td><td>${s.said!=null? pct(s.said) : '—'}</td>`+
+    `<td class="${s.priced? cls(s.units) : ''}">${s.priced? units(s.units) : '—'}</td><td>${s.roi!=null? sign(s.roi)+pct(Math.abs(s.roi)) : '—'}</td></tr>`;
+}
+function listBlock(b){
+  const a=b.all, notes=[];
+  if(a.n && a.priced<a.n) notes.push(`Units count the ${num(a.priced)} of ${num(a.n)} picks that had a real price.`);
+  if(a.clvN) notes.push(`Price moved its way on ${num(a.clvUp)} of ${num(a.clvN)}, against it on ${num(a.clvDn)} (average ${sign(a.clv)}${Math.abs(a.clv).toFixed(1)}¢, first price to last).`);
+  if(b.void || b.push) notes.push(`Not counted: ${b.void||0} voided, ${b.push||0} pushed.`);
+  return `<div class="rc-list"><h3><i class="rc-sw" style="background:${COLORS[b.tag]||'var(--s3)'}"></i>${b.name}</h3>`+
+    `<table class="rc-t"><thead><tr><th></th><th>Picks</th><th>Hit</th><th>Model</th><th>Units</th><th>Return</th></tr></thead><tbody>`+
+    statRow('All-time', a)+statRow(`${R.window} days`, b.d30)+`</tbody></table>`+
+    (notes.length? `<p class="rc-note">${notes.join(' ')}</p>` : '')+`</div>`;
+}
+
+// ---- charts: inline SVG, a crosshair and a small tooltip; the tables beside them hold the same numbers ----
+function hover(wrap, xs, at, tip){
+  // xs: each point's x in viewBox units (width W); at(i) moves the crosshair; tip(i) is the tooltip's HTML
+  const svg=wrap.querySelector('svg'), box=document.createElement('div');
+  box.className='rc-tip'; box.hidden=true; wrap.appendChild(box);
+  const W=svg.viewBox.baseVal.width;
+  function move(e){
+    const r=svg.getBoundingClientRect(), x=(e.clientX-r.left)/r.width*W;
+    let i=0; xs.forEach((v,k)=>{ if(Math.abs(v-x)<Math.abs(xs[i]-x)) i=k; });
+    at(i); box.innerHTML=tip(i); box.hidden=false;
+    const left=xs[i]/W*r.width, w=box.offsetWidth;
+    box.style.left=Math.max(0, Math.min(r.width-w, left+(left>r.width/2? -w-10 : 10)))+'px';
+    box.style.top=(svg.offsetTop+6)+'px';
+  }
+  svg.addEventListener('pointermove', move); svg.addEventListener('pointerdown', move);
+  svg.addEventListener('pointerleave', ()=>{ box.hidden=true; at(-1); });
+}
+function unitsChart(el, lists, label){
+  const series=lists.filter(b=>b.weeks.length);
+  if(!series.length){ el.innerHTML='<p class="rc-note">No priced, graded picks yet, so there is no line to draw.</p>'; return; }
+  const W=340, H=180, L=38, Rt=12, T=10, B=24;
+  const weeks=[...new Set(series.flatMap(b=>b.weeks.map(w=>w[0])))].sort();
+  const t0=dayMs(weeks[0]), t1=dayMs(weeks[weeks.length-1]);
+  const vals=series.flatMap(b=>b.weeks.map(w=>w[1])), lo=Math.min(0, ...vals), hi=Math.max(0, ...vals), span=(hi-lo)||1;
+  const x=iso=> t1===t0? (L+W-Rt)/2 : L+(dayMs(iso)-t0)/(t1-t0)*(W-L-Rt);
+  const y=v=> T+(hi-v)/span*(H-T-B);
+  const ticks=[...new Set([lo, 0, hi])];
+  let s=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${label}: units won or lost over time, by week">`;
+  ticks.forEach(v=>{ s+=`<line x1="${L}" x2="${W-Rt}" y1="${y(v)}" y2="${y(v)}" stroke="${v===0? 'rgba(255,255,255,.38)' : 'rgba(255,255,255,.09)'}" stroke-width="1"/>`+
+    `<text x="${L-6}" y="${y(v)+3.5}" text-anchor="end" font-size="10.5" fill="#b8c5d6">${v===0? '0' : sign(v)+Math.abs(v).toFixed(Math.abs(v)<10? 1 : 0)}</text>`; });
+  s+=`<text x="${L}" y="${H-7}" font-size="10.5" fill="#b8c5d6">${day(weeks[0])}</text>`;
+  if(weeks.length>1) s+=`<text x="${W-Rt}" y="${H-7}" text-anchor="end" font-size="10.5" fill="#b8c5d6">${day(weeks[weeks.length-1])}</text>`;
+  s+=`<line class="rc-cross" x1="0" x2="0" y1="${T}" y2="${H-B}" stroke="rgba(255,255,255,.4)" stroke-width="1" visibility="hidden"/>`;
+  series.forEach(b=>{
+    const c=COLORS[b.tag]||'var(--s3)', pts=b.weeks.map(w=>[x(w[0]), y(w[1])]), end=pts[pts.length-1];
+    if(pts.length>1) s+=`<polyline points="${pts.map(p=>p[0].toFixed(1)+','+p[1].toFixed(1)).join(' ')}" fill="none" stroke="${c}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>`;
+    s+=`<circle cx="${end[0].toFixed(1)}" cy="${end[1].toFixed(1)}" r="4" fill="${c}" stroke="#0f2038" stroke-width="2"/>`;
+  });
+  s+='</svg>';
+  el.innerHTML=`<h3>Units won or lost so far, week by week (1 unit a pick)</h3><div class="rc-legend">`+
+    series.map(b=>`<span><i class="rc-sw" style="background:${COLORS[b.tag]||'var(--s3)'}"></i>${b.name} ${units(b.weeks[b.weeks.length-1][1])}</span>`).join('')+`</div>`+s;
+  const cross=el.querySelector('.rc-cross');
+  // a list's running total at a week: its last point on or before it
+  const upTo=(b,wk)=>{ let v=null; for(const w of b.weeks){ if(w[0]<=wk) v=w[1]; else break; } return v; };
+  hover(el, weeks.map(x), i=>{ if(i<0) cross.setAttribute('visibility','hidden'); else { cross.setAttribute('x1', x(weeks[i])); cross.setAttribute('x2', x(weeks[i])); cross.setAttribute('visibility','visible'); } },
+    i=>`<b>Week of ${day(weeks[i])}</b>`+series.map(b=>{ const v=upTo(b, weeks[i]);
+      return `<span><i class="rc-sw" style="background:${COLORS[b.tag]||'var(--s3)'}"></i>${b.name}: ${v==null? 'not started' : units(v)}</span>`; }).join(''));
+}
+function calibChart(el, calib, label){
+  if(!calib.length){ el.innerHTML='<p class="rc-note">No graded picks yet.</p>'; return; }
+  const W=340, H=250, L=38, Rt=12, T=10, B=36;
+  const lo=Math.min(50, Math.floor(Math.min(...calib.map(c=>c.hit*100))/10)*10), hi=100;
+  const x=v=> L+(v-50)/50*(W-L-Rt), y=v=> T+(hi-v)/(hi-lo)*(H-T-B);
+  let s=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${label}: how often picks hit against the chance the model gave them">`;
+  for(let v=lo; v<=hi; v+=10) s+=`<line x1="${L}" x2="${W-Rt}" y1="${y(v)}" y2="${y(v)}" stroke="rgba(255,255,255,.09)" stroke-width="1"/>`+
+    `<text x="${L-6}" y="${y(v)+3.5}" text-anchor="end" font-size="10.5" fill="#b8c5d6">${v}%</text>`;
+  for(let v=50; v<=100; v+=10) s+=`<text x="${x(v)}" y="${H-B+14}" text-anchor="middle" font-size="10.5" fill="#b8c5d6">${v}%</text>`;
+  s+=`<text x="${(L+W-Rt)/2}" y="${H-5}" text-anchor="middle" font-size="10.5" fill="#b8c5d6">Chance the model gave</text>`;
+  s+=`<line x1="${x(50)}" y1="${y(50)}" x2="${x(100)}" y2="${y(100)}" stroke="rgba(255,255,255,.45)" stroke-width="1" stroke-dasharray="4 4"/>`;
+  s+=`<text x="${x(97)}" y="${y(100)+14}" text-anchor="end" font-size="10.5" fill="#b8c5d6">said = happened</text>`;
+  s+=`<line class="rc-cross" x1="0" x2="0" y1="${T}" y2="${H-B}" stroke="rgba(255,255,255,.4)" stroke-width="1" visibility="hidden"/>`;
+  const pts=calib.map(c=>[x(c.said*100), y(c.hit*100)]);
+  if(pts.length>1) s+=`<polyline points="${pts.map(p=>p[0].toFixed(1)+','+p[1].toFixed(1)).join(' ')}" fill="none" stroke="var(--s1)" stroke-width="2" stroke-linejoin="round"/>`;
+  pts.forEach(p=>{ s+=`<circle cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="4.5" fill="var(--s1)" stroke="#0f2038" stroke-width="2"/>`; });
+  s+='</svg>';
+  el.innerHTML=`<h3>How often it hit (up the side) against the chance the model gave (along the bottom)</h3>`+s;
+  const cross=el.querySelector('.rc-cross');
+  hover(el, pts.map(p=>p[0]), i=>{ if(i<0) cross.setAttribute('visibility','hidden'); else { cross.setAttribute('x1', pts[i][0]); cross.setAttribute('x2', pts[i][0]); cross.setAttribute('visibility','visible'); } },
+    i=>{ const c=calib[i]; return `<b>${c.lo}–${c.hi}% picks</b><span>Model said ${pct(c.said)}</span><span>Hit ${pct(c.hit)}</span><span>${num(c.n)} picks</span>`; });
+}
+function calibTable(cols){
+  // cols: [[label, calib], ...]; one row per 10-point band, "said → hit" in each cell
+  const bands=[...new Set(cols.flatMap(c=>c[1].map(b=>b.lo)))].sort((a,b)=>a-b);
+  if(!bands.length) return '';
+  const cell=(calib,lo)=>{ const b=calib.find(k=>k.lo===lo); return b? pct(b.hit)+`<br><span style="color:var(--muted);font-size:11px">${num(b.n)}</span>` : '—'; };
+  return `<table class="rc-t"><thead><tr><th>Model said</th>${cols.map(c=>`<th>${c[0]}</th>`).join('')}</tr></thead><tbody>`+
+    bands.map(lo=>`<tr><th scope="row">${lo}–${lo+10}%</th>${cols.map(c=>`<td>${cell(c[1], lo)}</td>`).join('')}</tr>`).join('')+
+    `</tbody></table><p class="rc-note">Each cell: how often those picks hit, and how many there were.</p>`;
+}
+function fairRow(label, f){
+  if(!f || f.brierModel==null) return `<tr><th scope="row">${label}</th><td>${f? num(f.n) : 0}</td><td class="rc-none" colspan="3">Too few priced picks to compare (needs 200)</td></tr>`;
+  return `<tr><th scope="row">${label}</th><td>${num(f.n)}</td><td>${f.brierModel.toFixed(4)}</td><td>${f.brierMarket.toFixed(4)}</td><td>${Math.round(f.w*100)}%</td></tr>`;
+}
+const fairHead='<thead><tr><th></th><th>Picks</th><th>Model</th><th>Market</th><th>Weight</th></tr></thead>';
+
+function sportPanel(s){
+  const sec=document.createElement('section');
+  sec.className='panel'; sec.id=s.sport;
+  sec.innerHTML=`<h2>${s.name}${s.test? '<span class="rc-badge">New · under test</span>' : ''}</h2>`+
+    `<p class="rc-sub">${s.test? 'New on the site and still building a record, so it is kept apart from the other sports and off the home page. Match markets, not player props. ' : ''}`+
+    `${s.graded? `${num(s.graded)} live picks graded since ${day(s.since, true)}. Every list the ${s.name} page publishes is below.` : 'No graded live picks yet.'}</p>`+
+    `<div class="rc-grid"><div>${s.lists.map(listBlock).join('')}</div><div><div class="rc-chart"></div>`+
+    `<a class="rc-more" href="${s.page}#past">See every graded ${s.name} pick in Past picks →</a></div></div>`+
+    (s.test? `<h3 class="rc-h3">Calibration and model vs. market</h3><div class="rc-grid"><div class="rc-scroll">${calibTable([[s.name, s.calib]])}</div>`+
+      `<div class="rc-scroll"><table class="rc-t">${fairHead}<tbody>${fairRow(s.name, s.fair)}</tbody></table></div></div>` : '');
+  unitsChart(sec.querySelector('.rc-chart'), s.lists, s.name);
+  return sec;
+}
+
+(function(){
+  const main=R.sports.filter(s=>!s.test), test=R.sports.filter(s=>s.test);
+  $('rc-graded').textContent=num(R.graded);
+  $('rc-since').textContent=R.since? day(R.since, true) : '—';
+  $('rc-gen').textContent=day(R.day, true);
+  $('rc-asof').textContent=`Numbers last changed ${day(R.gen, true)}, ${R.gen.slice(11,16)} UTC. Checked with every site update.`;
+  $('rc-stamp').textContent=`Worked out from the same pick files the sport pages read, with every site update. The numbers last changed ${day(R.gen, true)} at ${R.gen.slice(11,16)} UTC.`;
+  $('rc-jump').innerHTML='<a href="#losing">What\'s losing</a>'+R.sports.map(s=>`<a href="#${s.sport}">${s.name}</a>`).join('')+
+    '<a href="#potd">Pick of the Day</a><a href="#calibration">Calibration</a><a href="#market">Model vs. market</a>';
+
+  // what's losing
+  const down=R.losing.filter(l=>l.priced && l.units<0), dip=R.losing.filter(l=>!(l.priced && l.units<0));
+  const line=l=>`<li><b>${l.name} · ${l.list}</b>: <span class="rc-dn">${units(l.units)} units</span> over ${num(l.priced)} priced picks`+
+    `${l.roi!=null? ` (${sign(l.roi)}${pct(Math.abs(l.roi))} return)` : ''}.${l.d30!=null? ` Last ${R.window} days: <span class="${cls(l.d30)}">${units(l.d30)}</span>.` : ` No picks in the last ${R.window} days.`}</li>`;
+  const line2=l=>`<li><b>${l.name} · ${l.list}</b>: <span class="rc-dn">${units(l.d30)} units</span> over the last ${R.window} days (${units(l.units)} all-time).</li>`;
+  $('rc-losing').innerHTML=(down.length? `<h3 class="rc-h3">Down all-time</h3><ul class="rc-lose">${down.map(line).join('')}</ul>` :
+      '<p class="rc-sub">No list is down units all-time right now. When one is, it is named here.</p>')+
+    (dip.length? `<h3 class="rc-h3">Up all-time, down over the last ${R.window} days</h3><ul class="rc-lose">${dip.map(line2).join('')}</ul>` : '');
+
+  main.forEach(s=>$('rc-sports').appendChild(sportPanel(s)));
+  test.forEach(s=>$('rc-test').appendChild(sportPanel(s)));
+
+  // Pick of the Day
+  $('rc-botd').innerHTML=`<div class="rc-grid"><div>${R.botd.map(listBlock).join('')}</div><div><div class="rc-chart"></div>`+
+    `<a class="rc-more" href="./">See today's two picks on the home page →</a></div></div>`;
+  unitsChart($('rc-botd').querySelector('.rc-chart'), R.botd, 'Pick of the Day');
+
+  // calibration, pooled and by sport
+  calibChart($('rc-calchart'), R.calib, 'All four sports');
+  $('rc-caltable').innerHTML=calibTable([['All', R.calib]].concat(main.map(s=>[s.name, s.calib])))+
+    `<p class="rc-note">Check any of it pick by pick: ${main.map(s=>`<a href="${s.page}#past">${s.name} Past picks</a>`).join(' · ')}</p>`;
+
+  // model vs. market
+  const f=R.fair;
+  $('rc-fairline').textContent= f && f.brierModel!=null ?
+    `On ${num(f.n)} graded picks that had a price, the market's price scored ${f.brierMarket.toFixed(4)} and the model ${f.brierModel.toFixed(4)}. `+
+    (f.brierMarket<f.brierModel? 'The market has predicted better than the model.' : f.brierMarket>f.brierModel? 'The model has predicted better than the market.' : 'They have predicted equally well.')+
+    ` So the fair chance on every priced card is ${Math.round(f.w*100)}% model and ${100-Math.round(f.w*100)}% market.` :
+    'Not enough priced, graded picks yet to compare the model with the market.';
+  $('rc-fairtable').innerHTML=`<table class="rc-t">${fairHead}<tbody>${fairRow('All four sports', f)}${main.map(s=>fairRow(s.name, s.fair)).join('')}</tbody></table>`;
+})();
+</script>
