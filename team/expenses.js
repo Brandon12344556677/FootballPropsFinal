@@ -22,6 +22,7 @@
   const today = () => new Date().toLocaleDateString('en-CA');
 
   let pw = null, data = {v: 1, items: []}, sha = null, loaded = false, busy = false, login = null;
+  let expired = false;   // GitHub said 401 to the saved token: reads go without it, saving needs a new one
   let editing = null;   // {kind: 'item' | 'rec', id} while the form edits a saved entry
 
   // ---------- crypto (OpenSSL-compatible) ----------
@@ -47,9 +48,14 @@
 
   // ---------- GitHub storage ----------
   function token(){ try { return localStorage.getItem(TOKEN_KEY) || ''; } catch(e){ return ''; } }
-  function headers(){ const h = {Accept: 'application/vnd.github+json'}; const t = token(); if (t) h.Authorization = 'Bearer ' + t; return h; }
+  function headers(auth = true){ const h = {Accept: 'application/vnd.github+json'}; const t = token(); if (t && auth) h.Authorization = 'Bearer ' + t; return h; }
   async function fetchList(path = PATH){
-    const r = await fetch(`${apiFor(path)}?ref=${BRANCH}&t=${Date.now()}`, {headers: headers(), cache: 'no-store'});
+    // The repo is public, so reading needs no token. GitHub answers 401 to any request carrying an expired or
+    // revoked token, even a read, so on a 401 the read is tried again without it (and the token is flagged).
+    const url = () => `${apiFor(path)}?ref=${BRANCH}&t=${Date.now()}`;
+    const auth = !!token() && !expired;   // per request: several reads can be in flight when the 401 comes back
+    let r = await fetch(url(), {headers: headers(auth), cache: 'no-store'});
+    if (r.status === 401 && auth) { if (!expired) { expired = true; render(); } r = await fetch(url(), {headers: headers(false), cache: 'no-store'}); }
     if (r.status === 404) return {doc: {v: 1, items: []}, sha: null};
     if (!r.ok) throw Object.assign(new Error('read'), {status: r.status});
     const j = await r.json();
@@ -74,13 +80,15 @@
   async function change(fn){
     if (busy) return;
     if (!token()) { msg('Connect GitHub below to save changes.', true); return; }
+    if (expired) { msg('Your GitHub token has expired. Make a new one (steps below) to save changes.', true); return; }
     busy = true; msg('Saving…');
     try {
       const r = await update(PATH, fn); sha = r.sha; data = r.doc;
       msg('Saved. Your teammate sees it on their next refresh.');
       render();
     } catch(e){
-      msg(e.status === 401 ? 'GitHub rejected the token. Make a new one (steps below).' :
+      if (e.status === 401) { expired = true; render(); }
+      msg(e.status === 401 ? 'GitHub rejected the token: it has expired or was revoked. Make a new one (steps below).' :
           e.status === 403 || e.status === 404 ? 'This GitHub account can’t write to the repo. Use an account Brandon added as a collaborator.' :
           'Couldn’t save. Check your connection and try again.', true);
     } finally { busy = false; }
@@ -171,21 +179,26 @@
       return `<li class="row"><span class="name">${esc(r.desc)} <small>${esc(r.cat)} · ${money(+r.amount || 0)} ${esc(FREQ[r.freq] || '')} since ${esc(r.start)}${r.end ? ' · stopped ' + esc(r.end) : nx ? ' · next ' + esc(nx) : ''}</small></span>` +
         `<span class="pct">${n}\u00d7</span><span class="n"><button type="button" class="ghost exredit" data-id="${esc(r.id)}">Edit</button> ${r.end ? '' : `<button type="button" class="ghost exstop" data-id="${esc(r.id)}">Stop</button> `}<button type="button" class="ghost exrdel" data-id="${esc(r.id)}" title="Remove it and every time it was counted">Delete</button></span></li>`; }).join('');
     const t = token();
-    $('exConn').innerHTML = t
-      ? `Saving as <b>${esc(login || 'your GitHub account')}</b> on this device. <button type="button" class="ghost" id="exDisc">Disconnect</button>`
+    $('exConn').innerHTML = t && expired
+      ? `<b>The GitHub token saved on this device has expired</b>, so changes can't be saved (the list still loads). Make a new one with the steps below and paste it to replace it. <button type="button" class="ghost" id="exDisc">Remove the old token</button>`
+      : t ? `Saving as <b>${esc(login || 'your GitHub account')}</b> on this device. <button type="button" class="ghost" id="exDisc">Disconnect</button>`
       : 'Not connected on this device: you can see the list but not change it.';
-    $('exTokWrap').hidden = !!t;
-    const d = $('exDisc'); if (d) d.onclick = () => { try { localStorage.removeItem(TOKEN_KEY); } catch(e){} login = null; msg(''); render(); };
+    $('exTokWrap').hidden = !!t && !expired;
+    const d = $('exDisc'); if (d) d.onclick = () => { try { localStorage.removeItem(TOKEN_KEY); } catch(e){} login = null; expired = false; msg(''); render(); };
   }
   async function who(){
     if (!token()) { login = null; return; }
-    try { const r = await fetch('https://api.github.com/user', {headers: headers()}); if (r.ok) login = (await r.json()).login; else if (r.status === 401) login = 'an expired token'; } catch(e){}
+    try {
+      const r = await fetch('https://api.github.com/user', {headers: headers()});
+      if (r.ok) { login = (await r.json()).login; expired = false; }
+      else if (r.status === 401) { login = null; expired = true; }
+    } catch(e){}
     render();
   }
   async function reload(){
     if (!pw) return;
     try { const r = await fetchList(); data = r.doc; sha = r.sha; loaded = true; render(); }
-    catch(e){ loaded = true; msg(e.message === 'format' || e.name === 'OperationError' ? 'The saved list doesn’t open with this password.' : 'Couldn’t load the list. Refresh to try again.', true); render(); }
+    catch(e){ loaded = true; msg(e.message === 'format' || e.name === 'OperationError' ? 'The saved list doesn’t open with this password.' : e.status === 403 ? 'GitHub is limiting requests from this network for now. Try again in a few minutes.' : 'Couldn’t load the list. Refresh to try again.', true); render(); }
   }
   function csv(){
     const rows = [['Date', 'Type', 'Category', 'Description', 'Paid by / from', 'Amount']]
@@ -258,7 +271,7 @@
     $('exTokSave').addEventListener('click', () => {
       const t = $('exTok').value.trim(); if (!t) return;
       try { localStorage.setItem(TOKEN_KEY, t); } catch(e){ msg('This browser won’t store the token.', true); return; }
-      $('exTok').value = ''; msg('Connected on this device.'); who(); render();
+      $('exTok').value = ''; expired = false; msg('Connected on this device.'); who(); reload(); render();
     });
     $('exCsv').addEventListener('click', csv);
   }
@@ -269,7 +282,7 @@
     ready: () => !!pw,
     canSave: () => !!token(),
     read: async path => (await fetchList(path)).doc,
-    update: async (path, fn) => { if (!token()) throw Object.assign(new Error('token'), {status: 0}); return (await update(path, fn)).doc; }
+    update: async (path, fn) => { if (!token()) throw Object.assign(new Error('token'), {status: 0}); if (expired) throw Object.assign(new Error('token'), {status: 401}); return (await update(path, fn)).doc; }
   };
 
   window.addEventListener('psa-unlock', e => { pw = e.detail && e.detail.pw; wire(); render(); reload(); who(); });
