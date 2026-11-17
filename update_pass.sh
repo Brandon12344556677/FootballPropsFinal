@@ -28,6 +28,10 @@ timeout 3m python build_players.py 2>&1 | tee "$LOGDIR/build_players.log" || ech
 # One page per upcoming game (games/), every run; adds them to the sitemap.
 timeout 2m python build_games.py 2>&1 | tee "$LOGDIR/build_games.log" || echo "game pages not rebuilt this run"
 
+# Link-preview cards (og/*.png, and p/<sport>/<key>.png for Value picks' share pages), drawn in headless Chrome
+# by og/draw.html; only new or changed cards, the daily ones at most once a day. Without Chrome it does nothing.
+timeout 3m python cards.py 2>&1 | tee "$LOGDIR/cards.log" || echo "preview cards not drawn this run"
+
 # Once a day (first run after 11 AM ET): yesterday's Value results + today's best value,
 # to whichever Discord/Telegram secrets are set. With none set, it does nothing.
 timeout 3m python post_daily.py 2>&1 | tee "$LOGDIR/post_daily.log" || echo "daily post skipped this run"
@@ -57,7 +61,7 @@ git config user.name "github-actions[bot]"
 git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 git add nfl.html data.json slate.json picks.json weekly.json sitemap.xml robots.txt
 git add -A players 2>/dev/null || true
-git add -A games best p 2>/dev/null || true
+git add -A games best p og 2>/dev/null || true
 for f in nba.html nba.json nba_stats.json nba_picks.json \
          nhl.html nhl.json nhl_stats.json nhl_picks.json \
          mlb.html mlb.json mlb_stats.json mlb_picks.json          tennis.html tennis.json tennis_picks.json tennis_picks_recent.json tennis_results.json today.json botd.json posted.json top_cache.json health.json fast_hist.json \

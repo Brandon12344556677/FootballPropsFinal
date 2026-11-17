@@ -22,7 +22,9 @@ README.md has the full feature tour; this file is the working rules.
   every sport with units, 30-day figures, weekly units lines, calibration and model-vs-market, losing lists named first ("What's losing").
   Reuses build_today's calibration/fair_weight and depth.real_price; tennis shown apart as a sport under test. Non-fatal step.
 - `build_players.py` → `players/`, `build_games.py` → `games/` (one page per upcoming game), `best/` (today's best props
-  per sport) and `p/` (link-preview pages for shared picks, kept 14 days after the game), `health.py` → `health.json`,
+  per sport) and `p/` (link-preview pages for shared picks, kept 14 days after the game), `cards.py` (after build_games: the 1200x630
+  link-preview cards, `og/<site|home|record|sport>.png` and a card per Value pick's share page `p/<sport>/<key>.png`, drawn by `og/draw.html`
+  in headless Chrome, only when missing or changed, daily ones at most once a day; same copy rules as the ads), `health.py` → `health.json`,
   `post_daily.py` (Discord/Telegram, and the daily picks email via Buttondown: `BUTTONDOWN_API_KEY`, sign-up form on the
   home page shown once `NEWSLETTER` is set in index.html), `watchdog.py` (own workflow, started by every update run, so about every 20 min, with a 30-min schedule as backup: checks the live site and keeps one
   "Site watchdog" GitHub issue open while something is broken, and restarts the update chain when no update run has started in 30+ minutes (`restart_chain`, via `start_run.py`); the team dashboard reads it). `build_today.py` also writes `search.json` (home page player search).
@@ -92,7 +94,8 @@ The bot overwrites these on every pass, so hand edits are lost and cause merge c
 - `data.json`, `slate.json`, `picks.json`, `weekly.json`, `*_picks.json`, `*_stats.json`,
   `nba.json`, `nhl.json`, `mlb.json`, `tennis.json`, `tennis_results.json`, `record.json`, `today.json`, `botd.json`, `health.json`, `top_cache.json`,
   `sitemap.xml`, `robots.txt`, `players/`, `games/`, `best/`, `p/`, `team/stats.enc`, `team/edges.enc`, `team/parlays.enc`, `team/parlays_nba.enc`, `team/parlays_nfl.enc`, `team/parlay_potd.enc`, `team/spreads.enc`, `team/arbs.enc`, `team/tpod.enc`, `spread_scores.json`, `fast_hist.json`, `*_picks_recent.json`, `search.json`,
-  `tiktok/<day>/` and `tiktok/posted.json` (the TikTok workflow; `tiktok/callback.html` is hand-written).
+  `tiktok/<day>/` and `tiktok/posted.json` (the TikTok workflow; `tiktok/callback.html` is hand-written),
+  `og/*.png`, `og/state.json` and `p/<sport>/*.png` (cards.py; `og/draw.html` is hand-written).
 
 `index.html` (home page), `methodology.html`, `guides/`, and the legal pages are hand-written and safe to edit.
 
