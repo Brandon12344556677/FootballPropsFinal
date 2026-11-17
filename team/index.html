@@ -115,13 +115,14 @@ footer p{margin:0;max-width:80ch}
 #app[data-cur="potd"] [data-view]:not([data-view="potd"]){display:none!important}
 #app[data-cur="spreads"] [data-view]:not([data-view="spreads"]){display:none!important}
 #app[data-cur="arbs"] [data-view]:not([data-view="arbs"]){display:none!important}
+#app[data-cur="roi4"] [data-view]:not([data-view="roi4"]){display:none!important}
 #app[data-cur="secret"] [data-view]:not([data-view="secret"]){display:none!important}
 #app[data-cur="tpod"] [data-view]:not([data-view="tpod"]){display:none!important}
 #app[data-cur="social"] [data-view]:not([data-view="social"]){display:none!important}
 #app[data-cur="sponsors"] [data-view]:not([data-view="sponsors"]){display:none!important}
 #app[data-cur="expenses"] [data-view]:not([data-view="expenses"]){display:none!important}
 #app[data-cur="affiliates"] [data-view]:not([data-view="affiliates"]){display:none!important}
-#app[data-cur="picks"] #tabs, #app[data-cur="parlays"] #tabs, #app[data-cur="potd"] #tabs, #app[data-cur="spreads"] #tabs, #app[data-cur="arbs"] #tabs, #app[data-cur="secret"] #tabs, #app[data-cur="tpod"] #tabs, #app[data-cur="social"] #tabs, #app[data-cur="expenses"] #tabs, #app[data-cur="affiliates"] #tabs{display:none}
+#app[data-cur="picks"] #tabs, #app[data-cur="parlays"] #tabs, #app[data-cur="potd"] #tabs, #app[data-cur="spreads"] #tabs, #app[data-cur="arbs"] #tabs, #app[data-cur="roi4"] #tabs, #app[data-cur="secret"] #tabs, #app[data-cur="tpod"] #tabs, #app[data-cur="social"] #tabs, #app[data-cur="expenses"] #tabs, #app[data-cur="affiliates"] #tabs{display:none}
 /* expenses (expenses.js) */
 .exform{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:10px;align-items:end}
 .exform label{display:grid;gap:4px;font-size:13px;color:var(--muted);min-width:0}
@@ -249,6 +250,23 @@ details.plpast>summary:focus-visible{outline:2px solid var(--accent);outline-off
 .post-h{display:flex;justify-content:space-between;align-items:center;gap:10px}
 .post textarea{width:100%;box-sizing:border-box;background:var(--surface-2);color:var(--fg);border:1px solid var(--line);border-radius:8px;padding:10px;font:inherit;font-size:14px;resize:vertical}
 
+/* 4% return tab */
+.r4-note{border-left:3px solid var(--warn);padding:8px 12px;background:var(--surface-2);border-radius:0 8px 8px 0;font-size:14px;color:var(--soft);margin:0 0 14px;max-width:90ch}
+.r4-note b{color:var(--fg)}
+.r4-seg{display:flex;gap:4px;flex-wrap:wrap;margin:6px 0 12px}
+.r4-seg button{color:var(--muted);background:var(--surface-2);border:1px solid var(--line);border-radius:999px;padding:6px 14px;min-height:36px}
+.r4-seg button[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.r4-chart svg{display:block;width:100%;height:auto}
+.r4-chart text{fill:var(--muted);font:12px var(--f-body)}
+.r4-legend{display:flex;gap:16px;flex-wrap:wrap;font-size:13px;color:var(--muted);margin:6px 0 0}
+.r4-legend i{display:inline-block;width:14px;height:3px;border-radius:2px;vertical-align:middle;margin-right:6px}
+.edges td.up{color:var(--accent)} .edges td.down{color:var(--down)} .edges td.mid{color:var(--warn)}
+.edges tr.r4-best td{background:var(--accent-weak)}
+.r4-bar{display:inline-block;width:90px;height:8px;border-radius:999px;background:var(--surface-2);overflow:hidden;vertical-align:middle;margin-right:8px}
+.r4-bar i{display:block;height:100%;border-radius:999px;background:var(--accent)}
+.r4-bar i.down{background:var(--down)}
+@media (pointer:coarse){ .r4-seg button{min-height:44px} }
+
 /* site health */
 .health{display:flex;gap:12px;align-items:flex-start;padding:12px 16px;border-radius:12px;border:1px solid var(--line);background:var(--surface)}
 .health .hdot{width:10px;height:10px;border-radius:50%;margin-top:6px;flex:none;background:var(--accent)}
@@ -355,6 +373,7 @@ details.plpast>summary:focus-visible{outline:2px solid var(--accent);outline-off
     <button role="tab" data-v="potd">Parlay of the Day</button>
     <button role="tab" data-v="spreads">Spreads</button>
     <button role="tab" data-v="arbs">Arbitrage</button>
+    <button role="tab" data-v="roi4">4% return</button>
     <button role="tab" data-v="secret">Secret methods</button>
     <button role="tab" data-v="tpod">3 Picks of the Day</button>
     <button role="tab" data-v="social">Social</button>
@@ -542,6 +561,49 @@ details.plpast>summary:focus-visible{outline:2px solid var(--accent);outline-off
     <details class="plpast"><summary><span>Past picks</span><span class="label" id="sdPastN"></span></summary>
     <div class="edwrap"><table class="edges pst"><thead><tr><th>Day</th><th>Game</th><th>Pick</th><th class="n">Price</th><th class="n">Model</th><th>Final</th><th>Result</th><th class="n">Units</th></tr></thead><tbody id="sdRows"></tbody></table></div>
     </details>
+  </section>
+
+  <section data-view="roi4" class="panel" id="r4Panel">
+    <div class="panel-h"><h2>4% return</h2><span class="label" id="r4Upd">Team only · paper bets</span></div>
+    <p class="r4-note"><b>Read this first.</b> The goal is the bankroll up <b>4% a month</b> (1 unit = 1% of a 100-unit bank). 4% every day isn't reachable: one night's props win and lose together, so single days swing from −100% to +80%, and even a real edge loses about one month in three. These are <b>paper bets</b> until the end of the NFL season: nothing is bought, and the numbers are only as good as the prices recorded. Every day and every month is shown, losing ones included.</p>
+    <div class="kpis" id="r4Kpis" aria-label="Live 4% return numbers"></div>
+    <h3 class="subh">4% a month: the paper trial</h3>
+    <p class="hint" id="r4Trial"></p>
+    <div class="edwrap"><table class="edges"><thead><tr><th>Month</th><th class="n">Bets</th><th class="n">Betting days</th><th class="n">Staked</th><th class="n">Units won</th><th class="n">Bank</th><th class="n">On stakes</th><th>Against 4%</th></tr></thead><tbody id="r4MonthRows"></tbody></table></div>
+    <h3 class="subh">What a month could look like</h3>
+    <p class="hint" id="r4OutNote"></p>
+    <div class="edwrap"><table class="edges"><thead><tr><th>If the real edge is</th><th class="n">On stakes</th><th class="n">Typical month</th><th class="n">Months at 4%+</th><th class="n">Losing months</th><th class="n">Bad month (1 in 20)</th><th class="n">Good month (1 in 20)</th></tr></thead><tbody id="r4Out"></tbody></table></div>
+    <h3 class="subh">Return over time</h3>
+    <div class="r4-seg" role="group" aria-label="Which record">
+      <button type="button" data-r4="live" aria-pressed="true">Live</button>
+      <button type="button" data-r4="bt" aria-pressed="false">Backtest (before going live)</button>
+    </div>
+    <div class="r4-chart" id="r4Cum"></div>
+    <p class="r4-legend"><span><i style="background:var(--accent)"></i>Return on units staked, to date</span><span><i style="background:var(--warn)"></i>4% target</span><span><i style="background:var(--soft)"></i>Units won (right end)</span></p>
+    <h3 class="subh">Each day's return <small class="hint">(4% a day is not the goal: shown for how much days swing)</small></h3>
+    <div class="r4-chart" id="r4Daily"></div>
+    <p class="hint" id="r4DailyNote"></p>
+    <h3 class="subh">Live record next to the backtest</h3>
+    <p class="hint">Live: bets made by the update bot since the track started, never changed after. Backtest: the same rule replayed on the days before that, each day using only results known before it (frozen when the track started).</p>
+    <div class="edwrap"><table class="edges vwt"><thead><tr><th></th><th class="n">Live</th><th class="n">Backtest</th></tr></thead><tbody id="r4Cmp"></tbody></table></div>
+    <h3 class="subh">By sport</h3>
+    <div class="edwrap"><table class="edges"><thead><tr><th>Sport</th><th class="n">Live bets</th><th class="n">Live staked</th><th class="n">Live units</th><th class="n">Live return</th><th class="n">Backtest bets</th><th class="n">Backtest units</th><th class="n">Backtest return</th></tr></thead><tbody id="r4Sport"></tbody></table></div>
+    <h3 class="subh">Today</h3>
+    <p class="hint" id="r4Plan"></p>
+    <div class="edwrap"><table class="edges"><thead><tr><th>Bet</th><th>Why</th><th class="n">Price</th><th class="n">Model</th><th class="n">Stake</th><th class="n">To win</th><th>Result</th></tr></thead><tbody id="r4Today"></tbody></table></div>
+    <details class="plpast"><summary><span>What qualified today, and what didn't</span><span class="label" id="r4SegN"></span></summary>
+    <div class="edwrap"><table class="edges"><thead><tr><th>Segment</th><th class="n">Graded picks</th><th class="n">Game days</th><th class="n">Return</th><th class="n">Low end</th><th>Bet today?</th></tr></thead><tbody id="r4Segs"></tbody></table></div>
+    </details>
+    <details class="plpast"><summary><span>Past live bets</span><span class="label" id="r4PastN"></span></summary>
+    <div class="edwrap"><table class="edges"><thead><tr><th>Day</th><th>Bet</th><th class="n">Price</th><th class="n">Stake</th><th>Result</th><th class="n">Units</th></tr></thead><tbody id="r4Past"></tbody></table></div>
+    </details>
+    <h3 class="subh">Every method tried</h3>
+    <p class="hint" id="r4StudyNote"></p>
+    <div class="edwrap"><table class="edges"><thead><tr><th>Method</th><th>Kind</th><th class="n">Bets</th><th class="n">Days</th><th class="n">Return</th><th class="n">Likely range</th><th class="n">Days at 4%+</th><th class="n">Worst drawdown</th><th>By sport</th></tr></thead><tbody id="r4Study"></tbody></table></div>
+    <h3 class="subh">Why nobody honest promises 4% a day</h3>
+    <p class="hint">4% a day compounds to about 1.65 million times the starting money in a year. Professional bettors' long-run edge is a few percent of what they wager, with big swings day to day. People on social media who promise steady daily returns mostly earn elsewhere: subscriptions, or sportsbook affiliate deals that pay them a share of followers' losses. Their records often hide losses, change unit sizes after the fact, or show screenshots of prices nobody could get, and UK regulators have ruled such "daily profit" and "guaranteed" claims misleading. The methods that really are steady are small and capped: arbitrage (the Arbitrage tab; rare and minutes long), promo conversion at sportsbooks (accounts get limited), and posting orders as a maker on the exchanges for their liquidity rewards (Kalshi's program ends Jan 1, 2027; resting orders risk being picked off when news breaks). Tested here and shown above: injury news, weather, lineups and players' past results. The market already prices NBA injury news and recent form; only the NFL model edge has held up.</p>
+    <h3 class="subh">The rule</h3>
+    <p class="hint" id="r4Rules"></p>
   </section>
 
   <section data-view="arbs" class="panel" id="abPanel">
@@ -872,7 +934,7 @@ details.plpast>summary:focus-visible{outline:2px solid var(--accent);outline-off
       snap = await load(pw);
       password = pw; store.set('psa-pw', pw);
       $('lock').hidden = true; $('app').hidden = false;
-      setRange(range); freshness(); loadHealth(); renderSpikes(); loadAgents(); loadEdges(pw); loadParlays(pw); loadParlays(pw, 'nb', 'parlays_nba.enc'); loadParlays(pw, 'nf', 'parlays_nfl.enc'); loadParlays(pw, 'pd', 'parlay_potd.enc'); loadSpreads(pw); loadArbs(pw); loadTpod(pw);
+      setRange(range); freshness(); loadHealth(); renderSpikes(); loadAgents(); loadEdges(pw); loadParlays(pw); loadParlays(pw, 'nb', 'parlays_nba.enc'); loadParlays(pw, 'nf', 'parlays_nfl.enc'); loadParlays(pw, 'pd', 'parlay_potd.enc'); loadSpreads(pw); loadArbs(pw); loadRoi4(pw); loadTpod(pw);
       window.dispatchEvent(new CustomEvent('psa-unlock', {detail: {pw}}));   // expenses.js
       clearInterval(timer);
       timer = setInterval(refresh, 5*60*1000);
@@ -887,7 +949,7 @@ details.plpast>summary:focus-visible{outline:2px solid var(--accent);outline-off
   }
   async function refresh(){
     if (!password) return;
-    try { snap = await load(password); freshness(); render(); loadHealth(); renderSpikes(); loadAgents(); loadEdges(password); loadParlays(password); loadParlays(password, 'nb', 'parlays_nba.enc'); loadParlays(password, 'nf', 'parlays_nfl.enc'); loadParlays(password, 'pd', 'parlay_potd.enc'); loadSpreads(password); loadArbs(password); loadTpod(password); window.dispatchEvent(new Event('psa-refresh')); } catch(e){ if (e.code === 'wrong') lock(); }
+    try { snap = await load(password); freshness(); render(); loadHealth(); renderSpikes(); loadAgents(); loadEdges(password); loadParlays(password); loadParlays(password, 'nb', 'parlays_nba.enc'); loadParlays(password, 'nf', 'parlays_nfl.enc'); loadParlays(password, 'pd', 'parlay_potd.enc'); loadSpreads(password); loadArbs(password); loadRoi4(password); loadTpod(password); window.dispatchEvent(new Event('psa-refresh')); } catch(e){ if (e.code === 'wrong') lock(); }
   }
   function lock(){
     password = null; snap = null; store.del('psa-pw'); clearInterval(timer);
@@ -1253,7 +1315,7 @@ details.plpast>summary:focus-visible{outline:2px solid var(--accent);outline-off
 
 
   // ---------- section menu: Overview / Audience / Sign-ups / Picks / Parlays / Spreads / Arbitrage / Secret methods / 3 Picks / Social / Sponsors ----------
-  const VIEWS = ['overview','audience','signups','picks','parlays','potd','spreads','arbs','secret','tpod','social','sponsors','affiliates','expenses'];
+  const VIEWS = ['overview','audience','signups','picks','parlays','potd','spreads','arbs','roi4','secret','tpod','social','sponsors','affiliates','expenses'];
   function setView(v, push){
     if (!VIEWS.includes(v)) v = 'overview';
     $('app').dataset.cur = v;
@@ -1499,6 +1561,136 @@ details.plpast>summary:focus-visible{outline:2px solid var(--accent);outline-off
         : `<tr class="ed-wait"><td colspan="8">The first results show up the day after the first pick.</td></tr>`;
       if(d.gen) $('sdUpd').textContent='Team only · 1 unit a pick · updated '+new Date(d.gen).toLocaleString('en-US',{month:'short', day:'numeric', hour:'numeric', minute:'2-digit'});
     } catch(err){}
+  }
+  // ---------- 4% return: team/roi4.enc (roi4.py), same password ----------
+  let R4=null, R4which='live';
+  async function loadRoi4(pw){
+    try {
+      const r=await fetch('roi4.enc?t='+Date.now(),{cache:'no-store'});
+      if(!r.ok && r.status!==404) return;
+      R4= r.ok? await decrypt(await r.text(), pw) : {bets: [], stats: null};
+      renderRoi4();
+    } catch(err){}
+  }
+  document.querySelectorAll('[data-r4]').forEach(b=>b.addEventListener('click',()=>{
+    R4which=b.dataset.r4; document.querySelectorAll('[data-r4]').forEach(x=>x.setAttribute('aria-pressed', String(x===b))); renderRoi4();
+  }));
+  function renderRoi4(){
+    const d=R4; if(!d) return;
+    const SPN={nfl:'NFL', nba:'NBA', nhl:'NHL', mlb:'MLB', tennis:'Tennis'}, RES={hit:'✅ Hit', miss:'❌ Miss', void:'Void (stake back)'};
+    const pct=(v,dp=1)=>v==null? '–' : (v>=0?'+':'−')+Math.abs(v*100).toFixed(dp)+'%';
+    const u=v=>v==null? '–' : (v>=0?'+':'−')+Math.abs(v).toFixed(2)+'u', cls=v=>v==null? '' : v>0? 'up' : v<0? 'down' : '';
+    const c=v=>Math.round(v*100)+'¢', T=(d.rules||{}).target||0.04;
+    const live=d.stats||{n:0, daily:[], by_sport:{}}, bt=(d.backtest||{}).stats||{n:0, daily:[], by_sport:{}};
+    const today=new Date().toLocaleDateString('en-CA',{timeZone:'America/New_York'});
+    const open=(d.bets||[]).filter(b=>b.res==null);
+    // headline: the live record only (the backtest has its own column below)
+    const L=live.n? live : null;
+    const MT=(d.rules||{}).month_target||0.04, BANK=(d.rules||{}).bank||100, thisMonth=today.slice(0,7);
+    const lm=(live.monthly||[]), cur=lm.find(m=>m.month===thisMonth), done=lm.filter(m=>m.month<thisMonth);
+    $('r4Kpis').innerHTML=[
+      ['This month', cur? pct(cur.bank) : '–', cur? `${u(cur.pnl)} of the ${(MT*BANK).toFixed(2)}u target · still running` : (open.length? `${open.length} open bet${open.length===1?'':'s'}` : 'no graded bets this month yet'), cur? cls(cur.bank-MT) : ''],
+      ['Months at 4%+', done.length? `${done.filter(m=>m.bank>=MT).length} of ${done.length}` : '–', done.length? `${done.filter(m=>m.pnl<0).length} losing · finished months only` : 'the first full month counts', ''],
+      ['Live return on stakes', L? pct(L.roi,2) : '–', L? `${L.n} bets · ${u(L.pnl)} on ${L.staked.toFixed(2)}u` : 'starts with the first graded bet', L? cls(L.roi) : ''],
+      ['Worst drawdown', L? '−'+L.max_dd.toFixed(2)+'u' : '–', L? `longest losing run ${L.losing_days_run} day${L.losing_days_run===1?'':'s'}` : 'from the peak, in units', L&&L.max_dd? 'down' : '']
+    ].map(([k,v,s,cl])=>`<div class="kpi"><span class="label">${k}</span><span class="v ${cl}">${v}</span><span class="s">${s}</span></div>`).join('');
+    // the monthly trial: live months, then the backtest's, against 4% of the bank
+    const R_=d.rules||{}, review=R_.review_on||'', left=review? Math.ceil((Date.parse(review+'T12:00:00Z')-Date.parse(today+'T12:00:00Z'))/864e5) : null;
+    const avgM=done.length? done.reduce((a,m)=>a+m.bank,0)/done.length : null;
+    $('r4Trial').textContent= (left!=null && left>0? `Paper only until ${review} (the end of the NFL season, ${left} days away). ` : review? `The trial ended ${review}. ` : '')+
+      (done.length? `${done.length} finished live month${done.length===1?'':'s'}: average ${pct(avgM)} of the bank a month against the 4% target, ${done.filter(m=>m.bank>=MT).length} at or above it, ${done.filter(m=>m.pnl<0).length} losing. ` : 'No finished live month yet. ')+
+      (left!=null && left<=0? (done.length>=3 && avgM>=MT? 'On paper it met the target: evidence the edge is real, still not a promise. Start small if real money goes in.' : 'It did not meet 4% a month on paper. Do not put real money behind it.') :
+        'At the end, the question is whether the live months average 4%+ of the bank. Judge the average, not any single month: even a real edge loses about one month in three.');
+    const mbar=m=>{ const w=Math.min(100, Math.abs(m.bank)/MT*100); return `<span class="r4-bar"><i class="${m.pnl<0? 'down' : ''}" style="width:${w}%"></i></span>${m.bank>=MT? 'Met' : m.pnl<0? 'Losing' : 'Short'}`; };
+    const mrow=(m,tag)=>`<tr><td>${esc(new Date(m.month+'-15T12:00:00Z').toLocaleString('en-US',{month:'long', year:'numeric'}))} <small>${tag}${m.month===thisMonth&&tag==='live'? ' · so far' : ''}</small></td><td class="n">${m.n}</td><td class="n">${m.days}</td><td class="n">${m.staked.toFixed(2)}u</td>`+
+      `<td class="n ${cls(m.pnl)}">${u(m.pnl)}</td><td class="n ${m.bank>=MT? 'up' : m.pnl<0? 'down' : 'mid'}">${pct(m.bank)}</td><td class="n ${cls(m.roi)}">${pct(m.roi)}</td><td>${mbar(m)}</td></tr>`;
+    const btm=(bt.monthly||[]);
+    $('r4MonthRows').innerHTML= (lm.length? lm.slice().reverse().map(m=>mrow(m,'live')).join('') : `<tr class="ed-wait"><td colspan="8">No graded live bets yet.</td></tr>`)+
+      btm.slice().reverse().map(m=>mrow(m,'backtest')).join('');
+    const ol=(d.backtest||{}).outlook;
+    $('r4OutNote').textContent= ol? `Thousands of made-up months, each ${ol.bet_days} betting days drawn from the backtest's own days (it stakes about ${ol.staked}u a month on the ${BANK}u bank). The top row assumes the backtest's edge is real; the others show what happens if it is smaller or not there at all.` : 'Frozen with the backtest on the first run.';
+    $('r4Out').innerHTML= ol? ol.rows.map(r=>`<tr><td>${esc(r.label)}</td><td class="n">${pct(r.roi)}</td><td class="n ${cls(r.median)}">${pct(r.median)}</td><td class="n">${Math.round(r.p_hit*100)}%</td><td class="n">${Math.round(r.p_down*100)}%</td><td class="n down">${pct(r.bad)}</td><td class="n up">${pct(r.good)}</td></tr>`).join('') : '';
+    // charts
+    const S= R4which==='bt'? bt : live, days=S.daily||[];
+    const W=720, H=240, pl=48, pr=56, pt=14, pb=28, iw=W-pl-pr, ih=H-pt-pb;
+    if(!days.length){
+      const msg= R4which==='bt'? 'The backtest is frozen into the file on the first run.' : 'No graded live bets yet. The graph starts after the first bets are graded; the backtest button shows the replay.';
+      $('r4Cum').innerHTML=$('r4Daily').innerHTML=`<p class="empty">${msg}</p>`; $('r4DailyNote').textContent='';
+    } else {
+      const x=i=>pl+(days.length===1? iw/2 : i*iw/(days.length-1));
+      const rois=days.map(q=>q.cum_roi), lo=Math.min(0, T, ...rois), hi=Math.max(T, ...rois), pad=(hi-lo)*0.1||0.02;
+      const y=v=>pt+ih-(v-(lo-pad))/((hi+pad)-(lo-pad))*ih;
+      const ul=days.map(q=>q.cum), ulo=Math.min(0,...ul), uhi=Math.max(0.01,...ul), upad=(uhi-ulo)*0.1||1;
+      const yu=v=>pt+ih-(v-(ulo-upad))/((uhi+upad)-(ulo-upad))*ih;
+      const path=(f,vals)=>vals.map((v,i)=>(i?'L':'M')+x(i).toFixed(1)+','+f(v).toFixed(1)).join('');
+      const ticks=[lo-pad, (lo+hi)/2, hi+pad], lab=i=>days[i].day.slice(5), every=Math.max(1, Math.ceil(days.length/8));
+      $('r4Cum').innerHTML=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Return to date against the 4% target">`+
+        ticks.map(t=>`<line x1="${pl}" x2="${W-pr}" y1="${y(t)}" y2="${y(t)}" stroke="var(--line)"/><text x="${pl-6}" y="${y(t)+4}" text-anchor="end">${pct(t,0)}</text>`).join('')+
+        `<line x1="${pl}" x2="${W-pr}" y1="${y(0)}" y2="${y(0)}" stroke="var(--muted)"/>`+
+        `<line x1="${pl}" x2="${W-pr}" y1="${y(T)}" y2="${y(T)}" stroke="var(--warn)" stroke-dasharray="6 4" stroke-width="2"/>`+
+        `<path d="${path(yu,ul)}" fill="none" stroke="var(--soft)" stroke-width="1.5" stroke-dasharray="2 3"/>`+
+        `<text x="${W-pr+6}" y="${yu(ul[ul.length-1])+4}">${u(ul[ul.length-1])}</text>`+
+        `<path d="${path(y,rois)}" fill="none" stroke="var(--accent)" stroke-width="2.5"/>`+
+        days.map((q,i)=>`<circle cx="${x(i)}" cy="${y(q.cum_roi)}" r="3.5" fill="var(--accent)"><title>${q.day}: ${pct(q.cum_roi,2)} to date, ${u(q.cum)} on ${q.cum_staked.toFixed(2)}u staked</title></circle>`+
+          (i%every===0||i===days.length-1? `<text x="${x(i)}" y="${H-8}" text-anchor="middle">${lab(i)}</text>` : '')).join('')+`</svg>`;
+      const dr=days.map(q=>q.roi), dlo=Math.min(-0.1,...dr), dhi=Math.max(T+0.02,...dr), bw=Math.max(3, Math.min(28, iw/days.length*0.7));
+      const yd=v=>pt+ih-(v-dlo)/(dhi-dlo)*ih;
+      $('r4Daily').innerHTML=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Each day's return">`+
+        [dlo,0,dhi].map(t=>`<line x1="${pl}" x2="${W-pr}" y1="${yd(t)}" y2="${yd(t)}" stroke="var(--line)"/><text x="${pl-6}" y="${yd(t)+4}" text-anchor="end">${pct(t,0)}</text>`).join('')+
+        days.map((q,i)=>{ const col=q.roi>=T? 'var(--accent)' : q.roi>=0? 'var(--warn)' : 'var(--down)', y0=yd(0), y1=yd(q.roi);
+          return `<rect x="${x(i)-bw/2}" y="${Math.min(y0,y1)}" width="${bw}" height="${Math.max(1,Math.abs(y1-y0))}" rx="2" fill="${col}"><title>${q.day}: ${pct(q.roi)} (${u(q.pnl)} on ${q.staked.toFixed(2)}u, ${q.hit} of ${q.n} won)</title></rect>`+
+            (i%every===0||i===days.length-1? `<text x="${x(i)}" y="${H-8}" text-anchor="middle">${lab(i)}</text>` : ''); }).join('')+
+        `<line x1="${pl}" x2="${W-pr}" y1="${yd(T)}" y2="${yd(T)}" stroke="var(--warn)" stroke-dasharray="6 4" stroke-width="2"/></svg>`;
+      $('r4DailyNote').textContent=`${S.days} betting days: ${S.days_hit} at 4% or better (green), ${S.days_up-S.days_hit} up but under 4% (amber), ${S.days_down} losing (red). Median day ${pct(S.median_day)}, worst ${pct(S.worst_day)}, best ${pct(S.best_day)}. ${S.no_bet_days||0} day${S.no_bet_days===1?'':'s'} with nothing worth betting.`;
+    }
+    // live vs backtest
+    const v=(s,f)=>s&&s.n? f(s) : '–';
+    const rows=[
+      ['Return on units staked', s=>pct(s.roi,2), 'roi'], ['Units won', s=>u(s.pnl), 'pnl'], ['Units staked', s=>s.staked.toFixed(2)+'u'],
+      ['Bets (graded)', s=>s.n], ['Hit rate', s=>Math.round(s.hit*100)+'%'], ['Average stake', s=>s.avg_stake.toFixed(2)+'u'], ['Average price', s=>c(s.avg_price)],
+      ['Days with bets', s=>s.days], ['Days at 4%+', s=>`${s.days_hit} (${Math.round(s.days_hit/s.days*100)}%)`], ['Days up / down', s=>`${s.days_up} / ${s.days_down}`],
+      ['Median day', s=>pct(s.median_day)], ['Worst day', s=>pct(s.worst_day)], ['Best day', s=>pct(s.best_day)],
+      ['Worst drawdown', s=>'−'+s.max_dd.toFixed(2)+'u'], ['Longest losing run', s=>`${s.losing_days_run} days · ${s.losing_bets_run} bets`],
+      ['Days with no bet', s=>s.no_bet_days], ['Voided (stake back)', s=>s.voids]];
+    $('r4Cmp').innerHTML=rows.map(([k,f,col])=>`<tr><td>${k}</td><td class="n ${col&&live.n? cls(live[col]) : ''}">${v(live,f)}</td><td class="n ${col&&bt.n? cls(bt[col]) : ''}">${v(bt,f)}</td></tr>`).join('');
+    const sports=[...new Set([...Object.keys(live.by_sport||{}), ...Object.keys(bt.by_sport||{})])];
+    $('r4Sport').innerHTML= sports.length? sports.map(s=>{ const a=(live.by_sport||{})[s], b=(bt.by_sport||{})[s];
+      return `<tr><td><b>${SPN[s]||s}</b></td><td class="n">${a? a.n : 0}</td><td class="n">${a? a.staked.toFixed(2)+'u' : '–'}</td><td class="n ${a? cls(a.pnl) : ''}">${a? u(a.pnl) : '–'}</td><td class="n ${a? cls(a.roi) : ''}">${a? pct(a.roi) : '–'}</td>`+
+        `<td class="n">${b? b.n : 0}</td><td class="n ${b? cls(b.pnl) : ''}">${b? u(b.pnl) : '–'}</td><td class="n ${b? cls(b.roi) : ''}">${b? pct(b.roi) : '–'}</td></tr>`; }).join('')
+      : `<tr class="ed-wait"><td colspan="8">No graded bets yet.</td></tr>`;
+    // today
+    const plan=(d.plans||{})[today]||[], ok=plan.filter(p=>p.ok), seg=Object.fromEntries(plan.map(p=>[p.key,p]));
+    $('r4Plan').textContent= !plan.length? "Today's plan is made at the first update of the day." : ok.length?
+      `Betting today: ${ok.map(p=>`${p.label} (${pct(p.roi)} over ${p.n} picks)`).join('; ')}. Bets are placed as each game locks, 20-30 minutes before it starts, at that price.` :
+      'Nothing has earned a bet today (no segment returned 4%+ with the low end of its range above zero over enough picks), so no bets. That is the rule working, not broken.';
+    const bet=b=>`${esc(SPN[b.sport]||b.sport)} · <b>${esc(b.player)}</b> ${esc(b.side)} ${esc(b.line)} ${esc(b.stat)}`;
+    const tb=(d.bets||[]).filter(b=>b.day===today);
+    $('r4Today').innerHTML= (tb.length? tb.map(b=>`<tr><td>${bet(b)}</td><td><small>${esc((seg[b.seg]||{}).label||b.seg)}</small></td><td class="n">${c(b.price)}</td><td class="n">${Math.round(b.prob*100)}%</td>`+
+      `<td class="n">${b.stake.toFixed(2)}u</td><td class="n">+${(b.stake*(1-b.price)/b.price).toFixed(2)}u</td><td>${b.res? RES[b.res]+(b.pnl? ` <small>${u(b.pnl)}</small>` : '') : 'Pending'}</td></tr>`).join('')+
+      `<tr><td colspan="4"><b>Today, ${tb.length} bet${tb.length===1?'':'s'}</b></td><td class="n"><b>${tb.reduce((a,b)=>a+b.stake,0).toFixed(2)}u</b></td><td colspan="2"></td></tr>`
+      : `<tr class="ed-wait"><td colspan="7">${ok.length? 'No bets yet today: they are made as games lock.' : 'No bets today.'}</td></tr>`);
+    $('r4SegN').textContent= plan.length? `${ok.length} of ${plan.length}` : '';
+    $('r4Segs').innerHTML= plan.length? plan.slice().sort((a,b)=>b.roi-a.roi).map(p=>`<tr><td>${esc(p.label)}</td><td class="n">${p.n}</td><td class="n">${p.days}</td><td class="n ${cls(p.roi)}">${pct(p.roi)}</td><td class="n ${cls(p.lo)}">${pct(p.lo)}</td><td>${p.ok? '<span class="chip do">Yes</span>' : '<span class="chip">No</span>'}</td></tr>`).join('')
+      : `<tr class="ed-wait"><td colspan="6">No plan yet today.</td></tr>`;
+    const past=(d.bets||[]).filter(b=>b.day!==today).sort((a,b)=>b.day.localeCompare(a.day));
+    $('r4PastN').textContent= past.length? `${past.length} bet${past.length===1?'':'s'}` : '';
+    $('r4Past').innerHTML= past.length? past.slice(0,300).map(b=>`<tr><td>${esc(b.day)}</td><td>${bet(b)}</td><td class="n">${c(b.price)}</td><td class="n">${b.stake.toFixed(2)}u</td><td>${b.res? RES[b.res] : 'Pending'}</td><td class="n ${cls(b.pnl)}">${b.pnl==null? '–' : u(b.pnl)}</td></tr>`).join('')
+      : `<tr class="ed-wait"><td colspan="6">The first results show up after the first bets' games.</td></tr>`;
+    // the methods study (roi4_study.py), frozen when the track started
+    const st=d.study;
+    if(st && (st.rows||[]).length){
+      $('r4StudyNote').textContent=`${st.rows.length} ways of picking and sizing bets, each replayed walk-forward from ${st.from} to the day before ${st.until} (${st.days} days): every day chosen only from results known before it, priced at the locked price with $25+ offered, 1 unit a bet unless the method sizes its own. Likely range: 90% of a bootstrap over game days; a range that crosses zero means the result could be luck. Highlighted: the rule this track uses. Methods with under 100 bets are listed last: too few to judge. Frozen when the track started.`;
+      $('r4Study').innerHTML=st.rows.map(m=>`<tr class="${m.name.startsWith('roi4.py rule:')? 'r4-best' : ''}"><td>${esc(m.name)}</td><td><small>${esc(m.family)}${m.n<100? ' · too few bets to judge' : ''}</small></td><td class="n">${m.n}</td><td class="n">${m.days}</td>`+
+        `<td class="n ${m.roi==null? '' : m.roi>=T? 'up' : m.roi>=0? 'mid' : 'down'}">${pct(m.roi)}</td><td class="n">${m.lo==null? '–' : pct(m.lo,0)+' to '+pct(m.hi,0)}</td>`+
+        `<td class="n">${m.days? `${m.days_hit} of ${m.days}` : '–'}</td><td class="n">${m.n? '−'+m.max_dd.toFixed(1)+'u' : '–'}</td>`+
+        `<td><small>${Object.entries(m.by_sport||{}).filter(([,x])=>x[1]!=null).map(([k,x])=>`${SPN[k]||k} ${x[0]} at ${pct(x[1],0)}`).join(' · ')}</small></td></tr>`).join('');
+    } else {
+      $('r4StudyNote').textContent='The methods study is frozen into the file on the first run.';
+      $('r4Study').innerHTML=`<tr class="ed-wait"><td colspan="9">Not run yet.</td></tr>`;
+    }
+    const R=d.rules||{};
+    $('r4Rules').textContent= R.target? `Bets come only from the site's recorded picks that could really be bought ($25+ offered, a real price, no injury hold), at the price when the pick locks. Each morning a segment (each sport's Value spots, Top 25, or picks the model rates ${Math.round(R.edge_min*100)}+ points over the price) earns bets if, over the last ${R.lookback} days, it has ${R.min_n}+ graded picks on ${R.min_days}+ game days returning ${pct(R.min_roi,0)}+ with the low end of its range above ${pct(R.lo_floor,0)}. One bet per player, stat and game. Stake: quarter Kelly on the segment's past return, shrunk toward zero, ${R.min_bet}u to ${R.max_bet}u (1 unit = 1% of a ${R.bank}-unit bank), at most ${R.game_cap}u on one game and ${R.day_cap}u a day. The target: the bank up ${pct(R.month_target||0.04,0)} a month, judged on the live months at the end of the paper trial (${R.review_on||''}). Frozen once made; a win pays stake × (1 − price) ÷ price, a loss costs the stake, a push or void returns it. Track started ${d.live_from||''}.` : '';
+    if(d.gen) $('r4Upd').textContent='Team only · paper bets · updated '+new Date(d.gen).toLocaleString('en-US',{month:'short', day:'numeric', hour:'numeric', minute:'2-digit'});
   }
   // ---------- Polymarket / Kalshi arbitrage: team/arbs.enc (arbs.py), same password ----------
   async function loadArbs(pw){
