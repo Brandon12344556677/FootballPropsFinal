@@ -106,12 +106,14 @@ class Render(unittest.TestCase):
     def test_picks_listed_but_no_cards_and_script_errors(self):
         doms = {"/": ('<b class="pc-who">', []), "/nfl.html": ("<p>empty</p>", []),
                 "/nba.html": ("<p>off season</p>", []), "/nhl.html": ("", ["Uncaught TypeError: x (/app.js)"]),
-                "/mlb.html": ('<b class="pc-who">', [])}
+                "/mlb.html": ('<b class="pc-who">', []),
+                "/tennis.html": ("", ["Uncaught SyntaxError: Unexpected end of input"])}   # Nov 2026: unseen for 5 days
         with mock.patch.object(watchdog, "browser", return_value="chrome"), \
                 mock.patch.object(watchdog, "render", side_effect=lambda exe, url: doms[url.replace(watchdog.SITE, "").split("?")[0]]):
             out = watchdog.check_render({"picks": [{"sport": "nfl"}, {"sport": "mlb"}]})
-        self.assertEqual(sorted(out), ["render: /nfl.html", "render: /nhl.html"])   # NBA has no picks today: blank is fine
+        self.assertEqual(sorted(out), ["render: /nfl.html", "render: /nhl.html", "render: /tennis.html"])   # NBA has no picks today: blank is fine
         self.assertIn("Uncaught TypeError", out["render: /nhl.html"])
+        self.assertIn("Unexpected end of input", out["render: /tennis.html"])
 
     def test_console_filter(self):
         line = '[1:2:INFO:CONSOLE:5] "Uncaught ReferenceError: f is not defined", source: https://propstreaklab.com/app.js?v=1 (5)'
