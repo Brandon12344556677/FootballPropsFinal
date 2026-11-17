@@ -103,6 +103,9 @@ The bot overwrites these on every pass, so hand edits are lost and cause merge c
 - **Cache-busting.** When you change `app.js` or `app.css`, bump the `?v=YYYYMMDDx` query on every
   page and template that loads them (`index.html`, all `*_template.html`/`template.html`, the
   hand-written pages), or browsers keep the old file.
+- **The service worker pins app.js/app.css.** `sw.js` precaches `app.js`/`app.css` at their `?v=`: bump its `SHELL`
+  line (and `VERSION`, kept equal to the app.js version) with every cache-bust, or `test_sw.py` fails. Pages and `.json`
+  stay network-first (a saved copy only when the network fails); never make them cache-first, and keep `/team/` out.
 - **Keep the public explanation in sync.** A change to a rule users see (list cutoffs, lock
   times, Bet of the Day windows, grading) also updates `methodology.html` and any on-page note
   in `app.js`/the templates, and the README if it describes it.
