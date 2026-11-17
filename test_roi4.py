@@ -159,6 +159,36 @@ class StatsTest(unittest.TestCase):
         self.assertEqual(s["worst_day"], -1.0)
 
 
+class MonthTest(unittest.TestCase):
+    def test_monthly_against_the_bank(self):
+        def b(day, res, stake=1.0, k="x"):
+            return {"day": day, "res": res, "stake": stake, "price": 0.5, "sport": "nfl", "key": day + k,
+                    "pnl": stake if res == "hit" else -stake}
+        bets = [b("2026-10-30", "hit", 3), b("2026-10-31", "hit", 2), b("2026-11-02", "miss", 2), b("2026-11-08", "hit", 1)]
+        s = roi4.stats(bets)
+        self.assertEqual([m["month"] for m in s["monthly"]], ["2026-10", "2026-11"])
+        oct_, nov = s["monthly"]
+        self.assertEqual((oct_["pnl"], oct_["bank"], oct_["days"], oct_["roi"]), (5.0, 0.05, 2, 1.0))   # 5u of a 100u bank
+        self.assertEqual((nov["pnl"], nov["bank"]), (-1.0, -0.01))
+        self.assertEqual((s["months_hit"], s["months_down"]), (1, 1))
+        self.assertEqual(roi4.stats([])["monthly"], [])
+
+    def test_outlook(self):
+        daily = [{"day": f"2026-10-{d:02d}", "pnl": p, "staked": 10.0} for d, p in zip(range(1, 11), [3, -2, 1, 2, -1, 4, -3, 2, 1, 0])]
+        o = roi4.outlook(daily, 20, sims=2000)
+        self.assertEqual(o["bet_days"], 15)                  # 10 betting days in 20 calendar days -> 15 a month
+        self.assertEqual(o["staked"], 150.0)
+        real, half, none = o["rows"]
+        self.assertAlmostEqual(real["roi"], 0.07)
+        self.assertAlmostEqual(half["roi"], 0.035)
+        self.assertGreater(real["median"], half["median"])
+        self.assertGreater(half["median"], none["median"])
+        self.assertLess(none["median"], 0)
+        self.assertGreater(none["p_down"], real["p_down"])
+        self.assertIsNone(roi4.outlook([], 20))
+        self.assertEqual(roi4.outlook(daily, 20, sims=2000), o)   # seeded: the frozen numbers never drift
+
+
 class LiveTest(unittest.TestCase):
     def test_bettable(self):
         now = datetime.datetime(2026, 11, 15, 17, 40, tzinfo=UTC)
@@ -178,6 +208,8 @@ class LiveTest(unittest.TestCase):
         self.assertTrue(roi4.update(state, past + today, now))
         self.assertEqual(state["live_from"], "2026-11-15")
         self.assertIn("backtest", state)
+        self.assertIn("outlook", state["backtest"])
+        self.assertEqual(state["rules"]["month_target"], 0.04)
         self.assertTrue(all(b["day"] < "2026-11-15" for b in state["backtest"]["bets"]))
         self.assertEqual(len(state["bets"]), 2)
         plan_before, bets_before = state["plans"]["2026-11-15"], [dict(b) for b in state["bets"]]

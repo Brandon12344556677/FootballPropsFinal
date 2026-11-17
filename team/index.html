@@ -262,6 +262,9 @@ details.plpast>summary:focus-visible{outline:2px solid var(--accent);outline-off
 .r4-legend i{display:inline-block;width:14px;height:3px;border-radius:2px;vertical-align:middle;margin-right:6px}
 .edges td.up{color:var(--accent)} .edges td.down{color:var(--down)} .edges td.mid{color:var(--warn)}
 .edges tr.r4-best td{background:var(--accent-weak)}
+.r4-bar{display:inline-block;width:90px;height:8px;border-radius:999px;background:var(--surface-2);overflow:hidden;vertical-align:middle;margin-right:8px}
+.r4-bar i{display:block;height:100%;border-radius:999px;background:var(--accent)}
+.r4-bar i.down{background:var(--down)}
 @media (pointer:coarse){ .r4-seg button{min-height:44px} }
 
 /* site health */
@@ -562,8 +565,14 @@ details.plpast>summary:focus-visible{outline:2px solid var(--accent);outline-off
 
   <section data-view="roi4" class="panel" id="r4Panel">
     <div class="panel-h"><h2>4% return</h2><span class="label" id="r4Upd">Team only · paper bets</span></div>
-    <p class="r4-note"><b>Read this first.</b> The goal is a 4% return on every unit staked. No rule can make 4% <b>every day</b>: one night's props win and lose together, so single days swing from −100% to +80%. The 4% is a long-run average, and this tab shows every day, losing ones included. These are paper bets: nothing is bought, and the numbers are only as good as the prices recorded.</p>
+    <p class="r4-note"><b>Read this first.</b> The goal is the bankroll up <b>4% a month</b> (1 unit = 1% of a 100-unit bank). 4% every day isn't reachable: one night's props win and lose together, so single days swing from −100% to +80%, and even a real edge loses about one month in three. These are <b>paper bets</b> until the end of the NFL season: nothing is bought, and the numbers are only as good as the prices recorded. Every day and every month is shown, losing ones included.</p>
     <div class="kpis" id="r4Kpis" aria-label="Live 4% return numbers"></div>
+    <h3 class="subh">4% a month: the paper trial</h3>
+    <p class="hint" id="r4Trial"></p>
+    <div class="edwrap"><table class="edges"><thead><tr><th>Month</th><th class="n">Bets</th><th class="n">Betting days</th><th class="n">Staked</th><th class="n">Units won</th><th class="n">Bank</th><th class="n">On stakes</th><th>Against 4%</th></tr></thead><tbody id="r4MonthRows"></tbody></table></div>
+    <h3 class="subh">What a month could look like</h3>
+    <p class="hint" id="r4OutNote"></p>
+    <div class="edwrap"><table class="edges"><thead><tr><th>If the real edge is</th><th class="n">On stakes</th><th class="n">Typical month</th><th class="n">Months at 4%+</th><th class="n">Losing months</th><th class="n">Bad month (1 in 20)</th><th class="n">Good month (1 in 20)</th></tr></thead><tbody id="r4Out"></tbody></table></div>
     <h3 class="subh">Return over time</h3>
     <div class="r4-seg" role="group" aria-label="Which record">
       <button type="button" data-r4="live" aria-pressed="true">Live</button>
@@ -571,7 +580,7 @@ details.plpast>summary:focus-visible{outline:2px solid var(--accent);outline-off
     </div>
     <div class="r4-chart" id="r4Cum"></div>
     <p class="r4-legend"><span><i style="background:var(--accent)"></i>Return on units staked, to date</span><span><i style="background:var(--warn)"></i>4% target</span><span><i style="background:var(--soft)"></i>Units won (right end)</span></p>
-    <h3 class="subh">Each day's return against 4%</h3>
+    <h3 class="subh">Each day's return <small class="hint">(4% a day is not the goal: shown for how much days swing)</small></h3>
     <div class="r4-chart" id="r4Daily"></div>
     <p class="hint" id="r4DailyNote"></p>
     <h3 class="subh">Live record next to the backtest</h3>
@@ -1577,12 +1586,30 @@ details.plpast>summary:focus-visible{outline:2px solid var(--accent);outline-off
     const open=(d.bets||[]).filter(b=>b.res==null);
     // headline: the live record only (the backtest has its own column below)
     const L=live.n? live : null;
+    const MT=(d.rules||{}).month_target||0.04, BANK=(d.rules||{}).bank||100, thisMonth=today.slice(0,7);
+    const lm=(live.monthly||[]), cur=lm.find(m=>m.month===thisMonth), done=lm.filter(m=>m.month<thisMonth);
     $('r4Kpis').innerHTML=[
-      ['Live return', L? pct(L.roi,2) : '–', L? `target ${pct(T,0)} · ${L.n} bets` : 'starts with the first graded bet', L? cls(L.roi-T) : ''],
-      ['Units won', L? u(L.pnl) : '–', L? `${L.staked.toFixed(2)}u staked` : (open.length? `${open.length} open bet${open.length===1?'':'s'}` : 'no bets yet'), L? cls(L.pnl) : ''],
-      ['Days at 4%+', L? `${L.days_hit} of ${L.days}` : '–', L? `${Math.round(L.days_hit/L.days*100)}% of betting days · ${L.days_down} losing` : 'a day counts once it is graded', ''],
+      ['This month', cur? pct(cur.bank) : '–', cur? `${u(cur.pnl)} of the ${(MT*BANK).toFixed(2)}u target · still running` : (open.length? `${open.length} open bet${open.length===1?'':'s'}` : 'no graded bets this month yet'), cur? cls(cur.bank-MT) : ''],
+      ['Months at 4%+', done.length? `${done.filter(m=>m.bank>=MT).length} of ${done.length}` : '–', done.length? `${done.filter(m=>m.pnl<0).length} losing · finished months only` : 'the first full month counts', ''],
+      ['Live return on stakes', L? pct(L.roi,2) : '–', L? `${L.n} bets · ${u(L.pnl)} on ${L.staked.toFixed(2)}u` : 'starts with the first graded bet', L? cls(L.roi) : ''],
       ['Worst drawdown', L? '−'+L.max_dd.toFixed(2)+'u' : '–', L? `longest losing run ${L.losing_days_run} day${L.losing_days_run===1?'':'s'}` : 'from the peak, in units', L&&L.max_dd? 'down' : '']
     ].map(([k,v,s,cl])=>`<div class="kpi"><span class="label">${k}</span><span class="v ${cl}">${v}</span><span class="s">${s}</span></div>`).join('');
+    // the monthly trial: live months, then the backtest's, against 4% of the bank
+    const R_=d.rules||{}, review=R_.review_on||'', left=review? Math.ceil((Date.parse(review+'T12:00:00Z')-Date.parse(today+'T12:00:00Z'))/864e5) : null;
+    const avgM=done.length? done.reduce((a,m)=>a+m.bank,0)/done.length : null;
+    $('r4Trial').textContent= (left!=null && left>0? `Paper only until ${review} (the end of the NFL season, ${left} days away). ` : review? `The trial ended ${review}. ` : '')+
+      (done.length? `${done.length} finished live month${done.length===1?'':'s'}: average ${pct(avgM)} of the bank a month against the 4% target, ${done.filter(m=>m.bank>=MT).length} at or above it, ${done.filter(m=>m.pnl<0).length} losing. ` : 'No finished live month yet. ')+
+      (left!=null && left<=0? (done.length>=3 && avgM>=MT? 'On paper it met the target: evidence the edge is real, still not a promise. Start small if real money goes in.' : 'It did not meet 4% a month on paper. Do not put real money behind it.') :
+        'At the end, the question is whether the live months average 4%+ of the bank. Judge the average, not any single month: even a real edge loses about one month in three.');
+    const mbar=m=>{ const w=Math.min(100, Math.abs(m.bank)/MT*100); return `<span class="r4-bar"><i class="${m.pnl<0? 'down' : ''}" style="width:${w}%"></i></span>${m.bank>=MT? 'Met' : m.pnl<0? 'Losing' : 'Short'}`; };
+    const mrow=(m,tag)=>`<tr><td>${esc(new Date(m.month+'-15T12:00:00Z').toLocaleString('en-US',{month:'long', year:'numeric'}))} <small>${tag}${m.month===thisMonth&&tag==='live'? ' · so far' : ''}</small></td><td class="n">${m.n}</td><td class="n">${m.days}</td><td class="n">${m.staked.toFixed(2)}u</td>`+
+      `<td class="n ${cls(m.pnl)}">${u(m.pnl)}</td><td class="n ${m.bank>=MT? 'up' : m.pnl<0? 'down' : 'mid'}">${pct(m.bank)}</td><td class="n ${cls(m.roi)}">${pct(m.roi)}</td><td>${mbar(m)}</td></tr>`;
+    const btm=(bt.monthly||[]);
+    $('r4MonthRows').innerHTML= (lm.length? lm.slice().reverse().map(m=>mrow(m,'live')).join('') : `<tr class="ed-wait"><td colspan="8">No graded live bets yet.</td></tr>`)+
+      btm.slice().reverse().map(m=>mrow(m,'backtest')).join('');
+    const ol=(d.backtest||{}).outlook;
+    $('r4OutNote').textContent= ol? `Thousands of made-up months, each ${ol.bet_days} betting days drawn from the backtest's own days (it stakes about ${ol.staked}u a month on the ${BANK}u bank). The top row assumes the backtest's edge is real; the others show what happens if it is smaller or not there at all.` : 'Frozen with the backtest on the first run.';
+    $('r4Out').innerHTML= ol? ol.rows.map(r=>`<tr><td>${esc(r.label)}</td><td class="n">${pct(r.roi)}</td><td class="n ${cls(r.median)}">${pct(r.median)}</td><td class="n">${Math.round(r.p_hit*100)}%</td><td class="n">${Math.round(r.p_down*100)}%</td><td class="n down">${pct(r.bad)}</td><td class="n up">${pct(r.good)}</td></tr>`).join('') : '';
     // charts
     const S= R4which==='bt'? bt : live, days=S.daily||[];
     const W=720, H=240, pl=48, pr=56, pt=14, pb=28, iw=W-pl-pr, ih=H-pt-pb;
@@ -1662,7 +1689,7 @@ details.plpast>summary:focus-visible{outline:2px solid var(--accent);outline-off
       $('r4Study').innerHTML=`<tr class="ed-wait"><td colspan="9">Not run yet.</td></tr>`;
     }
     const R=d.rules||{};
-    $('r4Rules').textContent= R.target? `Bets come only from the site's recorded picks that could really be bought ($25+ offered, a real price, no injury hold), at the price when the pick locks. Each morning a segment (each sport's Value spots, Top 25, or picks the model rates ${Math.round(R.edge_min*100)}+ points over the price) earns bets if, over the last ${R.lookback} days, it has ${R.min_n}+ graded picks on ${R.min_days}+ game days returning ${pct(R.min_roi,0)}+ with the low end of its range above ${pct(R.lo_floor,0)}. One bet per player, stat and game. Stake: quarter Kelly on the segment's past return, shrunk toward zero, ${R.min_bet}u to ${R.max_bet}u (1 unit = 1% of a ${R.bank}-unit bank), at most ${R.game_cap}u on one game and ${R.day_cap}u a day. Frozen once made; a win pays stake × (1 − price) ÷ price, a loss costs the stake, a push or void returns it. Track started ${d.live_from||''}.` : '';
+    $('r4Rules').textContent= R.target? `Bets come only from the site's recorded picks that could really be bought ($25+ offered, a real price, no injury hold), at the price when the pick locks. Each morning a segment (each sport's Value spots, Top 25, or picks the model rates ${Math.round(R.edge_min*100)}+ points over the price) earns bets if, over the last ${R.lookback} days, it has ${R.min_n}+ graded picks on ${R.min_days}+ game days returning ${pct(R.min_roi,0)}+ with the low end of its range above ${pct(R.lo_floor,0)}. One bet per player, stat and game. Stake: quarter Kelly on the segment's past return, shrunk toward zero, ${R.min_bet}u to ${R.max_bet}u (1 unit = 1% of a ${R.bank}-unit bank), at most ${R.game_cap}u on one game and ${R.day_cap}u a day. The target: the bank up ${pct(R.month_target||0.04,0)} a month, judged on the live months at the end of the paper trial (${R.review_on||''}). Frozen once made; a win pays stake × (1 − price) ÷ price, a loss costs the stake, a push or void returns it. Track started ${d.live_from||''}.` : '';
     if(d.gen) $('r4Upd').textContent='Team only · paper bets · updated '+new Date(d.gen).toLocaleString('en-US',{month:'short', day:'numeric', hour:'numeric', minute:'2-digit'});
   }
   // ---------- Polymarket / Kalshi arbitrage: team/arbs.enc (arbs.py), same password ----------
