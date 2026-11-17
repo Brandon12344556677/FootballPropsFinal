@@ -19,7 +19,7 @@
   root.classList.add('thanksgiving');
   var css = document.createElement('link');
   css.rel = 'stylesheet';
-  css.href = '/thanksgiving.css?v=20261101b';
+  css.href = '/thanksgiving.css?v=20261117a';
   document.head.appendChild(css);
 
   // ---- the site's colors -> harvest colors: style sheets, then attributes, then anything drawn later

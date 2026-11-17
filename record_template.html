@@ -26,11 +26,11 @@
 /* The page's own styles; app.css (loaded after) brings the shared header, panels, hero and footer. */
 :root{
   color-scheme:dark;
-  --ink:#22354f; --bg:#0a1628; --surface:#0f2038; --surface-2:#142743; --line:#22354f;
-  --text:#ffffff; --muted:#b8c5d6;
-  --accent:#22d07f; --gold:#e8b54a;
-  --hit:#4fb583; --miss:#eb6f7d;
-  --s1:#5aa9ff; --s2:#e8b54a; --s3:#c58af9;   /* chart series: Value, Top 25, a third row */
+  --ink:var(--ps-line); --bg:var(--ps-bg); --surface:var(--ps-surface); --surface-2:var(--ps-surface-2); --line:var(--ps-line);
+  --text:var(--ps-text); --muted:var(--ps-muted);
+  --accent:var(--ps-green); --gold:var(--ps-gold);
+  --hit:#4fb583; --miss:var(--ps-red);
+  --s1:#5aa9ff; --s2:var(--ps-gold); --s3:#c58af9;   /* chart series: Value, Top 25, a third row */
 }
 *{box-sizing:border-box}
 body{background:var(--bg);color:var(--text);margin:0;line-height:1.5;font-size:15px;overflow-x:hidden;-webkit-font-smoothing:antialiased}
@@ -41,10 +41,10 @@ h2{margin:0}
 .panel{padding:20px;margin:0 0 18px}
 .rc-sub{color:var(--muted);font-size:14px;margin:6px 0 14px;max-width:62em}
 .rc-jump{display:flex;flex-wrap:wrap;gap:8px;margin:14px 0 18px}
-.rc-jump a{padding:7px 14px;border-radius:999px;border:1px solid var(--line);color:#dfe6ef;text-decoration:none;font-size:13.5px}
-.rc-jump a:hover{border-color:rgba(34,208,127,.5);color:#fff}
-.rc-badge{display:inline-block;margin-left:8px;padding:2px 9px;border-radius:999px;border:1px solid rgba(232,181,74,.55);color:var(--gold);
-  font-size:11.5px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;vertical-align:middle}
+.rc-jump a{padding:7px 14px;border-radius:999px;border:1px solid var(--line);color:var(--ps-soft);text-decoration:none;font-size:13.5px}
+.rc-jump a:hover{border-color:rgba(var(--ps-green-rgb),.5);color:#fff}
+.rc-badge{display:inline-block;margin-left:8px;padding:2px 9px;border-radius:999px;border:1px solid rgba(var(--ps-gold-rgb),.55);color:var(--gold);
+  font-size:12px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;vertical-align:middle}
 .rc-grid{display:grid;grid-template-columns:minmax(0,1fr);gap:18px}
 @media(min-width:880px){.rc-grid{grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);align-items:start}}
 .rc-list{margin:0 0 14px}
@@ -53,8 +53,8 @@ h2{margin:0}
 .rc-t{width:100%;border-collapse:collapse;font-size:13px;font-variant-numeric:tabular-nums}
 .rc-t th,.rc-t td{padding:6px 3px;border-bottom:1px solid rgba(255,255,255,.07);text-align:right;white-space:nowrap}
 .rc-t th:first-child,.rc-t td:first-child{text-align:left;padding-left:0}
-.rc-t thead th{color:var(--muted);font-weight:500;font-size:11.5px;text-transform:uppercase;letter-spacing:.04em}
-.rc-t tbody th{font-weight:500;color:#dfe6ef}
+.rc-t thead th{color:var(--muted);font-weight:500;font-size:12px;text-transform:uppercase;letter-spacing:.04em}
+.rc-t tbody th{font-weight:500;color:var(--ps-soft)}
 .rc-t .rc-none{text-align:left;color:var(--muted)}
 .rc-up{color:var(--hit);font-weight:600}
 .rc-dn{color:var(--miss);font-weight:600}
@@ -62,10 +62,10 @@ h2{margin:0}
 .rc-chart{position:relative;max-width:560px}
 .rc-chart svg{display:block;width:100%;height:auto;touch-action:pan-y}
 .rc-chart h3{font-size:13px;font-weight:500;color:var(--muted);margin:0 0 6px}
-.rc-legend{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:12.5px;color:#dfe6ef;margin:0 0 4px}
+.rc-legend{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:12.5px;color:var(--ps-soft);margin:0 0 4px}
 .rc-legend span{display:inline-flex;align-items:center;gap:6px}
-.rc-tip{position:absolute;top:0;pointer-events:none;background:#081120;border:1px solid var(--line);border-radius:10px;padding:7px 10px;
-  font-size:12px;line-height:1.5;color:#dfe6ef;white-space:nowrap;z-index:2;font-variant-numeric:tabular-nums}
+.rc-tip{position:absolute;top:0;pointer-events:none;background:var(--ps-bg-2);border:1px solid var(--line);border-radius:10px;padding:7px 10px;
+  font-size:12px;line-height:1.5;color:var(--ps-soft);white-space:nowrap;z-index:2;font-variant-numeric:tabular-nums}
 .rc-tip b{color:#fff}
 .rc-tip span{display:flex;align-items:center;gap:6px}
 .rc-more{display:inline-block;margin-top:10px;font-size:13.5px}
@@ -75,12 +75,12 @@ h2{margin:0}
 .rc-lose b{color:#fff}
 .rc-h3{font-size:13px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin:16px 0 2px}
 .rc-scroll{overflow-x:auto}
-@media(max-width:400px){.rc-t{font-size:12px}.rc-t th,.rc-t td{padding:6px 2px}.rc-t thead th{font-size:10.5px;letter-spacing:0}}
+@media(max-width:400px){.rc-t{font-size:12px}.rc-t th,.rc-t td{padding:6px 2px}.rc-t thead th{font-size:12px;letter-spacing:0}}
 </style>
 
-<link rel="stylesheet" href="app.css?v=20261117b">
-<script src="app.js?v=20261117c"></script>
-<script src="/thanksgiving.js?v=20261101b"></script>
+<link rel="stylesheet" href="app.css?v=20261117e">
+<script src="app.js?v=20261117e"></script>
+<script src="/thanksgiving.js?v=20261117a"></script>
 
 <header class="apptop">
   <div class="apptop-in">

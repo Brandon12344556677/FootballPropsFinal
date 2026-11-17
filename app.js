@@ -504,7 +504,7 @@ window.PS = (function(){
       `<h2 id="psgate-h">Are you 18 or older?</h2>`+
       `<p>Prop Streak Lab is player-prop research for adults. It isn't a sportsbook and takes no bets. Some links go to Polymarket and Kalshi, which have their own age and location rules.</p>`+
       `<div class="psgate-btns"><button type="button" class="btn" id="psgate-ok">Yes, I'm 18 or older</button><a class="btn ghost" href="https://www.google.com" rel="noopener">No, leave</a></div>`+
-      `<p class="psgate-fine">We use only essential local storage for your preferences and cookieless analytics — no ads, no cross-site tracking. <a href="cookies.html">Cookie Policy</a> · <a href="privacy.html">Privacy</a><br>Gambling problem? Call 1-800-522-4700 or visit <a href="https://www.ncpgambling.org" rel="noopener" target="_blank">ncpgambling.org</a>.</p>`;
+      `<p class="psgate-fine">We use only essential local storage for your preferences and cookieless analytics — no ads, no cross-site tracking. <a href="/cookies.html">Cookie Policy</a> · <a href="/privacy.html">Privacy</a><br>Gambling problem? Call 1-800-522-4700 or visit <a href="https://www.ncpgambling.org" rel="noopener" target="_blank">ncpgambling.org</a>.</p>`;
     const bar=document.getElementById('pslcookie'); if(bar) bar.hidden=true;    // the check carries the same notice
     const btn=g.querySelector('#psgate-ok'); btn.focus({preventScroll:true});
     btn.onclick=()=>{ try{ localStorage.setItem('psl_age_ok','1'); localStorage.setItem('psl_notice_ok','1'); }catch(e){}
@@ -703,7 +703,7 @@ window.PS = (function(){
       el.innerHTML=(upd? `<span class="tr-upd"><i class="tr-dot" aria-hidden="true"></i>Updated <b data-ago="${upd}">${ago(upd)}</b></span>` : '')+
         (tr && tr.graded? `<span class="tr-grd">${icon('shield-check')}<b>${tr.graded.toLocaleString('en-US')} picks graded in public</b>${since? ' since '+esc(since) : ''}</span>` : '')+
         lastResults(t)+
-        `<a class="tr-how" href="record.html">The full record, losses included →</a><a class="tr-how" href="methodology.html">How the model works →</a>`;
+        `<a class="tr-how" href="/record.html">The full record, losses included →</a><a class="tr-how" href="/methodology.html">How the model works →</a>`;
       el.hidden=false;
       const go=el.querySelector('[data-tab-go]');
       if(go) go.onclick=e=>{ const tab=document.querySelector(`.tab[data-tab="${go.dataset.tabGo}"]`); if(tab){ e.preventDefault(); tab.click(); } };
@@ -765,6 +765,24 @@ window.PS = (function(){
     const say=d>=1? `the market moved ${d}\u00a2 toward this pick` : d<=-1? `the market moved ${-d}\u00a2 away from this pick` : 'no real move';
     const title=`Price (the cheaper of Polymarket and Kalshi) when the site first recorded this pick: ${o}\u00a2. ${closed?'Last price before it locked (or, for picks before October 7, 2026, before the game)':'Now'}: ${n}\u00a2 \u2014 ${say}.`;
     return `<span class="pxmove ${cls}${closed?' inl':''}" title="${esc(title)}">${closed? `${o}\u00a2 \u2192 ${n}\u00a2` : `opened ${o}\u00a2`} <b>${arrow}</b></span>`;
+  }
+
+  // ---- the price since the pick was listed, as a tiny line (today.json's sp: cents, oldest first, one point
+  // about every 30 minutes or on each change; build_today.py keeps them). Up = toward the pick. Nothing for
+  // fewer than 3 points or a move under 2 cents. ----
+  function pxSpark(sp){
+    const v=(sp||[]).map(Number).filter(x=>isFinite(x));
+    if(v.length<3) return '';
+    const lo=Math.min(...v), hi=Math.max(...v);
+    if(hi-lo<2) return '';
+    const W=56, H=18, d=v[v.length-1]-v[0];
+    const pts=v.map((x,i)=>`${(i*(W-4)/(v.length-1)+2).toFixed(1)},${(H-2-(x-lo)*(H-4)/(hi-lo)).toFixed(1)}`);
+    const last=pts[pts.length-1].split(',');
+    const cls=d>=1?'up':d<=-1?'dn':'flat';
+    const say=`Price since it was listed: ${v[0]}\u00a2 \u2192 ${v[v.length-1]}\u00a2 (low ${lo}\u00a2, high ${hi}\u00a2)`;
+    return `<svg class="pxs ${cls}" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-label="${esc(say)}"><title>${esc(say)}</title>`+
+      `<polyline points="${pts.join(' ')}" fill="none" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"/>`+
+      `<circle cx="${last[0]}" cy="${last[1]}" r="2.2"/></svg>`;
   }
 
   // ---- nothing is certain: no chance above 99% (or below 1%) is shown, even on picks recorded before
@@ -1284,7 +1302,7 @@ window.PS = (function(){
   }
 
   return {teamVars, parlaySearch, parlayFinder, ticker, until, skeleton, esc, hashFor, pickHash, parsePickHash, syncHash, sharePick, toast, helpBtn, spark, verdict, icon, sheet, closeSheet, pickSheet, relatedPicks,
-          isTracked, toggleBet, renderBets, loadBets, fairOf, setFair, pxMove, lockBadge, lockRibbon, lockNote, startLabel, gameTime, liveUS, venues, venueName, thinPrice, cap, capPick, thinOut, getView, setView,
+          isTracked, toggleBet, renderBets, loadBets, fairOf, setFair, pxMove, pxSpark, lockBadge, lockRibbon, lockNote, startLabel, gameTime, liveUS, venues, venueName, thinPrice, cap, capPick, thinOut, getView, setView,
           watch, starBtn, renderWatchlist, filterBar, lineLadder, exchangeUrls, betCalc, parlaySlip};
 })();
 

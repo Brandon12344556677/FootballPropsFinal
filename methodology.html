@@ -13,61 +13,79 @@
 <link rel="manifest" href="/site.webmanifest">
 <meta name="theme-color" content="#0a1628">
 <link rel="stylesheet" href="fonts.css">
-<script src="/thanksgiving.js?v=20261101b"></script>
+<script src="/thanksgiving.js?v=20261117a"></script>
 <style>
-:root{color-scheme:dark;--green:#22d07f;--gold:#e8b54a;--line:#22354f;--muted:#9fb0c6}
+/* The page's own styles; app.css (loaded after) brings the shared header, fonts and background. */
+:root{color-scheme:dark}
 *{box-sizing:border-box}
-body{margin:0;background:#0a1628;color:#dfe6ef;font-family:"Inter",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;line-height:1.7;font-size:16px}
-a{color:var(--green)}
-.wrap{max-width:1080px;margin:0 auto;padding:20px 20px 80px}
-.top{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 0 18px;border-bottom:1px solid #1c2c46;margin-bottom:28px}
-.brand{display:flex;align-items:center;gap:10px;font-family:"Archivo","Inter",sans-serif;font-weight:800;letter-spacing:-.01em;color:#fff;text-decoration:none;font-size:19px}
-.back{color:var(--muted);text-decoration:none;font-size:14px}
-.back:hover{color:#dfe6ef}
-.layout{display:grid;grid-template-columns:230px minmax(0,1fr);gap:48px;align-items:start}
-nav.toc{position:sticky;top:20px;font-size:14px}
-nav.toc b{display:block;font-family:"Barlow Condensed",sans-serif;text-transform:uppercase;letter-spacing:.14em;font-size:12px;color:var(--muted);margin:0 0 10px}
-nav.toc a{display:block;color:#c9d4e2;text-decoration:none;padding:5px 0 5px 12px;border-left:2px solid var(--line)}
-nav.toc a:hover{color:#fff;border-left-color:var(--green)}
-.kicker{font-family:"Barlow Condensed",sans-serif;text-transform:uppercase;letter-spacing:.16em;font-size:13px;font-weight:700;color:var(--green);margin:0 0 8px}
-h1{font-family:"Archivo","Inter",sans-serif;font-weight:800;letter-spacing:-.03em;font-size:44px;line-height:1.05;color:#fff;margin:0 0 12px}
-.lead{font-size:18px;color:#eef2f7;margin:0 0 18px}
-.meta{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 30px}
-.meta span{display:inline-flex;align-items:center;gap:7px;padding:6px 12px;border-radius:999px;border:1px solid var(--line);font-size:13px;color:#c9d4e2}
-.meta .gold{border-color:rgba(232,181,74,.5);color:var(--gold)}
-h2{font-family:"Archivo","Inter",sans-serif;font-weight:800;letter-spacing:-.02em;font-size:26px;color:#fff;margin:2.2em 0 .5em;scroll-margin-top:20px}
-h3{font-family:"Archivo","Inter",sans-serif;font-weight:700;font-size:18px;color:#fff;margin:1.6em 0 .3em}
-p{margin:.6em 0}
-ul,ol{padding-left:22px;margin:.6em 0}
-li{margin:.35em 0}
-strong,b{color:#fff}
-.card{background:#0f2038;border:1px solid var(--line);border-radius:16px;padding:16px 20px;margin:1em 0}
-.card.rule{border-color:rgba(34,208,127,.45)}
-.steps{counter-reset:s;list-style:none;padding:0}
-.steps li{counter-increment:s;position:relative;padding:0 0 0 44px;margin:1em 0}
-.steps li::before{content:counter(s);position:absolute;left:0;top:1px;width:30px;height:30px;border-radius:50%;display:grid;place-items:center;
-  background:var(--green);color:#06210b;font-weight:800;font-size:14px;font-family:"Inter",sans-serif}
-code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.9em;background:#0f2038;border:1px solid var(--line);border-radius:6px;padding:1px 6px;color:#eef2f7}
-table{width:100%;border-collapse:collapse;font-size:14.5px;margin:.8em 0}
-th,td{text-align:left;padding:9px 10px;border-bottom:1px solid #1c2c46;vertical-align:top}
-th{font-family:"Barlow Condensed",sans-serif;text-transform:uppercase;letter-spacing:.1em;font-size:12.5px;color:var(--muted)}
-.note{color:var(--muted);font-size:14px}
-footer{margin-top:52px;padding-top:18px;border-top:1px solid #1c2c46;color:var(--muted);font-size:14px;display:flex;gap:16px;flex-wrap:wrap}
-footer a{color:var(--muted)}
-footer a:hover{color:#dfe6ef}
-@media(max-width:860px){.layout{grid-template-columns:1fr;gap:0}nav.toc{position:static;margin:0 0 24px;padding:14px 16px;border:1px solid var(--line);border-radius:14px}
-  h1{font-size:34px}}
+body{font-size:17px;line-height:1.6;color:var(--ps-soft);overflow-x:hidden;-webkit-font-smoothing:antialiased}
+.apptop .psview{display:none!important}   /* nothing here differs between Simple and Pro */
+.app.wrap.art{margin:0 auto}
+@media(max-width:760px){.apptop .sportnav a{min-height:44px}}
+.art a{color:var(--ps-green);text-underline-offset:2px}
+.art b,.art strong{color:var(--ps-text)}
+.art .crumbs{display:flex;align-items:center;min-height:44px;margin:12px 0 0;font-size:14px;color:var(--ps-muted)}
+.art .crumbs a{display:inline-flex;align-items:center;min-height:44px;color:var(--ps-muted);text-decoration:none}
+.art .crumbs a:hover{color:var(--ps-text)}
+.art h1{font-family:var(--ps-display);font-weight:800;letter-spacing:-.025em;font-size:clamp(32px,6vw,46px);line-height:1.05;color:var(--ps-text);margin:8px 0 14px}
+.art h2{font-family:var(--ps-display);font-weight:700;letter-spacing:-.01em;font-size:clamp(21px,3vw,25px);line-height:1.25;color:var(--ps-text)}
+.art ul,.art ol{padding-left:22px}
+.art .note{color:var(--ps-muted);font-size:15px}
+.art footer{margin-top:48px;padding-top:18px;border-top:1px solid var(--ps-line-soft);color:var(--ps-muted);font-size:14px;line-height:1.9}
+.art footer a{color:var(--ps-soft)}
+.art footer a:hover{color:var(--ps-green)}
+.art .layout{display:grid;grid-template-columns:220px minmax(0,72ch);gap:48px;align-items:start;margin-top:18px}
+.art nav.toc{position:sticky;top:86px;font-size:14px}
+.art nav.toc b{display:block;text-transform:uppercase;letter-spacing:.08em;font-size:12px;font-weight:700;color:var(--ps-muted);margin:0 0 10px}
+.art nav.toc a{display:block;color:var(--ps-soft);text-decoration:none;padding:5px 0 5px 12px;border-left:2px solid var(--ps-line);line-height:1.4}
+.art nav.toc a:hover{color:var(--ps-text);border-left-color:var(--ps-green)}
+.art .kicker{text-transform:uppercase;letter-spacing:.14em;font-size:13px;font-weight:700;color:var(--ps-green);margin:0 0 8px}
+.art .lead{font-size:19px;color:var(--ps-text);margin:0 0 18px;line-height:1.55}
+.art .meta{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 30px}
+.art .meta span{display:inline-flex;align-items:center;padding:6px 12px;border-radius:999px;border:1px solid var(--ps-line);font-size:13px;line-height:1.4;color:var(--ps-soft)}
+.art .meta .gold{border-color:rgba(232,181,74,.5);color:var(--ps-gold)}
+.art h2{margin:2em 0 .5em;scroll-margin-top:84px}
+.art h3{font-family:var(--ps-display);font-weight:700;font-size:19px;color:var(--ps-text);margin:1.6em 0 .3em}
+.art p{margin:.7em 0}
+.art li{margin:.4em 0}
+.art .card{background:var(--ps-card);border:1px solid var(--ps-line);border-radius:16px;padding:16px 20px;margin:1em 0}
+.art .card.rule{border-color:rgba(34,208,127,.45)}
+.art .steps{counter-reset:s;list-style:none;padding:0}
+.art .steps li{counter-increment:s;position:relative;padding:0 0 0 44px;margin:1em 0}
+.art .steps li::before{content:counter(s);position:absolute;left:0;top:1px;width:30px;height:30px;border-radius:50%;display:grid;place-items:center;
+  background:var(--ps-green);color:var(--ps-green-ink);font-weight:800;font-size:14px;font-family:var(--ps-body)}
+.art code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.88em;background:var(--ps-surface);border:1px solid var(--ps-line);border-radius:6px;padding:1px 6px;color:var(--ps-text)}
+.art table{width:100%;border-collapse:collapse;font-size:15px;margin:.8em 0;font-variant-numeric:tabular-nums}
+.art th,.art td{text-align:left;padding:9px 10px;border-bottom:1px solid var(--ps-line-soft);vertical-align:top}
+.art th{text-transform:uppercase;letter-spacing:.06em;font-size:12.5px;font-weight:700;color:var(--ps-muted)}
+.art footer{display:flex;flex-wrap:wrap;gap:4px 18px}
+@media(max-width:860px){
+  .art .layout{grid-template-columns:minmax(0,1fr);gap:0}
+  .art nav.toc{position:static;margin:0 0 26px;padding:12px 16px;border:1px solid var(--ps-line);border-radius:16px;background:var(--ps-card)}
+  .art nav.toc a{display:flex;align-items:center;min-height:44px;padding:4px 0 4px 12px}
+  .art h2{scroll-margin-top:130px}
+}
+@media(max-width:480px){.art th,.art td{padding:8px 6px}.art table{font-size:14px}}
 </style>
+<link rel="stylesheet" href="app.css?v=20261117e">
+<script src="app.js?v=20261117e"></script>
 </head>
 <body>
-<div class="wrap">
-  <div class="top">
-    <a class="brand" href="./">
-      <svg width="26" height="26" viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" rx="14" fill="#0f2038"></rect><path d="M32,6 Q32,32 54,32 Q32,32 32,58 Q32,32 10,32 Q32,32 32,6 Z" fill="#22d07f"></path></svg>
-      Prop Streak Lab
-    </a>
-    <a class="back" href="./">← Back to site</a>
+<header class="apptop">
+  <div class="apptop-in">
+    <a class="brand" href="./" aria-label="Prop Streak Lab home"><svg width="30" height="30" viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" rx="14" fill="#0f2038"/><path d="M32,6 Q32,32 54,32 Q32,32 32,58 Q32,32 10,32 Q32,32 32,6 Z" fill="#22d07f"/></svg><b>Prop <i>Streak</i> Lab</b></a>
+    <nav class="sportnav" aria-label="Sports">
+      <a href="./nfl.html">🏈 NFL</a>
+      <a href="./nba.html">🏀 NBA</a>
+      <a href="./nhl.html">🏒 NHL</a>
+      <a href="./mlb.html">⚾ MLB</a>
+      <a href="./tennis.html">🎾 Tennis</a>
+    </nav>
   </div>
+</header>
+
+<div class="wrap app art">
+  <nav class="crumbs" aria-label="Breadcrumb"><a class="back" href="./">← Back to site</a></nav>
 
   <div class="layout">
     <nav class="toc" aria-label="On this page">
@@ -81,6 +99,7 @@ footer a:hover{color:#dfe6ef}
       <a href="#vsmarket">Model vs. market</a>
       <a href="#lists">Value spots and Top 25 Surest</a>
       <a href="#views">Simple and Pro views</a>
+      <a href="#tennis">Tennis</a>
       <a href="#grading">How picks are recorded and graded</a>
       <a href="#locking">When and why picks lock</a>
       <a href="#limits">Honest limits</a>

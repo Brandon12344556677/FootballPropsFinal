@@ -112,6 +112,11 @@ The bot overwrites these on every pass, so hand edits are lost and cause merge c
 - **Keep the public explanation in sync.** A change to a rule users see (list cutoffs, lock
   times, Bet of the Day windows, grading) also updates `methodology.html` and any on-page note
   in `app.js`/the templates, and the README if it describes it.
+- **One set of design tokens.** Colors, text sizes, corners and the tap size live in app.css's `:root` (`--ps-*`); page CSS uses
+  `var(--ps-...)`, never the hex, and translucent brand colors are `rgba(var(--ps-green-rgb),.14)`. The pages' short names
+  (`--bg`, `--green`, `--accent`...) are aliases of the tokens. A seasonal theme overrides tokens only (thanksgiving.css's
+  `html.thanksgiving{...}` block). Nothing smaller than 12px; on touch screens every control gets 44px (the `pointer:coarse`
+  block at the end of app.css). Changing thanksgiving.js/.css also bumps their `?v=` on every page (and in build_players.py).
 - **A page's script must parse.** One `//` comment that swallowed a closing brace took the whole tennis page down for 5 days (Nov 11-16, 2026).
   After the last edit to any template or app.js, load the built page in a browser and check the console; the watchdog renders every sport page.
 - **The edge tracker follows every list change.** Adding, removing or changing a list, a list rule or what gets
