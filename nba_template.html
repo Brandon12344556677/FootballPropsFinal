@@ -627,8 +627,8 @@ details.valrules>summary{cursor:pointer}
 .panel.collapsed{padding-bottom:14px}
 </style>
 
-<link rel="stylesheet" href="app.css?v=20261111a">
-<script src="app.js?v=20261117a"></script>
+<link rel="stylesheet" href="app.css?v=20261117b">
+<script src="app.js?v=20261117b"></script>
 <script src="/thanksgiving.js?v=20261101b"></script>
 
 <header class="apptop">
@@ -673,6 +673,7 @@ details.valrules>summary{cursor:pointer}
   </div>
 
 <div id="page-week">
+  <div id="pickfilter"></div>
   <div class="panel" id="valuepanel" hidden>
     <div class="mkthead"><h2>⚡ Value spots<button type="button" class="qhelp hq" data-help="value" aria-expanded="false" aria-label="What are Value spots?"><span class="qi" aria-hidden="true">?</span></button></h2><span class="mktmuted">market gives it 30%+, model is 15+ points better — overs and unders both</span><span class="mktmuted" id="recV"></span></div>
     <details class="valrules">
@@ -731,6 +732,10 @@ details.valrules>summary{cursor:pointer}
   <div class="weekstrip" id="weekstrip" hidden></div>
   <div class="headline" id="headline"></div>
   <div id="verdict" class="verdict" hidden></div>
+  <div class="panel" id="ladderpanel" hidden>
+    <div class="mkthead"><h2>🪜 Every listed line</h2><span class="mktmuted" id="laddercap"></span></div>
+    <div id="ladderbody"></div>
+  </div>
   <div class="tiles" id="tiles"></div>
 
   <div class="twocol">
@@ -775,6 +780,14 @@ details.valrules>summary{cursor:pointer}
     <div class="mkthead"><h2>⚖️ Compare players</h2><span class="mktmuted" id="cmpcap"></span><button id="cmpclear" class="btn ghost" type="button">Clear</button></div>
     <p class="mktnote">Add players with <b>⚖ Compare</b> on the <b>Player</b> tab, then set a stat, line and side there — everyone is scored for that exact prop so you can see who's the better bet.</p>
     <div id="cmpbody"></div>
+  </div>
+  <div class="panel" id="calcpanel">
+    <div class="mkthead"><h2>🧮 Bet calculator</h2><span class="mktmuted">the prop open on the Player tab, at the price you see</span></div>
+    <div id="calcbody"></div>
+  </div>
+  <div class="panel" id="myslippanel">
+    <div class="mkthead"><h2>🧩 Parlay builder</h2><span class="mktmuted">your own legs: the model's chance they all hit and the payout at your prices</span></div>
+    <div id="myslipbody"></div>
   </div>
   <div class="panel" id="pfpanel2"><div class="mkthead"><h2>🎯 Parlay by payout</h2><span class="mktmuted">pick the payout and the chance you want — we search every priced pick</span></div><div id="pfbody"></div></div>
   <div class="panel">
@@ -1131,7 +1144,12 @@ function trackFor(bet){ return bet? {on:PS.isTracked(bet), toggle:()=>{ const on
 // The verdict card under the headline: the model's chance against the Polymarket price saved
 // with this exact pick at the last hourly update (these boards don't poll prices live).
 let VERDICT=null;   // {prob, lo, hi, neff} for the prop on screen, set by render()
+let CALC=null, MYSLIP=null;   // the Tools tab's bet calculator and parlay builder (set up with the other tools below)
 function paintVerdict(){
+  paintLadder();
+  const typing=id=>{ const a=document.activeElement, el=$(id); return !!(a && el && a.tagName==='INPUT' && el.contains(a)); };   // don't redraw a box being typed in
+  if(CALC && !typing('calcbody')) CALC.refresh();
+  if(MYSLIP && !typing('myslipbody')) MYSLIP.refresh();
   const v=VERDICT, p=state.player;
   if(!v || !p){ PS.verdict($('verdict'), null); return; }
   const mine=upcomingPicks().filter(x=>String(x.pid)===String(p.id) && x.stat===state.stat && x.price!=null);
@@ -1142,12 +1160,34 @@ function paintVerdict(){
     onShare:()=>PS.sharePick(state, statLabel(state.stat)),
     track:trackFor(betFor(p, state.stat, state.line, state.ou, v.prob, same? same.price : null))});
 }
+// The prop on screen as a pick: the upcoming recorded pick at this exact line and side (normPick, live price), or null.
+function curListed(){ const p=state.player; if(!p) return null;
+  const x=upcomingPicks().find(q=>String(q.pid)===String(p.id) && q.stat===state.stat && +q.line===+state.line && (q.side||'over')===state.ou && q.prob!=null);
+  return x? normPick(x) : null; }
+// A price you can get: none when the cheaper side has under $25 offered near it (the same test priceCell uses).
+function gettable(r){ if(!r || r.price==null) return null; if(r.vn!=='K' && r.pd!=null && r.pd<25) return null; if(r.vn==='K' && r.kd!=null && r.kd<25) return null; return r.price; }
+// Loads a line and side for the player on screen (the line ladder's rows).
+function setProp(line, side){ state.line=+line; state.ou=side==='under'? 'under' : 'over'; $('line').value=state.line;
+  $('over').setAttribute('aria-pressed', String(state.ou==='over')); $('under').setAttribute('aria-pressed', String(state.ou==='under')); render(); }
+// Line ladder: every listed line of this player's prop on the upcoming board, both exchanges' prices.
+function paintLadder(){ const panel=$('ladderpanel'), body=$('ladderbody'); if(!panel || !body) return;
+  const p=state.player;
+  if(!p || PICKS===null){ panel.hidden=true; return; }
+  const seen=new Set(), rows=[];
+  upcomingPicks().filter(x=>String(x.pid)===String(p.id) && x.stat===state.stat && x.prob!=null).forEach(x=>{
+    const r=normPick(x), k=r.line+'|'+r.side; if(seen.has(k)) return; seen.add(k);
+    rows.push({line:r.line, side:r.side, prob:r.prob, pp:r.pp, kp:r.kp, vn:r.vn, pd:r.pd, kd:r.kd, listed:x.lists||''}); });
+  if(!rows.length){ panel.hidden=true; return; }
+  panel.hidden=false;
+  $('laddercap').textContent=`${p.n} · ${statLabel(state.stat)} · tap a line to load it`;
+  PS.lineLadder(body, rows, {statText:statLabel(state.stat), open:r=>setProp(r.line, r.side)});
+}
 function render(){
   const p=state.player;
   PS.syncHash(state);
-  VERDICT=null; paintVerdict();
+  VERDICT=null; PS.verdict($('verdict'), null);   // painted (with the ladder and the Tools calculator) once the chance is known
   updatePlayerBtns();
-  if(!p){ $('headline').innerHTML='<span class="q">Search a player above to see their prop chances.</span>';
+  if(!p){ paintVerdict(); $('headline').innerHTML='<span class="q">Search a player above to see their prop chances.</span>';
     $('tiles').innerHTML=''; $('pmeta').textContent=''; drawDist([],0,'pts'); drawChart([],0,'pts'); $('tbl').innerHTML=''; $('splitbody').innerHTML=''; return; }
   const sk=state.stat, st=STATMAP[sk], gs=gamesOf(p), vals=gs.map(st.get);
   $('pmeta').innerHTML=`<b>${esc(p.n)}</b> &middot; ${esc(p.p)} &middot; ${esc(p.t)} &middot; ${gs.length} game${gs.length===1?'':'s'} in dataset`;
@@ -1283,6 +1323,26 @@ function normPick(p){ let px=p.price==null? null : p.price;
     line:p.line, side:p.side||'over', prob:p.prob, lo:p.lo, hi:p.hi, n:Math.round(p.neff||0),
     price:px, pp, kp, vn, pd:p.pd, kd:p.kd, px0:p.px0==null? null : p.px0, lk:p.lk||null, edge:(px==null||p.prob==null)? null : p.prob-px}; }
 function listRows(tag){ return upcomingPicks().filter(p=>(p.lists||'').includes(tag) && p.prob!=null).map(normPick); }
+// ---- Filter bar (PS.filterBar) over Value and Top 25: game, prop, side, price band, starred players. Made once the
+// picks are in, so a saved game or prop isn't dropped against an empty board. ----
+let FLT=null, fltSig='';
+const fltOn=()=>{ if(!FLT) return false; const f=FLT.get(); return !!(f.game || f.stat || f.side || f.band || f.star); };
+// A game by its teams and start time: one game is sometimes recorded under two ids (dated a day apart), and it's one choice here.
+const fltGame=g=> g? `${g.away}@${g.home}@${String(g.start||'').slice(0,16)}` : '';
+const fltRows=rows=> FLT? rows.filter(r=>FLT.test({gid:fltGame(r.game), sk:r.sk, side:r.side, price:r.price, pid:r.pid, sport:SPORT_KEY})) : rows;
+function fltOptions(){ const up=upcomingPicks().filter(p=>p.prob!=null), games=new Map(), stats=new Set();
+  up.slice().sort((a,b)=>String(a.start||a.date||'').localeCompare(String(b.start||b.date||''))).forEach(p=>{
+    const g=gameOf(p), k=fltGame(g); if(!games.has(k)) games.set(k, `${g.away} @ ${g.home}`);
+    if(p.stat) stats.add(p.stat); });
+  return {games:[...games.entries()], stats:STATS.filter(s=>stats.has(s.key)).map(s=>[s.key, s.label])}; }
+function syncFilter(){ const el=$('pickfilter'); if(!el || PICKS===null) return;
+  el.hidden=!upcomingPicks().some(p=>p.prob!=null);   // nothing on the board: no bar
+  const o=fltOptions(), sig=JSON.stringify(o);
+  if(!FLT){ FLT=PS.filterBar(el, {key:SPORT_KEY, options:o, onChange:()=>{ renderEdges(); renderValue(); }}); fltSig=sig; }
+  else if(sig!==fltSig){ fltSig=sig; FLT.setOptions(o); } }   // redrawn only when the games or props change (a live price refresh would close an open menu)
+// The note when the filter hides every pick on a list, with a one-tap Clear.
+function fltEmpty(what){ return `<p class="mktnote">None ${what} match your filters. <button type="button" class="btn ghost fltclear">Clear filters</button></p>`; }
+function wireFltClear(el){ el.querySelectorAll('.fltclear').forEach(b=>b.onclick=()=>{ if(FLT) FLT.clear(); }); }
 function sortRows(rows, key, dir){ return [...rows].sort((a,b)=>{
   if(key==='matchup') return dir*((a.game.away+a.game.home).localeCompare(b.game.away+b.game.home));
   if(['name','statText','side'].includes(key)) return dir*((''+a[key]).localeCompare(''+b[key]));
@@ -1307,6 +1367,7 @@ function pickTable(rows, sort){
     h+=`<article class="pickcard ${tier}${r.lk?' locked':''}" style="${PS.teamVars(SPORT_KEY, r.team)}">`+(r.lk? PS.lockRibbon(r.lk) : '')+
       `<div class="pc-top"><span class="av">${esc(initials(r.name))}</span>`+
         `<div class="pc-who"><b>${esc(r.name)}</b><span><span class="tbadge">${esc(r.team)}</span>${r.team===r.game.home? "vs "+esc(r.game.away) : r.team===r.game.away? "@ "+esc(r.game.home) : esc(r.game.away)+" @ "+esc(r.game.home)}</span>${r.game && r.game.start? PS.gameTime(r.game.start) : ''}</div>`+
+        PS.starBtn(SPORT_KEY, {pid:r.pid, name:r.name, team:r.team})+
         `<div class="pc-prob"><div class="ring" style="--p:${pv}"><b>${pv}<small>%</small></b></div><span title="80% range ${Math.round(r.lo*100)}–${Math.round(r.hi*100)}%, from ${r.n} games">chance</span></div></div>`+
       `<div class="pc-bet"><span class="leantag ${esc(r.side)}">${esc(r.side)}</span><b>${r.line}</b><span>${esc(r.statText)}</span>${byId[r.pid]? PS.spark(valuesOf(byId[r.pid], r.sk), r.line, r.side) : ''}</div>`+
       `<div class="pc-foot"><span class="pc-price livecell">${priceCell(r)}</span>${r.lk? PS.lockBadge(r.lk) : ''}<button class="edgeload" type="button" data-i="${idx}">Details</button></div>`+
@@ -1319,6 +1380,8 @@ function openPickSheet(r){ const p=byId[r.pid]; if(!p){ loadPick(r); return; }
   const g=r.game||{}, vs=r.team===g.home? 'vs '+g.away : r.team===g.away? '@ '+g.home : '';
   PS.pickSheet({name:r.name, team:r.team, sport:SPORT_KEY, vs, prob:r.prob, lo:r.lo, hi:r.hi, neff:r.n, side:r.side, line:r.line, statText:r.statText,
     price:(r.vn!=='K' && r.pd!=null && r.pd<25)? null : r.price, vn:r.vn, live:false, vals:valuesOf(p, r.sk), onOpen:()=>loadPick(r),
+    watch:{on:PS.watch.has(SPORT_KEY, r.pid), toggle:()=>PS.watch.toggle({sport:SPORT_KEY, pid:r.pid, name:r.name, team:r.team})},
+    links:PS.exchangeUrls(DB.links, r.gid, r.sk),
     track:trackFor(betFor(p, r.sk, r.line, r.side, r.prob, r.price, r.gid)),
     more:PS.relatedPicks(r, upcomingPicks().filter(x=>x.prob!=null).map(normPick), {key:x=>[x.pid,x.sk,x.line,x.side].join("|"), game:x=>x.gid, pid:x=>x.pid, open:openPickSheet}),
     onShare:()=>PS.sharePick({player:p, stat:r.sk, line:r.line, ou:r.side}, r.statText)}); }
@@ -1348,8 +1411,10 @@ function renderEdges(){ const body=$('edgebody'); if(!body) return;
   updateBoardStatus();
   const all=listRows('T');
   if(!all.length){ body.innerHTML=scheduleNote('the Top 25 Surest board'); return; }
-  const rows=sortRows(all, edgeSort.key, edgeSort.dir).slice(0,25);
-  body.innerHTML=pickTable(rows, edgeSort)+
+  const shown=fltRows(all);
+  if(!shown.length){ body.innerHTML=fltEmpty(`of the ${all.length} Top 25 Surest picks`); wireFltClear(body); return; }
+  const rows=sortRows(shown, edgeSort.key, edgeSort.dir).slice(0,25);
+  body.innerHTML=(fltOn()? `<p class="mktnote">Showing <b>${rows.length}</b> of ${all.length} Top 25 Surest picks that match your filters.</p>` : '')+pickTable(rows, edgeSort)+
     `<p class="mktnote" style="margin-top:8px">The 25 props with the highest <b>model chance</b> on the upcoming ${SPORT_NAME} slate, regardless of payout — best if you're holding <b>credits you can't withdraw without trading</b>, since these are the props most likely to win and let you cash out. <b>Model</b> = the chance the Bet side hits, with its 80% range and the games it's based on. <b>Polymarket</b> is the price for that exact side, the model's edge over it, and the payout multiplier — it fills in once Polymarket lists ${SPORT_NAME} player props. Click a header to sort. These picks are recorded before ${TIPOFF} and graded in <b>Past picks</b>.</p>`;
   wireTable(body, rows, edgeSort, renderEdges); }
 function generateDigest(){ const panel=$('digestpanel'), body=$('digestbody'), cap=$('digestcap'); if(!panel||!body) return;
@@ -1385,9 +1450,11 @@ function renderValue(){ const panel=$('valuepanel'), body=$('valuebody'); if(!pa
   panel.hidden=false;
   const all=listRows('V');
   if(!all.length){ body.innerHTML=`<p class="mktnote">No value spots right now — both rules above are tested against a market price, so this fills in automatically once <b>Polymarket or Kalshi lists ${SPORT_NAME} player props</b>. None are posted yet.</p>`; return; }
-  const rows=sortRows(all, valueSort.key, valueSort.dir).slice(0,50);
+  const shown=fltRows(all);
+  if(!shown.length){ body.innerHTML=fltEmpty(`of the ${all.length} value spot${all.length===1?'':'s'}`); wireFltClear(body); return; }
+  const rows=sortRows(shown, valueSort.key, valueSort.dir).slice(0,50);
   const unders=rows.filter(r=>r.side==='under').length, overs=rows.length-unders;
-  body.innerHTML=pickTable(rows, valueSort)+`<p class="mktnote" style="margin-top:8px"><b>${rows.length}</b> prop${rows.length===1?'':'s'} clear both rules at the recorded price — ${overs} over${overs===1?'':'s'} and ${unders} under${unders===1?'':'s'}. Picks are recorded before ${TIPOFF} and graded in <b>Past picks</b>. Backward-looking; not advice.</p>`;
+  body.innerHTML=pickTable(rows, valueSort)+`<p class="mktnote" style="margin-top:8px"><b>${rows.length}</b> prop${rows.length===1?'':'s'} clear both rules at the recorded price${fltOn()? ` and match your filters (of ${all.length})` : ''} — ${overs} over${overs===1?'':'s'} and ${unders} under${unders===1?'':'s'}. Picks are recorded before ${TIPOFF} and graded in <b>Past picks</b>. Backward-looking; not advice.</p>`;
   wireTable(body, rows, valueSort, renderValue);
 }
 
@@ -1457,7 +1524,7 @@ function loadFullPicks(){ if(PICKS_FULL||fullPicksLoading) return; fullPicksLoad
     .catch(()=>{ PICKS=PICKS||[]; PICKS_FULL=true; renderPickViews(); }).finally(()=>{ fullPicksLoading=false; });
 }
 let upSig=-1;
-function renderPickViews(){ paintVerdict(); renderEdges(); renderValue(); renderValueWeek(); generateDigest(); renderPast(); renderApTeams(); PS.ticker(tickerItems()); upSig=upcomingPicks().length; }
+function renderPickViews(){ syncFilter(); paintVerdict(); renderEdges(); renderValue(); renderValueWeek(); generateDigest(); renderPast(); renderApTeams(); renderWatch(); PS.ticker(tickerItems()); upSig=upcomingPicks().length; }
 // Once a minute: when a game starts, its picks drop off the boards without a reload.
 setInterval(()=>{ if(PICKS!==null && !document.hidden && upcomingPicks().length!==upSig) renderPickViews(); }, 60000);
 function initPicks(){ renderPast(); loadFullPicks(); }   // Past tab opened: load the full history
@@ -1664,29 +1731,24 @@ function renderPickTable(rows){
 }
 
 // ---- Tools: watchlist, compare, parlay ----
-let WATCH=[]; try{ WATCH=JSON.parse(localStorage.getItem('psl_nba_watch')||'[]'); if(!Array.isArray(WATCH)) WATCH=[]; }catch(e){ WATCH=[]; }
+// The watchlist is PS.watch (every sport, psl_watch_all; it copied the old psl_nba_watch list in and keeps it in step).
 let CMP=[];   try{ CMP=JSON.parse(localStorage.getItem('psl_nba_cmp')||'[]'); if(!Array.isArray(CMP)) CMP=[]; }catch(e){ CMP=[]; }
-function saveTools(){ try{ localStorage.setItem('psl_nba_watch',JSON.stringify(WATCH)); localStorage.setItem('psl_nba_cmp',JSON.stringify(CMP)); }catch(e){} }
+function saveTools(){ try{ localStorage.setItem('psl_nba_cmp',JSON.stringify(CMP)); }catch(e){} }
 function updatePlayerBtns(){ const box=$('playerbtns'), p=state.player; if(!box) return;
   if(!p){ box.hidden=true; return; } box.hidden=false;
-  const w=WATCH.includes(p.id), c=CMP.includes(p.id);
+  const w=PS.watch.has(SPORT_KEY, p.id), c=CMP.includes(p.id);
   $('watchstar').textContent = w? '★ Watching' : '☆ Watch';
   $('cmpadd').textContent = c? '⚖ In compare' : '⚖ Compare';
 }
 function playerModel(p, sk, line){ const vals=valuesOf(p, sk); if(vals.length<3) return null;
   const ctx=contextFor(p, sk); return calMp(modelProb(vals, line, floorFor(sk), ctx.scale, CAL[sk])); }
+// Watchlist panel (PS.renderWatchlist): each starred NBA player with his upcoming priced props; other sports link out.
 function renderWatch(){ const body=$('watchbody'); if(!body) return;
-  const items=WATCH.map(id=>byId[id]).filter(p=>p&&p.g&&p.g.length);
-  if(!items.length){ body.innerHTML='<p class="mktnote">No players starred yet. Open a player in the <b>Player</b> tab and tap <b>☆ Watch</b>.</p>'; return; }
-  body.innerHTML=items.map(p=>{ const sk='pts', vals=valuesOf(p,sk), line=seedLine(vals), mp=playerModel(p,sk,line);
-    const g=teamGame(p.t), opp=g?(g.away===p.t?g.home:g.away):null;
-    const prob=mp? (mp.over>=0.5?mp.over:mp.under):null, side=mp?(mp.over>=0.5?'over':'under'):'';
-    const cls=prob==null?'':prob>=0.7?'hi':prob>=0.6?'mid':'lo';
-    return `<div class="boardrow"><div><div class="bp">${esc(p.n)} <span class="bmeta">${esc(p.t)}${opp?' '+(g.home===p.t?'vs':'@')+' '+esc(opp):''}</span></div>`+
-      `<div class="bpick">Points ${side} ${line}</div></div>`+
-      `<div><button class="btn ghost" type="button" onclick="openPlayer('${esc(p.id)}')">Open</button> <button class="btn ghost" type="button" onclick="toggleWatch('${esc(p.id)}')">✕</button></div>`+
-      `<div class="bprob ${cls}">${prob!=null?pct(prob):'—'}</div></div>`; }).join('');
-}
+  PS.renderWatchlist(body, {sport:SPORT_KEY,
+    legsForPlayer:pid=>upcomingPicks().filter(x=>String(x.pid)===String(pid) && x.prob!=null).map(x=>{ const r=normPick(x);
+      return {statText:r.statText, side:r.side, line:r.line, prob:r.prob, price:r.price, vn:r.vn, thin:r.price!=null && gettable(r)==null, lists:x.lists||''}; }),
+    open:pid=>openPlayer(pid),
+    player:pid=>{ const p=byId[pid]; return p? {name:p.n, team:p.t} : null; }}); }
 function renderCompare(){ const body=$('cmpbody'); if(!body) return;
   $('cmpcap').textContent = CMP.length? `${statLabel(state.stat)} ${state.ou} ${state.line}` : '';
   const items=CMP.map(id=>byId[id]).filter(p=>p&&p.g&&p.g.length);
@@ -1701,7 +1763,9 @@ function renderCompare(){ const body=$('cmpbody'); if(!body) return;
   rows.forEach(r=>{ h+=`<tr><td>${esc(r.p.n)} <span class="bmeta">${esc(r.p.t)}</span></td><td>${fmt(r.avg)}</td><td>${r.n?pct(r.hit/r.n):'—'} <span class="bmeta">${r.hit}/${r.n}</span></td><td><b>${r.prob!=null?pct(r.prob):'—'}</b></td><td><button class="btn ghost" type="button" onclick="toggleCmp('${esc(r.p.id)}')">✕</button></td></tr>`; });
   body.innerHTML=h+'</tbody></table></div>';
 }
-function toggleWatch(id){ const i=WATCH.indexOf(id); if(i<0) WATCH.push(id); else WATCH.splice(i,1); saveTools(); updatePlayerBtns(); renderWatch(); }
+function toggleWatch(id){ const p=byId[id]; if(!p) return;
+  const on=PS.watch.toggle({sport:SPORT_KEY, pid:p.id, name:p.n, team:p.t}); PS.toast(on? '★ Added to your watchlist' : 'Removed from your watchlist'); }
+PS.watch.onChange(()=>updatePlayerBtns());   // the watchlist panel repaints itself
 function toggleCmp(id){ const i=CMP.indexOf(id); if(i<0){ if(CMP.length<6) CMP.push(id); } else CMP.splice(i,1); saveTools(); updatePlayerBtns(); renderCompare(); }
 function openPlayer(id){ showTab('player'); pick(id); }
 $('watchstar').onclick=()=>{ if(state.player) toggleWatch(state.player.id); };
@@ -1754,6 +1818,30 @@ PS.parlayFinder($('pfbody'), {sport:SPORT_KEY, gameWord:'game',
     return legs; },
   open:l=>openPickSheet(l.row)});
 $('cmpclear').onclick=()=>{ CMP=[]; saveTools(); updatePlayerBtns(); renderCompare(); };
+// Bet calculator (PS.betCalc): the prop open on the Player tab, at the price you type (starts at its live price, if listed).
+CALC=PS.betCalc($('calcbody'), {getPick:()=>{ const p=state.player, v=VERDICT; if(!p || !v) return null;
+  const r=curListed();
+  return {prob:v.prob, lo:v.lo, hi:v.hi, price:gettable(r), name:p.n, statText:statLabel(state.stat), side:state.ou, line:state.line}; }});
+// The game id a leg belongs to ("2026-11-18-LAL-BOS", as the picks carry it), for the same-game warning.
+function gidFor(p){ const x=upcomingPicks().find(q=>String(q.pid)===String(p.id) && q.gid); if(x) return x.gid;
+  const g=teamGame(p.t); if(!g) return '';
+  return (g.start? String(g.start).slice(0,10) : (g.date||''))+'-'+g.away+'-'+g.home; }
+const legKey=(pid, sk, line, side)=>[pid, sk, +line, side].join('|');
+// Parlay builder (PS.parlaySlip): your own legs from the Player tab; today's model chance and price refreshed by key.
+MYSLIP=PS.parlaySlip($('myslipbody'), {sport:SPORT_KEY,
+  getCurrent:()=>{ const p=state.player, v=VERDICT; if(!p || !v) return null;
+    return {key:legKey(p.id, state.stat, state.line, state.ou), gid:gidFor(p), pid:p.id, name:p.n, statText:statLabel(state.stat),
+      side:state.ou, line:state.line, prob:v.prob, price:gettable(curListed())}; },
+  legsFor:legs=>{ const by={};
+    upcomingPicks().filter(x=>x.prob!=null).forEach(x=>{ by[legKey(x.pid, x.stat, x.line, x.side||'over')]=x; });
+    return legs.map(l=>{ const x=by[l.key];
+      if(x){ const r=normPick(x); return {key:l.key, prob:r.prob, price:gettable(r)}; }
+      // not a listed line: the model's chance today at that line (the price stays as saved)
+      const [pid, sk, line, side]=String(l.key).split('|'), p=byId[pid];
+      if(!p || !STATMAP[sk] || !isFinite(+line)) return null;
+      const mp=playerModel(p, sk, +line); if(!mp) return null;
+      return {key:l.key, prob:side==='under'? mp.under : mp.over}; }).filter(Boolean); },
+  open:l=>{ const [pid, sk, line, side]=String(l.key).split('|'); if(byId[pid] && STATMAP[sk]) loadPick({pid, sk, line:+line, side}); }});
 
 // ---- Suggest a feature ----
 const FEEDBACK_EMAIL = "info@propstreaklab.com";
