@@ -1,11 +1,4 @@
 {
- "problems": {
-  "build: injuries 2026": {
-   "first": "2026-11-18T07:11:00Z",
-   "runs": 1,
-   "alerted": null,
-   "msg": "build.py: injuries 2026 failed (HTTP Error 404: Not Found)"
-  }
- },
+ "problems": {},
  "alert": []
 }
