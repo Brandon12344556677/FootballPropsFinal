@@ -1,4 +1,11 @@
 {
- "problems": {},
+ "problems": {
+  "team_stats: GoatCounter team stats": {
+   "first": "2026-11-18T03:01:31Z",
+   "runs": 1,
+   "alerted": null,
+   "msg": "team_stats.py: GoatCounter team stats failed (HTTPError: HTTP Error 404: Not Found)"
+  }
+ },
  "alert": []
 }
