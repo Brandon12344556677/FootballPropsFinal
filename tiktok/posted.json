@@ -1,48 +1,38 @@
 {
- "date": "2026-11-17",
+ "date": "2026-11-18",
  "drafts": {
   "c": {
    "caption": {
     "title": "Pick of the Day + today's best props",
-    "description": "Pick of the Day: Josh Okogie under 14.5 Points (97% model chance). Swipe for today's best NBA, NHL props → Free research, link in bio. Model chance, not a guarantee. 18+. #NBA #NBAProps #NHL #NHLProps #PlayerProps"
+    "description": "Pick of the Day: Christian Braun under 5.5 Assists (98% model chance). Swipe for today's best NBA, NHL props → Free research, link in bio. Model chance, not a guarantee. 18+. #NBA #NBAProps #NHL #NHLProps #PlayerProps"
    },
    "ok": true,
-   "id": "p_inbox_url~v2.7709287024486303758"
+   "id": "p_inbox_url~v2.7709645853124102175"
   },
   "v1": {
    "sport": "nba",
-   "angle": "gap",
-   "caption": "3 NBA player props where our model and the market disagree today 👀 Biggest gap: Sandro Mamukelashvili under 5.5 Rebounds, model 68% vs. market 41%. Free research, link in bio. Model chance, not a guarantee. 18+. #NBA #NBAProps #PlayerProps #SportsAnalytics",
+   "angle": "streak",
+   "caption": "3 NBA hit streaks on the line today 🔥 Longest: Nickeil Alexander-Walker, 10 straight games over 1.5 rebounds. Will it keep going? Free research, link in bio. Model chance, not a guarantee. 18+. #NBA #NBAProps #PlayerProps #SportsAnalytics",
    "ok": true,
-   "id": "v_inbox_file~v2.7709287019578591245"
+   "id": "v_inbox_file~v2.7709645973542242317"
   },
   "v2": {
    "sport": "nhl",
-   "angle": "record",
-   "caption": "Do our NHL picks actually hit? Top 25: 1,766 of 1,905 this season (93%), every pick recorded before the game and graded after ✅ Free research, link in bio. Model chance, not a guarantee. 18+. #NHL #NHLProps #PlayerProps #SportsAnalytics",
+   "angle": "gap",
+   "caption": "2 NHL player props where our model and the market disagree today 👀 Biggest gap: Emmitt Finnie under 0.5 Points, model 68% vs. market 50%. Free research, link in bio. Model chance, not a guarantee. 18+. #NHL #NHLProps #PlayerProps #SportsAnalytics",
    "ok": true,
-   "id": "v_inbox_file~v2.7709287039639963679"
+   "id": "v_inbox_file~v2.7709646001916823565"
   },
   "v3": {
    "sport": "nba",
-   "angle": "streak",
-   "caption": "3 NBA hit streaks on the line today 🔥 Longest: Brice Sensabaugh, 10 straight games over 1.5 rebounds. Will it keep going? Free research, link in bio. Model chance, not a guarantee. 18+. #NBA #NBAProps #PlayerProps #SportsAnalytics",
-   "ok": false,
-   "error": "spam_risk_too_many_pending_share: spam_risk_too_many_pending_share"
+   "angle": "record",
+   "caption": "Do our NBA picks actually hit? Top 25: 1,349 of 1,503 this season (90%), every pick recorded before the game and graded after ✅ Free research, link in bio. Model chance, not a guarantee. 18+. #NBA #NBAProps #PlayerProps #SportsAnalytics",
+   "ok": true,
+   "id": "v_inbox_file~v2.7709646047492425741"
   }
  },
  "history": [
   {
-   "date": "2026-11-03",
-   "sport": "nhl",
-   "angle": "gap"
-  },
-  {
-   "date": "2026-11-03",
-   "sport": "nhl",
-   "angle": "streak"
-  },
-  {
    "date": "2026-11-04",
    "sport": "nba",
    "angle": "streak"
@@ -225,9 +215,24 @@
   {
    "date": "2026-11-17",
    "sport": "nhl",
+   "angle": "record"
+  },
+  {
+   "date": "2026-11-18",
+   "sport": "nba",
+   "angle": "streak"
+  },
+  {
+   "date": "2026-11-18",
+   "sport": "nhl",
+   "angle": "gap"
+  },
+  {
+   "date": "2026-11-18",
+   "sport": "nba",
    "angle": "record"
   }
  ],
  "reconnect": false,
- "at": "2026-11-17T23:31:37Z"
+ "at": "2026-11-18T22:44:48Z"
 }
