@@ -1,4 +1,11 @@
 {
- "problems": {},
+ "problems": {
+  "build: stats 2026": {
+   "first": "2026-11-19T18:27:30Z",
+   "runs": 1,
+   "alerted": null,
+   "msg": "build.py: stats 2026 failed (HTTP Error 404: Not Found)"
+  }
+ },
  "alert": []
 }
