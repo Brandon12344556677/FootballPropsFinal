@@ -1,53 +1,38 @@
 {
- "date": "2026-11-19",
+ "date": "2026-11-20",
  "drafts": {
   "c": {
    "caption": {
     "title": "Pick of the Day + today's best props",
-    "description": "Pick of the Day: Alex Laferriere under 2.5 Points (97% model chance). Swipe for today's best NFL, NBA, NHL props → Free research, link in bio. Model chance, not a guarantee. 18+. #NFL #NFLProps #NBA #NBAProps #NHL #NHLProps #PlayerProps"
+    "description": "Pick of the Day: John Collins under 3.5 Assists (96% model chance). Swipe for today's best NBA props → Free research, link in bio. Model chance, not a guarantee. 18+. #NBA #NBAProps #PlayerProps"
    },
    "ok": true,
-   "id": "p_inbox_url~v2.7710019063380297741"
+   "id": "p_inbox_url~v2.7710382542574979085"
   },
   "v1": {
-   "sport": "nfl",
-   "angle": "record",
-   "caption": "Do our NFL picks actually hit? Top 25: 577 of 637 this season (91%), every pick recorded before the game and graded after ✅ Free research, link in bio. Model chance, not a guarantee. 18+. #NFL #NFLProps #PlayerProps #SportsAnalytics",
+   "sport": "nba",
+   "angle": "streak",
+   "caption": "3 NBA hit streaks on the line today 🔥 Longest: Mikel Brown Jr., 10 straight games over 1.5 assists. Will it keep going? Free research, link in bio. Model chance, not a guarantee. 18+. #NBA #NBAProps #PlayerProps #SportsAnalytics",
    "ok": true,
-   "id": "v_inbox_file~v2.7710019083382605838"
+   "id": "v_inbox_file~v2.7710383033362417678"
   },
   "v2": {
    "sport": "nba",
-   "angle": "gap",
-   "caption": "3 NBA player props where our model and the market disagree today 👀 Biggest gap: Taylor Hendricks over 9.5 Points, model 59% vs. market 37%. Free research, link in bio. Model chance, not a guarantee. 18+. #NBA #NBAProps #PlayerProps #SportsAnalytics",
+   "angle": "record",
+   "caption": "Do our NBA picks actually hit? Top 25: 1,424 of 1,586 this season (90%), every pick recorded before the game and graded after ✅ Free research, link in bio. Model chance, not a guarantee. 18+. #NBA #NBAProps #PlayerProps #SportsAnalytics",
    "ok": true,
-   "id": "v_inbox_file~v2.7710019076739024910"
+   "id": "v_inbox_file~v2.7710383036520712206"
   },
   "v3": {
-   "sport": "nhl",
-   "angle": "record",
-   "caption": "Do our NHL picks actually hit? Top 25: 1,836 of 1,979 this season (93%), every pick recorded before the game and graded after ✅ Free research, link in bio. Model chance, not a guarantee. 18+. #NHL #NHLProps #PlayerProps #SportsAnalytics",
-   "ok": true,
-   "id": "v_inbox_file~v2.7710019122834704414"
+   "sport": "nba",
+   "angle": "gap",
+   "caption": "3 NBA player props where our model and the market disagree today 👀 Biggest gap: Jamison Battle under 3.5 Rebounds, model 84% vs. market 52%. Free research, link in bio. Model chance, not a guarantee. 18+. #NBA #NBAProps #PlayerProps #SportsAnalytics",
+   "ok": false,
+   "error": "spam_risk_too_many_pending_share: spam_risk_too_many_pending_share"
   }
  },
  "history": [
   {
-   "date": "2026-11-05",
-   "sport": "nfl",
-   "angle": "record"
-  },
-  {
-   "date": "2026-11-05",
-   "sport": "nhl",
-   "angle": "gap"
-  },
-  {
-   "date": "2026-11-05",
-   "sport": "nba",
-   "angle": "streak"
-  },
-  {
    "date": "2026-11-06",
    "sport": "nba",
    "angle": "record"
@@ -230,9 +215,19 @@
   {
    "date": "2026-11-19",
    "sport": "nhl",
+   "angle": "record"
+  },
+  {
+   "date": "2026-11-20",
+   "sport": "nba",
+   "angle": "streak"
+  },
+  {
+   "date": "2026-11-20",
+   "sport": "nba",
    "angle": "record"
   }
  ],
  "reconnect": false,
- "at": "2026-11-19T22:52:35Z"
+ "at": "2026-11-20T22:24:46Z"
 }
