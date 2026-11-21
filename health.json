@@ -1,11 +1,4 @@
 {
- "problems": {
-  "team_stats: GoatCounter team stats": {
-   "first": "2026-11-21T23:42:04Z",
-   "runs": 1,
-   "alerted": null,
-   "msg": "team_stats.py: GoatCounter team stats failed (UnicodeDecodeError: 'utf-8' codec can't decode byte 0xbc in position 3522563: invalid start byte)"
-  }
- },
+ "problems": {},
  "alert": []
 }
