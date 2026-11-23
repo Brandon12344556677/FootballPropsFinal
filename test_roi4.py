@@ -99,6 +99,7 @@ class ChooseTest(unittest.TestCase):
         self.assertEqual(bets[0]["seg"], "nfl-edge")
         self.assertEqual(bets[0]["price"], 0.55)
         self.assertIsNone(bets[0]["res"])
+        self.assertTrue({"start", "team", "opp"} <= set(bets[0]))   # the tab's live tracker finds the game from these
 
     def test_no_bets_without_a_plan(self):
         self.assertEqual(roi4.choose([cand()], [dict(PLAN[0], ok=False, r=None)], []), [])

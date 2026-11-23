@@ -249,6 +249,7 @@ def choose(cands, day_plan, bets):
         out.append({"key": c["key"], "sport": c["sport"], "day": c["day"], "gid": c["gid"], "pid": c["pid"],
                     "player": c["player"], "stat": c["stat"], "line": c["line"], "side": c["side"],
                     "price": c["pr"], "prob": round(c["prob"], 3), "vn": c["vn"], "seg": seg["key"], "stake": st,
+                    "start": c.get("start"), "team": c.get("team"), "opp": c.get("opp"),   # for the tab's live tracking
                     "res": None, "pnl": None})
     return out
 
@@ -513,6 +514,11 @@ def update(state, cands, now, meta=None):
         plans[today] = slim_plan(plan(graded, today))
     post(state, cands, now, meta)
     state["bets"] += choose([c for c in cands if c["day"] == today and bettable(c, now)], plans[today], state["bets"])
+    by_key = {c["key"]: c for c in cands}
+    for b in state["bets"]:   # pending bets made before Nov 23, 2026 lack the game details the live tracker needs
+        c = by_key.get(b["key"])
+        if b.get("res") is None and c and not b.get("start"):
+            b.update({"start": c.get("start"), "team": c.get("team"), "opp": c.get("opp")})
     results = {c["key"]: c["res"] for c in cands}
     grade(state["bets"], results, today)
     grade(state["posted"], results, today)
