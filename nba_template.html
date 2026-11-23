@@ -561,29 +561,6 @@ input::placeholder{color:#b7c0cc}
 .edgeval,.edgeval.pos,.edgeval.neg,.up,.down,.parlaysum .big.hit{color:#fff}
 table td,table th,thead th,tbody td,.edgetbl td,.edgetbl th,.caltbl td,.caltbl th,.edgeload,.mktuse{color:#fff}
 
-/* ---- the scoreboard: Value spots' real season record as one banner, red when down, the old Value rule named ---- */
-.scoreboard{display:grid;grid-template-columns:1fr;gap:8px;margin:14px 0 4px}
-.scoreboard .sb{background:var(--ps-surface);border:1px solid var(--ps-line);border-radius:var(--ps-r-lg);padding:14px 18px;
-  display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 16px;text-decoration:none;color:inherit;min-height:var(--ps-tap)}
-.scoreboard .sb-k{flex-basis:100%}
-.scoreboard .sb:hover{border-color:rgba(var(--ps-green-rgb),.45)}
-.scoreboard .sb-k{font-size:var(--ps-fs-xs);font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--ps-muted)}
-.scoreboard .sb-v{font-size:var(--ps-fs-2xl);font-weight:800;line-height:1.1;color:var(--ps-green);font-variant-numeric:tabular-nums}
-.scoreboard .sb.dn .sb-v{color:var(--ps-red)}
-.scoreboard .sb-s{font-size:var(--ps-fs-sm);color:var(--ps-soft)}
-.scoreboard .sb-n{font-size:var(--ps-fs-xs);color:var(--ps-muted)}
-.scoreboard .sb-more{grid-column:1/-1;font-size:var(--ps-fs-sm);color:var(--ps-muted);margin:0}
-.scoreboard .sb-more a{color:var(--ps-green)}
-@media(max-width:560px){.scoreboard .sb{padding:12px 14px}.scoreboard .sb-n{flex-basis:100%}}
-/* ---- tonight's games: one chip per game, tap to show only its picks (the filter bar's game) ---- */
-.gamestrip{display:flex;gap:8px;overflow-x:auto;padding:4px 0 10px;scrollbar-width:none;-webkit-overflow-scrolling:touch}
-.gamestrip::-webkit-scrollbar{display:none}
-.gamestrip .gs{flex:none;display:flex;flex-direction:column;align-items:flex-start;gap:2px;min-height:var(--ps-tap);padding:8px 14px;
-  border-radius:var(--ps-r-md);border:1px solid var(--ps-line);background:var(--ps-surface);color:var(--ps-text);cursor:pointer;font:inherit;text-align:left}
-.gamestrip .gs b{font-size:var(--ps-fs-md)}
-.gamestrip .gs span{font-size:var(--ps-fs-xs);color:var(--ps-muted)}
-.gamestrip .gs[aria-pressed="true"]{border-color:var(--ps-green);background:rgba(var(--ps-green-rgb),.12)}
-.gamestrip .gs-lbl{flex:none;align-self:center;font-size:var(--ps-fs-xs);font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--ps-muted);padding-right:4px}
 </style>
 
 <style>
@@ -654,8 +631,8 @@ details.valrules>summary{cursor:pointer}
 .panel.collapsed{padding-bottom:14px}
 </style>
 
-<link rel="stylesheet" href="app.css?v=20261117e">
-<script src="app.js?v=20261117e"></script>
+<link rel="stylesheet" href="app.css?v=20261124a">
+<script src="app.js?v=20261124a"></script>
 <script src="/thanksgiving.js?v=20261117a"></script>
 
 <header class="apptop">
@@ -1406,21 +1383,15 @@ function syncFilter(){ const el=$('pickfilter'); if(!el || PICKS===null) return;
 // The note when the filter hides every pick on a list, with a one-tap Clear.
 function fltEmpty(what){ return `<p class="mktnote">None ${what} match your filters. <button type="button" class="btn ghost fltclear">Clear filters</button></p>`; }
 function wireFltClear(el){ el.querySelectorAll('.fltclear').forEach(b=>b.onclick=()=>{ if(FLT) FLT.clear(); }); }
-// ---- Tonight's games: one chip per upcoming game (start time, how many of its picks are on a list); a tap sets the
-// filter bar's game, a second tap clears it. Hidden with fewer than two games. ----
+// ---- The games strip (PS.gameStrip, the same on every sport page): one chip per upcoming game, a tap sets the
+// filter bar's game and a second tap clears it. ----
 function renderGames(){ const el=$('gamestrip'); if(!el || PICKS===null) return;
   const games=new Map();
-  upcomingPicks().filter(p=>p.prob!=null).forEach(p=>{ const g=gameOf(p), k=fltGame(g);
-    if(!games.has(k)) games.set(k, {g, n:0, listed:0});
+  upcomingPicks().filter(p=>p.prob!=null && p.gid).forEach(p=>{ const g=gameOf(p), k=fltGame(g);
+    if(!games.has(k)) games.set(k, {key:k, label:`${g.away} @ ${g.home}`, start:p.start||g.start, n:0, listed:0});
     const e=games.get(k); e.n++; if(/[TV]/.test(p.lists||'')) e.listed++; });
-  const rows=[...games.entries()].sort((a,b)=>String(a[1].g.start||'').localeCompare(String(b[1].g.start||'')));
-  if(rows.length<2){ el.hidden=true; el.innerHTML=''; return; }
-  const cur=FLT? FLT.get().game : '';
-  el.innerHTML=`<span class="gs-lbl">Games</span>`+rows.map(([k,e])=>
-    `<button type="button" class="gs" data-g="${esc(k)}" aria-pressed="${k===cur}"><b>${esc(e.g.away)} @ ${esc(e.g.home)}</b>`+
-    `<span>${esc(e.g.start? PS.startLabel(e.g.start) : 'time TBA')} · ${e.listed? e.listed+' on a list' : e.n+' props'}</span></button>`).join('');
-  el.hidden=false;
-  el.querySelectorAll('.gs').forEach(b=>b.onclick=()=>{ if(!FLT) return; const f=FLT.get(); f.game= f.game===b.dataset.g? '' : b.dataset.g; FLT.set(f); });
+  PS.gameStrip(el, {games:[...games.values()], current:FLT? FLT.get().game : '',
+    onPick:k=>{ if(!FLT) return; const f=FLT.get(); f.game=k; FLT.set(f); }});
 }
 function sortRows(rows, key, dir){ return [...rows].sort((a,b)=>{
   if(key==='matchup') return dir*((a.game.away+a.game.home).localeCompare(b.game.away+b.game.home));
@@ -2074,32 +2045,13 @@ render();
     });
   });
 })();
-// The scoreboard at the top: Value spots only (the current rule: overs, 30-60c, 20+ games), with its season record
-// at the recorded price, red when it's down (Top 25's record stays on its own panel and the Past picks tab); the Value picks made under the old rule are named with
-// their units and sit on the Record page. Before anything is graded: how many Value spots are live; hidden if neither.
+// The Value record banner at the top (PS.valueBanner, the same on every sport page): the season record at the
+// recorded price, red when down, an older rule's picks named; before anything is graded, how many are live.
 function renderValueWeek(){
-  const el=$('valueweekbar'); if(!el) return;
-  const R=DB.record||{}, tile=(r, name, extra)=>{
-    if(!r || !r.n) return '';
-    const units=+r.units||0, up=units>=0, roi=r.priced? units/r.priced : 0;
-    return `<a class="sb${up?'':' dn'}" href="#past"><span class="sb-k">${name} · this season</span>`+
-      `<span class="sb-v">${up?'+':'−'}${Math.abs(units).toFixed(1)}u</span>`+
-      `<span class="sb-s">${r.hit}/${r.n} hit (${Math.round(100*r.hit/r.n)}%) · ${roi>=0?'+':''}${(roi*100).toFixed(1)}% return</span>`+
-      (extra? `<span class="sb-n">${extra}</span>` : '')+`</a>`;
-  };
-  const pre=R.Vpre, preNote=pre && pre.n? `Value under the old rule (unders and other prices, to Nov 23): ${(pre.units>=0?'+':'−')+Math.abs(+pre.units||0).toFixed(1)}u on ${pre.n} picks, shown on the <a href="/record.html">Record page</a>.` : '';
-  const html=tile(R.V, '⚡ Value spots', 'Overs at 30–60¢, model 15+ points over, 20+ games');
-  if(html){
-    el.innerHTML=html+`<p class="sb-more">1 unit on every pick at the price it was recorded at, graded from the box score. ${preNote} <a href="/record.html">The full record →</a></p>`;
-    el.querySelectorAll('a.sb').forEach(a=>a.onclick=()=>{ showTab('past'); return false; });
-    el.hidden=false; return;
-  }
-  const live=PICKS ? listRows('V').length : 0;
-  if(!live){ el.hidden=true; return; }
-  el.innerHTML=`<a class="sb" href="#valuepanel"><span class="sb-k">⚡ Value spots</span><span class="sb-v">${live} live now</span>`+
-    `<span class="sb-s">Overs where the model's chance clearly beats the market price.</span></a>`;
-  el.querySelector('a.sb').onclick=()=>{ showTab('week'); const p=$('valuepanel'); if(p) p.scrollIntoView({behavior:'smooth'}); return false; };
-  el.hidden=false;
+  const R=DB.record||{};
+  PS.valueBanner($('valueweekbar'), {r:R.V, pre:R.Vpre, season:'this season', rule:'Overs at 30–60¢, model 15+ points over, 20+ games', preRule:'unders and other prices, to Nov 23',
+    liveText:'Overs where the model’s chance clearly beats the market price.', live:PICKS? listRows('V').length : 0, onRecord:()=>showTab('past'),
+    onLive:()=>{ showTab('week'); const p=$('valuepanel'); if(p) p.scrollIntoView({behavior:'smooth'}); }});
 }
 renderValueWeek();
 renderMyBets();

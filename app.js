@@ -785,6 +785,55 @@ window.PS = (function(){
       `<circle cx="${last[0]}" cy="${last[1]}" r="2.2"/></svg>`;
   }
 
+  // ---- The Value record banner at the top of every sport page (one look on every board). opts:
+  //   r: the Value list's season record {n, hit, priced, units} (units at the recorded price, 1 unit a pick)
+  //   pre: an older rule's record, named under the banner (NBA's and MLB's "Vpre"), or null
+  //   season: the label after "Value spots ·" ("this season", "2026 season")
+  //   rule: one line on what the list takes now; preRule: what the old rule took (for the note)
+  //   live: how many Value spots are on the board now (shown when nothing is graded yet)
+  //   onRecord / onLive: what a tap does (Past picks / scroll to the Value panel)
+  // Losses show in red; nothing at all hides the banner. ----
+  function valueBanner(el, o){
+    if(!el) return;
+    o=o||{};
+    const r=o.r, pre=o.pre;
+    const u=x=>(x>=0?'+':'−')+Math.abs(+x||0).toFixed(1)+'u';
+    el.classList.add('scoreboard');
+    if(r && r.n && r.priced){
+      const units=+r.units||0, up=units>=0, roi=units/r.priced;
+      const preNote=pre && pre.n? ` Value under the old rule${o.preRule? ' ('+esc(o.preRule)+')' : ''}: ${u(pre.units)} on ${pre.n} picks, shown on the <a href="/record.html">Record page</a>.` : '';
+      el.innerHTML=`<a class="sb${up?'':' dn'}" href="#past"><span class="sb-k">⚡ Value spots · ${esc(o.season||'this season')}</span>`+
+        `<span class="sb-v">${u(units)}</span>`+
+        `<span class="sb-s">${r.hit}/${r.n} hit (${Math.round(100*r.hit/r.n)}%) · ${roi>=0?'+':''}${(roi*100).toFixed(1)}% return</span>`+
+        (o.rule? `<span class="sb-n">${esc(o.rule)}</span>` : '')+`</a>`+
+        `<p class="sb-more">1 unit on every pick at the price it was recorded at, graded from the results.${preNote} <a href="/record.html">The full record →</a></p>`;
+      el.querySelector('a.sb').onclick=e=>{ e.preventDefault(); if(o.onRecord) o.onRecord(); };
+      el.hidden=false; return;
+    }
+    if(!o.live){ el.hidden=true; el.innerHTML=''; return; }
+    el.innerHTML=`<a class="sb" href="#valuepanel"><span class="sb-k">⚡ Value spots</span><span class="sb-v">${o.live} live now</span>`+
+      `<span class="sb-s">${esc(o.liveText||"Where the model's chance clearly beats the market price.")}</span></a>`;
+    el.querySelector('a.sb').onclick=e=>{ e.preventDefault(); if(o.onLive) o.onLive(); };
+    el.hidden=false;
+  }
+
+  // ---- The games strip on every sport page: one chip per upcoming game (or match), its start time and how many
+  // of its picks are on a list; a tap picks that game in the filter bar, a second tap clears it. opts:
+  //   games: [{key, label, start, listed, n}] (key = the filter bar's game value), current: the selected key,
+  //   onPick(key or ''), label: the strip's name ("Games", "Matches"). Hidden with fewer than two. ----
+  function gameStrip(el, o){
+    if(!el) return;
+    o=o||{};
+    const games=(o.games||[]).slice().sort((a,b)=>String(a.start||'').localeCompare(String(b.start||'')));
+    el.classList.add('gamestrip');
+    if(games.length<2){ el.hidden=true; el.innerHTML=''; return; }
+    el.innerHTML=`<span class="gs-lbl">${esc(o.label||'Games')}</span>`+games.map(g=>
+      `<button type="button" class="gs" data-g="${esc(g.key)}" aria-pressed="${g.key===o.current}"><b>${esc(g.label)}</b>`+
+      `<span>${esc(g.start? startLabel(g.start) : 'time TBA')} · ${g.listed? g.listed+' on a list' : (g.n||0)+' props'}</span></button>`).join('');
+    el.hidden=false;
+    el.querySelectorAll('.gs').forEach(b=>b.onclick=()=>{ if(o.onPick) o.onPick(b.dataset.g===o.current? '' : b.dataset.g); });
+  }
+
   // ---- nothing is certain: no chance above 99% (or below 1%) is shown, even on picks recorded before
   // the builders capped it (P_MAX in each model) ----
   const P_MAX=0.99;
@@ -1302,7 +1351,7 @@ window.PS = (function(){
   }
 
   return {teamVars, parlaySearch, parlayFinder, ticker, until, skeleton, esc, hashFor, pickHash, parsePickHash, syncHash, sharePick, toast, helpBtn, spark, verdict, icon, sheet, closeSheet, pickSheet, relatedPicks,
-          isTracked, toggleBet, renderBets, loadBets, fairOf, setFair, pxMove, pxSpark, lockBadge, lockRibbon, lockNote, startLabel, gameTime, liveUS, venues, venueName, thinPrice, cap, capPick, thinOut, getView, setView,
+          isTracked, toggleBet, renderBets, loadBets, fairOf, setFair, pxMove, pxSpark, valueBanner, gameStrip, lockBadge, lockRibbon, lockNote, startLabel, gameTime, liveUS, venues, venueName, thinPrice, cap, capPick, thinOut, getView, setView,
           watch, starBtn, renderWatchlist, filterBar, lineLadder, exchangeUrls, betCalc, parlaySlip};
 })();
 

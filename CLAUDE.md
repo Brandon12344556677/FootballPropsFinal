@@ -96,6 +96,9 @@ README.md has the full feature tour; this file is the working rules.
 - `app.js` / `app.css`: shared look and behavior for every page. Sport pages have a Simple (default) and a Pro view:
   `<html data-view>`, chosen after the 18+ check or with the header toggle. Anything new that only a regular needs
   (extra numbers, sort/filter controls, long notes) goes in Pro: class `pro-only`, or a rule in the Simple/Pro block of `app.css`.
+  Every sport page has the same top: the Value record banner (`PS.valueBanner`, in `#valueweekbar`) and the games strip
+  (`PS.gameStrip`, in `#gamestrip`, setting the filter bar's game); each template only passes its own record, rule text and games.
+  A new piece that every board shows belongs in app.js/app.css the same way, not copied into each template.
 
 ## Generated files — never edit by hand
 
