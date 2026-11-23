@@ -625,8 +625,8 @@ details.valrules>summary{cursor:pointer}
 .nflfcount{margin:0 0 10px}
 </style>
 
-<link rel="stylesheet" href="app.css?v=20261117e">
-<script src="app.js?v=20261117e"></script>
+<link rel="stylesheet" href="app.css?v=20261124a">
+<script src="app.js?v=20261124a"></script>
 <script src="/thanksgiving.js?v=20261117a"></script>
 
 <header class="apptop">
@@ -662,7 +662,7 @@ details.valrules>summary{cursor:pointer}
     <a class="refbanner group" href="./#email">📧 Free daily picks email →</a>
   </div>
 
-  <a id="valueweekbar" class="vwbar" href="#" onclick="showTab('past');return false;" hidden></a>
+  <section id="valueweekbar" class="scoreboard" hidden aria-label="How Value spots have done"></section>
 
   <div class="tabs" role="tablist">
     <button class="tab" role="tab" data-tab="week" aria-selected="true">📅 This week</button>
@@ -673,6 +673,7 @@ details.valrules>summary{cursor:pointer}
 
 <div id="page-week">
 
+  <div id="gamestrip" class="gamestrip" hidden></div>
   <div id="nflfilter" class="nflfilter"></div>
 
   <div class="panel" id="valuepanel">
@@ -1148,20 +1149,13 @@ if(WEEK.week){ $('dnweek').textContent = 'Week '+WEEK.week; $('dnweekbox').hidde
   b.hidden=true;   // the top Polymarket banner is off (each pick links to both exchanges)
   const bk=$('refbannerk'); if(bk) bk.hidden=true;   // and the Kalshi one
   const b2=$('refbanner2'); if(REFERRAL2.url){ b2.href=REFERRAL2.url; b2.textContent=REFERRAL2.text; b2.hidden=false; } else b2.hidden=true; })();
+// The Value record banner at the top (PS.valueBanner, the same on every sport page): the season record at the
+// recorded price, red when down. NFL's record carries roi and priced, so its units are roi x priced.
 (function renderValueWeek(){
-  const el=$('valueweekbar'); if(!el) return;
   const r=(typeof DB!=='undefined' && DB.record && DB.record.V) ? DB.record.V : null;
-  if(!r || !r.n || r.roi==null || !r.priced){ el.hidden=true; return; }
-  const units=r.roi*r.priced, up=units>=0, u=(up?'+':'')+units.toFixed(1);
-  const roiStr=` · ${r.roi>=0?'+':''}${Math.round(r.roi*100)}% ROI`;
-  const seas=(DB.season||'')+' season';
-  el.className='vwbar'+(up?'':' down');
-  el.innerHTML =
-    `<span class="lbl">⚡ Value spots · ${seas}</span>`+
-    `<span class="big">${up?'▲':'▼'} ${u} units</span>`+
-    `<span class="lbl">${r.hit}/${r.n} hit${roiStr}</span>`+
-    `<span class="sub">Every Value pick recorded before kickoff and graded from the box score — tap for the full record.</span>`;
-  el.hidden=false;
+  const rec=r && r.n && r.roi!=null && r.priced? Object.assign({}, r, {units:r.roi*r.priced}) : null;
+  PS.valueBanner($('valueweekbar'), {r:rec, season:(DB.season? DB.season+' season' : 'this season'),
+    rule:'Market gives it 30%+, model 15–18 points over', onRecord:()=>showTab('past')});
 })();
 (function renderSocial(){ const ig=$('social_ig'), tt=$('social_tt'), xa=$('social_x'), bar=$('socialbar'); if(!bar) return;
   const S=(typeof SOCIAL!=='undefined')?SOCIAL:{};
@@ -2090,7 +2084,8 @@ let edgeRows=[], valueRows=[], valueCands=[], lockedRows=[], edgeSort={key:'prob
    It only hides rows of each list; it never refills them (the lists are what gets recorded). */
 // (until the scan lands, this week's games still to play, so a saved game choice survives the reload)
 const FLT=PS.filterBar($('nflfilter'), {key:'nfl', options:{games:(WEEK.games||[]).filter(g=>g && g.id && !g.final).map(g=>[g.id, g.away+' @ '+g.home]), stats:[]}, onChange:()=>{
-  if(edgeRows.length || lockedRows.length){ renderEdges(); renderValue(); } }});
+  if(edgeRows.length || lockedRows.length){ renderEdges(); renderValue(); }
+  if(typeof renderGames==='function') renderGames(); }});
 // the price a row is filtered on: the live best price, else the one it was listed at (fractions)
 function fltPrice(r){ if(r.locked) return r.price; const lv=livePriceFor(r); return lv!=null? lv : (r.vprice!=null? r.vprice : r.price); }
 function fltPass(r){ return FLT.test({gid:(r.game||{}).gid, sk:r.sk, side:r.side, price:fltPrice(r), pid:r.pl? r.pl.id : '', sport:'nfl'}); }
@@ -2102,6 +2097,17 @@ function setFilterOptions(){
     .map(g=>[g.gid, g.away+' @ '+g.home]);
   const sks=[...new Set(all.map(r=>r.sk))].filter(Boolean).sort((a,b)=>statLabel(a).localeCompare(statLabel(b)));
   FLT.setOptions({games:gs, stats:sks.map(k=>[k, statLabel(k)])});
+  renderGames();
+}
+// ---- The games strip (PS.gameStrip, the same on every sport page): one chip per game still to play this week,
+// with how many of its props are Value spots (else how many props the board scanned for it); a tap sets the filter
+// bar's game and a second tap clears it. edgeRows is every scanned prop, not only the Top 25, so it only counts as props. ----
+function renderGames(){
+  const games=new Map(), add=g=>{ if(!games.has(g.gid)) games.set(g.gid, {key:g.gid, label:g.away+' @ '+g.home, start:g.start||g.date||'', n:0, listed:0}); return games.get(g.gid); };
+  new Set(lockedRows.concat(edgeRows)).forEach(r=>{ const g=r.game; if(g && g.gid) add(g).n++; });
+  valueRows.forEach(r=>{ const g=r.game; if(g && g.gid) add(g).listed++; });
+  PS.gameStrip($('gamestrip'), {games:[...games.values()], current:FLT.get().game,
+    onPick:k=>{ const f=FLT.get(); f.game=k; FLT.set(f); }});
 }
 // a list the filter emptied: say so, with a one-tap Clear
 function filteredOut(el, what){
