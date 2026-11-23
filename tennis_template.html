@@ -352,6 +352,8 @@ footer b{color:var(--ink)}
 .sliptext{white-space:pre-wrap;font-size:12px;background:var(--surface-2);padding:10px;border-radius:8px;max-height:220px;overflow:auto}
 .panel.collapsible > .mkthead, .panel.collapsible > h2:first-child{cursor:pointer;user-select:none}
 .panel.collapsible .chev{display:inline-block;margin-left:8px;font-size:.72em;color:var(--muted);transition:transform .15s ease;vertical-align:middle}
+.app .pc-foot .psstar{margin-left:auto;margin-right:-8px}   /* a pick card's star sits beside Details */
+.app .pc-foot .lockbadge{font-size:0;gap:0;padding:4px 8px} .app .pc-foot .lockbadge .ic{width:14px;height:14px}   /* the ribbon above says Locked; in the footer it's just the lock, so the price keeps its room */
 .panel.collapsed .chev{transform:rotate(-90deg)}
 .panel.collapsed > *:not(:first-child){display:none!important}
 .panel.collapsed{padding-bottom:14px}
@@ -1018,10 +1020,9 @@ function pickTable(rows, sort){
     h+=`<article class="pickcard ${tier}${r.lk?' locked':''}" style="${PS.teamVars(SPORT_KEY, r.team)}">`+(r.lk? PS.lockRibbon(r.lk) : '')+
       `<div class="pc-top"><span class="av">${esc(initials(r.name))}</span>`+
         `<div class="pc-who"><b>${esc(r.name)}</b><span><span class="tbadge">${esc(r.team)}</span>vs ${esc(r.opp)}</span>${r.start? PS.gameTime(r.start) : ''}</div>`+
-        PS.starBtn(SPORT_KEY, {pid:r.pid, name:r.name, team:r.team})+
         `<div class="pc-prob"><div class="ring" style="--p:${pv}"><b>${pv}<small>%</small></b></div><span title="${esc(r.event)} · ${esc(r.round)} · ${esc(SURF[r.surface]||'')}">chance</span></div></div>`+
       `<div class="pc-bet"><span class="leantag ${esc(r.bet.side)}">${esc(r.bet.side)}</span><b>${esc(r.bet.line)}</b><span>${esc(r.bet.text || r.statText)}</span>${sp? PS.spark(sp.vals, sp.line, sp.side) : ''}</div>`+
-      `<div class="pc-foot"><span class="pc-price livecell">${priceCell(r)}</span>${r.lk? PS.lockBadge(r.lk) : ''}<button class="edgeload" type="button" data-i="${idx}">Details</button></div>`+
+      `<div class="pc-foot"><span class="pc-price livecell">${priceCell(r)}</span>${r.lk? PS.lockBadge(r.lk) : ''}${PS.starBtn(SPORT_KEY, {pid:r.pid, name:r.name, team:r.team})}<button class="edgeload" type="button" data-i="${idx}">Details</button></div>`+
     `</article>`;
   });
   return h+`</div>`+PS.lockNote(rows.some(r=>r.lk)); }
@@ -1402,6 +1403,25 @@ $('psearch').addEventListener('input', e => searchPlayers(e.target.value));
   [['recT','T'],['recV','V']].forEach(([id,k])=>{ const el=$(id); if(!el) return; const r=R[k];
     if(!r||!r.n){ el.innerHTML='· live record: no graded picks yet — <a href="#past" data-tab-go="past">Past picks</a>'; return; }
     el.innerHTML=`· <b>live record ${r.hit}/${r.n} (${Math.round(100*r.hit/r.n)}%)</b>${r.priced? `, ${r.units>=0?'+':'−'}${Math.abs(r.units).toFixed(1)}u` : ''} — <a href="#past" data-tab-go="past">details</a>`; }); })();
+// Collapsible panels (the ▾ on each header), remembered per panel on this device.
+(function(){
+  ['page-week','page-player','page-tools'].forEach(pid=>{ const pg=$(pid); if(!pg) return;
+    pg.querySelectorAll('.panel').forEach(panel=>{
+      const head=panel.firstElementChild; if(!head) return;
+      const h2=head.matches('h2')?head:head.querySelector('h2'); if(!h2) return;
+      const label=panel.id||h2.textContent.trim().slice(0,24);
+      panel.classList.add('collapsible');
+      const chev=document.createElement('span'); chev.className='chev'; chev.textContent='▾'; chev.setAttribute('aria-hidden','true'); h2.appendChild(chev);
+      const key='psl_'+SPORT_NAME.toLowerCase()+'_open_'+label;
+      let open; try{ const s=localStorage.getItem(key); open = s!=null? s==='1' : true; }catch(e){ open=true; }
+      panel.classList.toggle('collapsed', !open);
+      head.setAttribute('role','button'); head.setAttribute('tabindex','0'); head.setAttribute('aria-expanded', String(open));
+      const set=v=>{ open=v; panel.classList.toggle('collapsed',!open); head.setAttribute('aria-expanded',String(open)); try{localStorage.setItem(key,open?'1':'0');}catch(e){} };
+      head.addEventListener('click',e=>{ if(e.target.closest('button,input,select,a,label')) return; set(!open); });
+      head.addEventListener('keydown',e=>{ if((e.key==='Enter'||e.key===' ')&&!e.target.closest('button,input,select,a,label')){ e.preventDefault(); set(!open); } });
+    });
+  });
+})();
 (function(){ const b=$('edgescan'); if(!b) return;
   b.onclick=()=>{ const st=$('edgestatus'); if(st) st.textContent='Scanning the board…'; loadPicks(); }; })();
 

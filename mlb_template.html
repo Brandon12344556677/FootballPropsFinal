@@ -352,6 +352,8 @@ footer b{color:var(--ink)}
 .sliptext{white-space:pre-wrap;font-size:12px;background:var(--surface-2);padding:10px;border-radius:8px;max-height:220px;overflow:auto}
 .panel.collapsible > .mkthead, .panel.collapsible > h2:first-child{cursor:pointer;user-select:none}
 .panel.collapsible .chev{display:inline-block;margin-left:8px;font-size:.72em;color:var(--muted);transition:transform .15s ease;vertical-align:middle}
+.app .pc-foot .psstar{margin-left:auto;margin-right:-8px}   /* a pick card's star sits beside Details */
+.app .pc-foot .lockbadge{font-size:0;gap:0;padding:4px 8px} .app .pc-foot .lockbadge .ic{width:14px;height:14px}   /* the ribbon above says Locked; in the footer it's just the lock, so the price keeps its room */
 .panel.collapsed .chev{transform:rotate(-90deg)}
 .panel.collapsed > *:not(:first-child){display:none!important}
 .panel.collapsed{padding-bottom:14px}
@@ -1396,10 +1398,9 @@ function pickTable(rows, sort){
     h+=`<article class="pickcard ${tier}${r.lk?' locked':''}" style="${PS.teamVars(SPORT_KEY, r.team)}">`+(r.lk? PS.lockRibbon(r.lk) : '')+
       `<div class="pc-top"><span class="av">${esc(initials(r.name))}</span>`+
         `<div class="pc-who"><b>${esc(r.name)}</b><span><span class="tbadge">${esc(r.team)}</span>${r.team===r.game.home? "vs "+esc(r.game.away) : r.team===r.game.away? "@ "+esc(r.game.home) : esc(r.game.away)+" @ "+esc(r.game.home)}</span>${r.game && r.game.start? PS.gameTime(r.game.start) : ''}</div>`+
-        PS.starBtn(SPORT_KEY, {pid:r.pid, name:r.name, team:r.team})+
         `<div class="pc-prob"><div class="ring" style="--p:${pv}"><b>${pv}<small>%</small></b></div><span title="80% range ${Math.round(r.lo*100)}–${Math.round(r.hi*100)}%, from ${r.n} games">chance</span></div></div>`+
       `<div class="pc-bet"><span class="leantag ${esc(r.side)}">${esc(r.side)}</span><b>${r.line}</b><span>${esc(r.statText)}</span>${byId[r.pid]? PS.spark(valuesOf(byId[r.pid], r.sk), r.line, r.side) : ''}</div>`+
-      `<div class="pc-foot"><span class="pc-price livecell">${priceCell(r)}</span>${r.lk? PS.lockBadge(r.lk) : ''}<button class="edgeload" type="button" data-i="${idx}">Details</button></div>`+
+      `<div class="pc-foot"><span class="pc-price livecell">${priceCell(r)}</span>${r.lk? PS.lockBadge(r.lk) : ''}${PS.starBtn(SPORT_KEY, {pid:r.pid, name:r.name, team:r.team})}<button class="edgeload" type="button" data-i="${idx}">Details</button></div>`+
     `</article>`;
   });
   return h+`</div>`+PS.lockNote(rows.some(r=>r.lk)); }
