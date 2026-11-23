@@ -71,7 +71,9 @@ STRATEGIES = [   # (key, label, sport or None, test)
     ("nfl-top", "NFL Top 25 Surest", "nfl", lambda p: "T" in p["lists"]),
     ("mlb-value", "MLB Value spots (unders, the current rule)", "mlb", lambda p: "V" in p["lists"] and p["side"] == "under"),
     ("mlb-top", "MLB Top 25 Surest", "mlb", lambda p: "T" in p["lists"]),
-    ("nba-value", "NBA Value spots", "nba", lambda p: "V" in p["lists"]),
+    ("nba-value", "NBA Value spots (overs 30-60¢, 20+ games: the current rule)", "nba",
+     lambda p: "V" in p["lists"] and p["side"] == "over" and (p.get("neff") or 0) >= 20 and 0.30 <= p["pr"] < 0.60),
+    ("nba-value-all", "NBA Value spots, every pick incl. the old rule", "nba", lambda p: "V" in p["lists"]),
     ("nba-top", "NBA Top 25 Surest", "nba", lambda p: "T" in p["lists"]),
     ("nba-unders", "NBA unders", "nba", lambda p: p["side"] == "under"),
     ("nba-overs", "NBA overs", "nba", lambda p: p["side"] == "over"),
@@ -169,6 +171,7 @@ def graded(sport, doc):
         out.append({"sport": sport, "day": day, "pr": pr, "win": p["res"] == "hit", "side": p.get("side") or "over",
                     "stat": p.get("stat"), "line": p.get("line"), "lists": p.get("lists") or "",
                     "p0": p0, "prob": p.get("prob"), "pos": p.get("pos"), "tour": p.get("tour"),   # for the private rules' filters
+                    "neff": p.get("neff"),
                     "pc": pc, "mv": None if pc is None or p0 is None else round((pc - p0) * 100)})   # whole cents
     return out
 

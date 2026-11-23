@@ -92,7 +92,7 @@ class Builders(unittest.TestCase):
             build_nba.injury_holds(ps, by_pid, box)
         self.assertEqual([p["hd"] for p in ps], ["Star Guard (day-to-day)", None])
         build_nba.assign_lists(ps)
-        self.assertEqual([p["lists"] for p in ps], ["", "TV"])
+        self.assertEqual([p["lists"] for p in ps], ["", "T"])   # 78c is past NBA Value's 30-60c band (since Nov 23, 2026)
 
     def test_nhl_goalie(self):
         by_pid = {"g1": {"n": "Starter", "t": "BOS", "p": "G"}, "g2": {"n": "Backup", "t": "BOS", "p": "G"},

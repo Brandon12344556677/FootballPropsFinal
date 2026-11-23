@@ -560,6 +560,30 @@ input::placeholder{color:#b7c0cc}
 .tile .pct,.tile.hi .pct,.tile.mid .pct,.tile.lo .pct,.tile.model .pct,.tile.model.hi .pct,.tile.model.mid .pct,.tile.model.lo .pct,
 .edgeval,.edgeval.pos,.edgeval.neg,.up,.down,.parlaysum .big.hit{color:#fff}
 table td,table th,thead th,tbody td,.edgetbl td,.edgetbl th,.caltbl td,.caltbl th,.edgeload,.mktuse{color:#fff}
+
+/* ---- the scoreboard: Value spots' real season record as one banner, red when down, the old Value rule named ---- */
+.scoreboard{display:grid;grid-template-columns:1fr;gap:8px;margin:14px 0 4px}
+.scoreboard .sb{background:var(--ps-surface);border:1px solid var(--ps-line);border-radius:var(--ps-r-lg);padding:14px 18px;
+  display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 16px;text-decoration:none;color:inherit;min-height:var(--ps-tap)}
+.scoreboard .sb-k{flex-basis:100%}
+.scoreboard .sb:hover{border-color:rgba(var(--ps-green-rgb),.45)}
+.scoreboard .sb-k{font-size:var(--ps-fs-xs);font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--ps-muted)}
+.scoreboard .sb-v{font-size:var(--ps-fs-2xl);font-weight:800;line-height:1.1;color:var(--ps-green);font-variant-numeric:tabular-nums}
+.scoreboard .sb.dn .sb-v{color:var(--ps-red)}
+.scoreboard .sb-s{font-size:var(--ps-fs-sm);color:var(--ps-soft)}
+.scoreboard .sb-n{font-size:var(--ps-fs-xs);color:var(--ps-muted)}
+.scoreboard .sb-more{grid-column:1/-1;font-size:var(--ps-fs-sm);color:var(--ps-muted);margin:0}
+.scoreboard .sb-more a{color:var(--ps-green)}
+@media(max-width:560px){.scoreboard .sb{padding:12px 14px}.scoreboard .sb-n{flex-basis:100%}}
+/* ---- tonight's games: one chip per game, tap to show only its picks (the filter bar's game) ---- */
+.gamestrip{display:flex;gap:8px;overflow-x:auto;padding:4px 0 10px;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+.gamestrip::-webkit-scrollbar{display:none}
+.gamestrip .gs{flex:none;display:flex;flex-direction:column;align-items:flex-start;gap:2px;min-height:var(--ps-tap);padding:8px 14px;
+  border-radius:var(--ps-r-md);border:1px solid var(--ps-line);background:var(--ps-surface);color:var(--ps-text);cursor:pointer;font:inherit;text-align:left}
+.gamestrip .gs b{font-size:var(--ps-fs-md)}
+.gamestrip .gs span{font-size:var(--ps-fs-xs);color:var(--ps-muted)}
+.gamestrip .gs[aria-pressed="true"]{border-color:var(--ps-green);background:rgba(var(--ps-green-rgb),.12)}
+.gamestrip .gs-lbl{flex:none;align-self:center;font-size:var(--ps-fs-xs);font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--ps-muted);padding-right:4px}
 </style>
 
 <style>
@@ -666,7 +690,7 @@ details.valrules>summary{cursor:pointer}
     <a class="refbanner group" href="./#email">📧 Free daily picks email →</a>
   </div>
 
-  <a id="valueweekbar" class="vwbar" href="#" hidden></a>
+  <section id="valueweekbar" class="scoreboard" hidden aria-label="How NBA Value spots have done"></section>
 
   <div class="tabs" role="tablist">
     <button class="tab" role="tab" data-tab="week" aria-selected="true">📅 Today</button>
@@ -676,9 +700,10 @@ details.valrules>summary{cursor:pointer}
   </div>
 
 <div id="page-week">
+  <div id="gamestrip" class="gamestrip" hidden></div>
   <div id="pickfilter"></div>
   <div class="panel" id="valuepanel" hidden>
-    <div class="mkthead"><h2>⚡ Value spots<button type="button" class="qhelp hq" data-help="value" aria-expanded="false" aria-label="What are Value spots?"><span class="qi" aria-hidden="true">?</span></button></h2><span class="mktmuted">market gives it 30%+, model is 15+ points better — overs and unders both</span><span class="mktmuted" id="recV"></span></div>
+    <div class="mkthead"><h2>⚡ Value spots<button type="button" class="qhelp hq" data-help="value" aria-expanded="false" aria-label="What are Value spots?"><span class="qi" aria-hidden="true">?</span></button></h2><span class="mktmuted">overs only: market gives it 30–60%, model is 15+ points better, 20+ games of history</span><span class="mktmuted" id="recV"></span></div>
     <details class="valrules">
       <summary class="vrhead">What counts as a value spot — both rules have to be true</summary>
       <ol class="vrlist">
@@ -879,7 +904,7 @@ details.valrules>summary{cursor:pointer}
     <div class="mktmuted" style="margin:-4px 0 12px;display:flex;gap:8px 18px;align-items:center;flex-wrap:wrap;font-size:13px;line-height:1.5">
       <span style="text-transform:uppercase;letter-spacing:.6px;font-weight:700;font-family:var(--dispers)">Lists key:</span>
       <span><span class="listchip T">T</span> = Top 25 Surest — the 25 highest model chances with a live Polymarket or Kalshi price and $25+ offered near it, one line per player-prop, none the model is 20+ points off the market on</span>
-      <span><span class="listchip V">V</span> = Value — the cheaper of Polymarket and Kalshi priced it at 30¢+ and the model was 15+ points higher, over <i>or</i> under</span>
+      <span><span class="listchip V">V</span> = Value — an over the cheaper of Polymarket and Kalshi priced at 30–60¢ with the model 15+ points higher and 20+ games of history (since Nov 23, 2026; older Value picks, unders included, show unlisted here and apart on the Record page)</span>
     </div>
     <div class="chartwrap"><table class="edgetbl" id="pktbl"></table></div>
     <div style="margin-top:10px;display:flex;gap:10px;align-items:center;flex-wrap:wrap"><button id="pkmore" class="btn ghost" hidden>Show more</button><button id="pkall" class="btn ghost" hidden>Show all</button><span class="mktmuted" id="pkcountb"></span></div>
@@ -1376,11 +1401,27 @@ function fltOptions(){ const up=upcomingPicks().filter(p=>p.prob!=null), games=n
 function syncFilter(){ const el=$('pickfilter'); if(!el || PICKS===null) return;
   el.hidden=!upcomingPicks().some(p=>p.prob!=null);   // nothing on the board: no bar
   const o=fltOptions(), sig=JSON.stringify(o);
-  if(!FLT){ FLT=PS.filterBar(el, {key:SPORT_KEY, options:o, onChange:()=>{ renderEdges(); renderValue(); }}); fltSig=sig; }
+  if(!FLT){ FLT=PS.filterBar(el, {key:SPORT_KEY, options:o, onChange:()=>{ renderEdges(); renderValue(); renderGames(); }}); fltSig=sig; }
   else if(sig!==fltSig){ fltSig=sig; FLT.setOptions(o); } }   // redrawn only when the games or props change (a live price refresh would close an open menu)
 // The note when the filter hides every pick on a list, with a one-tap Clear.
 function fltEmpty(what){ return `<p class="mktnote">None ${what} match your filters. <button type="button" class="btn ghost fltclear">Clear filters</button></p>`; }
 function wireFltClear(el){ el.querySelectorAll('.fltclear').forEach(b=>b.onclick=()=>{ if(FLT) FLT.clear(); }); }
+// ---- Tonight's games: one chip per upcoming game (start time, how many of its picks are on a list); a tap sets the
+// filter bar's game, a second tap clears it. Hidden with fewer than two games. ----
+function renderGames(){ const el=$('gamestrip'); if(!el || PICKS===null) return;
+  const games=new Map();
+  upcomingPicks().filter(p=>p.prob!=null).forEach(p=>{ const g=gameOf(p), k=fltGame(g);
+    if(!games.has(k)) games.set(k, {g, n:0, listed:0});
+    const e=games.get(k); e.n++; if(/[TV]/.test(p.lists||'')) e.listed++; });
+  const rows=[...games.entries()].sort((a,b)=>String(a[1].g.start||'').localeCompare(String(b[1].g.start||'')));
+  if(rows.length<2){ el.hidden=true; el.innerHTML=''; return; }
+  const cur=FLT? FLT.get().game : '';
+  el.innerHTML=`<span class="gs-lbl">Games</span>`+rows.map(([k,e])=>
+    `<button type="button" class="gs" data-g="${esc(k)}" aria-pressed="${k===cur}"><b>${esc(e.g.away)} @ ${esc(e.g.home)}</b>`+
+    `<span>${esc(e.g.start? PS.startLabel(e.g.start) : 'time TBA')} · ${e.listed? e.listed+' on a list' : e.n+' props'}</span></button>`).join('');
+  el.hidden=false;
+  el.querySelectorAll('.gs').forEach(b=>b.onclick=()=>{ if(!FLT) return; const f=FLT.get(); f.game= f.game===b.dataset.g? '' : b.dataset.g; FLT.set(f); });
+}
 function sortRows(rows, key, dir){ return [...rows].sort((a,b)=>{
   if(key==='matchup') return dir*((a.game.away+a.game.home).localeCompare(b.game.away+b.game.home));
   if(['name','statText','side'].includes(key)) return dir*((''+a[key]).localeCompare(''+b[key]));
@@ -1548,9 +1589,17 @@ let PICKS=null;
 // First load: nba_picks_recent.json (pending picks plus the latest results, written by build_today.py).
 // The full history loads only when the Past tab opens; with no recent file, the full one loads instead.
 let PICKS_FULL=false, fullPicksLoading=false;
+// Value spots are overs at 30-60c with 20+ games of history (build_nba.value_fits, since Nov 23, 2026): a Value pick
+// recorded under the old rule shows as an unlisted prop here, so Past picks and its profit follow the current rule.
+function valueRule(p){
+  const fits=p.side==='over' && (p.neff||0)>=20 && p.price!=null && p.price>=0.30 && p.price<0.60;
+  if(!fits && (p.lists||'').includes('V')) p.lists=p.lists.replace('V','');
+  return p;
+}
 function setPicks(d, full){
   if(!d||!d.picks){ PICKS=PICKS||[]; } else { const cols=d.cols; PICKS=d.picks.map(row=>PS.capPick(Object.fromEntries(cols.map((c,i)=>[c,row[i]]))))
-    .filter(p=>!PS.thinOut(p, {})); }      // ruled out only for a thin market: never recommended
+    .filter(p=>!PS.thinOut(p, {}))      // ruled out only for a thin market: never recommended
+    .map(valueRule); }
   if(full) PICKS_FULL=true;
   renderPickViews();
 }
@@ -1564,7 +1613,7 @@ function loadFullPicks(){ if(PICKS_FULL||fullPicksLoading) return; fullPicksLoad
     .catch(()=>{ PICKS=PICKS||[]; PICKS_FULL=true; renderPickViews(); }).finally(()=>{ fullPicksLoading=false; });
 }
 let upSig=-1;
-function renderPickViews(){ syncFilter(); paintVerdict(); renderEdges(); renderValue(); renderValueWeek(); generateDigest(); renderPast(); renderApTeams(); renderWatch(); PS.ticker(tickerItems()); upSig=upcomingPicks().length; }
+function renderPickViews(){ syncFilter(); renderGames(); paintVerdict(); renderEdges(); renderValue(); renderValueWeek(); generateDigest(); renderPast(); renderApTeams(); renderWatch(); PS.ticker(tickerItems()); upSig=upcomingPicks().length; }
 // Once a minute: when a game starts, its picks drop off the boards without a reload.
 setInterval(()=>{ if(PICKS!==null && !document.hidden && upcomingPicks().length!==upSig) renderPickViews(); }, 60000);
 function initPicks(){ renderPast(); loadFullPicks(); }   // Past tab opened: load the full history
@@ -2025,30 +2074,31 @@ render();
     });
   });
 })();
-// Value spots banner: the season's units record once Value picks are graded;
-// before that, a count of the Value spots live on the board; hidden if neither.
+// The scoreboard at the top: Value spots only (the current rule: overs, 30-60c, 20+ games), with its season record
+// at the recorded price, red when it's down (Top 25's record stays on its own panel and the Past picks tab); the Value picks made under the old rule are named with
+// their units and sit on the Record page. Before anything is graded: how many Value spots are live; hidden if neither.
 function renderValueWeek(){
   const el=$('valueweekbar'); if(!el) return;
-  const r=(DB.record||{}).V;
-  if(r && r.n && r.priced){
-    const units=+r.units||0, up=units>=0, u=(up?'+':'')+units.toFixed(1), roi=units/r.priced;
-    el.className='vwbar'+(up?'':' down');
-    el.innerHTML =
-      `<span class="lbl">⚡ Value spots · this season</span>`+
-      `<span class="big">${up?'▲':'▼'} ${u} units</span>`+
-      `<span class="lbl">${r.hit}/${r.n} hit · ${roi>=0?'+':''}${Math.round(roi*100)}% ROI</span>`+
-      `<span class="sub">Every Value pick recorded before ${TIPOFF} and graded from the box score — tap for the full record.</span>`;
-    el.onclick=()=>{ showTab('past'); return false; };
+  const R=DB.record||{}, tile=(r, name, extra)=>{
+    if(!r || !r.n) return '';
+    const units=+r.units||0, up=units>=0, roi=r.priced? units/r.priced : 0;
+    return `<a class="sb${up?'':' dn'}" href="#past"><span class="sb-k">${name} · this season</span>`+
+      `<span class="sb-v">${up?'+':'−'}${Math.abs(units).toFixed(1)}u</span>`+
+      `<span class="sb-s">${r.hit}/${r.n} hit (${Math.round(100*r.hit/r.n)}%) · ${roi>=0?'+':''}${(roi*100).toFixed(1)}% return</span>`+
+      (extra? `<span class="sb-n">${extra}</span>` : '')+`</a>`;
+  };
+  const pre=R.Vpre, preNote=pre && pre.n? `Value under the old rule (unders and other prices, to Nov 23): ${(pre.units>=0?'+':'−')+Math.abs(+pre.units||0).toFixed(1)}u on ${pre.n} picks, shown on the <a href="/record.html">Record page</a>.` : '';
+  const html=tile(R.V, '⚡ Value spots', 'Overs at 30–60¢, model 15+ points over, 20+ games');
+  if(html){
+    el.innerHTML=html+`<p class="sb-more">1 unit on every pick at the price it was recorded at, graded from the box score. ${preNote} <a href="/record.html">The full record →</a></p>`;
+    el.querySelectorAll('a.sb').forEach(a=>a.onclick=()=>{ showTab('past'); return false; });
     el.hidden=false; return;
   }
   const live=PICKS ? listRows('V').length : 0;
   if(!live){ el.hidden=true; return; }
-  el.className='vwbar';
-  el.innerHTML =
-    `<span class="lbl">⚡ Value spots</span>`+
-    `<span class="big">${live} live now</span>`+
-    `<span class="sub">Props where the model's chance clearly beats the market price — tap to see them.</span>`;
-  el.onclick=()=>{ showTab('week'); const p=$('valuepanel'); if(p) p.scrollIntoView({behavior:'smooth'}); return false; };
+  el.innerHTML=`<a class="sb" href="#valuepanel"><span class="sb-k">⚡ Value spots</span><span class="sb-v">${live} live now</span>`+
+    `<span class="sb-s">Overs where the model's chance clearly beats the market price.</span></a>`;
+  el.querySelector('a.sb').onclick=()=>{ showTab('week'); const p=$('valuepanel'); if(p) p.scrollIntoView({behavior:'smooth'}); return false; };
   el.hidden=false;
 }
 renderValueWeek();

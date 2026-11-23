@@ -144,7 +144,7 @@ class Window(unittest.TestCase):
     def test_weekly_series_ends_on_the_total(self):
         ps = [pick(date=(datetime.date(2026, 9, 1) + datetime.timedelta(days=3 * i)).isoformat(),
                    price=0.3 + 0.02 * (i % 20), res="hit" if i % 3 else "miss") for i in range(40)]
-        b = br.sport_block("nba", doc(*ps), "2026-10-18")["lists"][0]
+        b = br.sport_block("nhl", doc(*ps), "2026-10-18")["lists"][0]   # a board whose Value rule takes every recorded pick
         days = [w[0] for w in b["weeks"]]
         self.assertEqual(days, sorted(set(days)))
         self.assertTrue(all(datetime.date.fromisoformat(x).weekday() == 0 for x in days))
