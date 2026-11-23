@@ -577,9 +577,14 @@ details.plpast>summary:focus-visible{outline:2px solid var(--accent);outline-off
     <p class="r4-unit"><label for="r4PickMonth">Month</label> <select id="r4PickMonth"></select> <span class="hint" id="r4PickSum"></span></p>
     <div class="edwrap"><table class="edges"><thead><tr><th>Day</th><th>Pick</th><th class="n">Price</th><th class="n">Stake</th><th>Result</th><th class="n">Units</th></tr></thead><tbody id="r4Picks"></tbody></table></div>
     <h3 class="subh">Today's picks <small class="hint" id="r4PostWhen"></small></h3>
+    <p class="r4-note"><b>Buy as close to the game's start as you can.</b> These picks' prices have tended to drop before the start (NFL edge picks fall about 8¢ from first listing to the lock), so buying in the morning usually means paying more than the record does. Wait until shortly before the start, then buy at the price shown or lower, and never above "don't pay over".</p>
     <p class="hint" id="r4PostNote"></p>
     <p class="r4-unit"><label for="r4Unit">1 unit =</label> $<input id="r4Unit" type="number" min="0" step="1" inputmode="decimal" placeholder="10"> <span class="hint">stakes are shown in dollars too (kept on this device only)</span></p>
     <div id="r4Posted"><p class="empty">Loading…</p></div>
+    <h3 class="subh">Today's bets at the lock <small class="hint">(the ones the monthly record counts)</small></h3>
+    <p class="hint" id="r4Plan"></p>
+    <div class="edwrap"><table class="edges"><thead><tr><th>Bet</th><th>Why</th><th class="n">Price</th><th class="n">Model</th><th class="n">Stake</th><th class="n">To win</th><th>Live</th><th>Result</th></tr></thead><tbody id="r4Today"></tbody></table></div>
+    <p class="hint" id="r4TodayLive"></p>
     <details class="plpast"><summary><span>Past posted picks</span><span class="label" id="r4PostPastN"></span></summary>
     <div class="edwrap"><table class="edges"><thead><tr><th>Day</th><th>Pick</th><th class="n">Posted at</th><th class="n">Stake</th><th>Result</th><th class="n">Units</th></tr></thead><tbody id="r4PostPast"></tbody></table></div>
     </details>
@@ -607,9 +612,6 @@ details.plpast>summary:focus-visible{outline:2px solid var(--accent);outline-off
     <div class="edwrap"><table class="edges vwt"><thead><tr><th></th><th class="n">Posted picks</th><th class="n">At lock, live</th><th class="n">Backtest</th><th class="n">Since the backtest began</th></tr></thead><tbody id="r4Cmp"></tbody></table></div>
     <h3 class="subh">By sport</h3>
     <div class="edwrap"><table class="edges"><thead><tr><th>Sport</th><th class="n">Live bets</th><th class="n">Live staked</th><th class="n">Live units</th><th class="n">Live return</th><th class="n">Backtest bets</th><th class="n">Backtest units</th><th class="n">Backtest return</th></tr></thead><tbody id="r4Sport"></tbody></table></div>
-    <h3 class="subh">Today, at the lock <small class="hint">(the tested comparison)</small></h3>
-    <p class="hint" id="r4Plan"></p>
-    <div class="edwrap"><table class="edges"><thead><tr><th>Bet</th><th>Why</th><th class="n">Price</th><th class="n">Model</th><th class="n">Stake</th><th class="n">To win</th><th>Result</th></tr></thead><tbody id="r4Today"></tbody></table></div>
     <details class="plpast"><summary><span>What qualified today, and what didn't</span><span class="label" id="r4SegN"></span></summary>
     <div class="edwrap"><table class="edges"><thead><tr><th>Segment</th><th class="n">Graded picks</th><th class="n">Game days</th><th class="n">Return</th><th class="n">Low end</th><th>Bet today?</th></tr></thead><tbody id="r4Segs"></tbody></table></div>
     </details>
@@ -1703,10 +1705,11 @@ details.plpast>summary:focus-visible{outline:2px solid var(--accent);outline-off
       h:'hits', tb:'total bases', k:'strikeouts', hr:'home runs', rbi:'RBIs', pbb:'walks allowed', ml:'to win the match', set:'set', games:'total games', spread:'game spread', exact:'exact score'};
     const bet=b=>`${esc(SPN[b.sport]||b.sport)} · <b>${esc(b.player)}</b> ${esc(b.side)} ${esc(b.line)} ${esc(STN[b.stat]||b.stat)}`;
     const tb=(d.bets||[]).filter(b=>b.day===today);
-    $('r4Today').innerHTML= (tb.length? tb.map(b=>`<tr><td>${bet(b)}</td><td><small>${esc((seg[b.seg]||{}).label||b.seg)}</small></td><td class="n">${c(b.price)}</td><td class="n">${Math.round(b.prob*100)}%</td>`+
-      `<td class="n">${b.stake.toFixed(2)}u</td><td class="n">+${(b.stake*(1-b.price)/b.price).toFixed(2)}u</td><td>${b.res? RES[b.res]+(b.pnl? ` <small>${u(b.pnl)}</small>` : '') : 'Pending'}</td></tr>`).join('')+
-      `<tr><td colspan="4"><b>Today, ${tb.length} bet${tb.length===1?'':'s'}</b></td><td class="n"><b>${tb.reduce((a,b)=>a+b.stake,0).toFixed(2)}u</b></td><td colspan="2"></td></tr>`
-      : `<tr class="ed-wait"><td colspan="7">${ok.length? 'No bets yet today: they are made as games lock.' : 'No bets today.'}</td></tr>`);
+    $('r4Today').innerHTML= (tb.length? tb.map((b,i)=>`<tr class="pl-card" data-pl="${i}"><td>${bet(b)}</td><td><small>${esc((seg[b.seg]||{}).label||b.seg)}</small></td><td class="n">${c(b.price)}</td><td class="n">${Math.round(b.prob*100)}%</td>`+
+      `<td class="n">${b.stake.toFixed(2)}u</td><td class="n">+${(b.stake*(1-b.price)/b.price).toFixed(2)}u</td><td data-leg="0"><span class="pl-live">${b.start? '' : '<small>no game time</small>'}</span></td><td>${b.res? RES[b.res]+(b.pnl? ` <small>${u(b.pnl)}</small>` : '') : 'Pending'}</td></tr>`).join('')+
+      `<tr><td colspan="4"><b>Today, ${tb.length} bet${tb.length===1?'':'s'}</b></td><td class="n"><b>${tb.reduce((a,b)=>a+b.stake,0).toFixed(2)}u</b></td><td colspan="3"></td></tr>`
+      : `<tr class="ed-wait"><td colspan="8">${ok.length? 'No bets yet today: they are made as games lock.' : 'No bets today.'}</td></tr>`);
+    if(window.psaParlayLive) window.psaParlayLive.track(tb.map(b=>({legs: [b], res: b.res})), {root: 'r4Today', note: 'r4TodayLive'});   // live box scores (parlaylive.js)
     $('r4SegN').textContent= plan.length? `${ok.length} of ${plan.length}` : '';
     $('r4Segs').innerHTML= plan.length? plan.slice().sort((a,b)=>b.roi-a.roi).map(p=>`<tr><td>${esc(p.label)}</td><td class="n">${p.n}</td><td class="n">${p.days}</td><td class="n ${cls(p.roi)}">${pct(p.roi)}</td><td class="n ${cls(p.lo)}">${pct(p.lo)}</td><td>${p.ok? '<span class="chip do">Yes</span>' : '<span class="chip">No</span>'}</td></tr>`).join('')
       : `<tr class="ed-wait"><td colspan="6">No plan yet today.</td></tr>`;
