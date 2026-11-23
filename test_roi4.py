@@ -164,13 +164,15 @@ class MonthTest(unittest.TestCase):
         def b(day, res, stake=1.0, k="x"):
             return {"day": day, "res": res, "stake": stake, "price": 0.5, "sport": "nfl", "key": day + k,
                     "pnl": stake if res == "hit" else -stake}
-        bets = [b("2026-10-30", "hit", 3), b("2026-10-31", "hit", 2), b("2026-11-02", "miss", 2), b("2026-11-08", "hit", 1)]
+        bets = [b("2026-10-30", "hit", 3), b("2026-10-31", "hit", 2), b("2026-11-02", "miss", 2), b("2026-11-08", "hit", 1),
+                b("2026-12-01", "hit", 1), b("2026-12-02", "miss", 0.9)]
         s = roi4.stats(bets)
-        self.assertEqual([m["month"] for m in s["monthly"]], ["2026-10", "2026-11"])
-        oct_, nov = s["monthly"]
+        self.assertEqual([m["month"] for m in s["monthly"]], ["2026-10", "2026-11", "2026-12"])
+        oct_, nov, dec = s["monthly"]
         self.assertEqual((oct_["pnl"], oct_["bank"], oct_["days"], oct_["roi"]), (5.0, 0.05, 2, 1.0))   # 5u of a 100u bank
         self.assertEqual((nov["pnl"], nov["bank"]), (-1.0, -0.01))
-        self.assertEqual((s["months_hit"], s["months_down"]), (1, 1))
+        self.assertEqual((dec["bank"], round(dec["roi"], 4)), (0.001, 0.0526))   # the bank barely moved, but 5.3% on the 1.9u staked
+        self.assertEqual((s["months_hit"], s["months_down"]), (2, 1))           # judged on the return on stakes (Nov 23, 2026)
         self.assertEqual(roi4.stats([])["monthly"], [])
 
     def test_outlook(self):
@@ -185,6 +187,7 @@ class MonthTest(unittest.TestCase):
         self.assertGreater(half["median"], none["median"])
         self.assertLess(none["median"], 0)
         self.assertGreater(none["p_down"], real["p_down"])
+        self.assertTrue(-1 <= none["bad"] <= real["median"] <= real["good"] <= 1)   # returns on stakes, not shares of the bank
         self.assertIsNone(roi4.outlook([], 20))
         self.assertEqual(roi4.outlook(daily, 20, sims=2000), o)   # seeded: the frozen numbers never drift
 

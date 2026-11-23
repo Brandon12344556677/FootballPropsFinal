@@ -569,10 +569,10 @@ details.plpast>summary:focus-visible{outline:2px solid var(--accent);outline-off
 
   <section data-view="roi4" class="panel" id="r4Panel">
     <div class="panel-h"><h2>4% return</h2><span class="label" id="r4Upd">Team only · paper bets</span></div>
-    <p class="hint">Paper bets. 1 unit = 1% of a 100-unit bank; the goal is the bank up <b>4% a month</b>. Return = units won as a share of the bank.</p>
+    <p class="hint">Paper bets. 1 unit = 1% of a 100-unit bank; the goal is a <b>4%+ ROI every month</b>: at least 4% back on whatever was bet that month (units won ÷ units bet). Bank = units won as a share of the 100-unit bank.</p>
     <div class="kpis" id="r4Top" aria-label="Monthly results"></div>
     <h3 class="subh">Month by month</h3>
-    <div class="edwrap"><table class="edges"><thead><tr><th>Month</th><th class="n">Bets</th><th class="n">Units won</th><th class="n">Return</th><th class="n">On money staked</th><th>Against 4%</th></tr></thead><tbody id="r4MonthRows"></tbody></table></div>
+    <div class="edwrap"><table class="edges"><thead><tr><th>Month</th><th class="n">Bets</th><th class="n">Units bet</th><th class="n">Units won</th><th class="n">ROI</th><th class="n">Bank</th><th>Against 4%</th></tr></thead><tbody id="r4MonthRows"></tbody></table></div>
     <h3 class="subh">Past picks</h3>
     <p class="r4-unit"><label for="r4PickMonth">Month</label> <select id="r4PickMonth"></select> <span class="hint" id="r4PickSum"></span></p>
     <div class="edwrap"><table class="edges"><thead><tr><th>Day</th><th>Pick</th><th class="n">Price</th><th class="n">Stake</th><th>Result</th><th class="n">Units</th></tr></thead><tbody id="r4Picks"></tbody></table></div>
@@ -591,7 +591,7 @@ details.plpast>summary:focus-visible{outline:2px solid var(--accent);outline-off
     <p class="hint" id="r4Trial"></p>
     <h3 class="subh">What a month could look like</h3>
     <p class="hint" id="r4OutNote"></p>
-    <div class="edwrap"><table class="edges"><thead><tr><th>If the real edge is</th><th class="n">On stakes</th><th class="n">Typical month</th><th class="n">Months at 4%+</th><th class="n">Losing months</th><th class="n">Bad month (1 in 20)</th><th class="n">Good month (1 in 20)</th></tr></thead><tbody id="r4Out"></tbody></table></div>
+    <div class="edwrap"><table class="edges"><thead><tr><th>If the real edge is</th><th class="n">Overall ROI</th><th class="n">Typical month's ROI</th><th class="n">Months at 4%+</th><th class="n">Losing months</th><th class="n">Bad month (1 in 20)</th><th class="n">Good month (1 in 20)</th></tr></thead><tbody id="r4Out"></tbody></table></div>
     <h3 class="subh">Return over time</h3>
     <div class="r4-seg" role="group" aria-label="Which record">
       <button type="button" data-r4="live" aria-pressed="true">Live</button>
@@ -1616,33 +1616,34 @@ details.plpast>summary:focus-visible{outline:2px solid var(--accent);outline-off
     const md=s=>s? new Date(s+'T12:00:00Z').toLocaleDateString('en-US',{month:'short', day:'numeric'}) : '';
     $('r4Kpis').innerHTML=[
       ['Since '+(md(btFirst)||'the start'), SE.n? pct(SE.roi,2) : '–', SE.n? `${u(SE.pnl)} on ${SE.staked.toFixed(2)}u · backtest, then live from ${md(liveFrom)}` : 'no graded bets yet', SE.n? cls(SE.roi) : ''],
-      ['This month', cur? pct(cur.bank) : '–', cur? `${u(cur.pnl)} of the ${(MT*BANK).toFixed(2)}u target · ${mtag(cur)}, still running` : 'no graded bets this month yet', cur? cls(cur.bank-MT) : ''],
+      ['This month', cur? pct(cur.roi) : '–', cur? `ROI · ${u(cur.pnl)} on ${cur.staked.toFixed(2)}u bet · ${mtag(cur)}, still running` : 'no graded bets this month yet', cur? cls((cur.roi||0)-MT) : ''],
       ['Posted picks', PS.n? pct(PS.roi,2) : '–', PS.n? `${PS.n} graded · ${u(PS.pnl)} on ${PS.staked.toFixed(2)}u` : 'starts with the first graded posted pick', PS.n? cls(PS.roi) : ''],
       ['Worst drawdown', SE.n? '−'+SE.max_dd.toFixed(2)+'u' : '–', SE.n? `since ${md(btFirst)} · longest losing run ${SE.losing_days_run} day${SE.losing_days_run===1?'':'s'}` : 'from the peak, in units', SE.max_dd? 'down' : '']
     ].map(([k,v,s,cl])=>`<div class="kpi"><span class="label">${k}</span><span class="v ${cl}">${v}</span><span class="s">${s}</span></div>`).join('');
-    // the monthly trial: live months, then the backtest's, against 4% of the bank
+    // the monthly trial: live months, then the backtest's, against a 4% ROI (units won ÷ units bet that month)
     const R_=d.rules||{}, review=R_.review_on||'', left=review? Math.ceil((Date.parse(review+'T12:00:00Z')-Date.parse(today+'T12:00:00Z'))/864e5) : null;
-    const avgM=done.length? done.reduce((a,m)=>a+m.bank,0)/done.length : null;
+    const avgM=done.length? done.reduce((a,m)=>a+m.pnl,0)/(done.reduce((a,m)=>a+m.staked,0)||1) : null;
     $('r4Trial').textContent= (left!=null && left>0? `Paper only until ${review} (the end of the NFL season, ${left} days away). ` : review? `The trial ended ${review}. ` : '')+
-      (done.length? `${done.length} finished live month${done.length===1?'':'s'}: average ${pct(avgM)} of the bank a month against the 4% target, ${done.filter(m=>m.bank>=MT).length} at or above it, ${done.filter(m=>m.pnl<0).length} losing. ` : 'No finished live month yet. ')+
-      (left!=null && left<=0? (done.length>=3 && avgM>=MT? 'On paper it met the target: evidence the edge is real, still not a promise. Start small if real money goes in.' : 'It did not meet 4% a month on paper. Do not put real money behind it.') :
-        'At the end, the question is whether the live months average 4%+ of the bank. Judge the average, not any single month: even a real edge loses about one month in three.');
-    const mbar=m=>{ const w=Math.min(100, Math.abs(m.bank)/MT*100); return `<span class="r4-bar"><i class="${m.pnl<0? 'down' : ''}" style="width:${w}%"></i></span>${m.bank>=MT? 'Met' : m.pnl<0? 'Losing' : 'Short'}`; };
+      (done.length? `${done.length} finished live month${done.length===1?'':'s'}: ROI ${pct(avgM)} on everything bet in them against the 4% target, ${done.filter(m=>(m.roi||0)>=MT).length} at or above it, ${done.filter(m=>m.pnl<0).length} losing. ` : 'No finished live month yet. ')+
+      (left!=null && left<=0? (done.length>=3 && avgM>=MT? 'On paper it met the target: evidence the edge is real, still not a promise. Start small if real money goes in.' : 'It did not return 4%+ on the money bet on paper. Do not put real money behind it.') :
+        'At the end, the question is whether the live months together return 4%+ on the money bet. Judge the average, not any single month: even a real edge loses about one month in three.');
+    const mbar=m=>{ const r=m.roi||0, w=Math.min(100, Math.abs(r)/MT*100); return `<span class="r4-bar"><i class="${m.pnl<0? 'down' : ''}" style="width:${w}%"></i></span>${r>=MT? 'Met' : m.pnl<0? 'Losing' : 'Short'}`; };
     const mname=k=>new Date(k+'-15T12:00:00Z').toLocaleString('en-US',{month:'long', year:'numeric'});
-    const mrow=(m,tag)=>`<tr><td>${esc(mname(m.month))} <small>${tag}${m.month===thisMonth? ' · so far' : ''}</small></td><td class="n">${m.n}</td>`+
-      `<td class="n ${cls(m.pnl)}">${u(m.pnl)}</td><td class="n ${m.bank>=MT? 'up' : m.pnl<0? 'down' : 'mid'}"><b>${pct(m.bank)}</b></td><td class="n ${cls(m.roi)}">${pct(m.roi)}</td><td>${mbar(m)}</td></tr>`;
-    $('r4MonthRows').innerHTML= sm.length? sm.slice().reverse().map(m=>mrow(m, mtag(m))).join('') : `<tr class="ed-wait"><td colspan="6">No graded bets yet.</td></tr>`;
-    // the simple headline: this month, best and worst finished month, every month together
-    const fin=sm.filter(m=>m.month<thisMonth), best=fin.length? fin.reduce((a,m)=>m.bank>a.bank? m : a) : null, worst=fin.length? fin.reduce((a,m)=>m.bank<a.bank? m : a) : null;
-    const mk=(k,m,s)=>[k, m? pct(m.bank) : '–', m? s(m) : 'no finished month yet', m? cls(m.bank) : ''];
+    const mrow=(m,tag)=>`<tr><td>${esc(mname(m.month))} <small>${tag}${m.month===thisMonth? ' · so far' : ''}</small></td><td class="n">${m.n}</td><td class="n">${m.staked.toFixed(2)}u</td>`+
+      `<td class="n ${cls(m.pnl)}">${u(m.pnl)}</td><td class="n ${(m.roi||0)>=MT? 'up' : m.pnl<0? 'down' : 'mid'}"><b>${pct(m.roi)}</b></td><td class="n ${cls(m.bank)}">${pct(m.bank)}</td><td>${mbar(m)}</td></tr>`;
+    $('r4MonthRows').innerHTML= sm.length? sm.slice().reverse().map(m=>mrow(m, mtag(m))).join('') : `<tr class="ed-wait"><td colspan="7">No graded bets yet.</td></tr>`;
+    // the simple headline, all ROI (units won ÷ units bet): this month, best and worst finished month, every month together
+    const fin=sm.filter(m=>m.month<thisMonth), mroi=m=>m.roi||0, best=fin.length? fin.reduce((a,m)=>mroi(m)>mroi(a)? m : a) : null, worst=fin.length? fin.reduce((a,m)=>mroi(m)<mroi(a)? m : a) : null;
+    const fs=fin.reduce((a,m)=>a+m.staked,0), fp=fin.reduce((a,m)=>a+m.pnl,0);
+    const mk=(k,m,s)=>[k, m? pct(m.roi) : '–', m? s(m) : 'no finished month yet', m? cls(m.roi) : ''];
     $('r4Top').innerHTML=[
-      ['This month', cur? pct(cur.bank) : '–', cur? `${u(cur.pnl)} · ${pct(cur.roi)} on money staked · ${cur.n} bets so far` : 'no graded bets this month yet', cur? cls(cur.bank) : ''],
-      mk('Best month', best, m=>`${mname(m.month)} · ${u(m.pnl)} · ${mtag(m)}`),
-      mk('Worst month', worst, m=>`${mname(m.month)} · ${u(m.pnl)} · ${mtag(m)}`),
-      ['All months', fin.length? `${fin.filter(m=>m.bank>=MT).length} of ${fin.length}` : '–', fin.length? `hit 4% · ${fin.filter(m=>m.pnl<0).length} losing · average ${pct(fin.reduce((a,m)=>a+m.bank,0)/fin.length)} a month` : 'finished months that hit 4%', '']
+      ['This month ROI', cur? pct(cur.roi) : '–', cur? `${u(cur.pnl)} on ${cur.staked.toFixed(2)}u bet · ${cur.n} bets so far · ${(cur.roi||0)>=MT? 'on track for 4%' : 'under 4% so far'}` : 'no graded bets this month yet', cur? ((cur.roi||0)>=MT? 'up' : cur.pnl<0? 'down' : 'mid') : ''],
+      mk('Best month ROI', best, m=>`${mname(m.month)} · ${u(m.pnl)} on ${m.staked.toFixed(2)}u · ${mtag(m)}`),
+      mk('Worst month ROI', worst, m=>`${mname(m.month)} · ${u(m.pnl)} on ${m.staked.toFixed(2)}u · ${mtag(m)}`),
+      ['All months', fin.length? `${fin.filter(m=>mroi(m)>=MT).length} of ${fin.length}` : '–', fin.length? `hit 4% ROI · ${fin.filter(m=>m.pnl<0).length} losing · ${pct(fs? fp/fs : null)} ROI on all ${fs.toFixed(2)}u bet` : 'finished months that hit 4% ROI', '']
     ].map(([k,v,s,cl])=>`<div class="kpi"><span class="label">${k}</span><span class="v ${cl}">${v}</span><span class="s">${s}</span></div>`).join('');
     const ol=(d.backtest||{}).outlook;
-    $('r4OutNote').textContent= ol? `Thousands of made-up months, each ${ol.bet_days} betting days drawn from the backtest's own days (it stakes about ${ol.staked}u a month on the ${BANK}u bank). The top row assumes the backtest's edge is real; the others show what happens if it is smaller or not there at all.` : 'Frozen with the backtest on the first run.';
+    $('r4OutNote').textContent= ol? `Thousands of made-up months, each ${ol.bet_days} betting days drawn from the backtest's own days (it stakes about ${ol.staked}u a month on the ${BANK}u bank), each month's ROI on what it bet. The top row assumes the backtest's edge is real; the others show what happens if it is smaller or not there at all.` : 'Frozen with the backtest on the first run.';
     $('r4Out').innerHTML= ol? ol.rows.map(r=>`<tr><td>${esc(r.label)}</td><td class="n">${pct(r.roi)}</td><td class="n ${cls(r.median)}">${pct(r.median)}</td><td class="n">${Math.round(r.p_hit*100)}%</td><td class="n">${Math.round(r.p_down*100)}%</td><td class="n down">${pct(r.bad)}</td><td class="n up">${pct(r.good)}</td></tr>`).join('') : '';
     // charts
     const S= R4which==='bt'? bt : live, days=S.daily||[];
@@ -1726,7 +1727,7 @@ details.plpast>summary:focus-visible{outline:2px solid var(--accent);outline-off
       $('r4Study').innerHTML=`<tr class="ed-wait"><td colspan="9">Not run yet.</td></tr>`;
     }
     const R=d.rules||{};
-    $('r4Rules').textContent= R.target? `Bets come only from the site's recorded picks that could really be bought ($25+ offered, a real price, no injury hold), at the price when the pick locks. Each morning a segment (each sport's Value spots, Top 25, or picks the model rates ${Math.round(R.edge_min*100)}+ points over the price) earns bets if, over the last ${R.lookback} days, it has ${R.min_n}+ graded picks on ${R.min_days}+ game days returning ${pct(R.min_roi,0)}+ with the low end of its range above ${pct(R.lo_floor,0)}. One bet per player, stat and game. Stake: quarter Kelly on the segment's past return, shrunk toward zero, ${R.min_bet}u to ${R.max_bet}u (1 unit = 1% of a ${R.bank}-unit bank), at most ${R.game_cap}u on one game and ${R.day_cap}u a day. The target: the bank up ${pct(R.month_target||0.04,0)} a month, judged on the live months at the end of the paper trial (${R.review_on||''}). Frozen once made; a win pays stake × (1 − price) ÷ price, a loss costs the stake, a push or void returns it. Track started ${d.live_from||''}.` : '';
+    $('r4Rules').textContent= R.target? `Bets come only from the site's recorded picks that could really be bought ($25+ offered, a real price, no injury hold), at the price when the pick locks. Each morning a segment (each sport's Value spots, Top 25, or picks the model rates ${Math.round(R.edge_min*100)}+ points over the price) earns bets if, over the last ${R.lookback} days, it has ${R.min_n}+ graded picks on ${R.min_days}+ game days returning ${pct(R.min_roi,0)}+ with the low end of its range above ${pct(R.lo_floor,0)}. One bet per player, stat and game. Stake: quarter Kelly on the segment's past return, shrunk toward zero, ${R.min_bet}u to ${R.max_bet}u (1 unit = 1% of a ${R.bank}-unit bank), at most ${R.game_cap}u on one game and ${R.day_cap}u a day. The target: ${pct(R.month_target||0.04,0)}+ ROI each month (units won ÷ units bet that month), judged on the live months at the end of the paper trial (${R.review_on||''}). Frozen once made; a win pays stake × (1 − price) ÷ price, a loss costs the stake, a push or void returns it. Track started ${d.live_from||''}.` : '';
     // today's posted picks, to buy on Polymarket US by hand (posted from 11 AM ET, frozen at that price)
     const PP=d.posted||[], tp=PP.filter(b=>b.day===today).sort((a,b)=>(a.start||'').localeCompare(b.start||'')||a.key.localeCompare(b.key));
     let unit=0; try { unit=+localStorage.getItem('psa-r4-unit')||0; } catch(e){}
