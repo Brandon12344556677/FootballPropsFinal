@@ -268,7 +268,8 @@ details.plpast>summary:focus-visible{outline:2px solid var(--accent);outline-off
 .r4-bar{display:inline-block;width:90px;height:8px;border-radius:999px;background:var(--surface-2);overflow:hidden;vertical-align:middle;margin-right:8px}
 .r4-bar i{display:block;height:100%;border-radius:999px;background:var(--accent)}
 .r4-bar i.down{background:var(--down)}
-@media (pointer:coarse){ .r4-seg button{min-height:44px} }
+.r4-unit select{font:500 15px var(--f-body);color:var(--fg);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:6px 8px}
+@media (pointer:coarse){ .r4-seg button, .r4-unit select{min-height:44px} }
 
 /* site health */
 .health{display:flex;gap:12px;align-items:flex-start;padding:12px 16px;border-radius:12px;border:1px solid var(--line);background:var(--surface)}
@@ -568,7 +569,13 @@ details.plpast>summary:focus-visible{outline:2px solid var(--accent);outline-off
 
   <section data-view="roi4" class="panel" id="r4Panel">
     <div class="panel-h"><h2>4% return</h2><span class="label" id="r4Upd">Team only · paper bets</span></div>
-    <p class="r4-note"><b>Read this first.</b> The goal is the bankroll up <b>4% a month</b> (1 unit = 1% of a 100-unit bank). 4% every day isn't reachable: one night's props win and lose together, so single days swing from −100% to +80%, and even a real edge loses about one month in three. These are <b>paper bets</b> until the end of the NFL season: nothing is bought, and the numbers are only as good as the prices recorded. Every day and every month is shown, losing ones included.</p>
+    <p class="hint">Paper bets. 1 unit = 1% of a 100-unit bank; the goal is the bank up <b>4% a month</b>. Return = units won as a share of the bank.</p>
+    <div class="kpis" id="r4Top" aria-label="Monthly results"></div>
+    <h3 class="subh">Month by month</h3>
+    <div class="edwrap"><table class="edges"><thead><tr><th>Month</th><th class="n">Bets</th><th class="n">Units won</th><th class="n">Return</th><th class="n">On money staked</th><th>Against 4%</th></tr></thead><tbody id="r4MonthRows"></tbody></table></div>
+    <h3 class="subh">Past picks</h3>
+    <p class="r4-unit"><label for="r4PickMonth">Month</label> <select id="r4PickMonth"></select> <span class="hint" id="r4PickSum"></span></p>
+    <div class="edwrap"><table class="edges"><thead><tr><th>Day</th><th>Pick</th><th class="n">Price</th><th class="n">Stake</th><th>Result</th><th class="n">Units</th></tr></thead><tbody id="r4Picks"></tbody></table></div>
     <h3 class="subh">Today's picks <small class="hint" id="r4PostWhen"></small></h3>
     <p class="hint" id="r4PostNote"></p>
     <p class="r4-unit"><label for="r4Unit">1 unit =</label> $<input id="r4Unit" type="number" min="0" step="1" inputmode="decimal" placeholder="10"> <span class="hint">stakes are shown in dollars too (kept on this device only)</span></p>
@@ -576,11 +583,12 @@ details.plpast>summary:focus-visible{outline:2px solid var(--accent);outline-off
     <details class="plpast"><summary><span>Past posted picks</span><span class="label" id="r4PostPastN"></span></summary>
     <div class="edwrap"><table class="edges"><thead><tr><th>Day</th><th>Pick</th><th class="n">Posted at</th><th class="n">Stake</th><th>Result</th><th class="n">Units</th></tr></thead><tbody id="r4PostPast"></tbody></table></div>
     </details>
+    <details class="plpast" id="r4More"><summary><span>More detail</span><span class="label">charts, backtest, how it picks</span></summary>
+    <p class="r4-note"><b>Read this first.</b> 4% every day isn't reachable: one night's props win and lose together, so single days swing from −100% to +80%, and even a real edge loses about one month in three. These are <b>paper bets</b> until the end of the NFL season: nothing is bought, and the numbers are only as good as the prices recorded. Months before the track went live are the backtest.</p>
     <h3 class="subh">The record</h3>
     <div class="kpis" id="r4Kpis" aria-label="4% return numbers"></div>
     <h3 class="subh">4% a month: the paper trial</h3>
     <p class="hint" id="r4Trial"></p>
-    <div class="edwrap"><table class="edges"><thead><tr><th>Month</th><th class="n">Bets</th><th class="n">Betting days</th><th class="n">Staked</th><th class="n">Units won</th><th class="n">Bank</th><th class="n">On stakes</th><th>Against 4%</th></tr></thead><tbody id="r4MonthRows"></tbody></table></div>
     <h3 class="subh">What a month could look like</h3>
     <p class="hint" id="r4OutNote"></p>
     <div class="edwrap"><table class="edges"><thead><tr><th>If the real edge is</th><th class="n">On stakes</th><th class="n">Typical month</th><th class="n">Months at 4%+</th><th class="n">Losing months</th><th class="n">Bad month (1 in 20)</th><th class="n">Good month (1 in 20)</th></tr></thead><tbody id="r4Out"></tbody></table></div>
@@ -615,6 +623,7 @@ details.plpast>summary:focus-visible{outline:2px solid var(--accent);outline-off
     <p class="hint">4% a day compounds to about 1.65 million times the starting money in a year. Professional bettors' long-run edge is a few percent of what they wager, with big swings day to day. People on social media who promise steady daily returns mostly earn elsewhere: subscriptions, or sportsbook affiliate deals that pay them a share of followers' losses. Their records often hide losses, change unit sizes after the fact, or show screenshots of prices nobody could get, and UK regulators have ruled such "daily profit" and "guaranteed" claims misleading. The methods that really are steady are small and capped: arbitrage (the Arbitrage tab; rare and minutes long), promo conversion at sportsbooks (accounts get limited), and posting orders as a maker on the exchanges for their liquidity rewards (Kalshi's program ends Jan 1, 2027; resting orders risk being picked off when news breaks). Tested here and shown above: injury news, weather, lineups and players' past results. The market already prices NBA injury news and recent form; only the NFL model edge has held up.</p>
     <h3 class="subh">The rule</h3>
     <p class="hint" id="r4Rules"></p>
+    </details>
   </section>
 
   <section data-view="arbs" class="panel" id="abPanel">
@@ -1584,6 +1593,7 @@ details.plpast>summary:focus-visible{outline:2px solid var(--accent);outline-off
     } catch(err){}
   }
   $('r4Unit').addEventListener('input',()=>{ try { localStorage.setItem('psa-r4-unit', $('r4Unit').value); } catch(e){} renderRoi4(); });
+  $('r4PickMonth').addEventListener('change', renderRoi4);
   document.querySelectorAll('[data-r4]').forEach(b=>b.addEventListener('click',()=>{
     R4which=b.dataset.r4; document.querySelectorAll('[data-r4]').forEach(x=>x.setAttribute('aria-pressed', String(x===b))); renderRoi4();
   }));
@@ -1618,9 +1628,19 @@ details.plpast>summary:focus-visible{outline:2px solid var(--accent);outline-off
       (left!=null && left<=0? (done.length>=3 && avgM>=MT? 'On paper it met the target: evidence the edge is real, still not a promise. Start small if real money goes in.' : 'It did not meet 4% a month on paper. Do not put real money behind it.') :
         'At the end, the question is whether the live months average 4%+ of the bank. Judge the average, not any single month: even a real edge loses about one month in three.');
     const mbar=m=>{ const w=Math.min(100, Math.abs(m.bank)/MT*100); return `<span class="r4-bar"><i class="${m.pnl<0? 'down' : ''}" style="width:${w}%"></i></span>${m.bank>=MT? 'Met' : m.pnl<0? 'Losing' : 'Short'}`; };
-    const mrow=(m,tag)=>`<tr><td>${esc(new Date(m.month+'-15T12:00:00Z').toLocaleString('en-US',{month:'long', year:'numeric'}))} <small>${tag}${m.month===thisMonth? ' · so far' : ''}</small></td><td class="n">${m.n}</td><td class="n">${m.days}</td><td class="n">${m.staked.toFixed(2)}u</td>`+
-      `<td class="n ${cls(m.pnl)}">${u(m.pnl)}</td><td class="n ${m.bank>=MT? 'up' : m.pnl<0? 'down' : 'mid'}">${pct(m.bank)}</td><td class="n ${cls(m.roi)}">${pct(m.roi)}</td><td>${mbar(m)}</td></tr>`;
-    $('r4MonthRows').innerHTML= sm.length? sm.slice().reverse().map(m=>mrow(m, mtag(m))).join('') : `<tr class="ed-wait"><td colspan="8">No graded bets yet.</td></tr>`;
+    const mname=k=>new Date(k+'-15T12:00:00Z').toLocaleString('en-US',{month:'long', year:'numeric'});
+    const mrow=(m,tag)=>`<tr><td>${esc(mname(m.month))} <small>${tag}${m.month===thisMonth? ' · so far' : ''}</small></td><td class="n">${m.n}</td>`+
+      `<td class="n ${cls(m.pnl)}">${u(m.pnl)}</td><td class="n ${m.bank>=MT? 'up' : m.pnl<0? 'down' : 'mid'}"><b>${pct(m.bank)}</b></td><td class="n ${cls(m.roi)}">${pct(m.roi)}</td><td>${mbar(m)}</td></tr>`;
+    $('r4MonthRows').innerHTML= sm.length? sm.slice().reverse().map(m=>mrow(m, mtag(m))).join('') : `<tr class="ed-wait"><td colspan="6">No graded bets yet.</td></tr>`;
+    // the simple headline: this month, best and worst finished month, every month together
+    const fin=sm.filter(m=>m.month<thisMonth), best=fin.length? fin.reduce((a,m)=>m.bank>a.bank? m : a) : null, worst=fin.length? fin.reduce((a,m)=>m.bank<a.bank? m : a) : null;
+    const mk=(k,m,s)=>[k, m? pct(m.bank) : '–', m? s(m) : 'no finished month yet', m? cls(m.bank) : ''];
+    $('r4Top').innerHTML=[
+      ['This month', cur? pct(cur.bank) : '–', cur? `${u(cur.pnl)} · ${pct(cur.roi)} on money staked · ${cur.n} bets so far` : 'no graded bets this month yet', cur? cls(cur.bank) : ''],
+      mk('Best month', best, m=>`${mname(m.month)} · ${u(m.pnl)} · ${mtag(m)}`),
+      mk('Worst month', worst, m=>`${mname(m.month)} · ${u(m.pnl)} · ${mtag(m)}`),
+      ['All months', fin.length? `${fin.filter(m=>m.bank>=MT).length} of ${fin.length}` : '–', fin.length? `hit 4% · ${fin.filter(m=>m.pnl<0).length} losing · average ${pct(fin.reduce((a,m)=>a+m.bank,0)/fin.length)} a month` : 'finished months that hit 4%', '']
+    ].map(([k,v,s,cl])=>`<div class="kpi"><span class="label">${k}</span><span class="v ${cl}">${v}</span><span class="s">${s}</span></div>`).join('');
     const ol=(d.backtest||{}).outlook;
     $('r4OutNote').textContent= ol? `Thousands of made-up months, each ${ol.bet_days} betting days drawn from the backtest's own days (it stakes about ${ol.staked}u a month on the ${BANK}u bank). The top row assumes the backtest's edge is real; the others show what happens if it is smaller or not there at all.` : 'Frozen with the backtest on the first run.';
     $('r4Out').innerHTML= ol? ol.rows.map(r=>`<tr><td>${esc(r.label)}</td><td class="n">${pct(r.roi)}</td><td class="n ${cls(r.median)}">${pct(r.median)}</td><td class="n">${Math.round(r.p_hit*100)}%</td><td class="n">${Math.round(r.p_down*100)}%</td><td class="n down">${pct(r.bad)}</td><td class="n up">${pct(r.good)}</td></tr>`).join('') : '';
@@ -1730,6 +1750,16 @@ details.plpast>summary:focus-visible{outline:2px solid var(--accent);outline-off
     $('r4PostPastN').textContent= pp.length? `${pp.length} pick${pp.length===1?'':'s'}` : '';
     $('r4PostPast').innerHTML= pp.length? pp.slice(0,300).map(b=>`<tr><td>${esc(b.day)}</td><td>${bet(b)}</td><td class="n">${c(b.price)}</td><td class="n">${b.stake.toFixed(2)}u</td><td>${b.res? RES[b.res] : 'Pending'}</td><td class="n ${cls(b.pnl)}">${b.pnl==null? '–' : u(b.pnl)}</td></tr>`).join('')
       : `<tr class="ed-wait"><td colspan="6">None yet.</td></tr>`;
+    // past picks, one month at a time: the bets behind the month-by-month table (backtest, then live at the lock)
+    const all=[...((d.backtest||{}).bets||[]).map(b=>({...b, bt:1})), ...(d.bets||[])].filter(b=>b.day!==today).sort((a,b)=>b.day.localeCompare(a.day));
+    const months=[...new Set(all.map(b=>b.day.slice(0,7)))], sel=$('r4PickMonth');
+    const keep=sel.value;
+    sel.innerHTML=months.map(k=>`<option value="${k}">${esc(mname(k))} (${all.filter(b=>b.day.startsWith(k)).length} picks)</option>`).join('');
+    if(months.length) sel.value= months.includes(keep)? keep : months[0];
+    const mp=all.filter(b=>b.day.startsWith(sel.value)), mg=mp.filter(b=>b.res), mw=mg.filter(b=>b.res==='hit').length, ml=mg.filter(b=>b.res==='miss').length;
+    $('r4PickSum').textContent= mp.length? `${mw} won, ${ml} lost${mp.length>mg.length? `, ${mp.length-mg.length} pending` : ''} · ${u(mg.reduce((a,b)=>a+(b.pnl||0),0))}` : '';
+    $('r4Picks').innerHTML= mp.length? mp.map(b=>`<tr><td>${esc(b.day)}${b.bt? ' <small>backtest</small>' : ''}</td><td>${bet(b)}</td><td class="n">${c(b.price)}</td><td class="n">${b.stake.toFixed(2)}u</td><td>${b.res? RES[b.res] : 'Pending'}</td><td class="n ${cls(b.pnl)}">${b.pnl==null? '–' : u(b.pnl)}</td></tr>`).join('')
+      : `<tr class="ed-wait"><td colspan="6">No past picks yet.</td></tr>`;
     if(d.gen) $('r4Upd').textContent='Team only · paper bets · updated '+new Date(d.gen).toLocaleString('en-US',{month:'short', day:'numeric', hour:'numeric', minute:'2-digit'});
   }
   // ---------- Polymarket / Kalshi arbitrage: team/arbs.enc (arbs.py), same password ----------
