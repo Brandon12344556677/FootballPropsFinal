@@ -236,6 +236,18 @@ def graded(picks_doc):
     return n, first
 
 
+def value_fits(sport, p):
+    """A recorded Value pick that fits its board's current Value rule (the season records count only these):
+    MLB unders only (build_mlb.VALUE_SIDES); NBA overs at 30-60c with 20+ effective games (build_nba.value_fits,
+    test_nba_value.py checks the two agree). Other boards: every Value pick."""
+    if sport == "mlb":
+        return p.get("side") == "under"
+    if sport == "nba":
+        pr = p.get("price")
+        return p.get("side") == "over" and (p.get("neff") or 0) >= 20 and pr is not None and 0.30 <= pr < 0.60
+    return True
+
+
 def last_results(sport, picks_doc, today, max_age=7):
     import depth
     """The latest ET game day (on or before `today`, within `max_age` days) with graded live
@@ -247,7 +259,7 @@ def last_results(sport, picks_doc, today, max_age=7):
         p = dict(zip(cols, row))
         if p.get("src") != "live" or p.get("res") not in ("hit", "miss"):
             continue
-        if sport == "mlb" and p.get("side") == "over":   # MLB Value is unders only (build_mlb.VALUE_SIDES)
+        if not value_fits(sport, p):     # MLB unders only, NBA overs 30-60c: the record follows the current rule
             p["lists"] = (p.get("lists") or "").replace("V", "")
         t = parse_start(p.get("start"))
         day = t.astimezone(ET).date().isoformat() if t else p.get("date")   # NFL dates are already ET

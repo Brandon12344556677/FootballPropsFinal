@@ -1043,6 +1043,16 @@ VALUE_N = 200           # a safety cap only. At 50 it bound in busy weeks (NFL w
                         # cleared the rule went unrecorded), so the record now holds every pick that clears it
 VALUE_MIN_PRICE = 0.30  # the market has to give it at least 30%
 VALUE_MIN_EDGE = 0.15   # and the model has to be 15+ points higher
+# NBA Value is overs only, 30-60c, 20+ effective games (since Nov 23, 2026). On every graded Value pick
+# Oct 20 - Nov 23 at the price when it locked: 1,763 picks, -60.4 units (-3.4%); unders -52 units and lost
+# in every test; overs 30-60c with 20+ games: 882 picks, +21.1 units (+2.4%, about break-even: +/-3.9% is
+# one standard error, and the rule was chosen on that same stretch). The season record counts the current
+# rule (live_record, value_fits): Value picks made under the old rule stay in the picks file and show beside
+# the record as "Vpre" ("Value, old rule"); the board's Past picks drops their V tag (valueRule in
+# nba_template.html); methodology.html notes the rule.
+VALUE_SIDES = ("over",)
+VALUE_MAX_PRICE = 0.60
+VALUE_NEFF = 20.0
 
 
 TOP_VERIFY = 80         # the surest priced props whose order books are read for Top 25
@@ -1056,13 +1066,21 @@ def could_list(p, t_floor=1.01):
     if p.get("res") is not None or pick_locked(p) or not p.get("th"):
         return False
     return any(px is not None and (p["prob"] >= t_floor or
-                                   (p["neff"] >= VALUE_MIN_NEFF and value_qualifies(p["prob"], px)))
+                                   (p["neff"] >= VALUE_NEFF and p.get("side") in VALUE_SIDES and value_qualifies(p["prob"], px)))
                for px in (p.get("pp"), p.get("kp")))
 
 
 def value_qualifies(prob, price):
     """prob and price are fractions; price is what you'd pay for this side."""
-    return price is not None and price >= VALUE_MIN_PRICE and prob - price >= VALUE_MIN_EDGE
+    return price is not None and VALUE_MIN_PRICE <= price < VALUE_MAX_PRICE and prob - price >= VALUE_MIN_EDGE
+
+
+def value_fits(p):
+    """A recorded Value pick that fits the current rule (side, price band, games of history); the record counts
+    only these. Its price is the one it locked at (a fraction), as the record's units use."""
+    pr = p.get("price")
+    return (p.get("side") in VALUE_SIDES and (p.get("neff") or 0) >= VALUE_NEFF
+            and pr is not None and VALUE_MIN_PRICE <= pr < VALUE_MAX_PRICE)
 
 
 def stat_get(row, sk):
@@ -1404,8 +1422,8 @@ def assign_lists(picks):
         seen.add(k)
         p["lists"] += "T"
     vals = [((p["prob"] - p["price"]), p) for p in pending
-            if p.get("price") is not None and not p.get("th") and p["neff"] >= VALUE_MIN_NEFF
-            and value_qualifies(p["prob"], p["price"])]
+            if p.get("price") is not None and not p.get("th") and p["neff"] >= VALUE_NEFF
+            and p.get("side") in VALUE_SIDES and value_qualifies(p["prob"], p["price"])]
     vals.sort(key=lambda x: -x[0])
     for _, p in vals[:VALUE_N]:
         p["lists"] += "V"
@@ -1449,6 +1467,8 @@ def live_record(picks):
         if p.get("res") not in ("hit", "miss"):
             continue
         for tag in p.get("lists", ""):
+            if tag == "V" and not value_fits(p):
+                tag = "Vpre"      # a Value pick from before the current rule: shown beside the record, not in it
             r = out.setdefault(tag, {"n": 0, "hit": 0, "priced": 0, "units": 0.0})
             r["n"] += 1
             if p["res"] == "hit":
@@ -1461,7 +1481,10 @@ def live_record(picks):
     graded = [p for p in picks if p.get("res") in ("hit", "miss")]
     for tag, r in out.items():
         r["units"] = round(r["units"], 2)
-        r.update(clv_stats([p for p in graded if tag in (p.get("lists") or "")]))
+        if tag == "Vpre":
+            continue
+        r.update(clv_stats([p for p in graded if tag in (p.get("lists") or "")
+                            and not (tag == "V" and not value_fits(p))]))
     out["clv"] = clv_stats(graded)      # every graded pick, listed or not
     return out
 

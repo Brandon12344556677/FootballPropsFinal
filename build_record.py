@@ -42,12 +42,13 @@ TEMPLATE = "record_template.html"
 BOTD = "botd.json"
 WINDOW = 30             # days in the "last 30 days" column
 NAMES = {"nfl": "NFL", "nba": "NBA", "nhl": "NHL", "mlb": "MLB", "tennis": "Tennis"}
-# Every list a board publishes, in the order the page shows them. "Vpre" is MLB's Value overs from
-# before Value went unders only (build_mlb.VALUE_SIDES): no longer made, still on the record.
+# Every list a board publishes, in the order the page shows them. "Vpre" is the Value picks made under an
+# older rule (MLB's overs before unders only; NBA's unders and picks outside 30-60c / 20+ games before
+# Nov 23, 2026): no longer made, still on the record, shown apart.
 # "A" is every graded tennis side with a price, listed or not (tennis.json's own "A" row).
 LISTS = {
     "nfl": [("V", "Value"), ("T", "Top 25 Surest")],
-    "nba": [("V", "Value"), ("T", "Top 25 Surest")],
+    "nba": [("V", "Value (overs, 30-60¢)"), ("Vpre", "Value, old rule (ended)"), ("T", "Top 25 Surest")],
     "nhl": [("V", "Value"), ("T", "Top 25 Surest")],
     "mlb": [("V", "Value (unders only)"), ("Vpre", "Value overs (ended)"), ("T", "Top 25 Surest")],
     "tennis": [("V", "Value"), ("T", "Top 25 Surest"), ("A", "Every priced side")],
@@ -77,7 +78,7 @@ def rows(sport, doc):
         if not day:
             continue
         tags = list(p.get("lists") or "")
-        if sport == "mlb" and p.get("side") == "over":   # MLB Value is unders only (build_mlb.VALUE_SIDES)
+        if not build_today.value_fits(sport, p):   # MLB unders only, NBA overs 30-60c: older Value picks show apart
             tags = ["Vpre" if x == "V" else x for x in tags]
         if sport == "tennis":
             tags.append("A")
