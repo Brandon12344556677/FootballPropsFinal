@@ -561,10 +561,11 @@ input::placeholder{color:#b7c0cc}
 .edgeval,.edgeval.pos,.edgeval.neg,.up,.down,.parlaysum .big.hit{color:#fff}
 table td,table th,thead th,tbody td,.edgetbl td,.edgetbl th,.caltbl td,.caltbl th,.edgeload,.mktuse{color:#fff}
 
-/* ---- the scoreboard: each list's real season record, losses in red, the old Value rule named ---- */
-.scoreboard{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px;margin:14px 0 4px}
-.scoreboard .sb{background:var(--ps-surface);border:1px solid var(--ps-line);border-radius:var(--ps-r-lg);padding:14px 16px;
-  display:flex;flex-direction:column;gap:4px;text-decoration:none;color:inherit;min-height:var(--ps-tap)}
+/* ---- the scoreboard: Value spots' real season record as one banner, red when down, the old Value rule named ---- */
+.scoreboard{display:grid;grid-template-columns:1fr;gap:8px;margin:14px 0 4px}
+.scoreboard .sb{background:var(--ps-surface);border:1px solid var(--ps-line);border-radius:var(--ps-r-lg);padding:14px 18px;
+  display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 16px;text-decoration:none;color:inherit;min-height:var(--ps-tap)}
+.scoreboard .sb-k{flex-basis:100%}
 .scoreboard .sb:hover{border-color:rgba(var(--ps-green-rgb),.45)}
 .scoreboard .sb-k{font-size:var(--ps-fs-xs);font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--ps-muted)}
 .scoreboard .sb-v{font-size:var(--ps-fs-2xl);font-weight:800;line-height:1.1;color:var(--ps-green);font-variant-numeric:tabular-nums}
@@ -573,7 +574,7 @@ table td,table th,thead th,tbody td,.edgetbl td,.edgetbl th,.caltbl td,.caltbl t
 .scoreboard .sb-n{font-size:var(--ps-fs-xs);color:var(--ps-muted)}
 .scoreboard .sb-more{grid-column:1/-1;font-size:var(--ps-fs-sm);color:var(--ps-muted);margin:0}
 .scoreboard .sb-more a{color:var(--ps-green)}
-@media(max-width:560px){.scoreboard{grid-template-columns:1fr 1fr;gap:8px}.scoreboard .sb{padding:12px}.scoreboard .sb-v{font-size:var(--ps-fs-xl)}.scoreboard .sb-n{display:none}}
+@media(max-width:560px){.scoreboard .sb{padding:12px 14px}.scoreboard .sb-n{flex-basis:100%}}
 /* ---- tonight's games: one chip per game, tap to show only its picks (the filter bar's game) ---- */
 .gamestrip{display:flex;gap:8px;overflow-x:auto;padding:4px 0 10px;scrollbar-width:none;-webkit-overflow-scrolling:touch}
 .gamestrip::-webkit-scrollbar{display:none}
@@ -689,7 +690,7 @@ details.valrules>summary{cursor:pointer}
     <a class="refbanner group" href="./#email">📧 Free daily picks email →</a>
   </div>
 
-  <section id="valueweekbar" class="scoreboard" hidden aria-label="How the NBA lists have done"></section>
+  <section id="valueweekbar" class="scoreboard" hidden aria-label="How NBA Value spots have done"></section>
 
   <div class="tabs" role="tablist">
     <button class="tab" role="tab" data-tab="week" aria-selected="true">📅 Today</button>
@@ -2073,8 +2074,8 @@ render();
     });
   });
 })();
-// The scoreboard at the top: Value (the current rule: overs, 30-60c, 20+ games) and Top 25 Surest, each with its
-// season record at the recorded price, red when it's down; the Value picks made under the old rule are named with
+// The scoreboard at the top: Value spots only (the current rule: overs, 30-60c, 20+ games), with its season record
+// at the recorded price, red when it's down (Top 25's record stays on its own panel and the Past picks tab); the Value picks made under the old rule are named with
 // their units and sit on the Record page. Before anything is graded: how many Value spots are live; hidden if neither.
 function renderValueWeek(){
   const el=$('valueweekbar'); if(!el) return;
@@ -2087,7 +2088,7 @@ function renderValueWeek(){
       (extra? `<span class="sb-n">${extra}</span>` : '')+`</a>`;
   };
   const pre=R.Vpre, preNote=pre && pre.n? `Value under the old rule (unders and other prices, to Nov 23): ${(pre.units>=0?'+':'−')+Math.abs(+pre.units||0).toFixed(1)}u on ${pre.n} picks, shown on the <a href="/record.html">Record page</a>.` : '';
-  const html=tile(R.V, '⚡ Value spots', 'Overs at 30–60¢, model 15+ points over, 20+ games')+tile(R.T, '🎯 Top 25 Surest', 'The 25 surest props with a real price');
+  const html=tile(R.V, '⚡ Value spots', 'Overs at 30–60¢, model 15+ points over, 20+ games');
   if(html){
     el.innerHTML=html+`<p class="sb-more">1 unit on every pick at the price it was recorded at, graded from the box score. ${preNote} <a href="/record.html">The full record →</a></p>`;
     el.querySelectorAll('a.sb').forEach(a=>a.onclick=()=>{ showTab('past'); return false; });
