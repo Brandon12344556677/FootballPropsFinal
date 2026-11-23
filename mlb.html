@@ -629,8 +629,8 @@ details.valrules>summary{cursor:pointer}
 .panel.collapsed > *:not(:first-child){display:none!important}
 .panel.collapsed{padding-bottom:14px}
 </style>
-<link rel="stylesheet" href="app.css?v=20261117e">
-<script src="app.js?v=20261117e"></script>
+<link rel="stylesheet" href="app.css?v=20261124a">
+<script src="app.js?v=20261124a"></script>
 <script src="/thanksgiving.js?v=20261117a"></script>
 
 <header class="apptop">
@@ -665,7 +665,7 @@ details.valrules>summary{cursor:pointer}
     <a class="refbanner group" href="./#email">📧 Free daily picks email →</a>
   </div>
 
-  <a id="valueweekbar" class="vwbar" href="#" hidden></a>
+  <section id="valueweekbar" class="scoreboard" hidden aria-label="How Value spots have done"></section>
 
   <div class="tabs" role="tablist">
     <button class="tab" role="tab" data-tab="week" aria-selected="true">📅 Today</button>
@@ -675,6 +675,7 @@ details.valrules>summary{cursor:pointer}
   </div>
 
 <div id="page-week">
+  <div id="gamestrip" class="gamestrip" hidden></div>
   <div id="fltbar" hidden></div>
   <div class="panel" id="valuepanel" hidden>
     <div class="mkthead"><h2>⚡ Value spots<button type="button" class="qhelp hq" data-help="value" aria-expanded="false" aria-label="What are Value spots?"><span class="qi" aria-hidden="true">?</span></button></h2><span class="mktmuted">market gives it 30%+, model is 15+ points better — unders only</span><span class="mktmuted" id="recV"></span></div>
@@ -1361,6 +1362,16 @@ function updateFilterOptions(){ const wrap=$('fltbar'); if(!wrap || !FLT) return
   const gl=Object.keys(games).sort((a,b)=>String(games[a].t).localeCompare(String(games[b].t)) || games[a].label.localeCompare(games[b].label));
   FLT.setOptions({games:gl.map(g=>[g, games[g].label]), stats:STATS.filter(x=>stats.has(x.key)).map(x=>[x.key, x.label])});
 }
+// ---- The games strip (PS.gameStrip, the same on every sport page): one chip per upcoming game, a tap sets the
+// filter bar's game and a second tap clears it. ----
+function renderGames(){ const el=$('gamestrip'); if(!el || PICKS===null) return;
+  const games=new Map();
+  upcomingPicks().filter(p=>p.prob!=null && p.gid).forEach(p=>{ const g=gameOf(p), k=p.gid;
+    if(!games.has(k)) games.set(k, {key:k, label:`${g.away} @ ${g.home}`, start:p.start||g.start, n:0, listed:0});
+    const e=games.get(k); e.n++; if(/[TV]/.test(p.lists||'')) e.listed++; });
+  PS.gameStrip(el, {games:[...games.values()], current:FLT? FLT.get().game : '',
+    onPick:k=>{ if(!FLT) return; const f=FLT.get(); f.game=k; FLT.set(f); }});
+}
 function sortRows(rows, key, dir){ return [...rows].sort((a,b)=>{
   if(key==='matchup') return dir*((a.game.away+a.game.home).localeCompare(b.game.away+b.game.home));
   if(['name','statText','side'].includes(key)) return dir*((''+a[key]).localeCompare(''+b[key]));
@@ -1551,7 +1562,7 @@ function loadFullPicks(){ if(PICKS_FULL||fullPicksLoading) return; fullPicksLoad
     .catch(()=>{ PICKS=PICKS||[]; PICKS_FULL=true; renderPickViews(); }).finally(()=>{ fullPicksLoading=false; });
 }
 let upSig=-1;
-function renderPickViews(){ updateFilterOptions(); paintVerdict(); renderEdges(); renderValue(); renderValueWeek(); generateDigest(); renderPast(); renderApTeams(); PS.ticker(tickerItems()); upSig=upcomingPicks().length; }
+function renderPickViews(){ updateFilterOptions(); renderGames(); paintVerdict(); renderEdges(); renderValue(); renderValueWeek(); generateDigest(); renderPast(); renderApTeams(); PS.ticker(tickerItems()); upSig=upcomingPicks().length; }
 // Once a minute: when a game starts, its picks drop off the boards without a reload.
 setInterval(()=>{ if(PICKS!==null && !document.hidden && upcomingPicks().length!==upSig) renderPickViews(); }, 60000);
 function initPicks(){ renderPast(); loadFullPicks(); }   // Past tab opened: load the full history
@@ -1998,7 +2009,7 @@ const SOCIAL = { instagram: "https://www.instagram.com/propstreaklab", tiktok: "
   if(SOCIAL.tiktok){ tt.href=SOCIAL.tiktok; tt.hidden=false; } else tt.hidden=true;
   if(xa){ if(SOCIAL.x){ xa.href=SOCIAL.x; xa.hidden=false; } else xa.hidden=true; }
   bar.hidden = !(SOCIAL.instagram||SOCIAL.tiktok||SOCIAL.x); })();
-FLT=PS.filterBar($('fltbar'), {key:SPORT_KEY, options:{games:[], stats:[]}, onChange:()=>{ renderEdges(); renderValue(); }});
+FLT=PS.filterBar($('fltbar'), {key:SPORT_KEY, options:{games:[], stats:[]}, onChange:()=>{ renderEdges(); renderValue(); renderGames(); }});
 CALC=PS.betCalc($('calcbody'), {getPick:calcPick});
 SLIP=PS.parlaySlip($('slipbbody'), {sport:SPORT_KEY, getCurrent:slipCurrent, legsFor:slipLegsFor, open:slipOpen});
 renderEdges();        // shows "Loading…" until picks arrive
@@ -2034,31 +2045,13 @@ render();
     });
   });
 })();
-// Value spots banner: the season's units record once Value picks are graded;
-// before that, a count of the Value spots live on the board; hidden if neither.
+// The Value record banner at the top (PS.valueBanner, the same on every sport page): the season record at the
+// recorded price, red when down, an older rule's picks named; before anything is graded, how many are live.
 function renderValueWeek(){
-  const el=$('valueweekbar'); if(!el) return;
-  const r=(DB.record||{}).V;
-  if(r && r.n && r.priced){
-    const units=+r.units||0, up=units>=0, u=(up?'+':'')+units.toFixed(1), roi=units/r.priced;
-    el.className='vwbar'+(up?'':' down');
-    el.innerHTML =
-      `<span class="lbl">⚡ Value spots · this season</span>`+
-      `<span class="big">${up?'▲':'▼'} ${u} units</span>`+
-      `<span class="lbl">${r.hit}/${r.n} hit · ${roi>=0?'+':''}${Math.round(roi*100)}% ROI</span>`+
-      `<span class="sub">Every Value pick recorded before ${TIPOFF} and graded from the box score — tap for the full record.</span>`;
-    el.onclick=()=>{ showTab('past'); return false; };
-    el.hidden=false; return;
-  }
-  const live=PICKS ? listRows('V').length : 0;
-  if(!live){ el.hidden=true; return; }
-  el.className='vwbar';
-  el.innerHTML =
-    `<span class="lbl">⚡ Value spots</span>`+
-    `<span class="big">${live} live now</span>`+
-    `<span class="sub">Props where the model's chance clearly beats the market price — tap to see them.</span>`;
-  el.onclick=()=>{ showTab('week'); const p=$('valuepanel'); if(p) p.scrollIntoView({behavior:'smooth'}); return false; };
-  el.hidden=false;
+  const R=DB.record||{};
+  PS.valueBanner($('valueweekbar'), {r:R.V, pre:R.Vpre, season:'this season', rule:'Unders only: market gives it 30%+, model 15+ points over', preRule:'overs, to Oct 12',
+    live:PICKS? listRows('V').length : 0, onRecord:()=>showTab('past'),
+    onLive:()=>{ showTab('week'); const p=$('valuepanel'); if(p) p.scrollIntoView({behavior:'smooth'}); }});
 }
 renderValueWeek();
 renderMyBets();
