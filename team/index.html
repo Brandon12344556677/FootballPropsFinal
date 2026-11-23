@@ -571,11 +571,6 @@ details.plpast>summary:focus-visible{outline:2px solid var(--accent);outline-off
     <div class="panel-h"><h2>4% return</h2><span class="label" id="r4Upd">Team only · paper bets</span></div>
     <p class="hint">Paper bets. 1 unit = 1% of a 100-unit bank; the goal is a <b>4%+ ROI every month</b>: at least 4% back on whatever was bet that month (units won ÷ units bet). Bank = units won as a share of the 100-unit bank.</p>
     <div class="kpis" id="r4Top" aria-label="Monthly results"></div>
-    <h3 class="subh">Month by month</h3>
-    <div class="edwrap"><table class="edges"><thead><tr><th>Month</th><th class="n">Bets</th><th class="n">Units bet</th><th class="n">Units won</th><th class="n">ROI</th><th class="n">Bank</th><th>Against 4%</th></tr></thead><tbody id="r4MonthRows"></tbody></table></div>
-    <h3 class="subh">Past picks</h3>
-    <p class="r4-unit"><label for="r4PickMonth">Month</label> <select id="r4PickMonth"></select> <span class="hint" id="r4PickSum"></span></p>
-    <div class="edwrap"><table class="edges"><thead><tr><th>Day</th><th>Pick</th><th class="n">Price</th><th class="n">Stake</th><th>Result</th><th class="n">Units</th></tr></thead><tbody id="r4Picks"></tbody></table></div>
     <h3 class="subh">Today's picks <small class="hint" id="r4PostWhen"></small></h3>
     <p class="r4-note"><b>Buy as close to the game's start as you can.</b> These picks' prices have tended to drop before the start (NFL edge picks fall about 8¢ from first listing to the lock), so buying in the morning usually means paying more than the record does. Wait until shortly before the start, then buy at the price shown or lower, and never above "don't pay over".</p>
     <p class="hint" id="r4PostNote"></p>
@@ -585,6 +580,12 @@ details.plpast>summary:focus-visible{outline:2px solid var(--accent);outline-off
     <p class="hint" id="r4Plan"></p>
     <div class="edwrap"><table class="edges"><thead><tr><th>Bet</th><th>Why</th><th class="n">Price</th><th class="n">Model</th><th class="n">Stake</th><th class="n">To win</th><th>Live</th><th>Result</th></tr></thead><tbody id="r4Today"></tbody></table></div>
     <p class="hint" id="r4TodayLive"></p>
+    <h3 class="subh">Month by month</h3>
+    <div class="edwrap"><table class="edges"><thead><tr><th>Month</th><th class="n">Bets</th><th class="n">Units bet</th><th class="n">Units won</th><th class="n">ROI</th><th class="n">Bank</th><th>Against 4%</th></tr></thead><tbody id="r4MonthRows"></tbody></table></div>
+    <details class="plpast" id="r4PastBox"><summary><span>Past picks</span><span class="label" id="r4PastBoxN"></span></summary>
+    <p class="r4-unit"><label for="r4PickMonth">Month</label> <select id="r4PickMonth"></select> <span class="hint" id="r4PickSum"></span></p>
+    <div class="edwrap"><table class="edges"><thead><tr><th>Day</th><th>Pick</th><th class="n">Price</th><th class="n">Stake</th><th>Result</th><th class="n">Units</th></tr></thead><tbody id="r4Picks"></tbody></table></div>
+    </details>
     <details class="plpast"><summary><span>Past posted picks</span><span class="label" id="r4PostPastN"></span></summary>
     <div class="edwrap"><table class="edges"><thead><tr><th>Day</th><th>Pick</th><th class="n">Posted at</th><th class="n">Stake</th><th>Result</th><th class="n">Units</th></tr></thead><tbody id="r4PostPast"></tbody></table></div>
     </details>
@@ -1596,6 +1597,8 @@ details.plpast>summary:focus-visible{outline:2px solid var(--accent);outline-off
   }
   $('r4Unit').addEventListener('input',()=>{ try { localStorage.setItem('psa-r4-unit', $('r4Unit').value); } catch(e){} renderRoi4(); });
   $('r4PickMonth').addEventListener('change', renderRoi4);
+  try { if(localStorage.getItem('psa-r4-past')==='open') $('r4PastBox').open=true; } catch(e){}   // hidden by default; remembered on this device
+  $('r4PastBox').addEventListener('toggle',()=>{ try { localStorage.setItem('psa-r4-past', $('r4PastBox').open? 'open' : 'closed'); } catch(e){} });
   document.querySelectorAll('[data-r4]').forEach(b=>b.addEventListener('click',()=>{
     R4which=b.dataset.r4; document.querySelectorAll('[data-r4]').forEach(x=>x.setAttribute('aria-pressed', String(x===b))); renderRoi4();
   }));
@@ -1760,6 +1763,7 @@ details.plpast>summary:focus-visible{outline:2px solid var(--accent);outline-off
     const keep=sel.value;
     sel.innerHTML=months.map(k=>`<option value="${k}">${esc(mname(k))} (${all.filter(b=>b.day.startsWith(k)).length} picks)</option>`).join('');
     if(months.length) sel.value= months.includes(keep)? keep : months[0];
+    $('r4PastBoxN').textContent= all.length? `${all.length} pick${all.length===1?'':'s'}` : '';
     const mp=all.filter(b=>b.day.startsWith(sel.value)), mg=mp.filter(b=>b.res), mw=mg.filter(b=>b.res==='hit').length, ml=mg.filter(b=>b.res==='miss').length;
     $('r4PickSum').textContent= mp.length? `${mw} won, ${ml} lost${mp.length>mg.length? `, ${mp.length-mg.length} pending` : ''} · ${u(mg.reduce((a,b)=>a+(b.pnl||0),0))}` : '';
     $('r4Picks').innerHTML= mp.length? mp.map(b=>`<tr><td>${esc(b.day)}${b.bt? ' <small>backtest</small>' : ''}</td><td>${bet(b)}</td><td class="n">${c(b.price)}</td><td class="n">${b.stake.toFixed(2)}u</td><td>${b.res? RES[b.res] : 'Pending'}</td><td class="n ${cls(b.pnl)}">${b.pnl==null? '–' : u(b.pnl)}</td></tr>`).join('')
