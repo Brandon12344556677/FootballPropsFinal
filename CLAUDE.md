@@ -52,7 +52,7 @@ README.md has the full feature tour; this file is the working rules.
   above zero; one bet per player, stat and game; quarter Kelly on the segment's shrunk return, 0.10-1u, 5u a game, 25u a day. Frozen,
   graded from the picks; the first run freezes a walk-forward backtest and `roi4_study.py`'s study of every other method into the file
   (results stay encrypted: never put them in public code, the README or a PR). Dashboard tab 4% return; edge tracker row "roi4".
-  The target is the bank up 4% a month (`MONTH_TARGET`; the owner dropped 4% a day as unreachable), on paper until `REVIEW_ON`
+  The target is a 4%+ ROI each month, units won ÷ units bet that month (`MONTH_TARGET`; since Nov 23, 2026; was the bank up 4% a month, and before that 4% a day, dropped as unreachable), on paper until `REVIEW_ON`
   (Feb 15, 2027, the end of the NFL season), when the live months are judged; the tab shows each month and a seeded outlook.
   Posted picks (`post`, `state["posted"]`): the same plan posted from 11 AM ET at the Polymarket US price ($25+ offered there, game
   30+ minutes away, Polymarket event link from the sport files' "links", NFL kickoff from slate.json), frozen, graded at that price:

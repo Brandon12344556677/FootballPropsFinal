@@ -1,7 +1,7 @@
 """
 Prop Streak Lab — the "4% return" track (team only, never public): paper bets, sized in units, aiming at
-the bankroll up 4% a month (MONTH_TARGET, units won / BANK; the owner's goal since Nov 17, 2026, after a
-daily 4% proved unreachable), which at this rule's turnover means about 4% back on every unit staked. Paper only
+a 4% return on every unit staked over each month (MONTH_TARGET, units won / units staked that month; the owner's
+goal since Nov 23, 2026, after a daily 4% proved unreachable and then the bank up 4% a month, Nov 17-23). Paper only
 until REVIEW_ON, the end of the NFL season, when the live months are judged.
 
 The owner's brief: any sport, any number of bets a day, choose the stake of each, the one goal a 4% return.
@@ -57,7 +57,7 @@ SPORTS = ["nfl", "nba", "nhl", "mlb", "tennis"]
 SPORT_NAME = {"nfl": "NFL", "nba": "NBA", "nhl": "NHL", "mlb": "MLB", "tennis": "Tennis"}
 
 TARGET = 0.04        # 4% back on every unit staked: what a day or a bet is judged against
-MONTH_TARGET = 0.04  # the owner's goal (Nov 17, 2026): the bankroll up 4% a month, units won / BANK
+MONTH_TARGET = 0.04  # the owner's goal (Nov 23, 2026): 4%+ back on the units staked each month (was the bank up 4%, Nov 17-23)
 REVIEW_ON = "2027-02-15"   # paper only until then: the day after the NFL season's last game, when the live months are judged
 EDGE_MIN = 0.10      # the "model edge" segments: the model's chance at least 10 points over the price
 LOOKBACK = 42        # days of graded picks a segment is judged on
@@ -340,8 +340,8 @@ def stats(bets, days_planned=()):
 
 
 def monthly(daily):
-    """The month-by-month record: units won as a share of the BANK-unit bankroll (the 4%-a-month target) and
-    the return on units staked. The current month is still running; the tab marks it."""
+    """The month-by-month record: the return on units staked (judged against the 4%-a-month target) and units
+    won as a share of the BANK-unit bankroll. The current month is still running; the tab marks it."""
     months = {}
     for d in daily:
         m = months.setdefault(d["day"][:7], {"month": d["day"][:7], "n": 0, "days": 0, "staked": 0.0, "pnl": 0.0})
@@ -352,14 +352,14 @@ def monthly(daily):
     out = [{"month": m["month"], "n": m["n"], "days": m["days"], "staked": round(m["staked"], 2), "pnl": round(m["pnl"], 2),
             "bank": round(m["pnl"] / BANK, 4), "roi": round(m["pnl"] / m["staked"], 4) if m["staked"] else None}
            for m in (months[k] for k in sorted(months))]
-    return {"monthly": out, "months_hit": sum(1 for m in out if m["bank"] >= MONTH_TARGET),
+    return {"monthly": out, "months_hit": sum(1 for m in out if (m["roi"] or 0) >= MONTH_TARGET),
             "months_down": sum(1 for m in out if m["pnl"] < 0)}
 
 
 def outlook(daily, calendar_days, sims=5000, seed=4):
     """What a 30-day month could look like, from the backtest's own betting days: bootstrap months of the same
     number of betting days, with the edge as replayed, halved, and gone (each day's units shifted so the whole
-    replay returns that much on its stakes). Percent of the bank."""
+    replay returns that much on its stakes). Each month's return on the units it staked, the 4% goal's measure."""
     if not daily or not calendar_days:
         return None
     k = max(1, round(len(daily) / calendar_days * 30))
@@ -367,8 +367,13 @@ def outlook(daily, calendar_days, sims=5000, seed=4):
     pnl = sum(d["pnl"] for d in daily)
     rng, out = random.Random(seed), []
     for label, roi in (("As replayed", None), ("Edge half as big", pnl / staked / 2 if staked else 0), ("No edge (the market's -2%)", -0.02)):
-        days = [d["pnl"] + ((roi * staked - pnl) * d["staked"] / staked if roi is not None and staked else 0) for d in daily]
-        res = sorted(sum(rng.choice(days) for _ in range(k)) / BANK for _ in range(sims))
+        days = [(d["pnl"] + ((roi * staked - pnl) * d["staked"] / staked if roi is not None and staked else 0), d["staked"]) for d in daily]
+        res = []
+        for _ in range(sims):
+            pick = [rng.choice(days) for _ in range(k)]
+            st = sum(x[1] for x in pick)
+            res.append(sum(x[0] for x in pick) / st if st else 0.0)
+        res.sort()
         out.append({"label": label, "roi": round(pnl / staked if roi is None else roi, 4), "median": round(res[sims // 2], 4),
                     "p_hit": round(sum(r >= MONTH_TARGET for r in res) / sims, 3), "p_down": round(sum(r < 0 for r in res) / sims, 3),
                     "bad": round(res[sims // 20], 4), "good": round(res[sims - sims // 20 - 1], 4)})
@@ -495,6 +500,8 @@ def update(state, cands, now, meta=None):
         bts = stats(bt, bt_plans.keys())
         state["backtest"] = {"bets": bt, "stats": bts, "outlook": outlook(bts["daily"], len(bt_plans)),
                              "qualified": {d: [s["key"] for s in p if s["ok"]] for d, p in bt_plans.items()}}
+    # recomputed every run from the frozen backtest days (seeded, so it only moves when the method does)
+    state["backtest"]["outlook"] = outlook(state["backtest"]["stats"]["daily"], len(state["backtest"].get("qualified") or {}))
     if "study" not in state:     # every other method, replayed the same way (roi4_study.py), frozen like the backtest
         try:
             import roi4_study
