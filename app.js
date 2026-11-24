@@ -296,6 +296,15 @@ window.PS = (function(){
   // ---- the fair chance: model and market blended, w = the model's weight (today.json refits it hourly) ----
   let FAIR_W=0.1;
   const fairOf=(prob, price)=> price==null? null : FAIR_W*prob+(1-FAIR_W)*price;
+  // A pick card's chance ring. Value cards (o.fair) show the fair chance: on Value picks the model has run 15-20 points
+  // above what they hit, and the market price has been the better guide, so the blend is the honest headline;
+  // the model's own number stays underneath (Pro view). Every other card shows the model's chance.
+  function probRing(prob, o){ o=o||{}; const pv=Math.round(prob*100);
+    if(o.fair && o.price!=null){ const fv=Math.round(100*fairOf(prob, o.price)), c=Math.round(o.price*100);
+      return `<div class="pc-prob pc-fair"><div class="ring" style="--p:${fv}"><b>${fv}<small>%</small></b></div>`+
+        `<span title="${esc(`The model says ${pv}%, the market price ${c}¢. On Value picks the market has been the better guide, so the fair chance blends the two, mostly the market.`)}">fair chance</span>`+
+        `<span class="pro-only pc-model">model ${pv}%</span></div>`; }
+    return `<div class="pc-prob"><div class="ring" style="--p:${pv}"><b>${pv}<small>%</small></b></div><span${o.title? ` title="${esc(o.title)}"` : ''}>chance</span></div>`; }
   function setFair(w){ if(!(w>=0 && w<=1) || w===FAIR_W) return; FAIR_W=w;
     document.querySelectorAll('.verdict').forEach(el=>{ if(el._o){ el.dataset.sig=''; verdict(el, el._o); } }); }
 
@@ -721,7 +730,7 @@ window.PS = (function(){
     let seen=false; try{ seen=localStorage.getItem('psl_newhere_ok')==='1'; }catch(e){}
     if(seen) return;
     const box=document.createElement('section'); box.id='psnew'; box.className='psnew'; box.setAttribute('aria-label','How to read this page');
-    box.innerHTML='<p class="psnew-line simple-only"><span><b>72%</b> = our chance it hits · <b>57¢</b> = the price, so it pays 1.75× · Tap a pick for the full story. Research, not advice. 18+.</span>'+
+    box.innerHTML='<p class="psnew-line simple-only"><span><b>72%</b> = the chance it hits (on Value picks, the <i>fair</i> chance: our model blended with the market, which has been the better guide there) · <b>57¢</b> = the price, so it pays 1.75× · Tap a pick for the full story. Research, not advice. 18+.</span>'+
       '<button type="button" class="psnew-x" aria-label="Close">Got it</button></p>'+
       '<div class="pro-only"><div class="psnew-h"><b>New here? How to read a pick</b><button type="button" class="psnew-x" aria-label="Close">Got it</button></div>'+
       '<ul>'+
@@ -1351,7 +1360,7 @@ window.PS = (function(){
   }
 
   return {teamVars, parlaySearch, parlayFinder, ticker, until, skeleton, esc, hashFor, pickHash, parsePickHash, syncHash, sharePick, toast, helpBtn, spark, verdict, icon, sheet, closeSheet, pickSheet, relatedPicks,
-          isTracked, toggleBet, renderBets, loadBets, fairOf, setFair, pxMove, pxSpark, valueBanner, gameStrip, lockBadge, lockRibbon, lockNote, startLabel, gameTime, liveUS, venues, venueName, thinPrice, cap, capPick, thinOut, getView, setView,
+          isTracked, toggleBet, renderBets, loadBets, fairOf, setFair, probRing, pxMove, pxSpark, valueBanner, gameStrip, lockBadge, lockRibbon, lockNote, startLabel, gameTime, liveUS, venues, venueName, thinPrice, cap, capPick, thinOut, getView, setView,
           watch, starBtn, renderWatchlist, filterBar, lineLadder, exchangeUrls, betCalc, parlaySlip};
 })();
 

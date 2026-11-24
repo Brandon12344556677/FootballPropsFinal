@@ -35,8 +35,8 @@
 <link rel="manifest" href="/site.webmanifest">
 <script data-goatcounter="https://propstreaklive.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
 <link rel="stylesheet" href="fonts.css">
-<link rel="stylesheet" href="app.css?v=20261124a">
-<script src="app.js?v=20261124a"></script>
+<link rel="stylesheet" href="app.css?v=20261125a">
+<script src="app.js?v=20261125a"></script>
 <script src="/thanksgiving.js?v=20261117a"></script>
 <style>
 :root{
@@ -579,15 +579,15 @@ footer .fine a{color:#8394ab}
   const initials=n=>{ const w=String(n||'').replace(/\s+(Jr|Sr|II|III|IV)\.?$/i,'').trim().split(/\s+/); return ((w[0]||'')[0]||'')+(w.length>1? (w[w.length-1][0]||'') : ''); };
 
   function card(p){
-    const pv=Math.round(p.prob*100), tier=p.prob>=0.9?'hi':p.prob>=0.7?'mid':'lo';
+    const val=p.kind==='value', fp=val? FAIRW*p.prob+(1-FAIRW)*p.price : p.prob;   // Value cards: the fair chance in the ring
+    const pv=Math.round(p.prob*100), fv=Math.round(100*fp), tier=fp>=0.9?'hi':fp>=0.7?'mid':'lo';
     const href=`./${p.sport}.html#${PS.hashFor(p.pid, p.stat, p.line, p.side, p.player)}`;
-    const fair=Math.round(100*(FAIRW*p.prob+(1-FAIRW)*p.price));
-    const kind=p.kind==='value'? `<span class="pc-kind">⚡ Value · fair ${fair}%</span>`
+    const kind=val? `<span class="pc-kind">⚡ Value</span>`
                                : `<span class="pc-kind safe">🎯 Safe bet that pays</span>`;
     return `<a class="pickcard ${tier}${p.lk?' locked':''}" href="${esc(href)}" style="${PS.teamVars(p.sport, p.team)}">`+(p.lk? PS.lockRibbon(p.lk) : '')+
       `<div class="pc-top"><span class="av">${esc(initials(p.player))}</span>`+
         `<div class="pc-who"><b>${esc(p.player)}</b><span><span class="tbadge">${esc(p.team)}</span>vs ${esc(p.opp)}</span><span>${SPORT[p.sport]||''} · ${esc(PS.startLabel(p.start))} · <span class="cd" data-cd="${esc(p.start)}">${PS.until(Date.parse(p.start))}</span></span>${p.lk? PS.lockBadge(p.lk) : ''}</div>`+
-        `<div class="pc-prob"><div class="ring" style="--p:${pv}"><b>${pv}<small>%</small></b></div><span>chance</span></div></div>`+
+        `<div class="pc-prob"><div class="ring" style="--p:${fv}"><b>${fv}<small>%</small></b></div><span>${val? 'fair chance' : 'chance'}</span>${val? `<span>model ${pv}%</span>` : ''}</div></div>`+
       `<div class="pc-bet"><span class="leantag ${esc(p.side)}">${esc(p.side)}</span><b>${esc(p.line)}</b><span>${esc(p.statText)}</span>${PS.spark(p.l10, p.line, p.side)}</div>`+
       `<div class="pc-foot"><span class="pc-price"><span class="pmpx">${Math.round(p.price*100)}¢</span> <span class="rng">${(1/p.price).toFixed(2)}× payout</span>${PS.venues(p.pp, p.kp, p.vn)}${PS.pxSpark? PS.pxSpark(p.sp) : ''}</span>${kind}</div>`+
     `</a>`;
@@ -628,13 +628,14 @@ footer .fine a{color:#8394ab}
     if(p.res==='void') return `<span class="bs-st">Void · didn’t play</span>`;
     return Date.parse(p.start)>Date.now()? `<span class="bs-st">Pending</span>` : `<span class="bs-st live">Live · graded after the final</span>`;
   }
-  function bsCard(p){
-    const pv=Math.round(p.prob*100), tier=p.prob>=0.9?'hi':p.prob>=0.7?'mid':'lo';
+  function bsCard(p, val){   // val: the Value Shot, whose ring shows the fair chance
+    const fp=val && p.price? FAIRW*p.prob+(1-FAIRW)*p.price : p.prob;
+    const pv=Math.round(p.prob*100), fv=Math.round(100*fp), tier=fp>=0.9?'hi':fp>=0.7?'mid':'lo';
     const href=`./${p.sport}.html#${PS.hashFor(p.pid, p.stat, p.line, p.side, p.player)}`;
     return `<a class="pickcard ${tier}" href="${esc(href)}" style="${PS.teamVars(p.sport, p.team)}">`+
       `<div class="pc-top"><span class="av">${esc(initials(p.player))}</span>`+
         `<div class="pc-who"><b>${esc(p.player)}</b><span><span class="tbadge">${esc(p.team)}</span>vs ${esc(p.opp)}</span><span>${SPORT[p.sport]||''} · <span class="cd" data-cd="${esc(p.start)}">${PS.until(Date.parse(p.start))}</span></span></div>`+
-        `<div class="pc-prob"><div class="ring" style="--p:${pv}"><b>${pv}<small>%</small></b></div><span>chance</span></div></div>`+
+        `<div class="pc-prob"><div class="ring" style="--p:${fv}"><b>${fv}<small>%</small></b></div><span>${val? 'fair chance' : 'chance'}</span>${val? `<span>model ${pv}%</span>` : ''}</div></div>`+
       `<div class="pc-bet"><span class="leantag ${esc(p.side)}">${esc(p.side)}</span><b>${esc(p.line)}</b><span>${esc(p.statText)}</span>${PS.spark(p.l10||[], p.line, p.side)}</div>`+
       `<div class="pc-foot"><span class="pc-price"><span class="pmpx">${Math.round(p.price*100)}¢</span> <span class="rng">${(1/p.price).toFixed(2)}× payout</span></span>${bsStatus(p)}</div>`+
     `</a>`;
@@ -645,7 +646,7 @@ footer .fine a{color:#8394ab}
     let html=`<div class="bs-head"><span class="bs-title">${m.t}</span><span class="bs-rec">${rec}</span></div><p class="bs-blurb">${m.blurb}</p>`;
     if(p){
       const base=h.n>=10? `Picks like this: <b>${h.hit} of ${h.n} hit (${Math.round(100*h.hit/h.n)}%)</b>${h.n<50?' — small sample':''}` : 'Too few graded picks like this yet to quote a hit rate';
-      html+=bsCard(p)+`<p class="bs-facts"><span>Market <b>${Math.round(p.price*100)}%</b>${p.vn? ' on '+PS.venueName(p.vn) : ''} · Model <b>${Math.round(p.prob*100)}%</b></span><span>Posted ${esc(etTime(p.picked))} ET · locked</span><span>${base}</span></p>`;
+      html+=bsCard(p, slot==='value')+`<p class="bs-facts"><span>Market <b>${Math.round(p.price*100)}%</b>${p.vn? ' on '+PS.venueName(p.vn) : ''} · Model <b>${Math.round(p.prob*100)}%</b></span><span>Posted ${esc(etTime(p.picked))} ET · locked</span><span>${base}</span></p>`;
     } else if(!day){
       html+=`<p class="bs-empty">Today’s pick posts at ${esc(b.pickFrom==='11:00'?'11 AM':b.pickFrom||'11 AM')} ET.</p>`;
     } else if(day.closed){

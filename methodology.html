@@ -67,8 +67,8 @@ body{font-size:17px;line-height:1.6;color:var(--ps-soft);overflow-x:hidden;-webk
 }
 @media(max-width:480px){.art th,.art td{padding:8px 6px}.art table{font-size:14px}}
 </style>
-<link rel="stylesheet" href="app.css?v=20261124a">
-<script src="app.js?v=20261124a"></script>
+<link rel="stylesheet" href="app.css?v=20261125a">
+<script src="app.js?v=20261125a"></script>
 </head>
 <body>
 <header class="apptop">
@@ -192,7 +192,7 @@ body{font-size:17px;line-height:1.6;color:var(--ps-soft);overflow-x:hidden;-webk
       </ul>
       <div class="card">
         <h3 style="margin-top:0">The fair chance</h3>
-        <p style="margin-bottom:0">Because the market's price has carried most of the predictive weight on the record so far, every card that shows a price also shows a <b>fair chance</b>: the model blended with the market, <code>w × model + (1 − w) × price</code>, where <i>w</i> is the mix that has predicted the graded picks best (lowest Brier score), kept between 10% and 90% model. It's refit on every run; the <a href="record.html#market">Record page</a> shows the current mix. It's the most realistic number on the card — and the gap between it and the price is the realistic edge, which is usually small.</p>
+        <p style="margin-bottom:0">Because the market's price has carried most of the predictive weight on the record so far, every card that shows a price also shows a <b>fair chance</b>: the model blended with the market, <code>w × model + (1 − w) × price</code>, where <i>w</i> is the mix that has predicted the graded picks best (lowest Brier score), kept between 10% and 90% model. It's refit on every run; the <a href="record.html#market">Record page</a> shows the current mix. It's the most realistic number on the card — and the gap between it and the price is the realistic edge, which is usually small. <b>On Value cards the fair chance is the big number in the ring</b> (since Nov 25, 2026), with the model's own chance in small print under it in the Pro view. Value picks are, by definition, where the model and the market disagree by 15+ points, and there the market has been the better guide: Value picks have hit close to what their price implied, 15 to 20 points below the model's chance. Every other card (Top 25 Surest, the Safe Pick) still shows the model's chance, which has been close to what those picks hit.</p>
       </div>
 
       <h2 id="lists">Value spots and Top 25 Surest</h2>

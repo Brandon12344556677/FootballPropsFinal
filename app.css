@@ -218,6 +218,7 @@ select option:checked,.app select option:checked{background-color:var(--ps-green
 .app .pc-prob b{display:block;font-family:var(--ps-num);font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:-.02em;font-size:32px;line-height:1;color:#fff}
 .app .pickcard.hi .pc-prob b{color:var(--ps-green)} .app .pickcard.mid .pc-prob b{color:var(--ps-mint)}
 .app .pc-prob span{font-size:12px;color:var(--ps-muted)}
+.app .pc-prob .pc-model{font-size:12px;color:var(--ps-muted);opacity:.85}   /* a Value card's model chance, under its fair chance */
 .app .pc-bet{display:flex;align-items:baseline;gap:8px;margin:12px 0;font-size:15px;color:var(--ps-soft)}
 .app .pc-bet b{font-family:var(--ps-cond);font-size:22px;font-weight:700;color:#fff;letter-spacing:.02em}
 .app .pc-bet .leantag{align-self:center}
