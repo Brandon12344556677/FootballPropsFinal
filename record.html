@@ -78,8 +78,8 @@ h2{margin:0}
 @media(max-width:400px){.rc-t{font-size:12px}.rc-t th,.rc-t td{padding:6px 2px}.rc-t thead th{font-size:12px;letter-spacing:0}}
 </style>
 
-<link rel="stylesheet" href="app.css?v=20261125a">
-<script src="app.js?v=20261125a"></script>
+<link rel="stylesheet" href="app.css?v=20261125d">
+<script src="app.js?v=20261125d"></script>
 <script src="/thanksgiving.js?v=20261117a"></script>
 
 <header class="apptop">
@@ -101,7 +101,7 @@ h2{margin:0}
     <p class="lede">Every list the site publishes, in every sport: how often it hit, what the model said, and what 1 unit on each pick returned at the price recorded before the game. Nothing is left out for how it turned out.</p>
     <p class="rc-note" id="rc-asof" style="margin:-8px 0 14px"></p>
     <div class="herostats">
-      <div><b id="rc-graded">—</b><span>Live picks graded</span></div>
+      <div><b id="rc-graded">—</b><span>Lines priced and graded</span></div>
       <div><b id="rc-gen">—</b><span>Updated</span></div>
       <div><b id="rc-since">—</b><span>Tracking since</span></div>
     </div>
@@ -277,7 +277,7 @@ function sportPanel(s){
   sec.className='panel'; sec.id=s.sport;
   sec.innerHTML=`<h2>${s.name}${s.test? '<span class="rc-badge">New · under test</span>' : ''}</h2>`+
     `<p class="rc-sub">${s.test? 'New on the site and still building a record, so it is kept apart from the other sports and off the home page. Match markets, not player props. ' : ''}`+
-    `${s.graded? `${num(s.graded)} live picks graded since ${day(s.since, true)}. Every list the ${s.name} page publishes is below.` : 'No graded live picks yet.'}</p>`+
+    `${s.graded? `${num(s.graded)} lines priced and graded since ${day(s.since, true)}, most of them never on a list. Every list the ${s.name} page publishes is below.` : 'No graded lines yet.'}</p>`+
     `<div class="rc-grid"><div>${s.lists.map(listBlock).join('')}</div><div><div class="rc-chart"></div>`+
     `<a class="rc-more" href="${s.page}#past">See every graded ${s.name} pick in Past picks →</a></div></div>`+
     (s.test? `<h3 class="rc-h3">Calibration and model vs. market</h3><div class="rc-grid"><div class="rc-scroll">${calibTable([[s.name, s.calib]])}</div>`+
