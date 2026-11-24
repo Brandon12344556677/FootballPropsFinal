@@ -216,6 +216,7 @@ html[data-view] .pickbar .pstrust .tr-res{display:inline-flex}
 .squadcard b{font-family:var(--display);font-weight:800;letter-spacing:-.02em;font-size:clamp(17px,1.7vw,20px);line-height:1.15}
 .squadcard b i{color:var(--green)}
 .squadcard .sub{margin:0;font-size:13px;line-height:1.35;color:var(--muted)}
+.squadcard .sub .disc{display:block;margin-top:3px;font-family:inherit;font-weight:600;font-size:13px;letter-spacing:0;color:var(--soft)}   /* the referral disclosure: plain, not hidden in grey */
 .squadcard .btn{flex:none}
 @media (max-width:620px){.squadqr{display:none}.squadcard{padding:12px 14px}}
 #email{min-width:0}
@@ -447,7 +448,7 @@ footer .fine a{color:#8394ab}
         <span class="squadcopy">
           <span class="kicker">Polymarket group</span>
           <b>Join our <i>squad</i> on Polymarket</b>
-          <span class="sub">Our group inside the Polymarket app. Polymarket is a separate service with its own age and location rules.</span>
+          <span class="sub">Our group inside the Polymarket app. Polymarket is a separate service with its own age and location rules. <b class="disc">We may earn a referral reward if you join through this link. It never changes the model or the picks.</b></span>
         </span>
         <span class="btn btn-go">Join →</span>
       </a>
