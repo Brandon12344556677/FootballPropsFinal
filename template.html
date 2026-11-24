@@ -626,8 +626,8 @@ details.valrules>summary{cursor:pointer}
 .nflfcount{margin:0 0 10px}
 </style>
 
-<link rel="stylesheet" href="app.css?v=20261124a">
-<script src="app.js?v=20261124a"></script>
+<link rel="stylesheet" href="app.css?v=20261125a">
+<script src="app.js?v=20261125a"></script>
 <script src="/thanksgiving.js?v=20261117a"></script>
 
 <header class="apptop">
@@ -2279,13 +2279,15 @@ function pickTable(rows, opts){
   let h=sort? `<div class="sortbar"><span class="sortlab">Sort</span>${SORTS.map(([k,l])=>`<button type="button" class="sortpill" data-k="${k}" aria-pressed="${sort.key===k}">${l}${sort.key===k?(sort.dir>0?' ↑':' ↓'):''}</button>`).join('')}</div>` : '';
   h+=`<div class="pickgrid">`;
   rows.forEach((r,idx)=>{
-    const tier=r.prob>=0.9?'hi':r.prob>=0.7?'mid':'lo', g=r.game||{};
+    const fair=!!opts.fair, fpx=r.locked? r.price : (livePriceFor(r) ?? r.price);   // Value cards: the fair chance in the ring
+    const fp=fair && fpx!=null? PS.fairOf(r.prob, fpx) : r.prob;
+    const tier=fp>=0.9?'hi':fp>=0.7?'mid':'lo', g=r.game||{};
     const vs=r.team===g.home? 'vs '+esc(g.away) : r.team===g.away? '@ '+esc(g.home) : esc(g.away)+' @ '+esc(g.home);
     const pv=Math.round(r.prob*100);
     h+=`<article class="pickcard ${tier}${r.locked?' locked':''}" style="${PS.teamVars('nfl', r.team)}">`+(r.locked? PS.lockRibbon(r.lk) : '')+
       `<div class="pc-top"><span class="av">${esc(initials(r.name))}</span>`+
         `<div class="pc-who"><b>${esc(r.name)}</b><span><span class="tbadge">${esc(r.team)}</span>${vs}</span>${kickoffISO(teamGame(r.team))? PS.gameTime(kickoffISO(teamGame(r.team))) : ''}</div>`+
-        `<div class="pc-prob"><div class="ring" style="--p:${pv}"><b>${pv}<small>%</small></b></div><span title="80% range ${Math.round(r.lo*100)}–${Math.round(r.hi*100)}%, from ${r.n} games">chance</span></div></div>`+
+        PS.probRing(r.prob, {fair, price:fpx, title:`80% range ${Math.round(r.lo*100)}–${Math.round(r.hi*100)}%, from ${r.n} games`})+`</div>`+
       `<div class="pc-bet"><span class="leantag ${r.side}">${r.side}</span><b>${r.line}</b><span>${esc(r.statText)}</span>${r.pl? PS.spark(valuesOf(r.pl, r.sk), r.line, r.side) : ''}</div>`+
       `<div class="pc-foot">${r.locked? lockedPrice(r)+PS.lockBadge(r.lk) : liveSpan(r)}${r.pl? PS.starBtn('nfl', {pid:r.pl.id, name:r.name, team:r.team}) : ''}<button class="edgeload" type="button" data-i="${idx}">Details</button></div>`+
     `</article>`;
@@ -2350,7 +2352,7 @@ function renderValue(){
   if(!rows.length){ filteredOut(body, `the ${allV.length} value spot${allV.length===1?'':'s'}`); trackLive('V', []); return; }
   const unders=rows.filter(r=>r.side==='under').length, overs=rows.length-unders;
   const stale=rows.filter(r=>!r.vlive && !r.locked).length;
-  body.innerHTML=fltCount(rows.length, allV.length)+pickTable(rows,{})+`<p class="mktnote" style="margin-top:8px"><b>${rows.length}</b> prop${rows.length===1?'':'s'}${rows.length<allV.length? ` (of ${allV.length}, filtered)` : ''} clear both rules at the price you'd pay right now — ${overs} over${overs===1?'':'s'} and ${unders} under${unders===1?'':'s'}${stale?`, ${stale} judged on the price from the last scan`:''}. Rechecked about once a minute, so a row leaves as soon as its price moves against it. Picks are recorded before kickoff and graded in <b>Past picks</b> — that record is priced at record time, so it can differ slightly from this list. Backward-looking; not advice.</p>`;
+  body.innerHTML=fltCount(rows.length, allV.length)+pickTable(rows,{fair:true})+`<p class="mktnote" style="margin-top:8px"><b>${rows.length}</b> prop${rows.length===1?'':'s'}${rows.length<allV.length? ` (of ${allV.length}, filtered)` : ''} clear both rules at the price you'd pay right now — ${overs} over${overs===1?'':'s'} and ${unders} under${unders===1?'':'s'}${stale?`, ${stale} judged on the price from the last scan`:''}. Rechecked about once a minute, so a row leaves as soon as its price moves against it. Picks are recorded before kickoff and graded in <b>Past picks</b> — that record is priced at record time, so it can differ slightly from this list. Backward-looking; not advice.</p>`;
   wireLoad(body, rows); wireFltClear(body);
   trackLive('V', rows.filter(r=>!r.locked));
 }
