@@ -1578,6 +1578,7 @@ function valueRule(p){
 }
 function setPicks(d, full){
   if(!d||!d.picks){ PICKS=PICKS||[]; } else { const cols=d.cols; PICKS=d.picks.map(row=>PS.capPick(Object.fromEntries(cols.map((c,i)=>[c,row[i]]))))
+    .filter(p=>p.res!=='dup')           // a second copy of a pick recorded under two ids for one game (voided)
     .filter(p=>!PS.thinOut(p, {}))      // ruled out only for a thin market: never recommended
     .map(valueRule); }
   if(full) PICKS_FULL=true;
