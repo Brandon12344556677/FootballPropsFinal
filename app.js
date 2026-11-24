@@ -694,14 +694,15 @@ window.PS = (function(){
     if(PAGE_SPORT){
       const r=L[PAGE_SPORT]; if(!r) return '';
       const parts=[];
-      if(r.T) parts.push(`Top 25 Surest <b>${r.T.hit}/${r.T.n} hit</b>`);
-      if(r.V) parts.push(`Value <b>${r.V.hit}/${r.V.n}</b>${r.V.units!=null? ` (${r.V.units>=0?'+':'−'}${Math.abs(r.V.units).toFixed(1)}u)` : ''}`);
+      const uu=x=>x!=null? ` (${x>=0?'+':'−'}${Math.abs(x).toFixed(1)}u after fees)` : '';
+      if(r.T) parts.push(`Top 25 Surest <b>${r.T.hit}/${r.T.n} hit</b>${uu(r.T.units)}`);
+      if(r.V) parts.push(`Value <b>${r.V.hit}/${r.V.n}</b>${uu(r.V.units)}`);
       return `<span class="tr-res">${icon('circle-check')}Last results, ${esc(dayLbl(r.day))}: ${parts.join(' · ')} <a href="#past" data-tab-go="past">See every pick →</a></span>`;
     }
     const recent=new Date(Date.now()-3*864e5).toISOString().slice(0,10);
     const parts=Object.keys(SPORT_LBL).filter(s=>L[s] && L[s].T && L[s].day>=recent)
-      .map(s=>`<a href="./${s}.html#past">${SPORT_LBL[s]} <b>${L[s].T.hit}/${L[s].T.n}</b></a>`);
-    return parts.length? `<span class="tr-res">${icon('circle-check')}Latest Top 25 results: ${parts.join(' · ')}</span>` : '';
+      .map(s=>{ const T=L[s].T, u=T.units; return `<a href="./${s}.html#past">${SPORT_LBL[s]} <b>${T.hit}/${T.n}</b>${u!=null? ` ${u>=0?'+':'−'}${Math.abs(u).toFixed(1)}u` : ''}</a>`; });
+    return parts.length? `<span class="tr-res">${icon('circle-check')}Latest Top 25 results, units after fees: ${parts.join(' · ')}</span>` : '';
   }
   function trust(){
     const el=document.getElementById('pstrust'); if(!el) return;
@@ -802,6 +803,18 @@ window.PS = (function(){
   //   live: how many Value spots are on the board now (shown when nothing is graded yet)
   //   onRecord / onLive: what a tap does (Past picks / scroll to the Value panel)
   // Losses show in red; nothing at all hides the banner. ----
+  // A list's record as every board shows it: units won after the exchange's taker fee first, then the return per
+  // unit after fees with its ± range ("too early to tell" while that range includes zero), then the hit rate beside
+  // the average price paid. r: a builder's record row (fees.py adds net/roiNet/pm/early/avgPx); an older row
+  // without them falls back to the hit rate alone.
+  const pctS=(x,d=1)=>(x>0?'+':x<0?'−':'')+Math.abs(100*x).toFixed(d)+'%';
+  function recordLine(r){
+    if(!r || !r.n) return '';
+    const hit=`${r.hit}/${r.n} hit (${Math.round(100*r.hit/r.n)}%)${r.avgPx!=null? ` at ${Math.round(100*r.avgPx)}¢ avg` : ''}`;
+    if(r.net==null) return `<b>live record ${hit}</b>`;
+    const ret=r.roiNet!=null? ` (${pctS(r.roiNet)}${r.pm!=null? ` ± ${Math.abs(100*r.pm).toFixed(1)}%` : ''}${r.early? ', too early to tell' : ''})` : '';
+    return `<b>${(r.net>=0?'+':'−')+Math.abs(r.net).toFixed(1)}u after fees</b>${ret} · ${hit}`;
+  }
   function valueBanner(el, o){
     if(!el) return;
     o=o||{};
@@ -809,13 +822,14 @@ window.PS = (function(){
     const u=x=>(x>=0?'+':'−')+Math.abs(+x||0).toFixed(1)+'u';
     el.classList.add('scoreboard');
     if(r && r.n && r.priced){
-      const units=+r.units||0, up=units>=0, roi=units/r.priced;
-      const preNote=pre && pre.n? ` Value under the old rule${o.preRule? ' ('+esc(o.preRule)+')' : ''}: ${u(pre.units)} on ${pre.n} picks, shown on the <a href="/record.html">Record page</a>.` : '';
+      const fee=r.net!=null, units=fee? +r.net : (+r.units||0), up=units>=0, roi=fee? r.roiNet : units/r.priced;
+      const preU=pre && (pre.net!=null? pre.net : pre.units);
+      const preNote=pre && pre.n? ` Value under the old rule${o.preRule? ' ('+esc(o.preRule)+')' : ''}: ${u(preU)}${pre.net!=null? ' after fees' : ''} on ${pre.n} picks, shown on the <a href="/record.html">Record page</a>.` : '';
       el.innerHTML=`<a class="sb${up?'':' dn'}" href="#past"><span class="sb-k">⚡ Value spots · ${esc(o.season||'this season')}</span>`+
-        `<span class="sb-v">${u(units)}</span>`+
-        `<span class="sb-s">${r.hit}/${r.n} hit (${Math.round(100*r.hit/r.n)}%) · ${roi>=0?'+':''}${(roi*100).toFixed(1)}% return</span>`+
+        `<span class="sb-v">${u(units)}${fee? '<small> after fees</small>' : ''}</span>`+
+        `<span class="sb-s">${pctS(roi)} return${fee && r.pm!=null? ` ± ${Math.abs(100*r.pm).toFixed(1)}%` : ''}${fee && r.early? ' (too early to tell)' : ''} · ${r.hit}/${r.n} hit${r.avgPx!=null? ` at ${Math.round(100*r.avgPx)}¢ avg` : ` (${Math.round(100*r.hit/r.n)}%)`}</span>`+
         (o.rule? `<span class="sb-n">${esc(o.rule)}</span>` : '')+`</a>`+
-        `<p class="sb-more">1 unit on every pick at the price it was recorded at, graded from the results.${preNote} <a href="/record.html">The full record →</a></p>`;
+        `<p class="sb-more">1 unit on every pick at the price it was recorded at, less the exchange's taker fee, graded from the results.${fee? ` Before fees: ${u(r.units)}.` : ''}${preNote} <a href="/record.html">The full record →</a></p>`;
       el.querySelector('a.sb').onclick=e=>{ e.preventDefault(); if(o.onRecord) o.onRecord(); };
       el.hidden=false; return;
     }
@@ -1360,7 +1374,7 @@ window.PS = (function(){
   }
 
   return {teamVars, parlaySearch, parlayFinder, ticker, until, skeleton, esc, hashFor, pickHash, parsePickHash, syncHash, sharePick, toast, helpBtn, spark, verdict, icon, sheet, closeSheet, pickSheet, relatedPicks,
-          isTracked, toggleBet, renderBets, loadBets, fairOf, setFair, probRing, pxMove, pxSpark, valueBanner, gameStrip, lockBadge, lockRibbon, lockNote, startLabel, gameTime, liveUS, venues, venueName, thinPrice, cap, capPick, thinOut, getView, setView,
+          isTracked, toggleBet, renderBets, loadBets, fairOf, setFair, probRing, recordLine, pxMove, pxSpark, valueBanner, gameStrip, lockBadge, lockRibbon, lockNote, startLabel, gameTime, liveUS, venues, venueName, thinPrice, cap, capPick, thinOut, getView, setView,
           watch, starBtn, renderWatchlist, filterBar, lineLadder, exchangeUrls, betCalc, parlaySlip};
 })();
 

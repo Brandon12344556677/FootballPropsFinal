@@ -7,6 +7,7 @@ import unittest
 from zoneinfo import ZoneInfo
 
 import botd
+import fees
 
 ET = ZoneInfo("America/New_York")
 
@@ -106,7 +107,11 @@ class GradeTests(unittest.TestCase):
         self.assertTrue(d["closed"])
         self.assertEqual((d["lock"]["res"], d["lock"]["actual"]), ("hit", 1))
         self.assertEqual(d["value"]["res"], "miss")                              # matched a day either side
-        self.assertEqual(doc["record"]["lock"], {"n": 1, "hit": 1, "miss": 0, "push": 0, "void": 0, "units": 0.11, "last": ["hit"]})
+        rec = doc["record"]["lock"]
+        self.assertEqual({k: rec[k] for k in ("n", "hit", "miss", "push", "void", "units", "last")},
+                         {"n": 1, "hit": 1, "miss": 0, "push": 0, "void": 0, "units": 0.11, "last": ["hit"]})
+        # after the taker fee (fees.py), with the average price paid
+        self.assertEqual((rec["net"], rec["avgPx"], rec["early"]), (round(fees.net(0.9, True, rec.get("vn")), 2), 0.9, True))
         self.assertEqual(doc["record"]["value"]["units"], -1.0)
 
     def test_dnp_and_stale_are_voids(self):
