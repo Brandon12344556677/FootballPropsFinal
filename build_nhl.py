@@ -22,6 +22,7 @@ ESPN response degrades to "no new data" instead of failing the build.
 """
 import gzip
 import json, math, os, re, sys, time, datetime, unicodedata, urllib.request
+from zoneinfo import ZoneInfo
 
 import news   # ESPN's injury report (holds)
 import kalshi  # Kalshi prices, side by side with Polymarket's
@@ -31,7 +32,8 @@ import holds   # props that wait for injury news
 import slim    # the slim data baked into the page
 
 TODAY = datetime.date.today()
-ET_TODAY = (datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(hours=4)).date().isoformat()
+ET = ZoneInfo("America/New_York")   # US Eastern, daylight saving included
+ET_TODAY = datetime.datetime.now(ET).date().isoformat()
 UA = {"User-Agent": "prop-streak-lab/2.0 (+https://propstreaklab.com)"}
 
 # ESPN blocks site.api.espn.com from data-center IPs (Akamai 403), but two hosts
@@ -777,7 +779,7 @@ def fetch_slate():
         if start:
             SB_GAMES.append((away, home, start))
         t0 = parse_utc(start)
-        if t0 and (t0 - datetime.timedelta(hours=4)).date().isoformat() > ET_TODAY:
+        if t0 and t0.astimezone(ET).date().isoformat() > ET_TODAY:
             continue      # tomorrow's games: only their start times (stamp_starts), no picks a day early
         if status.get("completed") or status.get("state", "pre") != "pre":
             STARTED.add(frozenset((away, home)))
@@ -793,11 +795,8 @@ def fetch_slate():
                     spread = -float(sp)   # ESPN spread is the home line (neg = home fav); store + = favored
                 except (TypeError, ValueError):
                     spread = None
-        tm = ""
-        m = re.search(r"T(\d{2}):(\d{2})", start)
-        if m:
-            hh = (int(m.group(1)) - 4) % 24    # UTC -> ET (in-season, ~UTC-4)
-            tm = f"{hh:02d}:{m.group(2)}"
+        t_et = parse_utc(start)
+        tm = t_et.astimezone(ET).strftime("%H:%M") if t_et else ""   # ET start, 24-hour (the page shows it 12-hour)
         games.append({"away": away, "home": home, "date": start[:10],
                       "time": tm, "start": start, "total": total, "spread": spread, "final": False})
     games.sort(key=lambda g: (g["date"], g["time"]))

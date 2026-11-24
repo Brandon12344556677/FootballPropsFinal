@@ -23,6 +23,7 @@ Change both or neither. Everything that touches the network is wrapped so a bad
 ESPN or Polymarket response degrades to "no new data" instead of failing the build.
 """
 import json, math, os, re, sys, time, datetime, unicodedata, urllib.request
+from zoneinfo import ZoneInfo
 from collections import Counter
 from concurrent.futures import ThreadPoolExecutor
 
@@ -34,7 +35,8 @@ import holds   # props that wait for injury news
 import slim    # the slim data baked into the page
 
 TODAY = datetime.date.today()
-ET_TODAY = (datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(hours=4)).date().isoformat()
+ET = ZoneInfo("America/New_York")   # US Eastern, daylight saving included
+ET_TODAY = datetime.datetime.now(ET).date().isoformat()
 UA = {"User-Agent": "prop-streak-lab/2.0 (+https://propstreaklab.com)"}
 
 # site.web.api serves from CI (unlike the Akamai-blocked site.api host). Its
@@ -545,11 +547,8 @@ def fetch_slate():
                     probables[t] = aid
                     pnames[t] = ath.get("displayName") or ath.get("fullName") or ""
                     break
-        tm = ""
-        m = re.search(r"T(\d{2}):(\d{2})", start)
-        if m:
-            hh = (int(m.group(1)) - 4) % 24    # UTC -> ET (in-season, ~UTC-4)
-            tm = f"{hh:02d}:{m.group(2)}"
+        t_et = parse_utc(start)
+        tm = t_et.astimezone(ET).strftime("%H:%M") if t_et else ""   # ET start, 24-hour (the page shows it 12-hour)
         games.append({"away": away, "home": home, "date": start[:10], "time": tm, "start": start,
                       "total": total, "spread": spread, "final": False,
                       "pst": (ev.get("season") or {}).get("type") == 3,
@@ -1128,7 +1127,7 @@ def pick_et_date(p):
     """The pick's game date on ESPN's scoreboard (ET): its start time's ET date, else the gid date."""
     t = parse_utc(p.get("start"))
     if t:
-        return (t - datetime.timedelta(hours=4)).date().isoformat()   # UTC -> ET (in-season, ~UTC-4)
+        return t.astimezone(ET).date().isoformat()   # UTC -> ET
     return (p.get("gid") or "")[:10]
 
 

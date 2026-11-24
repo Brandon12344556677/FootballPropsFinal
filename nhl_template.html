@@ -1068,6 +1068,14 @@ function teamGame(t){ return TEAM_GAME[t]||null; }
 function oppOf(p){ const g=teamGame(p.t); if(!g) return null; return g.away===p.t? g.home : g.away; }
 const CUR_SEASON = DB.season;
 const DAYS=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'], MONS=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+// A game's start in US Eastern time, from its UTC start: "8:00 PM ET", and its Eastern date for dlabel.
+// (The builder's g.time is a 24-hour fallback for games without a start.)
+const ET_TZ='America/New_York';
+function etClock(g){ const t=g && g.start? new Date(g.start) : null;
+  if(t && isFinite(t.getTime())) return t.toLocaleTimeString('en-US', {timeZone:ET_TZ, hour:'numeric', minute:'2-digit'})+' ET';
+  return g && g.time? g.time+' ET' : ''; }
+function etDate(g){ const t=g && g.start? new Date(g.start) : null;
+  return t && isFinite(t.getTime())? t.toLocaleDateString('en-CA', {timeZone:ET_TZ}) : (g? g.date : ''); }
 function dlabel(iso){ if(!iso) return ''; const d=new Date(iso+'T12:00:00'); if(!isFinite(d.getTime())) return iso;
   return `${MONS[d.getMonth()]} ${d.getDate()}`; }
 function gameLabel(row){ return (row[3]==='REG'? '' : 'PO ')+dlabel(row[1]); }
@@ -1245,7 +1253,7 @@ function render(){
   if(wg){ const opp=wg.away===p.t? wg.home : wg.away, home=wg.home===p.t;
     ws.innerHTML=`<span><span class="lab">Tonight</span> <b>${home?'vs':'@'} ${esc(opp)}</b></span>`+
       (wg.total!=null?`<span><span class="lab">O/U</span> <b>${wg.total}</b></span>`:'')+
-      (wg.time?`<span><span class="lab">Puck drop</span> <b>${esc(wg.time)} ET</b></span>`:''); ws.hidden=false;
+      (etClock(wg)?`<span><span class="lab">Puck drop</span> <b>${esc(etClock(wg))}</b></span>`:''); ws.hidden=false;
   } else ws.hidden=true;
   const ctx=contextFor(p, sk), oppNow=ctx.opp;
   const line=state.line;
@@ -1351,7 +1359,7 @@ function awaitingGrade(p){ if(p.res!=null || !pickStarted(p)) return false;   //
 function scheduleNote(what){
   const games=(WEEK.games||[]).filter(g=>!g.final && !(g.start && Date.parse(g.start)<=Date.now()));
   if(games.length) return games.map(g=>`<div class="boardrow"><div><div class="bp">${esc(g.away)} @ ${esc(g.home)}</div>`+
-    `<div class="bmeta">${esc(dlabel(g.date))}${g.time?' · '+esc(g.time)+' ET':''}</div></div><div></div>`+
+    `<div class="bmeta">${esc(dlabel(etDate(g)))}${etClock(g)?' · '+esc(etClock(g)):''}</div></div><div></div>`+
     `<div class="bmeta">picks post before puck drop</div></div>`).join('');
   return `<p class="mktnote">No upcoming games on the schedule yet — ${what} fills in automatically before puck drop once the season's games are posted. The <b>Player</b> tab works now on recent game logs.</p>`;
 }
