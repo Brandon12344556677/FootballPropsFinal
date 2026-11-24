@@ -2381,7 +2381,8 @@ def main():
                     f"    <changefreq>{freq}</changefreq>\n    <priority>{prio}</priority>\n  </url>\n")
         f.write("</urlset>\n")
     with open("robots.txt", "w", encoding="utf-8") as f:
-        f.write(f"User-agent: *\nAllow: /\n\nSitemap: {site}/sitemap.xml\n")
+        # the team dashboard (team/) is noindex and unlinked; keep crawlers out of it too
+        f.write(f"User-agent: *\nAllow: /\nDisallow: /team/\n\nSitemap: {site}/sitemap.xml\n")
 
     print(f"Data: {len(with_games)} players with games ({len(players)} total), seasons {seasons_used}, "
           f"through {thru}; week {wk} has {len(week_games)} games; {len(injuries)} injury reports.")
