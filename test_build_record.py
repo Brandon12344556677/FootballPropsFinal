@@ -8,7 +8,6 @@ import tempfile
 import unittest
 
 import build_record as br
-import fees
 
 NOW = datetime.datetime(2026, 11, 16, 18, 0, tzinfo=datetime.timezone.utc)
 COLS = ["src", "date", "start", "side", "prob", "price", "px0", "pxc", "lists", "res", "vn", "th"]
@@ -16,11 +15,6 @@ COLS = ["src", "date", "start", "side", "prob", "price", "px0", "pxc", "lists", 
 
 def doc(*picks):
     return {"cols": COLS, "picks": [[p.get(c) for c in COLS] for p in picks]}
-
-
-def net(*bets):
-    """Units after the taker fee (fees.net; no venue: Kalshi's) on [(price, won?), ...], rounded as the record does."""
-    return round(sum(fees.net(px, won) for px, won in bets), 2)
 
 
 def pick(**kw):
@@ -90,10 +84,7 @@ class Weekly(unittest.TestCase):
                                 pick(date="2026-11-09", price=0.25),                # Mon, week of Nov 9: +3
                                 pick(date="2026-11-10", price=None),                # no price: not a bet
                                 pick(date="2026-11-24", price=0.5, res="miss")))    # a week with no picks is skipped
-        # after the taker fee (fees.net): the weeks add up what each unit returned net of it
-        w1 = [(0.5, True), (0.5, False)]
-        w2, w3 = w1 + [(0.25, True)], w1 + [(0.25, True), (0.5, False)]
-        self.assertEqual(br.weekly(rs), [["2026-11-02", net(*w1), 2], ["2026-11-09", net(*w2), 1], ["2026-11-23", net(*w3), 1]])
+        self.assertEqual(br.weekly(rs), [["2026-11-02", 0.0, 2], ["2026-11-09", 3.0, 1], ["2026-11-23", 2.0, 1]])
 
     def test_last_30_days(self):
         d = doc(pick(date="2026-10-01", price=0.5, res="miss"), pick(date="2026-11-10", price=0.5))
@@ -132,8 +123,7 @@ class Whole(unittest.TestCase):
     def test_up_overall_but_down_this_month_is_named(self):
         d = doc(pick(lists="T", price=0.25, date="2026-09-20"), pick(lists="T", price=0.9, res="miss"))
         rec = br.build([("nhl", d)], None, NOW)
-        self.assertEqual([(x["list"], x["units"], x["d30"]) for x in rec["losing"]],
-                         [("Top 25 Surest", net((0.25, True), (0.9, False)), net((0.9, False)))])
+        self.assertEqual([(x["list"], x["units"], x["d30"]) for x in rec["losing"]], [("Top 25 Surest", 2.0, -1.0)])
 
     def test_tennis_is_marked_under_test_and_kept_out_of_the_pooled_fits(self):
         d = doc(pick(lists="V", price=0.5, res="miss"))
@@ -158,7 +148,7 @@ class Window(unittest.TestCase):
         days = [w[0] for w in b["weeks"]]
         self.assertEqual(days, sorted(set(days)))
         self.assertTrue(all(datetime.date.fromisoformat(x).weekday() == 0 for x in days))
-        self.assertAlmostEqual(b["weeks"][-1][1], b["all"]["net"], places=2)    # the chart is after fees, like the headline
+        self.assertAlmostEqual(b["weeks"][-1][1], b["all"]["units"], places=2)
         self.assertEqual(sum(w[2] for w in b["weeks"]), b["all"]["priced"])
 
 
@@ -172,16 +162,6 @@ class Details(unittest.TestCase):
         b = {x["tag"]: x for x in br.sport_block("tennis", doc(pick(lists=None), pick(lists="V")), "2026-10-18")["lists"]}
         self.assertEqual((b["A"]["all"]["n"], b["V"]["all"]["n"], b["T"]["all"]["n"]), (2, 1, 0))
 
-    def test_up_before_fees_down_after_is_losing(self):
-        # 25 hits and 25 misses at 49c: +1.02 before fees, but the taker fee (about 1.8 units) takes it below zero
-        ps = [pick(lists="V", price=0.49, res="hit" if i < 25 else "miss", date="2026-09-20") for i in range(50)]
-        rec = br.build([("nhl", doc(*ps))], None, NOW)
-        a = rec["sports"][0]["lists"][0]["all"]
-        self.assertGreater(a["units"], 0)
-        self.assertLess(a["net"], 0)
-        self.assertEqual([(x["list"], x["units"], x["gross"]) for x in rec["losing"]], [("Value", a["net"], a["units"])])
-        self.assertTrue(a["early"])
-
     def test_losing_order(self):
         # down all-time first (worst first), then up overall but down this month (worst month first)
         d = doc(pick(lists="V", price=0.5, res="miss"),
@@ -190,9 +170,7 @@ class Details(unittest.TestCase):
                 pick(lists="T", price=0.9, res="miss"))
         rec = br.build([("nhl", d), ("mlb", m)], None, NOW)
         self.assertEqual([(x["name"], x["list"], x["units"], x["d30"]) for x in rec["losing"]],
-                         [("NHL", "Value", net((0.5, False)), net((0.5, False))),
-                          ("MLB", "Top 25 Surest", net((0.25, True), (0.9, False), (0.9, False)), net((0.9, False), (0.9, False))),
-                          ("NHL", "Top 25 Surest", net((0.1, True), (0.9, False)), net((0.9, False)))])
+                         [("NHL", "Value", -1.0, -1.0), ("MLB", "Top 25 Surest", 1.0, -2.0), ("NHL", "Top 25 Surest", 8.0, -1.0)])
 
     def test_nfl_unreal_price_in_cents(self):
         s = br.stats(br.rows("nfl", doc(pick(price=5), pick(price=90, px0=52), pick(price=50, px0=45))))

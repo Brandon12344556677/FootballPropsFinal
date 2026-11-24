@@ -35,8 +35,8 @@
 <link rel="manifest" href="/site.webmanifest">
 <script data-goatcounter="https://propstreaklive.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
 <link rel="stylesheet" href="fonts.css">
-<link rel="stylesheet" href="app.css?v=20261125b">
-<script src="app.js?v=20261125b"></script>
+<link rel="stylesheet" href="app.css?v=20261125c">
+<script src="app.js?v=20261125c"></script>
 <script src="/thanksgiving.js?v=20261117a"></script>
 <style>
 :root{
@@ -642,8 +642,7 @@ footer .fine a{color:#8394ab}
   }
   function bsSlot(slot, day, b){
     const m=SLOT[slot], r=(b.record||{})[slot]||{}, h=(b.hist||{})[slot]||{}, p=day&&day[slot];
-    const ru=r.net!=null? r.net : (r.units||0);   // units after the exchange's taker fee (fees.py), when botd.json has them
-    const rec=(r.n||r.push||r.void)? `Record <b>${r.hit}–${r.miss}</b>${r.push?`–${r.push}`:''} · <span class="${ru>=0?'up':'dn'}">${units(ru)}${r.net!=null? ' after fees' : ''}</span>` : 'Record starts today';
+    const rec=(r.n||r.push||r.void)? `Record <b>${r.hit}–${r.miss}</b>${r.push?`–${r.push}`:''} · <span class="${r.units>=0?'up':'dn'}">${units(r.units||0)}</span>` : 'Record starts today';
     let html=`<div class="bs-head"><span class="bs-title">${m.t}</span><span class="bs-rec">${rec}</span></div><p class="bs-blurb">${m.blurb}</p>`;
     if(p){
       const base=h.n>=10? `Picks like this: <b>${h.hit} of ${h.n} hit (${Math.round(100*h.hit/h.n)}%)</b>${h.n<50?' — small sample':''}` : 'Too few graded picks like this yet to quote a hit rate';
@@ -864,12 +863,11 @@ footer .fine a{color:#8394ab}
     io.observe(ch); setTimeout(()=>{ if(!fired){ io.disconnect(); go(); } }, 1200);
   }
 
-  // "Pick a sport" tiles: each sport's season Top 25 units after fees under its name (a hit rate on 90¢ picks says
-  // little), once there are enough graded picks
+  // "Pick a sport" tiles: each sport's season Top 25 hit rate under its name, once there are enough graded picks
   function pickbarRecords(t){
     const R=(t&&t.record)||{};
     document.querySelectorAll('.pickbar [data-rec]').forEach(el=>{ const r=(R[el.dataset.rec]||{}).T;
-      if(r && r.n>=20) el.textContent=r.net!=null? `Top 25: ${r.net>=0?'+':'−'}${Math.abs(r.net).toFixed(1)}u after fees` : `Top 25: ${Math.round(100*r.hit/r.n)}% hit`; });
+      if(r && r.n>=20) el.textContent=`Top 25: ${Math.round(100*r.hit/r.n)}% hit`; });
   }
   // If today.json can't be read (one more try after 4 seconds), the placeholder sections hide rather than shimmer forever.
   const loadToday=again=>get('today.json').then(t=>{

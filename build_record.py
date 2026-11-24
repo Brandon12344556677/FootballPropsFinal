@@ -11,10 +11,8 @@ botd.json) and writes:
                 ("gen": when the numbers last changed; "window": 30 days, today included)
                 "calib", "fair": the same two, pooled over the featured sports (what the home page shows),
                 "botd": Pick of the Day's two slots, shaped like a sport's lists,
-                "losing": [{"sport", "name", "list", "units", "priced", "roi", "pm", "gross", "d30"}]: every list down
-                           units after fees (units/roi/d30 after fees; gross: units before them)}
-               stats = {"n", "hit", "said": average model chance, "priced", "units", "roi" (before fees),
-                        "net", "roiNet", "pm", "early", "avgPx": after the taker fee, its +/- range, average price (fees.py),
+                "losing": [{"sport", "name", "list", "units", "priced", "roi", "d30"}]: every list down units}
+               stats = {"n", "hit", "said": average model chance, "priced", "units", "roi",
                         "clvN", "clvUp", "clvDn", "clv": average price move in cents, first price to last
                         (none for tennis: NO_MOVE)}
   record.html  record_template.html with __RECORDDATA__ replaced by that JSON. The page only draws it.
@@ -36,7 +34,6 @@ import sys
 
 import build_today
 import depth
-import fees
 from build_today import ET, NOT_FEATURED, SPORTS, cap, parse_start
 
 OUT = "record.json"
@@ -90,7 +87,7 @@ def rows(sport, doc):
         if sport not in NO_MOVE and p.get("px0") is not None and p.get("pxc") is not None:
             mv = round((p["pxc"] - p["px0"]) * 100.0 / cents, 1)
         out.append({"day": str(day), "win": p["res"] == "hit", "prob": cap(p.get("prob")), "price": price,
-                    "vn": p.get("vn"), "tags": tags, "mv": mv})
+                    "tags": tags, "mv": mv})
     return out
 
 
@@ -110,20 +107,18 @@ def stats(rs):
             "said": round(sum(said) / len(said), 4) if said else None,
             "priced": len(bets), "units": round(sum(bets), 2),
             "roi": round(sum(bets) / len(bets), 4) if bets else None,
-            # after the exchange's taker fee, with a +/- range and the average price paid (fees.py): what the page leads with
-            **fees.summary([(r["price"], r["win"], r.get("vn")) for r in rs if r.get("price")]),
             "clvN": len(mv), "clvUp": sum(1 for m in mv if m >= 1), "clvDn": sum(1 for m in mv if m <= -1),
             "clv": round(sum(mv) / len(mv), 1) if mv else None}
 
 
 def weekly(rs):
-    """Units over time, after the taker fee (fees.net): [[Monday of the week, units won or lost so far, priced bets
-    that week], ...], one point per week that had a priced bet, oldest first."""
+    """Units over time: [[Monday of the week, units won or lost so far, priced bets that week], ...],
+    one point per week that had a priced bet, oldest first."""
     per = {}
     for r in rs:
-        if not r.get("price"):
+        u = units(r)
+        if u is None:
             continue
-        u = fees.net(r["price"], r["win"], r.get("vn"))
         try:
             d = datetime.date.fromisoformat(r["day"])
         except ValueError:
@@ -171,7 +166,7 @@ def botd_blocks(doc, since):
             except (TypeError, ValueError):
                 price = None
             rs.append({"day": str(d["date"]), "win": p["res"] == "hit", "prob": cap(p.get("prob")),
-                       "price": price / 100.0 if price and price > 1 else price, "vn": p.get("vn"), "tags": [slot], "mv": None})
+                       "price": price / 100.0 if price and price > 1 else price, "tags": [slot], "mv": None})
         b = list_block(slot, name, rs, since)
         rec = record.get(slot) if isinstance(record.get(slot), dict) else {}
         b["push"], b["void"] = rec.get("push") or 0, rec.get("void") or 0
@@ -187,10 +182,10 @@ def losing(sports, botd):
         for b in lists:
             if b["tag"] == "A":
                 continue
-            a, d = b["all"], b["d30"]       # after fees: a list that only breaks even before them is losing money
-            if (a["priced"] and a["net"] < 0) or (d["priced"] and d["net"] < 0):
-                out.append({"sport": sport, "name": name, "list": b["name"], "units": a["net"], "priced": a["priced"],
-                            "roi": a["roiNet"], "pm": a["pm"], "gross": a["units"], "d30": d["net"] if d["priced"] else None})
+            a, d = b["all"], b["d30"]
+            if (a["priced"] and a["units"] < 0) or (d["priced"] and d["units"] < 0):
+                out.append({"sport": sport, "name": name, "list": b["name"], "units": a["units"], "priced": a["priced"],
+                            "roi": a["roi"], "d30": d["units"] if d["priced"] else None})
     # down all-time first, by units; then the lists that are up overall but down this month, by the month
     return sorted(out, key=lambda x: (0, x["units"], x["d30"] or 0) if x["priced"] and x["units"] < 0 else (1, x["d30"], x["units"]))
 

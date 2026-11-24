@@ -24,7 +24,6 @@ from zoneinfo import ZoneInfo
 import news   # pre-game news feeds, test mode
 import kalshi  # Kalshi prices, side by side with Polymarket's
 import depth   # enough money at the price? (thin-market filter)
-import fees    # units and return after the exchange fee, with a +/- range
 import arbs    # Polymarket US / Kalshi arbitrage finder (team only)
 import holds   # props that wait for injury news
 
@@ -2096,9 +2095,7 @@ def live_record(picks):
         priced = [p for p in ps if p.get("price") and depth.real_price(p)]   # a price that can't have been real stays out of the ROI
         roi = (sum((100.0 / p["price"] - 1) if p["res"] == "hit" else -1 for p in priced) / len(priced)) if priced else None
         out[k] = {"n": len(ps), "hit": hits, "roi": round(roi, 3) if roi is not None else None, "priced": len(priced),
-                  **clv_stats(ps),
-                  # units, return (+/- range) after the taker fee, and the average price (fees.py; NFL prices are cents)
-                  **fees.summary([(p["price"] / 100.0, p["res"] == "hit", p.get("vn")) for p in priced])}
+                  **clv_stats(ps)}
     return out
 
 

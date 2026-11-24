@@ -30,8 +30,7 @@ Grading reads each sport's own picks file (the same graded result the sport page
 is voided too, so the record can't hang on a missing box score.
 
   botd.json  {"gen", "rules", "days": [{"date", "lock", "value", "closed"}],
-              "record": {"lock"|"value": {"n", "hit", "miss", "push", "void", "units", "last",
-                                          "net", "roiNet", "pm", "early", "avgPx"}},   (after the taker fee: fees.py)
+              "record": {"lock"|"value": {"n", "hit", "miss", "push", "void", "units", "last"}},
               "hist": {"lock"|"value": {"n", "hit"}}}     (every day is kept: it's the record)
 
 Standard library only; build_today.py calls update() and never lets it fail the run.
@@ -40,8 +39,6 @@ import datetime
 import json
 import os
 from zoneinfo import ZoneInfo
-
-import fees
 
 ET = ZoneInfo("America/New_York")
 OUT = "botd.json"
@@ -161,7 +158,6 @@ def grade(pick, index, now):
 
 def record(days, slot):
     r = {"n": 0, "hit": 0, "miss": 0, "push": 0, "void": 0, "units": 0.0, "last": []}
-    bets = []
     for d in sorted(days, key=lambda d: d["date"]):
         p = d.get(slot)
         if not p or p.get("res") is None:
@@ -171,10 +167,8 @@ def record(days, slot):
         if res in ("hit", "miss"):
             r["n"] += 1
             r["units"] += (1.0 / p["price"] - 1.0) if res == "hit" else -1.0
-            bets.append((p["price"], res == "hit", p.get("vn")))
         r["last"].append(res)
     r["units"] = round(r["units"], 2)
-    r.update(fees.summary(bets))      # units, return (+/- range) after the taker fee; average price
     r["last"] = r["last"][-10:]
     return r
 
