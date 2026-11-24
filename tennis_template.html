@@ -632,8 +632,8 @@ details.valrules>summary{cursor:pointer}
 .panel.collapsed{padding-bottom:14px}
 </style>
 
-<link rel="stylesheet" href="app.css?v=20261125b">
-<script src="app.js?v=20261125b"></script>
+<link rel="stylesheet" href="app.css?v=20261125a">
+<script src="app.js?v=20261125a"></script>
 <script src="/thanksgiving.js?v=20261117a"></script>
 
 <header class="apptop">
@@ -1403,7 +1403,7 @@ $('psearch').addEventListener('input', e => searchPlayers(e.target.value));
 (function renderRecords(){ const R=DB.record||{};
   [['recT','T'],['recV','V']].forEach(([id,k])=>{ const el=$(id); if(!el) return; const r=R[k];
     if(!r||!r.n){ el.innerHTML='· live record: no graded picks yet — <a href="#past" data-tab-go="past">Past picks</a>'; return; }
-    el.innerHTML=`· ${PS.recordLine(r)} — <a href="#past" data-tab-go="past">details</a>`; }); })();
+    el.innerHTML=`· <b>live record ${r.hit}/${r.n} (${Math.round(100*r.hit/r.n)}%)</b>${r.priced? `, ${r.units>=0?'+':'−'}${Math.abs(r.units).toFixed(1)}u` : ''} — <a href="#past" data-tab-go="past">details</a>`; }); })();
 // Collapsible panels (the ▾ on each header), remembered per panel on this device.
 (function(){
   ['page-week','page-player','page-tools'].forEach(pid=>{ const pg=$(pid); if(!pg) return;

@@ -988,7 +988,6 @@ def grade(p, by_mid, today, gone=(), now=None):
 
 def record(picks):
     import depth
-    import fees     # units and return after the exchange fee, with a +/- range
     out = {}
     for p in picks:
         if p.get("res") not in ("hit", "miss"):
@@ -1000,10 +999,8 @@ def record(picks):
             if p.get("price") and depth.real_price(p):
                 r["priced"] += 1
                 r["units"] += (1.0 / p["price"] - 1) if p["res"] == "hit" else -1
-                r.setdefault("_b", []).append((p["price"], p["res"] == "hit", p.get("vn")))   # for fees.summary
     for r in out.values():
         r["units"] = round(r["units"], 2)
-        r.update(fees.summary(r.pop("_b", [])))   # units, return (+/- range) after the taker fee; average price
     return out
 
 

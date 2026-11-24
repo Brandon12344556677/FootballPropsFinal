@@ -894,7 +894,6 @@ html[data-view="simple"] .app .pickcard .board{display:none}
 .scoreboard .sb-k{font-size:var(--ps-fs-xs);font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--ps-muted)}
 .scoreboard .sb-v{font-size:var(--ps-fs-2xl);font-weight:800;line-height:1.1;color:var(--ps-green);font-variant-numeric:tabular-nums}
 .scoreboard .sb.dn .sb-v{color:var(--ps-red)}
-.scoreboard .sb-v small{font-size:var(--ps-fs-sm,14px);font-weight:600;color:var(--ps-muted);margin-left:6px}   /* "after fees" beside the units */
 .scoreboard .sb-s{font-size:var(--ps-fs-sm);color:var(--ps-soft)}
 .scoreboard .sb-n{font-size:var(--ps-fs-xs);color:var(--ps-muted)}
 .scoreboard .sb-more{grid-column:1/-1;font-size:var(--ps-fs-sm);color:var(--ps-muted);margin:0}

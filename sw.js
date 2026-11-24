@@ -18,7 +18,7 @@
    Kill switch: set KILL = true and deploy; every browser drops its caches and unregisters the
    worker on its next visit (to retire it for good, also drop the register call in app.js).
    Or open any page with ?nosw (app.js unregisters it for that browser). */
-const VERSION = '20261125b';
+const VERSION = '20261125a';
 const KILL = false;
 const SHELL_CACHE = 'psl-shell-' + VERSION;   // the precached app shell + cache-first assets
 const PAGES_CACHE = 'psl-pages-' + VERSION;   // last good copy of each page and data file
@@ -26,7 +26,7 @@ const TIMEOUT = 4000;                          // ms to wait for the network bef
 const MAX_PAGES = 120;                         // saved pages + data files kept (oldest dropped first)
 const SHELL = [
   '/', '/offline.html',
-  '/app.js?v=20261125b', '/app.css?v=20261125b',
+  '/app.js?v=20261125a', '/app.css?v=20261125a',
   '/fonts.css', '/fonts/inter-latin-wght-normal.woff2', '/fonts/archivo-latin-wght-normal.woff2',
   '/favicon.ico', '/favicon.svg', '/icon-192.png', '/icon-512.png', '/apple-touch-icon.png',
   '/site.webmanifest',

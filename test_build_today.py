@@ -2,7 +2,6 @@
 import unittest
 
 import build_today
-import fees
 
 COLS = ["src", "res", "lists", "price", "start", "date"]
 
@@ -23,16 +22,16 @@ class LastResults(unittest.TestCase):
         ])
         r = build_today.last_results("nhl", d, "2026-10-11")
         self.assertEqual(r["day"], "2026-10-10")
-        self.assertEqual(r["T"], {"n": 2, "hit": 1, "units": round(fees.net(0.5, False), 2)})   # after the taker fee
+        self.assertEqual(r["T"], {"n": 2, "hit": 1})
         self.assertEqual(r["V"]["n"], 2)
         self.assertEqual(r["V"]["hit"], 1)
-        self.assertAlmostEqual(r["V"]["units"], round(fees.net(0.5, False) + fees.net(0.4, True), 2))   # -1 + (1/0.4 - 1), less fees
+        self.assertAlmostEqual(r["V"]["units"], 0.5)   # -1 + (1/0.4 - 1)
 
     def test_nfl_uses_date_and_cents(self):
         d = doc([{"src": "live", "res": "hit", "lists": "V", "price": 50, "date": "2026-10-05"}])
         r = build_today.last_results("nfl", d, "2026-10-11")
         self.assertEqual(r["day"], "2026-10-05")
-        self.assertAlmostEqual(r["V"]["units"], round(fees.net(0.5, True), 2))   # 50 cents: +1, less the fee
+        self.assertAlmostEqual(r["V"]["units"], 1.0)
         self.assertNotIn("T", r)
 
     def test_too_old_or_future_is_ignored(self):
