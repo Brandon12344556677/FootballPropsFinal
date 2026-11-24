@@ -682,7 +682,8 @@ window.PS = (function(){
   function engage(){ homeBets(); homeScreen(); }
   if(document.readyState!=='loading') engage(); else document.addEventListener('DOMContentLoaded', engage);
 
-  // ---- trust line under each hero: when the data last updated, and how many picks are graded in public ----
+  // ---- trust line under each hero: when the data last updated, and how many lines the model priced and graded in public
+  // (every line, listed or not: most were never on a list, so they're "lines", not "picks") ----
   // Both come from today.json, which the hourly job rewrites on every run.
   function ago(ms){ const m=Math.max(0, Math.round((Date.now()-ms)/60000));
     if(m<1) return 'just now'; if(m<60) return m+' min ago'; const h=Math.round(m/60); return h<48? h+(h===1?' hour':' hours')+' ago' : Math.round(h/24)+' days ago'; }
@@ -710,7 +711,7 @@ window.PS = (function(){
       if(!isFinite(upd)){ const lm=Date.parse(document.lastModified); upd= isFinite(lm) && lm<=Date.now()+6e4 && Date.now()-lm<30*864e5? lm : null; }
       const tr=t && t.tracked, since=tr && tr.since? new Date(tr.since+'T12:00:00Z').toLocaleDateString('en-US',{month:'short', day:'numeric', year:'numeric'}) : '';
       el.innerHTML=(upd? `<span class="tr-upd"><i class="tr-dot" aria-hidden="true"></i>Updated <b data-ago="${upd}">${ago(upd)}</b></span>` : '')+
-        (tr && tr.graded? `<span class="tr-grd">${icon('shield-check')}<b>${tr.graded.toLocaleString('en-US')} picks graded in public</b>${since? ' since '+esc(since) : ''}</span>` : '')+
+        (tr && tr.graded? `<span class="tr-grd">${icon('shield-check')}<b>${tr.graded.toLocaleString('en-US')} lines priced and graded in public</b>${since? ' since '+esc(since) : ''}</span>` : '')+
         lastResults(t)+
         `<a class="tr-how" href="/record.html">The full record, losses included →</a><a class="tr-how" href="/methodology.html">How the model works →</a>`;
       el.hidden=false;
