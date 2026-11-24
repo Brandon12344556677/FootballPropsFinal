@@ -38,6 +38,11 @@ body{font-size:17px;line-height:1.6;color:var(--ps-soft);overflow-x:hidden;-webk
 .art nav.toc{position:sticky;top:86px;font-size:14px}
 .art nav.toc b{display:block;text-transform:uppercase;letter-spacing:.08em;font-size:12px;font-weight:700;color:var(--ps-muted);margin:0 0 10px}
 .art nav.toc a{display:block;color:var(--ps-soft);text-decoration:none;padding:5px 0 5px 12px;border-left:2px solid var(--ps-line);line-height:1.4}
+.card.summary ul{margin:0;padding-left:20px}
+.card.summary li{margin:0 0 10px}
+.card.summary li:last-child{margin-bottom:0}
+.card.summary ul ul{margin:8px 0 0;padding-left:18px}
+.card.summary ul ul li{margin:0 0 6px}
 .art nav.toc a:hover{color:var(--ps-text);border-left-color:var(--ps-green)}
 .art .kicker{text-transform:uppercase;letter-spacing:.14em;font-size:13px;font-weight:700;color:var(--ps-green);margin:0 0 8px}
 .art .lead{font-size:19px;color:var(--ps-text);margin:0 0 18px;line-height:1.55}
@@ -90,6 +95,7 @@ body{font-size:17px;line-height:1.6;color:var(--ps-soft);overflow-x:hidden;-webk
   <div class="layout">
     <nav class="toc" aria-label="On this page">
       <b>On this page</b>
+      <a href="#summary">The short version</a>
       <a href="#overview">Overview</a>
       <a href="#data">Where the data comes from</a>
       <a href="#model">The model, step by step</a>
@@ -113,6 +119,24 @@ body{font-size:17px;line-height:1.6;color:var(--ps-soft);overflow-x:hidden;-webk
         <span>NFL · NBA · NHL · MLB · Tennis</span>
         <span>Rebuilt every 10 minutes</span>
         <span class="gold">Every pick graded from the box score</span>
+      </div>
+
+      <h2 id="summary">The short version</h2>
+      <div class="card summary">
+        <ul>
+          <li><b>What the model is.</b> One small, published model per sport turns a player's recent games, the opponent and (for the NFL) the Vegas line, snap counts and the injury report into the chance he clears a line. The same code runs in your browser and in the job that records picks every 10 minutes. No hand-picking, no overrides.</li>
+          <li><b>How it does against the market.</b> Across every line it prices, its chances have matched what happened: picks it called 70% have hit about 70%. But the market's price has predicted better in every sport, and where the two disagree most, on the Value lists, the market has usually been closer. That's why Value cards lead with the <a href="#vsmarket">fair chance</a>, which leans on the price. The <a href="record.html#market">Record page</a> has the current numbers.</li>
+          <li><b>What each list means.</b>
+            <ul>
+              <li><b>Value spots</b>: props priced 30¢+ where the model is at least 15 points above the price (each sport adds its own rules: <a href="#lists">details</a>). They have hit close to what their price said, so treat them as the riskier picks.</li>
+              <li><b>Top 25 Surest</b>: the props the model is surest of that you can actually buy ($25+ offered). They hit often but pay little, and a list can hit 90% and still lose money.</li>
+              <li><b>Safe Pick of the Day</b>: one prop priced 90–91¢ with the model at 90%+.</li>
+              <li><b>Value Shot</b>: one prop priced 30–50¢ with the model at 70–80%.</li>
+              <li><b>Hot streaks</b>: a player who has cleared the same line in every recent game. The price usually knows about the streak already.</li>
+            </ul></li>
+          <li><b>How picks are graded.</b> Every pick is recorded before its game at the price shown, locks 20–30 minutes before the start, and is graded from the box score: a <b>hit</b>, a <b>miss</b>, or a <b>push</b> when the stat lands exactly on a whole-number line (rare, since most lines end in .5). Pushes, players who don't play, and voided duplicates are left out of every record. Records count 1 unit on each pick at its recorded price, losing lists included, on the <a href="record.html">Record page</a>.</li>
+          <li><b>The limits.</b> It's research, not betting advice. The model can't see news, weather or who else is out, and a list with a few dozen picks can be up or down by luck. The full detail is below.</li>
+        </ul>
       </div>
 
       <h2 id="overview">Overview</h2>
