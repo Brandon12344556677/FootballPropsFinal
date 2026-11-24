@@ -48,7 +48,7 @@ FILES = [("nfl", "picks.json"), ("nhl", "nhl_picks.json"), ("mlb", "mlb_picks.js
 NHL_REGULAR = "2026-09-29"     # NHL 2026-27 regular season opener: anything earlier is left out (current season only)
 BOOT = 400
 WAITING = {"nba", "tennis"}   # rows shown even before their first graded pick (NBA season Oct 2026; tennis added Nov 2, 2026)
-WAITING_KEYS = {"parlays", "parlays-nba", "parlays-nfl", "parlay-potd", "spreads-all", "spreads-nba", "spreads-nfl", "spreads-nhl", "spreads-mlb", "botd-value", "botd-lock", "roi4", "roi4-posted"}     # and rows for lists that start posting later
+WAITING_KEYS = {"parlays", "parlays-nba", "parlays-nfl", "parlay-potd", "spreads-all", "spreads-nba", "spreads-nfl", "spreads-nhl", "spreads-mlb", "botd-value", "botd-lock", "botd-lock-9091", "roi4", "roi4-posted"}     # and rows for lists that start posting later
 OWN_ROWS = {"parlay", "parlay-nba", "parlay-nfl", "parlay-potd", "spread", "botd", "roi4", "roi4-posted"}  # rows that repeat picks already counted: only their own strategies grade them
 MOVE = 3   # cents the price must have moved from its first recording (px0) to the close (pxc) for the market-move rows
 
@@ -105,6 +105,9 @@ STRATEGIES = [   # (key, label, sport or None, test)
     ("tennis-fell", f"Tennis picks whose price fell {MOVE}c+ before lock, bought at the closing price", "tennis", moved(-1)),
     ("botd-value", "Value Shot (Pick of the Day, pays 2x+)", "botd", lambda p: p["lists"] == "value"),
     ("botd-lock", "Safe Pick of the Day", "botd", lambda p: p["lists"] == "lock"),
+    # the Safe Pick's 90-91c band (was 90-96c), from the day it started: its own record, apart from the old band's
+    ("botd-lock-9091", "Safe Pick of the Day, 90-91c rule (since Nov 25, 2026)", "botd",
+     lambda p: p["lists"] == "lock" and p["day"] >= "2026-11-25"),
     ("parlays", "Model parlays, NHL (three a day, 3-4.5x, 35-55% by the model)", "parlay", lambda p: True),
     ("parlays-nba", "Model parlays, NBA (same rules, own three a day)", "parlay-nba", lambda p: True),
     ("parlays-nfl", "Model parlays, NFL (same rules, own three a day)", "parlay-nfl", lambda p: True),

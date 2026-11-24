@@ -2,14 +2,14 @@
 Prop Streak Lab — Bet of the Day for the home page: a Lock and a Value Shot, picked once a
 day from every sport's upcoming priced picks, frozen once posted, and graded in public.
 
-  Lock        the surest pick on the board: Polymarket price 90-96c (pays 1.04-1.11x) and a
-              model chance of 90%+. On the graded record, picks priced 90-96c hit 91-92%
-              when the model was under 90%, and 135 of 138 (97.8%) when it was 90%+ — on
-              both halves (odd days 63/63, even days 72/75) and in each sport with enough
-              picks (NHL 42/44, MLB 88/89). Lower down (80-90c) the model agreeing added
-              nothing, so that band isn't used. Ranked by the lower of the two chances (both
-              have to be high), then by price. Nothing hits 100%: at ~98% expect a miss
-              every month or two.
+  Lock        the surest pick that still pays: price 90-91c (pays 1.10-1.11x) and a model chance
+              of 90%+. Until Nov 25, 2026 the band was 90-96c, and ranking by the lower of the two
+              chances put nearly every pick at 96c (49 of the first 52), where picks like it lost
+              money: of every live pick priced 90-96c with the model at 90%+, those at 92-96c
+              returned -0.2% to -2.0% a pick, those at 90-91c +0.5% (826 picks) and +1.2% (1,054).
+              The gain is small and may be noise; the slot stays empty on a day with nothing at
+              90-91c. Ranked by the lower of the two chances (both have to be high), then by price.
+              Nothing hits 100%: at ~92% expect about one miss in twelve.
   Value Shot  pays 2x or more: price 30-50c with a model chance of 70-80%. The market thinks
               these are coin flips; on the graded record they've hit about what the price
               says (model 65%+ at 30-50c: 26 of 54, 48%, against a 46% price), so it's the
@@ -49,7 +49,7 @@ MIN_NEFF = 6.0
 VOID_AFTER = datetime.timedelta(days=5)
 SLOTS = ("lock", "value")
 RULES = {   # inclusive bounds
-    "lock": {"price": [0.90, 0.96], "prob": [0.90, 1.00]},
+    "lock": {"price": [0.90, 0.91], "prob": [0.90, 1.00]},   # 90-96c until Nov 25, 2026 (see the docstring)
     "value": {"price": [0.30, 0.50], "prob": [0.70, 0.80]},
 }
 KEEP = ("sport", "pid", "player", "team", "opp", "gid", "stat", "statText", "line", "side",

@@ -615,7 +615,7 @@ footer .fine a{color:#8394ab}
 
   // Bet of the Day (botd.json, botd.py): today's entry from 11 AM ET; before that, yesterday's
   // picks with their results. A pick never changes once posted; the record counts every one.
-  const SLOT={lock:{t:'✅ Safe Pick of the Day', blurb:'The surest pick on the board: the market and the model both put it at 90%+. Small payout, the highest hit rate.'},
+  const SLOT={lock:{t:'✅ Safe Pick of the Day', blurb:'A likely pick that still pays: priced 90–91¢ (1.10× payout) with the model at 90%+. Picks priced higher hit more often but have lost money, so they are skipped.'},
               value:{t:'🎯 Value Shot', blurb:'Pays 2× or more. The model rates it well above the market — the riskier pick.'}};
   const etDay=d=>new Intl.DateTimeFormat('en-CA',{timeZone:'America/New_York'}).format(d);
   const fmtDay=iso=>new Date(iso+'T12:00:00Z').toLocaleDateString([], {weekday:'short', month:'short', day:'numeric', timeZone:'UTC'});
