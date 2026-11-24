@@ -669,6 +669,12 @@ html[data-view="simple"] .pro-only, html[data-view="pro"] .simple-only{display:n
 .psgate-view b{display:flex;align-items:center;gap:8px;color:#fff;font:800 18px "Archivo","Inter",system-ui,sans-serif}
 .psgate-view small{font:700 11px "Inter",system-ui,sans-serif;text-transform:uppercase;letter-spacing:.06em;color:var(--ps-green-ink);background:var(--ps-green);border-radius:999px;padding:3px 8px}
 .psgate-view:hover,.psgate-view:focus-visible{border-color:var(--ps-green);outline:none}
+.psgate-pick{display:flex;align-items:center;justify-content:center;gap:6px;margin:0 0 6px}
+.psgate-pick-l{font-size:13px;color:var(--ps-soft);margin-right:4px}
+.psgate-pick button{min-height:44px;padding:0 18px;border-radius:999px;border:1px solid #2a4163;background:#13284a;color:#c9d6e6;font:700 14px "Inter",system-ui,sans-serif;cursor:pointer}
+.psgate-pick button[aria-checked="true"]{border-color:var(--ps-green);background:rgba(var(--ps-green-rgb),.16);color:#fff}
+.psgate-pick button:focus-visible{outline:2px solid var(--ps-green);outline-offset:2px}
+.psgate-card .psgate-pick-n{margin:0 0 14px}
 .psgate-later{border:0;background:none;padding:0;color:var(--ps-mint);font:inherit;text-decoration:underline;cursor:pointer}
 
 /* "New here?" in Simple: one line */

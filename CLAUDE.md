@@ -94,7 +94,7 @@ README.md has the full feature tour; this file is the working rules.
   the next one when it ends (the 20-minute schedule is only a backup: GitHub's scheduler stalls). `start_run.py` starts the
   next run and the watchdog check and confirms each one really started (a request GitHub accepts can still end in "startup_failure"), asking again if not.
 - `app.js` / `app.css`: shared look and behavior for every page. Sport pages have a Simple (default) and a Pro view:
-  `<html data-view>`, chosen after the 18+ check or with the header toggle. Anything new that only a regular needs
+  `<html data-view>`, chosen in the 18+ check (one pop-up; Simple pre-selected) or with the header toggle. Anything new that only a regular needs
   (extra numbers, sort/filter controls, long notes) goes in Pro: class `pro-only`, or a rule in the Simple/Pro block of `app.css`.
   Every sport page has the same top: the Value record banner (`PS.valueBanner`, in `#valueweekbar`) and the games strip
   (`PS.gameStrip`, in `#gamestrip`, setting the filter bar's game); each template only passes its own record, rule text and games.
