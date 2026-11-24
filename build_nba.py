@@ -89,6 +89,26 @@ NBA_TEAMS = {
 }
 
 
+# The 30 NBA teams as ESPN's box scores code them. A game between anything else (the All-Star
+# game's STARS / STRIPES / WORLD teams, Rising Stars, international exhibitions) is not an NBA game:
+# ESPN marks the All-Star games as regular season, so they are dropped by team instead.
+ESPN_NBA_TEAMS = frozenset("ATL BOS BKN CHA CHI CLE DAL DEN DET GS HOU IND LAC LAL MEM MIA MIL MIN "
+                           "NO NY OKC ORL PHI PHX POR SAC SA TOR UTAH WSH".split())
+
+
+def nba_game(home, away):
+    return home in ESPN_NBA_TEAMS and away in ESPN_NBA_TEAMS
+
+
+def drop_exhibitions(store):
+    """Removes stored rows from games that weren't between two NBA teams (All-Star weekend).
+    Returns how many rows were dropped."""
+    rows = store.get("rows", [])
+    keep = [r for r in rows if nba_game(r.get("team"), r.get("opp"))]
+    store["rows"] = keep
+    return len(rows) - len(keep)
+
+
 def poly_team(tok):
     tok = (tok or "").lower()
     return NBA_TEAMS.get(tok, tok.upper())
@@ -665,6 +685,9 @@ def fetch_new_games(store):
                     complete_date = False        # a game that day isn't final yet
                     continue
                 if not home or not away:
+                    continue
+                if not nba_game(home, away):   # All-Star weekend or an exhibition: never stored
+                    seen.add(gid)
                     continue
                 if not re.match(r"\d{4}-\d{2}-\d{2}", date_g or ""):
                     date_g = date_iso
@@ -1642,6 +1665,9 @@ def main():
     except Exception as e:  # noqa: BLE001
         print(f"  ESPN ingestion failed ({e}); using existing store only")
         added = 0
+    dropped = drop_exhibitions(store)
+    if dropped:
+        print(f"  store: dropped {dropped} row(s) from All-Star/exhibition games")
     try:
         purged = purge_preseason(store)
         if purged:
