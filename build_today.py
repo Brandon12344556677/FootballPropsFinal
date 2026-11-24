@@ -10,7 +10,8 @@ and writes a small file the home page can fetch in one request:
                 "fair": {"w": model weight in the fair chance, "n": priced picks it was fitted on},
                 "last": {sport: {"day", "T": {n, hit}, "V": {n, hit, units}}}: each sport's latest graded day,
                 "calib": [{"lo", "hi", "n", "said", "hit"}]: hit rate by model chance (home page chart),
-                "streaks", "moves": home page cards (hot streaks; prices moving toward a pick)}
+                "streaks", "moves": home page cards (hot streaks; prices moving toward a pick),
+                "moveRate": {"n", "up", "dn"}: how often a listed pick's price moved toward / against it (move_rate)}
                (each pick carries "l10": its last ten game values, for the mini chart)
 
 "picks" holds the best upcoming bets across all four sports at the last recorded
@@ -337,6 +338,26 @@ def moves(cands, min_move=0.03, n=6):
     return out
 
 
+def move_rate(docs):
+    """How the price of a listed pick (Value or Top 25) usually moved, first recording to the last price before its
+    game, over every graded live pick in the featured sports: {"n", "up", "dn"} (a move of 1c or more either way).
+    Shown beside the "prices moving toward our pick" cards, which are the exceptions: most move against the pick."""
+    n = up = dn = 0
+    for sport, doc in docs:
+        cols = doc["cols"]
+        cents = 100.0 if sport == "nfl" else 1.0      # NFL prices are cents
+        for row in doc["picks"]:
+            p = dict(zip(cols, row))
+            if (p.get("src") != "live" or p.get("res") not in ("hit", "miss") or p.get("px0") is None
+                    or p.get("pxc") is None or not any(t in (p.get("lists") or "") for t in "VT")):
+                continue
+            m = (p["pxc"] - p["px0"]) * 100.0 / cents
+            n += 1
+            up += m >= 1
+            dn += m <= -1
+    return {"n": n, "up": up, "dn": dn}
+
+
 FAST_STATE = "fast_hist.json"    # recent price snapshots of every upcoming priced pick, for fast_moves()
 FAST_MOVE = 0.10                 # 10c or more...
 FAST_WINDOW = (40, 75)           # ...against the price 40-75 minutes ago
@@ -617,7 +638,7 @@ def main():
     doc = {"gen": now.strftime("%Y-%m-%dT%H:%M:%SZ"), "record": rec, "picks": picks, "valueLive": value_live,
            "tracked": {"graded": n_graded, "since": since}, "fair": fair_weight(docs), "last": last,
            "calib": calibration(docs),
-           "streaks": streaks(okc), "moves": moves(okc), "fast": fast, "fastAll": fast_all,
+           "streaks": streaks(okc), "moves": moves(okc), "moveRate": move_rate(docs), "fast": fast, "fastAll": fast_all,
            "flags": news_flags(feat), "promo": promo_day(docs, today_et), "live": live}
     with open(OUT, "w", encoding="utf-8") as f:
         json.dump(doc, f, separators=(",", ":"), ensure_ascii=False)

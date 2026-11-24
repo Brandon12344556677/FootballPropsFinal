@@ -40,6 +40,25 @@ class LastResults(unittest.TestCase):
         self.assertIsNone(build_today.last_results("nfl", d, "2026-10-11"))
 
 
+def mdoc(rows):
+    cols = ["src", "res", "lists", "px0", "pxc"]
+    return {"cols": cols, "picks": [[r.get(c) for c in cols] for r in rows]}
+
+
+class MoveRate(unittest.TestCase):
+    def test_listed_graded_live_only(self):
+        d = mdoc([
+            {"src": "live", "res": "hit", "lists": "V", "px0": 0.40, "pxc": 0.45},     # toward
+            {"src": "live", "res": "miss", "lists": "T", "px0": 0.92, "pxc": 0.88},    # against
+            {"src": "live", "res": "hit", "lists": "V", "px0": 0.40, "pxc": 0.405},    # under 1c: neither
+            {"src": "live", "res": "hit", "lists": "", "px0": 0.40, "pxc": 0.50},      # not on a list
+            {"src": "live", "res": None, "lists": "V", "px0": 0.40, "pxc": 0.50},      # not graded
+            {"src": "bt", "res": "hit", "lists": "V", "px0": 0.40, "pxc": 0.50},       # backtest
+        ])
+        nfl = mdoc([{"src": "live", "res": "hit", "lists": "V", "px0": 40, "pxc": 38}])   # cents
+        self.assertEqual(build_today.move_rate([("nhl", d), ("nfl", nfl)]), {"n": 4, "up": 1, "dn": 2})
+
+
 class Calibration(unittest.TestCase):
     def test_buckets_from_live_graded_picks(self):
         cols = ["src", "res", "prob"]
