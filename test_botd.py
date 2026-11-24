@@ -35,8 +35,9 @@ def picks_doc(rows):
 
 class ChooseTests(unittest.TestCase):
     def test_lock_wants_both_chances_high(self):
-        cs = [cand(1, 0.99, 0.90), cand(2, 0.94, 0.95), cand(3, 0.99, 0.97), cand(4, 0.88, 0.95), cand(5, 0.99, 0.85)]
-        # 1: min .90; 2: min .94 -> best; 3: price above 96c; 4: model under 90%; 5: price under 90c
+        cs = [cand(1, 0.99, 0.90), cand(2, 0.94, 0.91), cand(3, 0.99, 0.92), cand(4, 0.88, 0.91), cand(5, 0.99, 0.85)]
+        # 1: min .90; 2: min .91 -> best; 3: price above 91c (the band was 90-96c until Nov 25, 2026);
+        # 4: model under 90%; 5: price under 90c
         self.assertEqual(botd.choose(cs, "lock", at(11))["pid"], 2)
 
     def test_value_shot_window(self):
@@ -45,13 +46,13 @@ class ChooseTests(unittest.TestCase):
 
     def test_filters(self):
         now = at(11)
-        self.assertIsNone(botd.choose([cand(1, 0.95, 0.92, flag="Questionable")], "lock", now))
-        self.assertIsNone(botd.choose([cand(1, 0.95, 0.92, neff=4.0)], "lock", now))
-        self.assertIsNone(botd.choose([cand(1, 0.95, 0.92, start=at(11, 30))], "lock", now))      # starts in 30 min
-        self.assertIsNone(botd.choose([cand(1, 0.95, 0.92, start=at(19, day=2))], "lock", now))   # tomorrow
-        self.assertIsNone(botd.choose([cand(1, 0.95, 0.92)], "lock", now, taken={("nhl", "1")}))
+        self.assertIsNone(botd.choose([cand(1, 0.95, 0.91, flag="Questionable")], "lock", now))
+        self.assertIsNone(botd.choose([cand(1, 0.95, 0.91, neff=4.0)], "lock", now))
+        self.assertIsNone(botd.choose([cand(1, 0.95, 0.91, start=at(11, 30))], "lock", now))      # starts in 30 min
+        self.assertIsNone(botd.choose([cand(1, 0.95, 0.91, start=at(19, day=2))], "lock", now))   # tomorrow
+        self.assertIsNone(botd.choose([cand(1, 0.95, 0.91)], "lock", now, taken={("nhl", "1")}))
         late = at(23, 30) + datetime.timedelta(minutes=10)    # 11:40 PM ET is still Oct 1 in ET
-        self.assertIsNotNone(botd.choose([cand(1, 0.95, 0.92, start=late)], "lock", now))
+        self.assertIsNotNone(botd.choose([cand(1, 0.95, 0.91, start=late)], "lock", now))
 
 
 class NewsFlagTests(unittest.TestCase):
@@ -71,26 +72,26 @@ class NewsFlagTests(unittest.TestCase):
 
 class UpdateTests(unittest.TestCase):
     def test_posts_at_11_never_swaps_and_closes(self):
-        doc = botd.update({}, [cand(1, 0.95, 0.92)], [], at(10, 55))
+        doc = botd.update({}, [cand(1, 0.95, 0.91)], [], at(10, 55))
         self.assertEqual(doc["days"], [])                                        # before 11 AM ET
-        doc = botd.update(doc, [cand(1, 0.95, 0.92)], [], at(11, 5))
+        doc = botd.update(doc, [cand(1, 0.95, 0.91)], [], at(11, 5))
         self.assertEqual(doc["days"][0]["lock"]["pid"], 1)
         self.assertIsNone(doc["days"][0]["value"])
-        better = [cand(2, 0.97, 0.95), cand(1, 0.95, 0.90), cand(3, 0.75, 0.45)]
+        better = [cand(2, 0.97, 0.91), cand(1, 0.95, 0.90), cand(3, 0.75, 0.45)]
         doc = botd.update(doc, better, [], at(14))
         self.assertEqual(doc["days"][0]["lock"]["pid"], 1)                       # locked: never swapped
-        self.assertEqual(doc["days"][0]["lock"]["price"], 0.92)                  # at the price it posted at
+        self.assertEqual(doc["days"][0]["lock"]["price"], 0.91)                  # at the price it posted at
         self.assertEqual(doc["days"][0]["value"]["pid"], 3)                      # an empty slot still fills
         self.assertFalse(doc["days"][0]["closed"])
 
     def test_empty_slot_closes_at_7_30(self):
         doc = botd.update({}, [], [], at(19, 35))
         self.assertTrue(doc["days"][0]["closed"])
-        doc = botd.update(doc, [cand(1, 0.95, 0.92, start=at(22))], [], at(20))
+        doc = botd.update(doc, [cand(1, 0.95, 0.91, start=at(22))], [], at(20))
         self.assertIsNone(doc["days"][0]["lock"])                               # no late picks once closed
 
     def test_two_different_players(self):
-        cs = [cand(1, 0.95, 0.92), cand(1, 0.75, 0.45, stat="g")]
+        cs = [cand(1, 0.95, 0.91), cand(1, 0.75, 0.45, stat="g")]
         doc = botd.update({}, cs, [], at(11))
         self.assertEqual(doc["days"][0]["lock"]["pid"], 1)
         self.assertIsNone(doc["days"][0]["value"])
@@ -122,9 +123,9 @@ class GradeTests(unittest.TestCase):
         self.assertEqual(doc["days"][0]["lock"]["res"], "void")
 
     def test_history_base_rate(self):
-        rows = [{"src": "live", "pid": 1, "stat": "pts", "line": 1.5, "side": "under", "prob": 0.93, "price": 0.92, "res": "hit"},
+        rows = [{"src": "live", "pid": 1, "stat": "pts", "line": 1.5, "side": "under", "prob": 0.93, "price": 0.91, "res": "hit"},
                 {"src": "live", "pid": 2, "stat": "pts", "line": 1.5, "side": "under", "prob": 0.93, "price": 0.85, "res": "hit"},
-                {"src": "bt", "pid": 3, "stat": "pts", "line": 1.5, "side": "under", "prob": 0.93, "price": 0.92, "res": "miss"}]
+                {"src": "bt", "pid": 3, "stat": "pts", "line": 1.5, "side": "under", "prob": 0.93, "price": 0.91, "res": "miss"}]
         nfl = [{"src": "live", "pid": 4, "stat": "rec", "line": 4.5, "side": "over", "prob": 0.74, "price": 45, "res": "miss"}]
         h = botd.history([("nhl", picks_doc(rows)), ("nfl", picks_doc(nfl))])
         self.assertEqual(h, {"lock": {"n": 1, "hit": 1}, "value": {"n": 1, "hit": 0}})   # NFL prices are cents
