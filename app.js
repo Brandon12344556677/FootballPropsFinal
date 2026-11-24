@@ -483,10 +483,9 @@ window.PS = (function(){
   }
   if(document.readyState!=='loading') viewSwitch(); else document.addEventListener('DOMContentLoaded', viewSwitch);
 
-  // ---- one-time 18+ check. It carries the storage notice, so a first visit sees one pop-up, not two.
-  // Then, once, how to see the boards (Simple or Pro); a visitor who passed the check before
-  // the question existed gets just the question. Only a sport board asks it (the views differ nowhere
-  // else), so a visitor landing on the home page gets one tap, and the question on their first board. ----
+  // ---- one-time 18+ check. It carries the storage notice and, once, how to see the boards (Simple,
+  // pre-selected, or Pro), so a first visit sees one pop-up, not two or three. A visitor who passed the
+  // check before the question existed gets just the question, on their first sport board. ----
   const GATE_LOGO='<svg class="psgate-logo" viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" rx="14" fill="#0f2038"/><path d="M32,6 Q32,32 54,32 Q32,32 32,58 Q32,32 10,32 Q32,32 32,6 Z" fill="#22d07f"/></svg>';
   function viewStep(card, done){
     try{ localStorage.setItem('psl_view_asked','1'); }catch(e){}
@@ -509,15 +508,24 @@ window.PS = (function(){
     const card=g.firstChild, close=()=>{ g.remove(); document.documentElement.classList.remove('ps-lock'); };
     document.body.appendChild(g); document.documentElement.classList.add('ps-lock');
     if(ok){ viewStep(card, close); return; }
+    const askView=canStore() && !viewAsked();   // the view question rides along on the 18+ check
+    let pick='simple';
     card.innerHTML=GATE_LOGO+
       `<h2 id="psgate-h">Are you 18 or older?</h2>`+
       `<p>Prop Streak Lab is player-prop research for adults. It isn't a sportsbook and takes no bets. Some links go to Polymarket and Kalshi, which have their own age and location rules.</p>`+
+      (askView? `<div class="psgate-pick" role="radiogroup" aria-label="How to see picks"><span class="psgate-pick-l">Show picks</span>`+
+        `<button type="button" role="radio" data-v="simple" aria-checked="true" title="Today's best picks: who, the line, how likely it hits, what it pays">Simple</button>`+
+        `<button type="button" role="radio" data-v="pro" aria-checked="false" title="Every number, sorting and the Tools tab">Pro</button></div>`+
+        `<p class="psgate-fine psgate-pick-n">Simple shows the essentials; Pro adds every number. Switch any time at the top of a sports page.</p>` : '')+
       `<div class="psgate-btns"><button type="button" class="btn" id="psgate-ok">Yes, I'm 18 or older</button><a class="btn ghost" href="https://www.google.com" rel="noopener">No, leave</a></div>`+
       `<p class="psgate-fine">We use only essential local storage for your preferences and cookieless analytics — no ads, no cross-site tracking. <a href="/cookies.html">Cookie Policy</a> · <a href="/privacy.html">Privacy</a><br>Gambling problem? Call 1-800-522-4700 or visit <a href="https://www.ncpgambling.org" rel="noopener" target="_blank">ncpgambling.org</a>.</p>`;
     const bar=document.getElementById('pslcookie'); if(bar) bar.hidden=true;    // the check carries the same notice
     const btn=g.querySelector('#psgate-ok'); btn.focus({preventScroll:true});
+    card.querySelectorAll('.psgate-pick button').forEach(b=>b.onclick=()=>{ pick=b.dataset.v;
+      card.querySelectorAll('.psgate-pick button').forEach(x=>x.setAttribute('aria-checked', String(x===b))); });
     btn.onclick=()=>{ try{ localStorage.setItem('psl_age_ok','1'); localStorage.setItem('psl_notice_ok','1'); }catch(e){}
-      if(board && canStore() && !viewAsked()) viewStep(card, close); else close(); };
+      if(askView){ try{ localStorage.setItem('psl_view_asked','1'); }catch(e){} setView(pick, 'gate'); }
+      close(); };
   }
   if(document.readyState!=='loading') ageGate(); else document.addEventListener('DOMContentLoaded', ageGate);
 
