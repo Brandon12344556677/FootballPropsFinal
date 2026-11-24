@@ -1,53 +1,38 @@
 {
- "date": "2026-11-22",
+ "date": "2026-11-23",
  "drafts": {
   "c": {
    "caption": {
     "title": "Pick of the Day + today's best props",
-    "description": "Pick of the Day: Justin Herbert under 3.5 Pass TDs (96% model chance). Swipe for today's best NFL, NBA, NHL props → Free research, link in bio. Model chance, not a guarantee. 18+. #NFL #NFLProps #NBA #NBAProps #NHL #NHLProps #PlayerProps"
+    "description": "Pick of the Day: Alperen Sengun under 2.5 3-Pointers (98% model chance). Swipe for today's best NBA, NHL props → Free research, link in bio. Model chance, not a guarantee. 18+. #NBA #NBAProps #NHL #NHLProps #PlayerProps"
    },
    "ok": true,
-   "id": "p_inbox_url~v2.7711108017992714254"
+   "id": "p_inbox_url~v2.7711566130711857165"
   },
   "v1": {
-   "sport": "nfl",
-   "angle": "gap",
-   "caption": "3 NFL player props where our model and the market disagree today 👀 Biggest gap: Bhayshul Tuten under 2.5 Receptions, model 84% vs. market 66%. Free research, link in bio. Model chance, not a guarantee. 18+. #NFL #NFLProps #PlayerProps #SportsAnalytics",
+   "sport": "nhl",
+   "angle": "streak",
+   "caption": "1 NHL hit streak on the line today 🔥 Longest: Kirill Kaprizov, 10 straight games over 0.5 points. Will it keep going? Free research, link in bio. Model chance, not a guarantee. 18+. #NHL #NHLProps #PlayerProps #SportsAnalytics",
    "ok": true,
-   "id": "v_inbox_file~v2.7711108071217367053"
+   "id": "v_inbox_file~v2.7711566165335836686"
   },
   "v2": {
    "sport": "nba",
-   "angle": "record",
-   "caption": "Do our NBA picks actually hit? Top 25: 1,509 of 1,682 this season (90%), every pick recorded before the game and graded after ✅ Free research, link in bio. Model chance, not a guarantee. 18+. #NBA #NBAProps #PlayerProps #SportsAnalytics",
+   "angle": "gap",
+   "caption": "3 NBA player props where our model and the market disagree today 👀 Biggest gap: Luka Doncic over 54.5 Pts+Reb+Ast, model 51% vs. market 32%. Free research, link in bio. Model chance, not a guarantee. 18+. #NBA #NBAProps #PlayerProps #SportsAnalytics",
    "ok": true,
-   "id": "v_inbox_file~v2.7711108151470426126"
+   "id": "v_inbox_file~v2.7711566286035355679"
   },
   "v3": {
    "sport": "nhl",
-   "angle": "gap",
-   "caption": "2 NHL player props where our model and the market disagree today 👀 Biggest gap: Filip Chytil under 0.5 Points, model 73% vs. market 54%. Free research, link in bio. Model chance, not a guarantee. 18+. #NHL #NHLProps #PlayerProps #SportsAnalytics",
+   "angle": "record",
+   "caption": "Do our NHL picks actually hit? Top 25: 2,008 of 2,164 this season (93%), every pick recorded before the game and graded after ✅ Free research, link in bio. Model chance, not a guarantee. 18+. #NHL #NHLProps #PlayerProps #SportsAnalytics",
    "ok": true,
-   "id": "v_inbox_file~v2.7711108179677202445"
+   "id": "v_inbox_file~v2.7711566371276032013"
   }
  },
  "history": [
   {
-   "date": "2026-11-08",
-   "sport": "nfl",
-   "angle": "gap"
-  },
-  {
-   "date": "2026-11-08",
-   "sport": "nba",
-   "angle": "record"
-  },
-  {
-   "date": "2026-11-08",
-   "sport": "nhl",
-   "angle": "gap"
-  },
-  {
    "date": "2026-11-09",
    "sport": "nfl",
    "angle": "streak"
@@ -231,8 +216,23 @@
    "date": "2026-11-22",
    "sport": "nhl",
    "angle": "gap"
+  },
+  {
+   "date": "2026-11-23",
+   "sport": "nhl",
+   "angle": "streak"
+  },
+  {
+   "date": "2026-11-23",
+   "sport": "nba",
+   "angle": "gap"
+  },
+  {
+   "date": "2026-11-23",
+   "sport": "nhl",
+   "angle": "record"
   }
  ],
  "reconnect": false,
- "at": "2026-11-22T21:18:39Z"
+ "at": "2026-11-24T02:56:18Z"
 }
