@@ -55,6 +55,11 @@ h2{margin:0}
 .rc-t th:first-child,.rc-t td:first-child{text-align:left;padding-left:0}
 .rc-t thead th{color:var(--muted);font-weight:500;font-size:12px;text-transform:uppercase;letter-spacing:.04em}
 .rc-t tbody th{font-weight:500;color:var(--ps-soft)}
+.rc-scroll{overflow-x:auto}
+.rc-t td.rc-lead{font-weight:700;font-size:14px}
+.rc-t .rc-pm,.rc-t .rc-px{color:var(--muted);font-weight:400}
+.rc-t .rc-early{display:block;font-size:12px;color:var(--muted);font-weight:400}
+.rc-t td.rc-gross{color:var(--muted)}
 .rc-t .rc-none{text-align:left;color:var(--muted)}
 .rc-up{color:var(--hit);font-weight:600}
 .rc-dn{color:var(--miss);font-weight:600}
@@ -78,8 +83,8 @@ h2{margin:0}
 @media(max-width:400px){.rc-t{font-size:12px}.rc-t th,.rc-t td{padding:6px 2px}.rc-t thead th{font-size:12px;letter-spacing:0}}
 </style>
 
-<link rel="stylesheet" href="app.css?v=20261125a">
-<script src="app.js?v=20261125a"></script>
+<link rel="stylesheet" href="app.css?v=20261125b">
+<script src="app.js?v=20261125b"></script>
 <script src="/thanksgiving.js?v=20261117a"></script>
 
 <header class="apptop">
@@ -111,7 +116,7 @@ h2{margin:0}
 
   <section class="panel" id="losing">
     <h2>What's losing</h2>
-    <p class="rc-sub">The lists that are down units, worst first. A list that is up overall but down over the last 30 days is named too.</p>
+    <p class="rc-sub">The lists that are down units after the exchange's fee, worst first. A list that is up overall but down over the last 30 days is named too.</p>
     <div id="rc-losing"></div>
   </section>
 
@@ -143,7 +148,7 @@ h2{margin:0}
 
   <section class="panel" id="how">
     <h2>How this page counts</h2>
-    <p class="rc-sub" style="margin-bottom:0">Only picks recorded before their game count: no backtests. "Model" is the average chance the model gave those picks, to set beside how often they hit. A pick is a hit or a miss; pushes, voids and players who didn't play are left out. Units are 1 unit on each pick at its recorded Polymarket or Kalshi price: a hit at 40¢ returns +1.50, a miss returns −1. A pick with no price, or a price that can't have been real (under 10¢, or 35¢ away from its first price), counts in the hit rate but not in the units. Return is units divided by priced picks. Price move is how the price of the side taken changed from its first recording to its last before the game. The MLB Value list has been unders only since its overs lost; those overs keep their own row here. Past results don't predict future ones. Research and entertainment, not advice. 18+. <a href="methodology.html">How the model works</a>.</p>
+    <p class="rc-sub" style="margin-bottom:0">Only picks recorded before their game count: no backtests. "Model" is the average chance the model gave those picks, to set beside how often they hit. A pick is a hit or a miss; pushes, voids and players who didn't play are left out. Units are 1 unit on each pick at its recorded Polymarket or Kalshi price: a hit at 40¢ returns +1.50, a miss returns −1. <b>After fees</b> takes off the exchange's taker fee, as someone taking that price would pay it: Polymarket US 0.05 × price × (1 − price) per contract and Kalshi 0.07 × price × (1 − price), so about 2.5¢ or 3.5¢ on each unit at 50¢. The ± is a 95% range on the return per pick; when it includes zero the record can't yet tell an edge from luck, and the page says "too early to tell". "Hit, avg price" puts the hit rate beside the average price paid: a 90% hit rate at 92¢ loses money. A pick with no price, or a price that can't have been real (under 10¢, or 35¢ away from its first price), counts in the hit rate but not in the units. Return is units divided by priced picks. Price move is how the price of the side taken changed from its first recording to its last before the game. The MLB Value list has been unders only since its overs lost; those overs keep their own row here. Past results don't predict future ones. Research and entertainment, not advice. 18+. <a href="methodology.html">How the model works</a>.</p>
     <p class="rc-note" id="rc-stamp"></p>
   </section>
 
@@ -171,10 +176,18 @@ const day=(iso,year)=>{ const p=String(iso).slice(0,10).split('-'); return MONTH
 const dayMs=iso=>{ const p=iso.split('-'); return Date.UTC(+p[0], +p[1]-1, +p[2]); };
 
 // ---- one list: its name, an all-time and a last-30-days row, and the notes under them ----
+// Leads with what 1 unit on each pick returned after the exchange's taker fee (units, then the return with its ±
+// range); then how often it hit, beside the average price paid (a hit rate means nothing without it); then what the
+// model said and the units before fees. A return whose range includes zero is "too early to tell".
 function statRow(label, s){
-  if(!s.n) return `<tr><th scope="row">${label}</th><td class="rc-none" colspan="5">No graded picks</td></tr>`;
-  return `<tr><th scope="row">${label}</th><td>${num(s.n)}</td><td>${pct(s.hit/s.n)}</td><td>${s.said!=null? pct(s.said) : '—'}</td>`+
-    `<td class="${s.priced? cls(s.units) : ''}">${s.priced? units(s.units) : '—'}</td><td>${s.roi!=null? sign(s.roi)+pct(Math.abs(s.roi)) : '—'}</td></tr>`;
+  if(!s.n) return `<tr><th scope="row">${label}</th><td class="rc-none" colspan="6">No graded picks</td></tr>`;
+  const net=s.priced && s.net!=null;
+  const ret=s.roiNet!=null? `${sign(s.roiNet)}${pct(Math.abs(s.roiNet))}${s.pm!=null? `<span class="rc-pm"> ± ${pct(s.pm)}</span>` : ''}`+
+    (s.early? '<span class="rc-early">too early to tell</span>' : '') : '—';
+  return `<tr><th scope="row">${label}</th><td>${num(s.n)}</td>`+
+    `<td class="rc-lead ${net? cls(s.net) : ''}">${net? units(s.net) : '—'}</td><td class="${s.roiNet!=null? cls(s.roiNet) : ''}">${ret}</td>`+
+    `<td>${pct(s.hit/s.n)}${s.avgPx!=null? `<span class="rc-px"> at ${Math.round(100*s.avgPx)}¢</span>` : ''}</td>`+
+    `<td>${s.said!=null? pct(s.said) : '—'}</td><td class="rc-gross">${s.priced? units(s.units) : '—'}</td></tr>`;
 }
 function listBlock(b){
   const a=b.all, notes=[];
@@ -182,8 +195,8 @@ function listBlock(b){
   if(a.clvN) notes.push(`Price moved its way on ${num(a.clvUp)} of ${num(a.clvN)}, against it on ${num(a.clvDn)} (average ${sign(a.clv)}${Math.abs(a.clv).toFixed(1)}¢, first price to last).`);
   if(b.void || b.push) notes.push(`Not counted: ${b.void||0} voided, ${b.push||0} pushed.`);
   return `<div class="rc-list"><h3><i class="rc-sw" style="background:${COLORS[b.tag]||'var(--s3)'}"></i>${b.name}</h3>`+
-    `<table class="rc-t"><thead><tr><th></th><th>Picks</th><th>Hit</th><th>Model</th><th>Units</th><th>Return</th></tr></thead><tbody>`+
-    statRow('All-time', a)+statRow(`${R.window} days`, b.d30)+`</tbody></table>`+
+    `<div class="rc-scroll"><table class="rc-t"><thead><tr><th></th><th>Picks</th><th>Units after fees</th><th>Return after fees</th><th>Hit, avg price</th><th>Model said</th><th>Units before fees</th></tr></thead><tbody>`+
+    statRow('All-time', a)+statRow(`${R.window} days`, b.d30)+`</tbody></table></div>`+
     (notes.length? `<p class="rc-note">${notes.join(' ')}</p>` : '')+`</div>`;
 }
 
@@ -226,7 +239,7 @@ function unitsChart(el, lists, label){
     s+=`<circle cx="${end[0].toFixed(1)}" cy="${end[1].toFixed(1)}" r="4" fill="${c}" stroke="#0f2038" stroke-width="2"/>`;
   });
   s+='</svg>';
-  el.innerHTML=`<h3>Units won or lost so far, week by week (1 unit a pick)</h3><div class="rc-legend">`+
+  el.innerHTML=`<h3>Units won or lost so far after fees, week by week (1 unit a pick)</h3><div class="rc-legend">`+
     series.map(b=>`<span><i class="rc-sw" style="background:${COLORS[b.tag]||'var(--s3)'}"></i>${b.name} ${units(b.weeks[b.weeks.length-1][1])}</span>`).join('')+`</div>`+s;
   const cross=el.querySelector('.rc-cross');
   // a list's running total at a week: its last point on or before it
@@ -298,11 +311,12 @@ function sportPanel(s){
 
   // what's losing
   const down=R.losing.filter(l=>l.priced && l.units<0), dip=R.losing.filter(l=>!(l.priced && l.units<0));
-  const line=l=>`<li><b>${l.name} · ${l.list}</b>: <span class="rc-dn">${units(l.units)} units</span> over ${num(l.priced)} priced picks`+
-    `${l.roi!=null? ` (${sign(l.roi)}${pct(Math.abs(l.roi))} return)` : ''}.${l.d30!=null? ` Last ${R.window} days: <span class="${cls(l.d30)}">${units(l.d30)}</span>.` : ` No picks in the last ${R.window} days.`}</li>`;
-  const line2=l=>`<li><b>${l.name} · ${l.list}</b>: <span class="rc-dn">${units(l.d30)} units</span> over the last ${R.window} days (${units(l.units)} all-time).</li>`;
+  const line=l=>`<li><b>${l.name} · ${l.list}</b>: <span class="rc-dn">${units(l.units)} units after fees</span> over ${num(l.priced)} priced picks`+
+    `${l.roi!=null? ` (${sign(l.roi)}${pct(Math.abs(l.roi))} return${l.pm!=null? ` ± ${pct(l.pm)}` : ''})` : ''}${l.gross!=null && l.gross>=0? `; ${units(l.gross)} before fees` : ''}.`+
+    `${l.d30!=null? ` Last ${R.window} days: <span class="${cls(l.d30)}">${units(l.d30)}</span>.` : ` No picks in the last ${R.window} days.`}</li>`;
+  const line2=l=>`<li><b>${l.name} · ${l.list}</b>: <span class="rc-dn">${units(l.d30)} units after fees</span> over the last ${R.window} days (${units(l.units)} all-time).</li>`;
   $('rc-losing').innerHTML=(down.length? `<h3 class="rc-h3">Down all-time</h3><ul class="rc-lose">${down.map(line).join('')}</ul>` :
-      '<p class="rc-sub">No list is down units all-time right now. When one is, it is named here.</p>')+
+      '<p class="rc-sub">No list is down units after fees all-time right now. When one is, it is named here.</p>')+
     (dip.length? `<h3 class="rc-h3">Up all-time, down over the last ${R.window} days</h3><ul class="rc-lose">${dip.map(line2).join('')}</ul>` : '');
 
   main.forEach(s=>$('rc-sports').appendChild(sportPanel(s)));

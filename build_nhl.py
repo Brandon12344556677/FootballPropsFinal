@@ -27,6 +27,7 @@ from zoneinfo import ZoneInfo
 import news   # ESPN's injury report (holds)
 import kalshi  # Kalshi prices, side by side with Polymarket's
 import depth   # enough money at the price? (thin-market filter)
+import fees    # units and return after the exchange fee, with a +/- range
 import arbs    # Polymarket US / Kalshi arbitrage finder (team only)
 import holds   # props that wait for injury news
 import slim    # the slim data baked into the page
@@ -1511,9 +1512,11 @@ def live_record(picks):
             if p.get("price") and depth.real_price(p):
                 r["priced"] += 1
                 r["units"] += (1.0 / p["price"] - 1) if p["res"] == "hit" else -1
+                r.setdefault("_b", []).append((p["price"], p["res"] == "hit", p.get("vn")))   # for fees.summary
     graded = [p for p in picks if p.get("res") in ("hit", "miss")]
     for tag, r in out.items():
         r["units"] = round(r["units"], 2)
+        r.update(fees.summary(r.pop("_b", [])))   # units, return (+/- range) after the taker fee; average price
         r.update(clv_stats([p for p in graded if tag in (p.get("lists") or "")]))
     out["clv"] = clv_stats(graded)      # every graded pick, listed or not
     return out

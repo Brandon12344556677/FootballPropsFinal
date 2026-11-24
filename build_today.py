@@ -8,7 +8,7 @@ and writes a small file the home page can fetch in one request:
   today.json   {"gen", "record": {sport: {"T", "V"}}, "picks": [...], "valueLive": [[sport, start], ...],
                 "tracked": {"graded": live picks graded so far, "since": first live pick date},
                 "fair": {"w": model weight in the fair chance, "n": priced picks it was fitted on},
-                "last": {sport: {"day", "T": {n, hit}, "V": {n, hit, units}}}: each sport's latest graded day,
+                "last": {sport: {"day", "T": {n, hit, units}, "V": {n, hit, units}}} (units after fees): each sport's latest graded day,
                 "calib": [{"lo", "hi", "n", "said", "hit"}]: hit rate by model chance (home page chart),
                 "streaks", "moves": home page cards (hot streaks; prices moving toward a pick)}
                (each pick carries "l10": its last ten game values, for the mini chart)
@@ -133,7 +133,8 @@ def parse_start(s):
 
 
 def record(db):
-    """The season record the sport page shows, as {tag: {n, hit, priced, units}}."""
+    """The season record the sport page shows, as {tag: {n, hit, priced, units, net, roiNet, pm, early, avgPx}}
+    (net...avgPx: after the exchange's taker fee, from the builder's fees.summary; None on an older file)."""
     out = {}
     for tag, r in (db.get("record") or {}).items():
         if tag not in ("T", "V") or not r.get("n"):
@@ -142,7 +143,8 @@ def record(db):
         if units is None and r.get("roi") is not None and r.get("priced"):
             units = r["roi"] * r["priced"]      # the NFL builder stores ROI instead of units
         out[tag] = {"n": r["n"], "hit": r["hit"], "priced": r.get("priced") or 0,
-                    "units": round(units, 2) if units is not None else None}
+                    "units": round(units, 2) if units is not None else None,
+                    **{k: r.get(k) for k in ("net", "roiNet", "pm", "early", "avgPx")}}
     return out
 
 
@@ -251,8 +253,10 @@ def value_fits(sport, p):
 def last_results(sport, picks_doc, today, max_age=7):
     import depth
     """The latest ET game day (on or before `today`, within `max_age` days) with graded live
-    picks: {"day", "T": {n, hit}, "V": {n, hit, units}} for the results line under each page's
-    hero. Pushes and voids don't count; units are 1 unit per Value spot at its recorded price."""
+    picks: {"day", "T": {n, hit, units}, "V": {n, hit, units}} for the results line under each page's
+    hero. Pushes and voids don't count; units are 1 unit per pick at its recorded price, after the
+    exchange's taker fee (fees.net)."""
+    import fees
     cols = picks_doc["cols"]
     days = {}
     for row in picks_doc["picks"]:
@@ -266,17 +270,15 @@ def last_results(sport, picks_doc, today, max_age=7):
         if not day:
             continue
         lists, hit = p.get("lists") or "", p["res"] == "hit"
-        d = days.setdefault(day, {"T": {"n": 0, "hit": 0}, "V": {"n": 0, "hit": 0, "units": 0.0}})
-        if "T" in lists:
-            d["T"]["n"] += 1
-            d["T"]["hit"] += hit
-        if "V" in lists:
-            d["V"]["n"] += 1
-            d["V"]["hit"] += hit
-            price = p.get("price") if depth.real_price(p) else None   # a price that can't have been real: no units
-            if price:
-                price = price / 100.0 if sport == "nfl" else price
-                d["V"]["units"] += (1 / price - 1) if hit else -1
+        d = days.setdefault(day, {"T": {"n": 0, "hit": 0, "units": 0.0}, "V": {"n": 0, "hit": 0, "units": 0.0}})
+        price = p.get("price") if p.get("price") and depth.real_price(p) else None   # a price that can't have been real: no units
+        price = price / 100.0 if price and sport == "nfl" else price
+        for tag in ("T", "V"):
+            if tag in lists:
+                d[tag]["n"] += 1
+                d[tag]["hit"] += hit
+                if price:
+                    d[tag]["units"] += fees.net(price, hit, p.get("vn"))
     oldest = (datetime.date.fromisoformat(today) - datetime.timedelta(days=max_age)).isoformat()
     recent = sorted(d for d in days if oldest <= d <= today and (days[d]["T"]["n"] or days[d]["V"]["n"]))
     if not recent:
@@ -286,8 +288,9 @@ def last_results(sport, picks_doc, today, max_age=7):
     for tag in ("T", "V"):
         if days[day][tag]["n"]:
             out[tag] = days[day][tag]
-    if "V" in out:
-        out["V"]["units"] = round(out["V"]["units"], 2)
+    for tag in ("T", "V"):
+        if tag in out:
+            out[tag]["units"] = round(out[tag]["units"], 2)
     return out
 
 
