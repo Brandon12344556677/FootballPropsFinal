@@ -491,7 +491,7 @@ footer .fine a{color:#8394ab}
       <div class="mvtabs" role="tablist" aria-label="Lists" hidden></div>
       <div class="app movegrid">
         <div class="movecol" id="mvstreak"><h3>Hot streaks</h3><p class="mvnote">Cleared this exact line in each of their last games, and it still pays.</p><div class="mvlist"></div></div>
-        <div class="movecol" id="mvmove"><h3>Prices moving toward our pick</h3><p class="mvnote">The price has risen since we recorded the pick: the market came around to it.</p><div class="mvlist"></div></div>
+        <div class="movecol" id="mvmove"><h3>Prices moving toward our pick</h3><p class="mvnote">The price has risen since we recorded the pick: the market came around to it.<span id="mvrate"></span></p><div class="mvlist"></div></div>
         <div class="movecol" id="mvfast" hidden><h3>Moving fast</h3><p class="mvnote">The price jumped 10¢ or more in the last hour, often a sign of injury or lineup news. Check before you bet.</p><div class="mvlist"></div></div>
       </div>
     </div>
@@ -804,6 +804,9 @@ footer .fine a{color:#8394ab}
       const more=col.querySelector('.mvmore'); if(more) more.onclick=()=>{ col.classList.add('all'); more.remove(); }; };
     fill('mvstreak', st, p=>row(p, `<b>${p.streak} straight</b><small>model ${Math.round(p.prob*100)}% · ${Math.round(p.price*100)}¢</small>`));
     fill('mvmove', mv, p=>row(p, `<b>${Math.round(p.px0*100)}¢ → ${Math.round(p.price*100)}¢</b><small>model ${Math.round(p.prob*100)}%</small>`));
+    // these are the exceptions: across every graded pick on our lists, how the price usually moved before the game
+    const mr=t&&t.moveRate, rate=document.getElementById('mvrate');
+    if(rate) rate.textContent=mr && mr.n>=100? ` That's the exception: across ${mr.n.toLocaleString('en-US')} graded picks on our lists, the price moved toward the pick ${Math.round(100*mr.up/mr.n)}% of the time and against it ${Math.round(100*mr.dn/mr.n)}%, first price to the last before the game.` : '';
     fill('mvfast', fs, p=>row(p, `<b>${Math.round(p.was*100)}¢ → ${Math.round(p.price*100)}¢</b><small>in the last hour · model ${Math.round(p.prob*100)}%</small>`));
     sec.hidden=!st.length && !mv.length && !fs.length;
     // phones: one list at a time, picked from tabs above them
