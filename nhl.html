@@ -632,8 +632,8 @@ details.valrules>summary{cursor:pointer}
 .panel.collapsed{padding-bottom:14px}
 </style>
 
-<link rel="stylesheet" href="app.css?v=20261124a">
-<script src="app.js?v=20261124a"></script>
+<link rel="stylesheet" href="app.css?v=20261125a">
+<script src="app.js?v=20261125a"></script>
 <script src="/thanksgiving.js?v=20261117a"></script>
 
 <header class="apptop">
@@ -1426,15 +1426,16 @@ const initials=n=>{ const w=String(n||"").replace(/\s+(Jr|Sr|II|III|IV)\.?$/i,""
 // Pick cards (Top 25 Surest, Value spots): one card per prop — who, the bet in words, the
 // model's chance, the Polymarket price — sorted by the pill row above the grid.
 const SORTS=[['prob','Chance'],['edge','Edge'],['price','Price'],['matchup','Game'],['name','Player']];
-function pickTable(rows, sort){
+function pickTable(rows, sort, fair){   // fair: Value cards, the fair chance in the ring
   const pills=SORTS.map(([k,l])=>`<button type="button" class="sortpill" data-k="${k}" aria-pressed="${sort.key===k}">${l}${sort.key===k?(sort.dir>0?' ↑':' ↓'):''}</button>`).join('');
   let h=`<div class="sortbar"><span class="sortlab">Sort</span>${pills}</div><div class="pickgrid">`;
   rows.forEach((r,idx)=>{
-    const tier=r.prob>=0.9?'hi':r.prob>=0.7?'mid':'lo', pv=Math.round(r.prob*100);
+    const fpx=r.price, fp=fair && fpx!=null? PS.fairOf(r.prob, fpx) : r.prob;
+    const tier=fp>=0.9?'hi':fp>=0.7?'mid':'lo', pv=Math.round(r.prob*100);
     h+=`<article class="pickcard ${tier}${r.lk?' locked':''}" style="${PS.teamVars(SPORT_KEY, r.team)}">`+(r.lk? PS.lockRibbon(r.lk) : '')+
       `<div class="pc-top"><span class="av">${esc(initials(r.name))}</span>`+
         `<div class="pc-who"><b>${esc(r.name)}</b><span><span class="tbadge">${esc(r.team)}</span>${r.team===r.game.home? "vs "+esc(r.game.away) : r.team===r.game.away? "@ "+esc(r.game.home) : esc(r.game.away)+" @ "+esc(r.game.home)}</span>${r.game && r.game.start? PS.gameTime(r.game.start) : ''}</div>`+
-        `<div class="pc-prob"><div class="ring" style="--p:${pv}"><b>${pv}<small>%</small></b></div><span title="80% range ${Math.round(r.lo*100)}–${Math.round(r.hi*100)}%, from ${r.n} games">chance</span></div></div>`+
+        PS.probRing(r.prob, {fair, price:fpx, title:`80% range ${Math.round(r.lo*100)}–${Math.round(r.hi*100)}%, from ${r.n} games`})+`</div>`+
       `<div class="pc-bet"><span class="leantag ${esc(r.side)}">${esc(r.side)}</span><b>${r.line}</b><span>${esc(r.statText)}</span>${byId[r.pid]? PS.spark(valuesOf(byId[r.pid], r.sk), r.line, r.side) : ''}</div>`+
       `<div class="pc-foot"><span class="pc-price livecell">${priceCell(r)}</span>${r.lk? PS.lockBadge(r.lk) : ''}${PS.starBtn(SPORT_KEY, {pid:r.pid, name:r.name, team:r.team})}<button class="edgeload" type="button" data-i="${idx}">Details</button></div>`+
     `</article>`;
@@ -1524,7 +1525,7 @@ function renderValue(){ const panel=$('valuepanel'), body=$('valuebody'); if(!pa
   if(!shown.length){ body.innerHTML=fltEmpty(all.length, all.length===1? 'value spot' : 'value spots'); wireFltClear(body); return; }
   const rows=sortRows(shown, valueSort.key, valueSort.dir).slice(0,50);
   const unders=rows.filter(r=>r.side==='under').length, overs=rows.length-unders;
-  body.innerHTML=pickTable(rows, valueSort)+`<p class="mktnote" style="margin-top:8px"><b>${rows.length}</b> prop${rows.length===1?'':'s'} clear both rules at the recorded price${fltOn()? ` and match your filter (of ${all.length})` : ''} — ${overs} over${overs===1?'':'s'} and ${unders} under${unders===1?'':'s'}. Picks are recorded before ${TIPOFF} and graded in <b>Past picks</b>. Backward-looking; not advice.</p>`;
+  body.innerHTML=pickTable(rows, valueSort, true)+`<p class="mktnote" style="margin-top:8px"><b>${rows.length}</b> prop${rows.length===1?'':'s'} clear both rules at the recorded price${fltOn()? ` and match your filter (of ${all.length})` : ''} — ${overs} over${overs===1?'':'s'} and ${unders} under${unders===1?'':'s'}. Picks are recorded before ${TIPOFF} and graded in <b>Past picks</b>. Backward-looking; not advice.</p>`;
   wireTable(body, rows, valueSort, renderValue);
 }
 
