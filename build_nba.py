@@ -791,7 +791,9 @@ def fetch_slate():
                     spread = None
         t_et = parse_utc(start)
         tm = t_et.astimezone(ET).strftime("%H:%M") if t_et else ""   # ET start, 24-hour (the page shows it 12-hour)
-        games.append({"away": away, "home": home, "date": start[:10],
+        # dated by the game's Eastern day, like Polymarket's markets: ESPN's UTC date is the next day for
+        # an evening game, and two dates for one game recorded its picks twice (Oct 21 - Nov 25, 2026)
+        games.append({"away": away, "home": home, "date": t_et.astimezone(ET).date().isoformat() if t_et else start[:10],
                       "time": tm, "start": start, "total": total, "spread": spread, "final": False})
     games.sort(key=lambda g: (g["date"], g["time"]))
     return games
@@ -1215,6 +1217,16 @@ def build_market_picks(picks, poly_games, players_by_key, espn_slate, defense, d
     is modeled at the market's line so Value spots can compare model vs price.
     Returns count added; no-op when there are no NBA markets (off-season)."""
     have = {(p["pid"], p["date"], p["stat"], p["line"]): p for p in picks}
+    near = {}   # the same prop already recorded for this matchup a day either side (the other date for one game)
+    for p in picks:
+        m = re.match(r"^(\d{4}-\d{2}-\d{2})-([A-Z]+)-([A-Z]+)$", str(p.get("gid") or ""))
+        if m and p.get("src") == "live":
+            near.setdefault((p["pid"], p["stat"], p["line"], m.group(2), m.group(3)), []).append((m.group(1), p))
+
+    def recorded_near(pid, sk, line, g):
+        d = datetime.date.fromisoformat(g["date"])
+        return next((p for x, p in near.get((pid, sk, line, g["away"], g["home"]), ())
+                     if abs((datetime.date.fromisoformat(x) - d).days) <= 1), None)
     added = 0
     for g in poly_games:
         eg = next((x for x in espn_slate if {x["away"], x["home"]} == {g["away"], g["home"]}), None)
@@ -1242,8 +1254,9 @@ def build_market_picks(picks, poly_games, players_by_key, espn_slate, defense, d
             if opp is None:
                 continue
             key = (pl["id"], g["date"], sk, pm["line"])
-            if key in have:
-                refresh_price(have[key], pm)
+            twin = have.get(key) or recorded_near(pl["id"], sk, pm["line"], g)
+            if twin:
+                refresh_price(twin, pm)
                 continue
             rows = pl["g"]
             hp = hist_context(rows)
@@ -1382,6 +1395,37 @@ def grade_picks(picks, by_pid, games):
         p["res"] = grade_result(actual, p["line"], p["side"])
         n += 1
     return n, dnp
+
+
+DUP_SETTLE_DAYS = 2   # a twin is voided this long after its game, once parlays, Pick of the Day and roi4 have settled
+
+
+def void_duplicates(picks, now=None):
+    """From Oct 21 to Nov 25, 2026 one game could carry two ids a day apart (Polymarket's Eastern date and
+    ESPN's UTC date), and the same prop was recorded and graded under both. Of each such pair (same player,
+    stat, line, side and start), the copy on more lists is kept (a tie: the one recorded first) and the
+    other is voided as 'dup', which no record, list or calibration counts. Only once both copies are graded
+    and the game is DUP_SETTLE_DAYS old, so anything that followed either copy has already settled.
+    Returns how many were voided."""
+    now = now or datetime.datetime.now(datetime.timezone.utc)
+    groups = {}
+    for i, p in enumerate(picks):
+        if p.get("src") == "live" and p.get("start") and p.get("res") != "dup":
+            k = (p.get("pid"), p.get("stat"), p.get("line"), p.get("side"), str(p["start"])[:16])
+            groups.setdefault(k, []).append((i, p))
+    n = 0
+    for k, v in groups.items():
+        if len(v) < 2 or any(p.get("res") is None for _, p in v):
+            continue
+        t = parse_utc(v[0][1]["start"])
+        if not t or now - t < datetime.timedelta(days=DUP_SETTLE_DAYS):
+            continue
+        keep = max(v, key=lambda ip: (len(ip[1].get("lists") or ""), -ip[0]))[1]
+        for _, p in v:
+            if p is not keep:
+                p["res"] = "dup"
+                n += 1
+    return n
 
 
 def injury_holds(picks, by_pid, rows):
@@ -1713,6 +1757,9 @@ def main():
     if dropped:
         print(f"  picks: removed {dropped} pick(s) on preseason games")
     graded, dnp = grade_picks(picks, by_pid, box_games(store["rows"]))
+    twins = void_duplicates(picks)
+    if twins:
+        print(f"  picks: voided {twins} duplicate cop(ies) of picks recorded under two ids for one game")
     try:
         mkt_added = build_market_picks(picks, poly_games, players_by_key, slate, defense, defavg)
     except Exception as e:  # noqa: BLE001
