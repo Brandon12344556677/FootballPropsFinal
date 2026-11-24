@@ -138,7 +138,7 @@ def record_card(rec):
         since = day_label(datetime.date.fromisoformat(since)).split(", ")[1]
     except ValueError:
         pass
-    return {"title": f"{graded:,} picks graded since {since}" if graded else "Every pick, graded in public",
+    return {"title": f"{graded:,} lines graded since {since}" if graded else "Every pick, graded in public",
             "sub": "Value list units over the last 30 days, at the recorded price", "rows": rows}
 
 
