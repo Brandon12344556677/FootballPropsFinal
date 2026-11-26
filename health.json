@@ -1,17 +1,4 @@
 {
- "problems": {
-  "build_nhl: arbs": {
-   "first": "2026-11-26T08:23:32Z",
-   "runs": 1,
-   "alerted": null,
-   "msg": "build_nhl.py: arbs failed (no Kalshi prices this run)"
-  },
-  "build_nhl: kalshi": {
-   "first": "2026-11-26T08:23:32Z",
-   "runs": 1,
-   "alerted": null,
-   "msg": "build_nhl.py: kalshi failed (all 4 NHL series failed)"
-  }
- },
+ "problems": {},
  "alert": []
 }
