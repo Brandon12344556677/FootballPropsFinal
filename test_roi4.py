@@ -1,4 +1,5 @@
 import datetime
+import json
 import unittest
 
 import edge_report
@@ -10,6 +11,7 @@ UTC = datetime.timezone.utc
 def pick(**kw):
     p = {"src": "live", "gid": "G1", "pid": "P1", "player": "A Player", "stat": "rec", "line": 4.5, "side": "over",
          "prob": 0.70, "price": 0.55, "px0": 0.55, "lists": "", "vn": "P", "th": None, "hd": None, "pj": None,
+         "pd": 5000, "kd": 5000,   # dollars offered within 2c: deep enough for any stake
          "date": "2026-11-15", "start": "2026-11-15T18:00Z", "lk": None, "res": None}
     p.update(kw)
     return p
@@ -177,6 +179,43 @@ class ThinAfterBetTest(unittest.TestCase):
         self.assertEqual(st["bets"][0]["res"], "hit")
 
 
+class DepthTest(unittest.TestCase):
+    def test_whole_stake_offered_within_2c(self):
+        self.assertEqual(roi4.UNIT_USD, 100.0)
+        ok = roi4.choose([cand(pd=100)], PLAN, [])                  # 1u stake, $100 offered: fits
+        self.assertEqual(len(ok), 1)
+        self.assertEqual(ok[0]["depth"], 100.0)
+        self.assertEqual(roi4.choose([cand(pd=99)], PLAN, []), [])   # a dollar short: no bet
+        self.assertEqual(roi4.choose([cand(pd=None)], PLAN, []), [])  # depth not recorded: no bet
+        self.assertEqual(len(roi4.choose([cand(vn="K", pd=None, kd=300)], PLAN, [])), 1)   # Kalshi bets use Kalshi's depth
+
+    def test_old_thin_bets_are_left_out_of_the_record(self):
+        deep, thin = roi4.choose([cand()], PLAN, [])[0], roi4.choose([cand(pid="P2")], PLAN, [])[0]
+        for b in (deep, thin):
+            b.pop("depth")                                            # made before the rule: no depth stored
+            roi4.settle(b, "hit" if b is thin else "miss")
+        n = roi4.mark_thin([deep, thin], {deep["key"]: {"pd": 900}, thin["key"]: {"pd": 30}})
+        self.assertEqual(n, 1)
+        self.assertTrue(thin["thin"])
+        self.assertNotIn("thin", deep)
+        self.assertEqual(roi4.mark_thin([deep, thin], {}), 0)        # judged once
+        s = roi4.stats([deep, thin])
+        self.assertEqual((s["n"], s["thin"], s["pnl"]), (1, 1, -deep["stake"]))   # the thin win doesn't count
+        self.assertEqual(edge_report.roi4_rows({"bets": [deep, thin]})[0]["win"], False)
+        self.assertEqual(len(edge_report.roi4_rows({"bets": [deep, thin]})), 1)
+
+    def test_backtest_replayed_once_when_the_rule_changes(self):
+        past = [dict(x, res="hit" if i % 5 < 3 else "miss") for i, x in enumerate(history(start="2026-11-01"))]
+        now = datetime.datetime(2026, 11, 15, 17, 40, tzinfo=UTC)
+        st = {"live_from": "2026-11-15", "backtest": {"bets": [{"stale": True}], "stats": roi4.stats([]), "qualified": {}}}
+        roi4.update(st, past, now)
+        self.assertEqual(st["backtest"]["v"], roi4.BACKTEST_V)
+        self.assertNotIn({"stale": True}, st["backtest"]["bets"])
+        frozen = json.dumps(st["backtest"], sort_keys=True)
+        roi4.update(st, past, now + datetime.timedelta(minutes=10))
+        self.assertEqual(json.dumps(st["backtest"], sort_keys=True), frozen)
+
+
 class StatsTest(unittest.TestCase):
     def test_numbers(self):
         def b(day, res, stake=1.0, price=0.5, sport="nfl", k="x"):
@@ -235,7 +274,7 @@ class PostTest(unittest.TestCase):
         return {"posted": [], "plans": {"2026-11-15": PLAN}}
 
     def test_posts_at_the_polymarket_price_from_11(self):
-        c = cand(date="2026-11-15", start=None, price=0.50, pp=0.55, pd=40, kp=0.50, prob=0.70)
+        c = cand(date="2026-11-15", start=None, price=0.50, pp=0.55, pd=400, kp=0.50, prob=0.70)
         st = self.state()
         self.assertEqual(roi4.post(st, [c], self.NOW - datetime.timedelta(hours=1), self.META), [])   # 10:05 AM: not yet
         new = roi4.post(st, [c], self.NOW, self.META)
@@ -251,13 +290,13 @@ class PostTest(unittest.TestCase):
     def test_only_buyable_on_polymarket_and_not_too_late(self):
         st = self.state()
         base = dict(date="2026-11-15", start="2026-11-15T18:00Z", prob=0.70)
-        for bad in ({"pp": None}, {"pp": 0.55, "pd": 10}, {"pp": 0.55, "pd": 40, "lk": "2026-11-15T17:35Z"},
-                    {"pp": 0.55, "pd": 40, "start": "2026-11-15T16:20Z"}, {"pp": 0.65, "pd": 40},     # 15 minutes away; 5 points over only
-                    {"pp": 0.55, "pd": 40, "date": "2026-11-16", "start": "2026-11-16T18:00Z"}):
+        for bad in ({"pp": None}, {"pp": 0.55, "pd": 10}, {"pp": 0.55, "pd": 400, "lk": "2026-11-15T17:35Z"},
+                    {"pp": 0.55, "pd": 400, "start": "2026-11-15T16:20Z"}, {"pp": 0.65, "pd": 400},     # 15 minutes away; 5 points over only
+                    {"pp": 0.55, "pd": 400, "date": "2026-11-16", "start": "2026-11-16T18:00Z"}):
             self.assertEqual(roi4.post(st, [cand(**dict(base, **bad))], self.NOW, self.META), [], bad)
 
     def test_graded_and_counted_apart(self):
-        c = cand(date="2026-11-15", start="2026-11-15T18:00Z", pp=0.55, pd=40, prob=0.70)
+        c = cand(date="2026-11-15", start="2026-11-15T18:00Z", pp=0.55, pd=400, prob=0.70)
         past = [dict(x, res="hit" if i % 5 < 3 else "miss") for i, x in enumerate(history(start="2026-11-01"))]
         st = {}
         roi4.update(st, past + [c], self.NOW, self.META)
