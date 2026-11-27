@@ -570,7 +570,7 @@ details.plpast>summary:focus-visible{outline:2px solid var(--accent);outline-off
   <section data-view="roi4" class="panel" id="r4Panel">
     <div class="panel-h"><h2>4% return</h2><span class="label" id="r4Upd">Team only · paper bets</span></div>
     <p class="hint">Paper bets. 1 unit = 1% of a 100-unit bank; the goal is a <b>4%+ ROI every month</b>: at least 4% back on whatever was bet that month (units won ÷ units bet). Bank = units won as a share of the 100-unit bank.</p>
-    <div class="kpis" id="r4Top" aria-label="Monthly results"></div>
+    <div class="kpis kpis5" id="r4Top" aria-label="Today's and monthly results"></div>
     <h3 class="subh">Today's picks <small class="hint" id="r4PostWhen"></small></h3>
     <p class="r4-note"><b>Buy as close to the game's start as you can.</b> These picks' prices have tended to drop before the start (NFL edge picks fall about 8¢ from first listing to the lock), so buying in the morning usually means paying more than the record does. Wait until shortly before the start, then buy at the price shown or lower, and never above "don't pay over".</p>
     <p class="hint" id="r4PostNote"></p>
@@ -1641,12 +1641,20 @@ details.plpast>summary:focus-visible{outline:2px solid var(--accent);outline-off
     const fin=sm.filter(m=>m.month<thisMonth), mroi=m=>m.roi||0, best=fin.length? fin.reduce((a,m)=>mroi(m)>mroi(a)? m : a) : null, worst=fin.length? fin.reduce((a,m)=>mroi(m)<mroi(a)? m : a) : null;
     const fs=fin.reduce((a,m)=>a+m.staked,0), fp=fin.reduce((a,m)=>a+m.pnl,0);
     const mk=(k,m,s)=>[k, m? pct(m.roi) : '–', m? s(m) : 'no finished month yet', m? cls(m.roi) : ''];
+    // today: the day's at-lock bets (the ones the monthly record counts), graded ones only, so the number isn't a guess before games end
+    const tdy=(d.bets||[]).filter(b=>b.day===today), tg=tdy.filter(b=>b.res==='hit'||b.res==='miss'), tOpen=tdy.filter(b=>!b.res).length, tVoid=tdy.filter(b=>b.res==='void').length;
+    const tSt=tg.reduce((a,b)=>a+b.stake,0), tPn=tg.reduce((a,b)=>a+(b.pnl||0),0), tRoi=tSt? tPn/tSt : null;
+    const todayTile=['Today ROI', tg.length? pct(tRoi) : '–',
+      tg.length? `${u(tPn)} on ${tSt.toFixed(2)}u bet · ${tg.length} of ${tdy.length} graded${tOpen? ` · ${tOpen} still open` : ''}${tVoid? ` · ${tVoid} void` : ''}`
+        : tdy.length? `${tdy.length} bet${tdy.length===1?'':'s'} today, none graded yet` : 'no bets today',
+      tg.length? (tRoi>=MT? 'up' : tPn<0? 'down' : 'mid') : ''];
     $('r4Top').innerHTML=[
+      todayTile,
       ['This month ROI', cur? pct(cur.roi) : '–', cur? `${u(cur.pnl)} on ${cur.staked.toFixed(2)}u bet · ${cur.n} bets so far · ${(cur.roi||0)>=MT? 'on track for 4%' : 'under 4% so far'}` : 'no graded bets this month yet', cur? ((cur.roi||0)>=MT? 'up' : cur.pnl<0? 'down' : 'mid') : ''],
       mk('Best month ROI', best, m=>`${mname(m.month)} · ${u(m.pnl)} on ${m.staked.toFixed(2)}u · ${mtag(m)}`),
       mk('Worst month ROI', worst, m=>`${mname(m.month)} · ${u(m.pnl)} on ${m.staked.toFixed(2)}u · ${mtag(m)}`),
       ['All months', fin.length? `${fin.filter(m=>mroi(m)>=MT).length} of ${fin.length}` : '–', fin.length? `hit 4% ROI · ${fin.filter(m=>m.pnl<0).length} losing · ${pct(fs? fp/fs : null)} ROI on all ${fs.toFixed(2)}u bet` : 'finished months that hit 4% ROI', '']
-    ].map(([k,v,s,cl])=>`<div class="kpi"><span class="label">${k}</span><span class="v ${cl}">${v}</span><span class="s">${s}</span></div>`).join('');
+    ].map(([k,v,s,cl],i)=>`<div class="kpi${i===4? ' kpi-all' : ''}"><span class="label">${k}</span><span class="v ${cl}">${v}</span><span class="s">${s}</span></div>`).join('');
     const ol=(d.backtest||{}).outlook;
     $('r4OutNote').textContent= ol? `Thousands of made-up months, each ${ol.bet_days} betting days drawn from the backtest's own days (it stakes about ${ol.staked}u a month on the ${BANK}u bank), each month's ROI on what it bet. The top row assumes the backtest's edge is real; the others show what happens if it is smaller or not there at all.` : 'Frozen with the backtest on the first run.';
     $('r4Out').innerHTML= ol? ol.rows.map(r=>`<tr><td>${esc(r.label)}</td><td class="n">${pct(r.roi)}</td><td class="n ${cls(r.median)}">${pct(r.median)}</td><td class="n">${Math.round(r.p_hit*100)}%</td><td class="n">${Math.round(r.p_down*100)}%</td><td class="n down">${pct(r.bad)}</td><td class="n up">${pct(r.good)}</td></tr>`).join('') : '';
