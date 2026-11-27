@@ -151,6 +151,19 @@ def all_candidates(docs):
     return out
 
 
+def all_results(docs):
+    """{pick key: result} for every live pick, buyable or not: a bet is graded from its pick even when that pick no
+    longer passes candidate() (it went thin, or its price jumped, after the bet was made)."""
+    out = {}
+    for s, doc in docs.items():
+        cols = (doc or {}).get("cols") or []
+        for row in (doc or {}).get("picks") or []:
+            p = dict(zip(cols, row))
+            if p.get("src") == "live":
+                out[pick_key(s, p)] = p.get("res")
+    return out
+
+
 def edge(c):
     return c["prob"] - c["pr"]
 
@@ -268,8 +281,15 @@ def settle(bet, res):
 
 
 def grade(bets, results, today):
-    """results: {pick key: res}. Old pending bets with no result are voided."""
+    """results: {pick key: res}. Old pending bets with no result are voided. A bet that was voided that way and whose
+    pick has since been graded hit or miss gets that result (before Nov 26, 2026 results came only from buyable picks,
+    so a pick that went thin after the bet was made could never grade it)."""
     changed = False
+    for b in bets:
+        r = results.get(b["key"])
+        if b.get("res") == "void" and r in ("hit", "miss") and not b.get("regraded"):
+            b["res"], b["regraded"] = None, True
+            changed |= settle(b, r)
     cutoff = (datetime.date.fromisoformat(today) - datetime.timedelta(days=VOID_AFTER)).isoformat()
     for b in bets:
         if b.get("res") is not None:
@@ -486,7 +506,7 @@ def season_stats(state):
     return stats(bt + [dict(b, src="live") for b in state.get("bets") or []])
 
 
-def update(state, cands, now, meta=None):
+def update(state, cands, now, meta=None, results=None):
     """One pass: freeze the backtest (first run), plan today, post today's Polymarket picks (from 11 AM ET), add the
     at-lock bets, grade both. Returns True on a change."""
     meta = meta or {}
@@ -519,7 +539,7 @@ def update(state, cands, now, meta=None):
         c = by_key.get(b["key"])
         if b.get("res") is None and c and not b.get("start"):
             b.update({"start": c.get("start"), "team": c.get("team"), "opp": c.get("opp")})
-    results = {c["key"]: c["res"] for c in cands}
+    results = dict({c["key"]: c["res"] for c in cands}, **(results or {}))   # every live pick's result (all_results), not just the buyable ones
     grade(state["bets"], results, today)
     grade(state["posted"], results, today)
     state["stats"] = stats(state["bets"], [d for d in plans if d < today])
@@ -559,7 +579,8 @@ def print_backtest(cands, until):
 
 def main():
     now = datetime.datetime.now(UTC)
-    cands = all_candidates(load_docs())
+    docs = load_docs()
+    cands = all_candidates(docs)
     if len(sys.argv) > 1 and sys.argv[1] == "backtest":
         print_backtest(cands, sys.argv[2] if len(sys.argv) > 2 else now.astimezone(ET).date().isoformat())
         return 0
@@ -572,7 +593,7 @@ def main():
             state = json.loads(team_stats.decrypt(f.read().strip(), password))
     except FileNotFoundError:
         state = {}
-    if not update(state, cands, now, load_meta()):
+    if not update(state, cands, now, load_meta(), all_results(docs)):
         print(f"4% return: no change ({len(state.get('bets') or [])} live bets)")
         return 0
     state["gen"] = now.strftime("%Y-%m-%dT%H:%M:%SZ")
