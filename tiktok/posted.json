@@ -1,41 +1,38 @@
 {
- "date": "2026-11-26",
+ "date": "2026-11-27",
  "drafts": {
   "c": {
    "caption": {
     "title": "Pick of the Day + today's best props",
-    "description": "Pick of the Day: Joe Milton III under 2.5 Pass TDs (96% model chance). Swipe for today's best NFL props → Free research, link in bio. Model chance, not a guarantee. 18+. #NFL #NFLProps #PlayerProps"
+    "description": "Pick of the Day: Pat Bryant under 69.5 Rec Yds (94% model chance). Swipe for today's best NBA, NHL props → Free research, link in bio. Model chance, not a guarantee. 18+. #NBA #NBAProps #NHL #NHLProps #PlayerProps"
    },
    "ok": true,
-   "id": "p_inbox_url~v2.7712634851094284302"
+   "id": "p_inbox_url~v2.7713001621210417165"
   },
   "v1": {
-   "sport": "nfl",
-   "angle": "gap",
-   "caption": "3 NFL player props where our model and the market disagree today 👀 Biggest gap: Emmett Johnson under 2.5 Receptions, model 48% vs. market 30%. Free research, link in bio. Model chance, not a guarantee. 18+. #NFL #NFLProps #PlayerProps #SportsAnalytics",
+   "sport": "nba",
+   "angle": "record",
+   "caption": "Do our NBA picks actually hit? Top 25: 1,674 of 1,865 this season (90%), every pick recorded before the game and graded after ✅ Free research, link in bio. Model chance, not a guarantee. 18+. #NBA #NBAProps #PlayerProps #SportsAnalytics",
    "ok": true,
-   "id": "v_inbox_file~v2.7712634864566323214"
+   "id": "v_inbox_file~v2.7713001668405200910"
   },
   "v2": {
-   "sport": "nfl",
+   "sport": "nhl",
    "angle": "record",
-   "caption": "Do our NFL picks actually hit? Top 25: 622 of 687 this season (91%), every pick recorded before the game and graded after ✅ Free research, link in bio. Model chance, not a guarantee. 18+. #NFL #NFLProps #PlayerProps #SportsAnalytics",
+   "caption": "Do our NHL picks actually hit? Top 25: 2,125 of 2,286 this season (93%), every pick recorded before the game and graded after ✅ Free research, link in bio. Model chance, not a guarantee. 18+. #NHL #NHLProps #PlayerProps #SportsAnalytics",
    "ok": true,
-   "id": "v_inbox_file~v2.7712634903573645326"
+   "id": "v_inbox_file~v2.7713001737615509517"
+  },
+  "v3": {
+   "sport": "nba",
+   "angle": "gap",
+   "caption": "3 NBA player props where our model and the market disagree today 👀 Biggest gap: Collin Sexton over 9.5 Points, model 68% vs. market 41%. Free research, link in bio. Model chance, not a guarantee. 18+. #NBA #NBAProps #PlayerProps #SportsAnalytics",
+   "ok": true,
+   "id": "v_inbox_file~v2.7713001755226834957"
   }
  },
  "history": [
   {
-   "date": "2026-11-12",
-   "sport": "nfl",
-   "angle": "record"
-  },
-  {
-   "date": "2026-11-12",
-   "sport": "nba",
-   "angle": "gap"
-  },
-  {
    "date": "2026-11-13",
    "sport": "nba",
    "angle": "record"
@@ -219,8 +216,23 @@
    "date": "2026-11-26",
    "sport": "nfl",
    "angle": "record"
+  },
+  {
+   "date": "2026-11-27",
+   "sport": "nba",
+   "angle": "record"
+  },
+  {
+   "date": "2026-11-27",
+   "sport": "nhl",
+   "angle": "record"
+  },
+  {
+   "date": "2026-11-27",
+   "sport": "nba",
+   "angle": "gap"
   }
  ],
  "reconnect": false,
- "at": "2026-11-27T00:02:48Z"
+ "at": "2026-11-27T23:46:35Z"
 }
