@@ -143,6 +143,40 @@ class GradeTest(unittest.TestCase):
         self.assertEqual(b["res"], "void")
 
 
+class ThinAfterBetTest(unittest.TestCase):
+    def test_a_pick_that_goes_thin_still_grades(self):
+        # the Nov 26, 2026 case: posted at 44c, then thin at the lock (th 1, no depth), graded hit in the picks file
+        b = roi4.choose([cand()], PLAN, [])[0]
+        thin = pick(th=1, res="hit")
+        self.assertIsNone(roi4.candidate("nfl", thin))                 # no longer a candidate...
+        doc = {"cols": list(thin), "picks": [list(thin.values())]}
+        results = roi4.all_results({"nfl": doc})
+        self.assertEqual(results[b["key"]], "hit")                    # ...but its result is still read
+        roi4.grade([b], results, "2026-11-16")
+        self.assertEqual(b["res"], "hit")
+
+    def test_wrongly_voided_bets_are_regraded_once(self):
+        b = roi4.choose([cand()], PLAN, [])[0]
+        roi4.grade([b], {}, "2026-11-25")                              # no result for 5+ days: voided
+        self.assertEqual(b["res"], "void")
+        self.assertTrue(roi4.grade([b], {b["key"]: "miss"}, "2026-11-26"))
+        self.assertEqual((b["res"], b["pnl"], b["regraded"]), ("miss", -b["stake"], True))
+        push = roi4.choose([cand(pid="P7")], PLAN, [])[0]
+        roi4.grade([push], {push["key"]: "push"}, "2026-11-16")         # a real push stays void
+        self.assertFalse(roi4.grade([push], {push["key"]: "push"}, "2026-11-26"))
+        self.assertEqual(push["res"], "void")
+
+    def test_update_uses_every_result(self):
+        past = [dict(x, res="hit" if i % 5 < 3 else "miss") for i, x in enumerate(history(start="2026-11-01"))]
+        now = datetime.datetime(2026, 11, 15, 17, 40, tzinfo=UTC)
+        c = cand(date="2026-11-15", lk="2026-11-15T17:35Z")
+        st = {}
+        roi4.update(st, past + [c], now)
+        self.assertEqual(len(st["bets"]), 1)
+        roi4.update(st, past, now + datetime.timedelta(hours=5), results={c["key"]: "hit"})   # the pick is no longer a candidate
+        self.assertEqual(st["bets"][0]["res"], "hit")
+
+
 class StatsTest(unittest.TestCase):
     def test_numbers(self):
         def b(day, res, stake=1.0, price=0.5, sport="nfl", k="x"):
