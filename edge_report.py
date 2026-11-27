@@ -235,7 +235,7 @@ def roi4_rows(doc, field="bets", sport="roi4"):
     flat 1-unit bet at its frozen price (the tab shows them at their own stakes). The backtest is never counted."""
     out = []
     for b in (doc or {}).get(field) or []:
-        if b.get("res") not in ("hit", "miss") or not b.get("price"):
+        if b.get("res") not in ("hit", "miss") or not b.get("price") or b.get("thin"):   # thin: left out of the record (roi4.mark_thin)
             continue
         out.append({"sport": sport, "day": b["day"], "pr": float(b["price"]), "win": b["res"] == "hit",
                     "side": b.get("side") or "over", "stat": b.get("stat"), "line": b.get("line"), "lists": b.get("sport") or ""})

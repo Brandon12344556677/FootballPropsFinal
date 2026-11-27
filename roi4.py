@@ -64,7 +64,7 @@ LOOKBACK = 42        # days of graded picks a segment is judged on
 MIN_N = 300          # graded picks (one per player, stat and game) a segment needs
 MIN_DAYS = 6         # over this many game days
 MIN_ROI = TARGET     # returning the target or better
-LO_FLOOR = 0.0       # and the low end of its 80% bootstrap range above zero (a looser -3% let NHL in on a hot streak: -15% after)
+LO_FLOOR = 0.0       # and the low end of its 80% bootstrap range above zero (a looser floor let NHL in on a hot streak, and it lost)
 BOOT = 300
 SHRINK_N = 500       # r * n / (n + SHRINK_N): a segment's past return is trusted more as it grows
 BANK = 100.0         # units: the stake is a fraction of this
@@ -80,6 +80,12 @@ NFL_BET_MIN = 15     # NFL picks carry no start time: bet only within this many 
 POST_FROM = (11, 0)
 POST_LEAD = 30       # minutes before the start
 POST_USD = 25.0      # dollars offered near the Polymarket price for the side (the pick's "pd")
+# Depth (since Nov 27, 2026): a bet needs its whole stake in dollars offered within 2c of its price on its exchange (the
+# pick's "pd" on Polymarket, "kd" on Kalshi), at UNIT_USD a unit, the owner's unit size. In thinner markets a bet that
+# size moves the price (the numbers are in the encrypted file, as always). Bets made before the rule that don't meet it
+# are kept in the file, marked "thin", and left out of every record (stats).
+UNIT_USD = 100.0
+BACKTEST_V = 2       # bump when the rule changes what the backtest would have bet: the frozen backtest is replayed once
 SPORT_DATA = {"nfl": "data.json", "nba": "nba.json", "nhl": "nhl.json", "mlb": "mlb.json", "tennis": "tennis.json"}
 
 
@@ -162,6 +168,44 @@ def all_results(docs):
             if p.get("src") == "live":
                 out[pick_key(s, p)] = p.get("res")
     return out
+
+
+def depth_usd(c):
+    """Dollars offered within 2c of the price on the bet's exchange, or None if not recorded."""
+    d = c.get("pd") if c.get("vn") == "P" else c.get("kd")
+    return None if d is None else float(d)
+
+
+def deep_enough(c, stake):
+    d = depth_usd(c)
+    return d is not None and d >= stake * UNIT_USD
+
+
+def all_depths(docs):
+    """{pick key: {"pd", "kd"}} for every live pick: the depth behind bets made before the depth rule."""
+    out = {}
+    for s, doc in docs.items():
+        cols = (doc or {}).get("cols") or []
+        for row in (doc or {}).get("picks") or []:
+            p = dict(zip(cols, row))
+            if p.get("src") == "live":
+                out[pick_key(s, p)] = {"pd": p.get("pd"), "kd": p.get("kd")}
+    return out
+
+
+def mark_thin(bets, depths):
+    """Bets made before the depth rule get its verdict once: their pick's recorded depth on their exchange against
+    the stake. Under it: "thin", kept in the file but left out of the records. Returns how many were marked."""
+    n = 0
+    for b in bets:
+        if "depth" in b:
+            continue
+        d = depths.get(b["key"])
+        b["depth"] = depth_usd(dict(d or {}, vn=b.get("vn")))
+        if b["depth"] is None or b["depth"] < b["stake"] * UNIT_USD:
+            b["thin"] = True
+            n += 1
+    return n
 
 
 def edge(c):
@@ -257,11 +301,11 @@ def choose(cands, day_plan, bets):
         day_used = sum(b["stake"] for b in bets + out if b["day"] == c["day"])
         game_used = sum(b["stake"] for b in bets + out if b["day"] == c["day"] and b["gid"] == c["gid"])
         st = round(min(st, GAME_CAP - game_used, DAY_CAP - day_used), 2)
-        if st < MIN_BET:
+        if st < MIN_BET or not deep_enough(c, st):   # the whole stake has to be offered within 2c, or the bet moves the price
             continue
         out.append({"key": c["key"], "sport": c["sport"], "day": c["day"], "gid": c["gid"], "pid": c["pid"],
                     "player": c["player"], "stat": c["stat"], "line": c["line"], "side": c["side"],
-                    "price": c["pr"], "prob": round(c["prob"], 3), "vn": c["vn"], "seg": seg["key"], "stake": st,
+                    "price": c["pr"], "prob": round(c["prob"], 3), "vn": c["vn"], "seg": seg["key"], "stake": st, "depth": depth_usd(c),
                     "start": c.get("start"), "team": c.get("team"), "opp": c.get("opp"),   # for the tab's live tracking
                     "res": None, "pnl": None})
     return out
@@ -303,6 +347,8 @@ def grade(bets, results, today):
 
 def stats(bets, days_planned=()):
     """Every number the tab shows, from graded bets."""
+    thin = sum(1 for b in bets if b.get("thin"))
+    bets = [b for b in bets if not b.get("thin")]   # bets made before the depth rule that broke it: left out of every record
     done = [b for b in bets if b.get("res") in ("hit", "miss")]
     byday = {}
     for b in done:
@@ -351,7 +397,7 @@ def stats(bets, days_planned=()):
         "best_day": rois[-1] if rois else None, "worst_day": rois[0] if rois else None,
         "median_day": rois[len(rois) // 2] if rois else None,
         "max_dd": round(dd, 2), "losing_days_run": worst_run, "losing_bets_run": loss_streak,
-        "voids": sum(1 for b in bets if b.get("res") == "void"),
+        "voids": sum(1 for b in bets if b.get("res") == "void"), "thin": thin,
         "by_sport": {k: {"n": v["n"], "hit": round(v["hit"] / v["n"], 4), "staked": round(v["staked"], 2),
                          "pnl": round(v["pnl"], 2), "roi": round(v["pnl"] / v["staked"], 4) if v["staked"] else None}
                      for k, v in sorted(sport.items())},
@@ -506,7 +552,7 @@ def season_stats(state):
     return stats(bt + [dict(b, src="live") for b in state.get("bets") or []])
 
 
-def update(state, cands, now, meta=None, results=None):
+def update(state, cands, now, meta=None, results=None, depths=None):
     """One pass: freeze the backtest (first run), plan today, post today's Polymarket picks (from 11 AM ET), add the
     at-lock bets, grade both. Returns True on a change."""
     meta = meta or {}
@@ -516,11 +562,11 @@ def update(state, cands, now, meta=None, results=None):
     state.setdefault("live_from", today)
     state.setdefault("bets", [])
     plans = state.setdefault("plans", {})
-    if "backtest" not in state:
+    if (state.get("backtest") or {}).get("v") != BACKTEST_V:   # first run, or a rule change: replay the backtest once
         bt, bt_plans = backtest(cands, state["live_from"])
         bts = stats(bt, bt_plans.keys())
         state["backtest"] = {"bets": bt, "stats": bts, "outlook": outlook(bts["daily"], len(bt_plans)),
-                             "qualified": {d: [s["key"] for s in p if s["ok"]] for d, p in bt_plans.items()}}
+                             "qualified": {d: [s["key"] for s in p if s["ok"]] for d, p in bt_plans.items()}, "v": BACKTEST_V}
     # recomputed every run from the frozen backtest days (seeded, so it only moves when the method does)
     state["backtest"]["outlook"] = outlook(state["backtest"]["stats"]["daily"], len(state["backtest"].get("qualified") or {}))
     if "study" not in state:     # every other method, replayed the same way (roi4_study.py), frozen like the backtest
@@ -539,6 +585,9 @@ def update(state, cands, now, meta=None, results=None):
         c = by_key.get(b["key"])
         if b.get("res") is None and c and not b.get("start"):
             b.update({"start": c.get("start"), "team": c.get("team"), "opp": c.get("opp")})
+    depth_map = dict({c["key"]: {"pd": c.get("pd"), "kd": c.get("kd")} for c in cands}, **(depths or {}))
+    mark_thin(state["bets"], depth_map)
+    mark_thin(state["posted"], depth_map)
     results = dict({c["key"]: c["res"] for c in cands}, **(results or {}))   # every live pick's result (all_results), not just the buyable ones
     grade(state["bets"], results, today)
     grade(state["posted"], results, today)
@@ -549,7 +598,7 @@ def update(state, cands, now, meta=None, results=None):
                       "min_roi": MIN_ROI, "lo_floor": LO_FLOOR, "shrink_n": SHRINK_N, "bank": BANK, "kelly": KELLY,
                       "min_bet": MIN_BET, "max_bet": MAX_BET, "game_cap": GAME_CAP, "day_cap": DAY_CAP,
                       "month_target": MONTH_TARGET, "review_on": REVIEW_ON,
-                      "post_from": "%d:%02d" % POST_FROM, "post_lead": POST_LEAD, "post_usd": POST_USD}
+                      "post_from": "%d:%02d" % POST_FROM, "post_lead": POST_LEAD, "post_usd": POST_USD, "unit_usd": UNIT_USD}
     return json.dumps(state, sort_keys=True) != before
 
 
@@ -593,7 +642,7 @@ def main():
             state = json.loads(team_stats.decrypt(f.read().strip(), password))
     except FileNotFoundError:
         state = {}
-    if not update(state, cands, now, load_meta(), all_results(docs)):
+    if not update(state, cands, now, load_meta(), all_results(docs), all_depths(docs)):
         print(f"4% return: no change ({len(state.get('bets') or [])} live bets)")
         return 0
     state["gen"] = now.strftime("%Y-%m-%dT%H:%M:%SZ")
