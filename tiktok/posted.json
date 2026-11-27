@@ -1,53 +1,31 @@
 {
- "date": "2026-11-25",
+ "date": "2026-11-26",
  "drafts": {
   "c": {
    "caption": {
     "title": "Pick of the Day + today's best props",
-    "description": "Pick of the Day: Davion Mitchell under 24.5 Points (91% model chance). Swipe for today's best NFL, NBA, NHL props → Free research, link in bio. Model chance, not a guarantee. 18+. #NFL #NFLProps #NBA #NBAProps #NHL #NHLProps #PlayerProps"
+    "description": "Pick of the Day: Joe Milton III under 2.5 Pass TDs (96% model chance). Swipe for today's best NFL props → Free research, link in bio. Model chance, not a guarantee. 18+. #NFL #NFLProps #PlayerProps"
    },
    "ok": true,
-   "id": "p_inbox_url~v2.7712260156813264909"
+   "id": "p_inbox_url~v2.7712634851094284302"
   },
   "v1": {
    "sport": "nfl",
-   "angle": "record",
-   "caption": "Do our NFL picks actually hit? Top 25: 615 of 679 this season (91%), every pick recorded before the game and graded after ✅ Free research, link in bio. Model chance, not a guarantee. 18+. #NFL #NFLProps #PlayerProps #SportsAnalytics",
+   "angle": "gap",
+   "caption": "3 NFL player props where our model and the market disagree today 👀 Biggest gap: Emmett Johnson under 2.5 Receptions, model 48% vs. market 30%. Free research, link in bio. Model chance, not a guarantee. 18+. #NFL #NFLProps #PlayerProps #SportsAnalytics",
    "ok": true,
-   "id": "v_inbox_file~v2.7712260177286793229"
+   "id": "v_inbox_file~v2.7712634864566323214"
   },
   "v2": {
-   "sport": "nhl",
-   "angle": "gap",
-   "caption": "3 NHL player props where our model and the market disagree today 👀 Biggest gap: Emmitt Finnie under 0.5 Points, model 67% vs. market 45%. Free research, link in bio. Model chance, not a guarantee. 18+. #NHL #NHLProps #PlayerProps #SportsAnalytics",
+   "sport": "nfl",
+   "angle": "record",
+   "caption": "Do our NFL picks actually hit? Top 25: 622 of 687 this season (91%), every pick recorded before the game and graded after ✅ Free research, link in bio. Model chance, not a guarantee. 18+. #NFL #NFLProps #PlayerProps #SportsAnalytics",
    "ok": true,
-   "id": "v_inbox_file~v2.7712260217790285838"
-  },
-  "v3": {
-   "sport": "nba",
-   "angle": "streak",
-   "caption": "3 NBA hit streaks on the line today 🔥 Longest: Jabari Smith Jr., 10 straight games over 0.5 3-pointers. Will it keep going? Free research, link in bio. Model chance, not a guarantee. 18+. #NBA #NBAProps #PlayerProps #SportsAnalytics",
-   "ok": true,
-   "id": "v_inbox_file~v2.7712260156813461517"
+   "id": "v_inbox_file~v2.7712634903573645326"
   }
  },
  "history": [
   {
-   "date": "2026-11-11",
-   "sport": "nba",
-   "angle": "streak"
-  },
-  {
-   "date": "2026-11-11",
-   "sport": "nhl",
-   "angle": "gap"
-  },
-  {
-   "date": "2026-11-11",
-   "sport": "nhl",
-   "angle": "record"
-  },
-  {
    "date": "2026-11-12",
    "sport": "nfl",
    "angle": "record"
@@ -231,8 +209,18 @@
    "date": "2026-11-25",
    "sport": "nba",
    "angle": "streak"
+  },
+  {
+   "date": "2026-11-26",
+   "sport": "nfl",
+   "angle": "gap"
+  },
+  {
+   "date": "2026-11-26",
+   "sport": "nfl",
+   "angle": "record"
   }
  ],
  "reconnect": false,
- "at": "2026-11-25T23:49:25Z"
+ "at": "2026-11-27T00:02:48Z"
 }
