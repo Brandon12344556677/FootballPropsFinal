@@ -2,61 +2,61 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
     <loc>https://propstreaklab.com/</loc>
-    <lastmod>2026-11-27</lastmod>
+    <lastmod>2026-11-28</lastmod>
     <changefreq>daily</changefreq>
     <priority>1.0</priority>
   </url>
   <url>
     <loc>https://propstreaklab.com/nfl.html</loc>
-    <lastmod>2026-11-27</lastmod>
+    <lastmod>2026-11-28</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
     <loc>https://propstreaklab.com/nba.html</loc>
-    <lastmod>2026-11-27</lastmod>
+    <lastmod>2026-11-28</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
     <loc>https://propstreaklab.com/nhl.html</loc>
-    <lastmod>2026-11-27</lastmod>
+    <lastmod>2026-11-28</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
     <loc>https://propstreaklab.com/mlb.html</loc>
-    <lastmod>2026-11-27</lastmod>
+    <lastmod>2026-11-28</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
     <loc>https://propstreaklab.com/tennis.html</loc>
-    <lastmod>2026-11-27</lastmod>
+    <lastmod>2026-11-28</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
     <loc>https://propstreaklab.com/methodology.html</loc>
-    <lastmod>2026-11-27</lastmod>
+    <lastmod>2026-11-28</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
     <loc>https://propstreaklab.com/privacy.html</loc>
-    <lastmod>2026-11-27</lastmod>
+    <lastmod>2026-11-28</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.3</priority>
   </url>
   <url>
     <loc>https://propstreaklab.com/terms.html</loc>
-    <lastmod>2026-11-27</lastmod>
+    <lastmod>2026-11-28</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.3</priority>
   </url>
   <url>
     <loc>https://propstreaklab.com/cookies.html</loc>
-    <lastmod>2026-11-27</lastmod>
+    <lastmod>2026-11-28</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.3</priority>
   </url>
@@ -312,8 +312,8 @@
   <url><loc>https://propstreaklab.com/best/nfl.html</loc><lastmod>2026-11-27</lastmod><changefreq>hourly</changefreq><priority>0.6</priority></url>
   <url><loc>https://propstreaklab.com/games/nfl/atl-at-min-2026-11-29.html</loc><lastmod>2026-11-27</lastmod><changefreq>hourly</changefreq><priority>0.6</priority></url>
   <url><loc>https://propstreaklab.com/games/nfl/nyj-at-mia-2026-11-29.html</loc><lastmod>2026-11-27</lastmod><changefreq>hourly</changefreq><priority>0.6</priority></url>
-  <url><loc>https://propstreaklab.com/games/nfl/nyg-at-ind-2026-11-29.html</loc><lastmod>2026-11-27</lastmod><changefreq>hourly</changefreq><priority>0.6</priority></url>
   <url><loc>https://propstreaklab.com/games/nfl/ten-at-jax-2026-11-29.html</loc><lastmod>2026-11-27</lastmod><changefreq>hourly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://propstreaklab.com/games/nfl/nyg-at-ind-2026-11-29.html</loc><lastmod>2026-11-27</lastmod><changefreq>hourly</changefreq><priority>0.6</priority></url>
   <url><loc>https://propstreaklab.com/games/nfl/bal-at-hou-2026-11-29.html</loc><lastmod>2026-11-27</lastmod><changefreq>hourly</changefreq><priority>0.6</priority></url>
   <url><loc>https://propstreaklab.com/games/nfl/no-at-cin-2026-11-29.html</loc><lastmod>2026-11-27</lastmod><changefreq>hourly</changefreq><priority>0.6</priority></url>
   <url><loc>https://propstreaklab.com/games/nfl/ne-at-lac-2026-11-29.html</loc><lastmod>2026-11-27</lastmod><changefreq>hourly</changefreq><priority>0.6</priority></url>
@@ -322,7 +322,6 @@
   <url><loc>https://propstreaklab.com/games/nfl/lv-at-cle-2026-11-29.html</loc><lastmod>2026-11-27</lastmod><changefreq>hourly</changefreq><priority>0.6</priority></url>
   <url><loc>https://propstreaklab.com/games/nfl/car-at-tb-2026-11-30.html</loc><lastmod>2026-11-27</lastmod><changefreq>hourly</changefreq><priority>0.6</priority></url>
   <url><loc>https://propstreaklab.com/best/nba.html</loc><lastmod>2026-11-27</lastmod><changefreq>hourly</changefreq><priority>0.6</priority></url>
-  <url><loc>https://propstreaklab.com/games/nba/mia-at-ny-2026-11-27.html</loc><lastmod>2026-11-27</lastmod><changefreq>hourly</changefreq><priority>0.6</priority></url>
   <url><loc>https://propstreaklab.com/games/nba/phi-at-ind-2026-11-27.html</loc><lastmod>2026-11-27</lastmod><changefreq>hourly</changefreq><priority>0.6</priority></url>
   <url><loc>https://propstreaklab.com/games/nba/mil-at-det-2026-11-27.html</loc><lastmod>2026-11-27</lastmod><changefreq>hourly</changefreq><priority>0.6</priority></url>
   <url><loc>https://propstreaklab.com/games/nba/bkn-at-tor-2026-11-27.html</loc><lastmod>2026-11-27</lastmod><changefreq>hourly</changefreq><priority>0.6</priority></url>
@@ -344,5 +343,11 @@
   <url><loc>https://propstreaklab.com/games/nhl/sea-at-edm-2026-11-27.html</loc><lastmod>2026-11-27</lastmod><changefreq>hourly</changefreq><priority>0.6</priority></url>
   <url><loc>https://propstreaklab.com/games/nhl/mtl-at-vgk-2026-11-28.html</loc><lastmod>2026-11-27</lastmod><changefreq>hourly</changefreq><priority>0.6</priority></url>
   <url><loc>https://propstreaklab.com/games/nhl/tb-at-fla-2026-11-28.html</loc><lastmod>2026-11-27</lastmod><changefreq>hourly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://propstreaklab.com/games/nhl/cgy-at-nyr-2026-11-28.html</loc><lastmod>2026-11-27</lastmod><changefreq>hourly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://propstreaklab.com/games/nhl/wsh-at-stl-2026-11-28.html</loc><lastmod>2026-11-27</lastmod><changefreq>hourly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://propstreaklab.com/games/nhl/ott-at-car-2026-11-28.html</loc><lastmod>2026-11-27</lastmod><changefreq>hourly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://propstreaklab.com/games/nhl/wpg-at-nj-2026-11-28.html</loc><lastmod>2026-11-27</lastmod><changefreq>hourly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://propstreaklab.com/games/nhl/nsh-at-det-2026-11-28.html</loc><lastmod>2026-11-27</lastmod><changefreq>hourly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://propstreaklab.com/games/nhl/tor-at-pit-2026-11-28.html</loc><lastmod>2026-11-27</lastmod><changefreq>hourly</changefreq><priority>0.6</priority></url>
   <url><loc>https://propstreaklab.com/best/mlb.html</loc><lastmod>2026-11-27</lastmod><changefreq>hourly</changefreq><priority>0.6</priority></url>
 </urlset>
